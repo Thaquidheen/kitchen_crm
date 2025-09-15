@@ -10,4 +10,6 @@ import java.util.List;
 public interface MaterialRepository extends JpaRepository<Material, Long> {
     List<Material> findByActiveTrue();
     List<Material> findByNameContainingIgnoreCase(String name);
+
+    boolean existsByName(String name);
 }

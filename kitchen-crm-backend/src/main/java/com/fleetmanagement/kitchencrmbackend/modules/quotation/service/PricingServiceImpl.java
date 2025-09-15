@@ -1,12 +1,13 @@
+package com.fleetmanagement.kitchencrmbackend.modules.quotation.service;
+
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.*;
-import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.PricingService;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 @Service
-class PricingServiceImpl implements PricingService {
+public class PricingServiceImpl implements PricingService {
 
     private static final BigDecimal MM_TO_SQFT_CONVERSION = BigDecimal.valueOf(0.0000107639);
 
@@ -79,7 +80,7 @@ class PricingServiceImpl implements PricingService {
         return sqft.multiply(unitRate);
     }
 
-    // Helper method to calculate line item totals
+    @Override
     public void calculateAccessoryLineTotal(QuotationAccessory accessory, BigDecimal marginPercentage, BigDecimal taxPercentage) {
         BigDecimal baseAmount = accessory.getUnitPrice().multiply(BigDecimal.valueOf(accessory.getQuantity()));
         BigDecimal marginAmount = calculateMarginAmount(baseAmount, marginPercentage);
@@ -90,6 +91,7 @@ class PricingServiceImpl implements PricingService {
         accessory.setTotalPrice(baseAmount.add(marginAmount).add(taxAmount));
     }
 
+    @Override
     public void calculateCabinetLineTotal(QuotationCabinet cabinet, BigDecimal marginPercentage, BigDecimal taxPercentage) {
         BigDecimal baseAmount;
 
@@ -107,6 +109,7 @@ class PricingServiceImpl implements PricingService {
         cabinet.setTotalPrice(baseAmount.add(marginAmount).add(taxAmount));
     }
 
+    @Override
     public void calculateDoorLineTotal(QuotationDoor door, BigDecimal marginPercentage, BigDecimal taxPercentage) {
         BigDecimal baseAmount;
 
@@ -124,6 +127,7 @@ class PricingServiceImpl implements PricingService {
         door.setTotalPrice(baseAmount.add(marginAmount).add(taxAmount));
     }
 
+    @Override
     public void calculateLightingLineTotal(QuotationLighting lighting, BigDecimal marginPercentage, BigDecimal taxPercentage) {
         BigDecimal baseAmount = lighting.getUnitPrice().multiply(lighting.getQuantity());
         BigDecimal marginAmount = calculateMarginAmount(baseAmount, marginPercentage);

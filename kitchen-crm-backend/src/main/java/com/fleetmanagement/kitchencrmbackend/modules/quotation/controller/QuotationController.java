@@ -32,7 +32,7 @@ public class QuotationController {
     @Autowired
     private QuotationService quotationService;
 
-    @Autowired
+    @Autowired(required = false)
     private PdfGenerationService pdfGenerationService;
 
     @GetMapping
@@ -142,13 +142,15 @@ public class QuotationController {
     }
 
     @GetMapping("/{id}/pdf")
-    public ResponseEntity<Resource> downloadQuotationPdf(
+    public ResponseEntity<?> downloadQuotationPdf(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         String userRole = currentUser.getAuthorities().iterator().next().getAuthority();
         ApiResponse<Resource> response = pdfGenerationService.generateQuotationPdf(id, userRole);
-
+        if (pdfGenerationService == null) {
+            return ResponseEntity.ok(ApiResponse.error("PDF generation is not yet available"));
+        }
         if (response.getSuccess()) {
             Resource resource = response.getData();
             return ResponseEntity.ok()
