@@ -16,12 +16,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional
 public class AuthServiceImpl implements AuthService {
 
     @Autowired
@@ -53,7 +55,10 @@ public class AuthServiceImpl implements AuthService {
 
             String jwt = tokenProvider.generateToken(authentication);
 
-            User user = userRepository.findByEmail(loginRequest.getEmail()).orElse(null);
+            // Use the new method that fetches roles eagerly
+            User user = userRepository.findByEmailWithRoles(loginRequest.getEmail())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
             Set<String> roles = user.getRoles().stream()
                     .map(role -> role.getName().name())
                     .collect(Collectors.toSet());
@@ -62,6 +67,8 @@ public class AuthServiceImpl implements AuthService {
 
             return ApiResponse.success("Login successful", loginResponse);
         } catch (Exception e) {
+            // Add logging to see the actual exception
+            e.printStackTrace(); // Remove this in production
             return ApiResponse.error("Invalid email or password");
         }
     }
