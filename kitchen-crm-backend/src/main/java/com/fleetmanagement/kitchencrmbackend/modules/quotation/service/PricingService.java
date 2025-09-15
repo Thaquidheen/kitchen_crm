@@ -10,7 +10,7 @@ public interface PricingService {
     void calculateQuotationTotals(Quotation quotation);
     void applyMarginToLineItems(Quotation quotation, BigDecimal marginPercentage, String userRole);
     BigDecimal calculateDimensionBasedPrice(Integer widthMm, Integer heightMm, BigDecimal unitRate);
-
+    void calculateCategoryTotals(Quotation quotation);
     // Line item calculation methods
     void calculateAccessoryLineTotal(QuotationAccessory accessory, BigDecimal marginPercentage, BigDecimal taxPercentage);
     void calculateCabinetLineTotal(QuotationCabinet cabinet, BigDecimal marginPercentage, BigDecimal taxPercentage);

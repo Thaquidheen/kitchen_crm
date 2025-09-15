@@ -51,6 +51,30 @@ public class QuotationDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // ACCESSORIES CATEGORY TOTALS
+    private BigDecimal accessoriesBaseTotal = BigDecimal.ZERO;
+    private BigDecimal accessoriesMarginAmount = BigDecimal.ZERO;
+    private BigDecimal accessoriesTaxAmount = BigDecimal.ZERO;
+    private BigDecimal accessoriesFinalTotal = BigDecimal.ZERO;
+
+    // CABINETS CATEGORY TOTALS
+    private BigDecimal cabinetsBaseTotal = BigDecimal.ZERO;
+    private BigDecimal cabinetsMarginAmount = BigDecimal.ZERO;
+    private BigDecimal cabinetsTaxAmount = BigDecimal.ZERO;
+    private BigDecimal cabinetsFinalTotal = BigDecimal.ZERO;
+
+    // DOORS CATEGORY TOTALS
+    private BigDecimal doorsBaseTotal = BigDecimal.ZERO;
+    private BigDecimal doorsMarginAmount = BigDecimal.ZERO;
+    private BigDecimal doorsTaxAmount = BigDecimal.ZERO;
+    private BigDecimal doorsFinalTotal = BigDecimal.ZERO;
+
+    // LIGHTING CATEGORY TOTALS
+    private BigDecimal lightingBaseTotal = BigDecimal.ZERO;
+    private BigDecimal lightingMarginAmount = BigDecimal.ZERO;
+    private BigDecimal lightingTaxAmount = BigDecimal.ZERO;
+    private BigDecimal lightingFinalTotal = BigDecimal.ZERO;
+
     // Line items
     private List<QuotationAccessoryDto> accessories;
     private List<QuotationCabinetDto> cabinets;

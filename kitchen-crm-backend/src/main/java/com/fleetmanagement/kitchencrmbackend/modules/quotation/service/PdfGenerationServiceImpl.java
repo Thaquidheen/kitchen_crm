@@ -385,4 +385,282 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 "5. Any changes to the original design will be charged extra.\n" +
                 "6. Warranty: 1 year for manufacturing defects.";
     }
+
+    private String populateQuotationTemplate(QuotationDto quotation, String userRole) throws IOException {
+        // Load template
+        String htmlContent = loadTemplate("quotation-template.html");
+
+        // Company and customer details (existing code)...
+
+        // Line items table with category-wise totals
+        StringBuilder lineItemsHtml = new StringBuilder();
+
+        // Add accessories section
+        if (quotation.getAccessories() != null && !quotation.getAccessories().isEmpty()) {
+            lineItemsHtml.append("<tr class='category-header'><td colspan='5'><strong>ACCESSORIES</strong></td></tr>");
+            for (QuotationAccessoryDto accessory : quotation.getAccessories()) {
+                lineItemsHtml.append(createLineItemRow(accessory));
+            }
+
+            // Category subtotal
+            lineItemsHtml.append("<tr class='category-subtotal'>")
+                    .append("<td colspan='4'><strong>Accessories Subtotal:</strong></td>")
+                    .append("<td><strong>₹").append(formatCurrency(quotation.getAccessoriesBaseTotal())).append("</strong></td>")
+                    .append("</tr>");
+
+            // Show margin and tax for admin only
+            if ("ROLE_SUPER_ADMIN".equals(userRole)) {
+                lineItemsHtml.append("<tr class='category-margin'>")
+                        .append("<td colspan='4'>Margin (").append(quotation.getMarginPercentage()).append("%):</td>")
+                        .append("<td>₹").append(formatCurrency(quotation.getAccessoriesMarginAmount())).append("</td>")
+                        .append("</tr>");
+
+                lineItemsHtml.append("<tr class='category-tax'>")
+                        .append("<td colspan='4'>Tax (").append(quotation.getTaxPercentage()).append("%):</td>")
+                        .append("<td>₹").append(formatCurrency(quotation.getAccessoriesTaxAmount())).append("</td>")
+                        .append("</tr>");
+            }
+
+            // Category final total
+            lineItemsHtml.append("<tr class='category-total'>")
+                    .append("<td colspan='4'><strong>ACCESSORIES TOTAL:</strong></td>")
+                    .append("<td><strong>₹").append(formatCurrency(quotation.getAccessoriesFinalTotal())).append("</strong></td>")
+                    .append("</tr>");
+        }
+
+        // Add cabinets section
+        if (quotation.getCabinets() != null && !quotation.getCabinets().isEmpty()) {
+            lineItemsHtml.append("<tr class='category-header'><td colspan='5'><strong>CABINETS</strong></td></tr>");
+            for (QuotationCabinetDto cabinet : quotation.getCabinets()) {
+                lineItemsHtml.append(createCabinetLineItemRow(cabinet));
+            }
+
+            // Category subtotal
+            lineItemsHtml.append("<tr class='category-subtotal'>")
+                    .append("<td colspan='4'><strong>Cabinets Subtotal:</strong></td>")
+                    .append("<td><strong>₹").append(formatCurrency(quotation.getCabinetsBaseTotal())).append("</strong></td>")
+                    .append("</tr>");
+
+            // Show margin and tax for admin only
+            if ("ROLE_SUPER_ADMIN".equals(userRole)) {
+                lineItemsHtml.append("<tr class='category-margin'>")
+                        .append("<td colspan='4'>Margin (").append(quotation.getMarginPercentage()).append("%):</td>")
+                        .append("<td>₹").append(formatCurrency(quotation.getCabinetsMarginAmount())).append("</td>")
+                        .append("</tr>");
+
+                lineItemsHtml.append("<tr class='category-tax'>")
+                        .append("<td colspan='4'>Tax (").append(quotation.getTaxPercentage()).append("%):</td>")
+                        .append("<td>₹").append(formatCurrency(quotation.getCabinetsTaxAmount())).append("</td>")
+                        .append("</tr>");
+            }
+
+            // Category final total
+            lineItemsHtml.append("<tr class='category-total'>")
+                    .append("<td colspan='4'><strong>CABINETS TOTAL:</strong></td>")
+                    .append("<td><strong>₹").append(formatCurrency(quotation.getCabinetsFinalTotal())).append("</strong></td>")
+                    .append("</tr>");
+        }
+
+        // Add doors section
+        if (quotation.getDoors() != null && !quotation.getDoors().isEmpty()) {
+            lineItemsHtml.append("<tr class='category-header'><td colspan='5'><strong>DOORS</strong></td></tr>");
+            for (QuotationDoorDto door : quotation.getDoors()) {
+                lineItemsHtml.append(createDoorLineItemRow(door));
+            }
+
+            // Category subtotal
+            lineItemsHtml.append("<tr class='category-subtotal'>")
+                    .append("<td colspan='4'><strong>Doors Subtotal:</strong></td>")
+                    .append("<td><strong>₹").append(formatCurrency(quotation.getDoorsBaseTotal())).append("</strong></td>")
+                    .append("</tr>");
+
+            // Show margin and tax for admin only
+            if ("ROLE_SUPER_ADMIN".equals(userRole)) {
+                lineItemsHtml.append("<tr class='category-margin'>")
+                        .append("<td colspan='4'>Margin (").append(quotation.getMarginPercentage()).append("%):</td>")
+                        .append("<td>₹").append(formatCurrency(quotation.getDoorsMarginAmount())).append("</td>")
+                        .append("</tr>");
+
+                lineItemsHtml.append("<tr class='category-tax'>")
+                        .append("<td colspan='4'>Tax (").append(quotation.getTaxPercentage()).append("%):</td>")
+                        .append("<td>₹").append(formatCurrency(quotation.getDoorsTaxAmount())).append("</td>")
+                        .append("</tr>");
+            }
+
+            // Category final total
+            lineItemsHtml.append("<tr class='category-total'>")
+                    .append("<td colspan='4'><strong>DOORS TOTAL:</strong></td>")
+                    .append("<td><strong>₹").append(formatCurrency(quotation.getDoorsFinalTotal())).append("</strong></td>")
+                    .append("</tr>");
+        }
+
+        // Add lighting section
+        if (quotation.getLighting() != null && !quotation.getLighting().isEmpty()) {
+            lineItemsHtml.append("<tr class='category-header'><td colspan='5'><strong>LIGHTING & PROFILES</strong></td></tr>");
+            for (QuotationLightingDto lighting : quotation.getLighting()) {
+                lineItemsHtml.append(createLightingLineItemRow(lighting));
+            }
+
+            // Category subtotal
+            lineItemsHtml.append("<tr class='category-subtotal'>")
+                    .append("<td colspan='4'><strong>Lighting Subtotal:</strong></td>")
+                    .append("<td><strong>₹").append(formatCurrency(quotation.getLightingBaseTotal())).append("</strong></td>")
+                    .append("</tr>");
+
+            // Show margin and tax for admin only
+            if ("ROLE_SUPER_ADMIN".equals(userRole)) {
+                lineItemsHtml.append("<tr class='category-margin'>")
+                        .append("<td colspan='4'>Margin (").append(quotation.getMarginPercentage()).append("%):</td>")
+                        .append("<td>₹").append(formatCurrency(quotation.getLightingMarginAmount())).append("</td>")
+                        .append("</tr>");
+
+                lineItemsHtml.append("<tr class='category-tax'>")
+                        .append("<td colspan='4'>Tax (").append(quotation.getTaxPercentage()).append("%):</td>")
+                        .append("<td>₹").append(formatCurrency(quotation.getLightingTaxAmount())).append("</td>")
+                        .append("</tr>");
+            }
+
+            // Category final total
+            lineItemsHtml.append("<tr class='category-total'>")
+                    .append("<td colspan='4'><strong>LIGHTING TOTAL:</strong></td>")
+                    .append("<td><strong>₹").append(formatCurrency(quotation.getLightingFinalTotal())).append("</strong></td>")
+                    .append("</tr>");
+        }
+
+        // Add transportation and installation
+        if (quotation.getTransportationPrice().compareTo(BigDecimal.ZERO) > 0) {
+            lineItemsHtml.append("<tr class='service-item'>")
+                    .append("<td>Transportation</td>")
+                    .append("<td>1</td>")
+                    .append("<td>Service</td>")
+                    .append("<td>₹").append(formatCurrency(quotation.getTransportationPrice())).append("</td>")
+                    .append("<td>₹").append(formatCurrency(quotation.getTransportationPrice())).append("</td>")
+                    .append("</tr>");
+        }
+
+        if (quotation.getInstallationPrice().compareTo(BigDecimal.ZERO) > 0) {
+            lineItemsHtml.append("<tr class='service-item'>")
+                    .append("<td>Installation</td>")
+                    .append("<td>1</td>")
+                    .append("<td>Service</td>")
+                    .append("<td>₹").append(formatCurrency(quotation.getInstallationPrice())).append("</td>")
+                    .append("<td>₹").append(formatCurrency(quotation.getInstallationPrice())).append("</td>")
+                    .append("</tr>");
+        }
+
+        htmlContent = htmlContent.replace("{{LINE_ITEMS}}", lineItemsHtml.toString());
+
+        // Final totals
+        htmlContent = htmlContent.replace("{{SUBTOTAL}}", formatCurrency(quotation.getSubtotal()));
+        htmlContent = htmlContent.replace("{{TAX_PERCENTAGE}}", quotation.getTaxPercentage().toString());
+        htmlContent = htmlContent.replace("{{TAX_AMOUNT}}", formatCurrency(quotation.getTaxAmount()));
+        htmlContent = htmlContent.replace("{{TOTAL_AMOUNT}}", formatCurrency(quotation.getTotalAmount()));
+
+        // Show overall margin only to super admin
+        if ("ROLE_SUPER_ADMIN".equals(userRole) && quotation.getMarginAmount() != null) {
+            String marginRow = "<tr><td colspan='4' class='text-right'><strong>Total Margin (" +
+                    quotation.getMarginPercentage() + "%):</strong></td>" +
+                    "<td><strong>₹" + formatCurrency(quotation.getMarginAmount()) + "</strong></td></tr>";
+            htmlContent = htmlContent.replace("{{MARGIN_ROW}}", marginRow);
+        } else {
+            htmlContent = htmlContent.replace("{{MARGIN_ROW}}", "");
+        }
+
+        // Rest of the template population...
+        return htmlContent;
+    }
+
+    // Helper methods for creating line item rows (simplified - showing only base amounts)
+    private String createLineItemRow(QuotationAccessoryDto accessory) {
+        StringBuilder row = new StringBuilder();
+        BigDecimal baseAmount = accessory.getUnitPrice().multiply(BigDecimal.valueOf(accessory.getQuantity()));
+
+        row.append("<tr>")
+                .append("<td>").append(accessory.getAccessoryName()).append("</td>")
+                .append("<td>").append(accessory.getQuantity()).append("</td>")
+                .append("<td>").append(accessory.getUnit()).append("</td>")
+                .append("<td>₹").append(formatCurrency(accessory.getUnitPrice())).append("</td>")
+                .append("<td>₹").append(formatCurrency(baseAmount)).append("</td>")
+                .append("</tr>");
+
+        return row.toString();
+    }
+
+    private String createCabinetLineItemRow(QuotationCabinetDto cabinet) {
+        StringBuilder row = new StringBuilder();
+        BigDecimal baseAmount;
+
+        if (cabinet.getCalculatedSqft() != null) {
+            baseAmount = cabinet.getUnitPrice().multiply(cabinet.getCalculatedSqft()).multiply(BigDecimal.valueOf(cabinet.getQuantity()));
+        } else {
+            baseAmount = cabinet.getUnitPrice().multiply(BigDecimal.valueOf(cabinet.getQuantity()));
+        }
+
+        String specifications = "";
+        if (cabinet.getWidthMm() != null && cabinet.getHeightMm() != null && cabinet.getDepthMm() != null) {
+            specifications = " (" + cabinet.getWidthMm() + "×" + cabinet.getHeightMm() + "×" + cabinet.getDepthMm() + "mm)";
+        }
+
+        row.append("<tr>")
+                .append("<td>").append(cabinet.getCabinetTypeName()).append(specifications).append("</td>")
+                .append("<td>").append(cabinet.getQuantity()).append("</td>")
+                .append("<td>").append(cabinet.getCalculatedSqft() != null ? "Sqft" : "Pieces").append("</td>")
+                .append("<td>₹").append(formatCurrency(cabinet.getUnitPrice())).append("</td>")
+                .append("<td>₹").append(formatCurrency(baseAmount)).append("</td>")
+                .append("</tr>");
+
+        return row.toString();
+    }
+
+    private String createDoorLineItemRow(QuotationDoorDto door) {
+        StringBuilder row = new StringBuilder();
+        BigDecimal baseAmount;
+
+        if (door.getCalculatedSqft() != null) {
+            baseAmount = door.getUnitPrice().multiply(door.getCalculatedSqft()).multiply(BigDecimal.valueOf(door.getQuantity()));
+        } else {
+            baseAmount = door.getUnitPrice().multiply(BigDecimal.valueOf(door.getQuantity()));
+        }
+
+        String specifications = "";
+        if (door.getWidthMm() != null && door.getHeightMm() != null) {
+            specifications = " (" + door.getWidthMm() + "×" + door.getHeightMm() + "mm)";
+        }
+        if (door.getDoorFinish() != null) {
+            specifications += ", " + door.getDoorFinish();
+        }
+
+        row.append("<tr>")
+                .append("<td>").append(door.getDoorTypeName()).append(specifications).append("</td>")
+                .append("<td>").append(door.getQuantity()).append("</td>")
+                .append("<td>").append(door.getCalculatedSqft() != null ? "Sqft" : "Pieces").append("</td>")
+                .append("<td>₹").append(formatCurrency(door.getUnitPrice())).append("</td>")
+                .append("<td>₹").append(formatCurrency(baseAmount)).append("</td>")
+                .append("</tr>");
+
+        return row.toString();
+    }
+
+    private String createLightingLineItemRow(QuotationLightingDto lighting) {
+        StringBuilder row = new StringBuilder();
+        BigDecimal baseAmount = lighting.getUnitPrice().multiply(lighting.getQuantity());
+
+        String specifications = "";
+        if (lighting.getWattage() != null) {
+            specifications += lighting.getWattage() + "W ";
+        }
+        if (lighting.getProfileType() != null) {
+            specifications += "Profile " + lighting.getProfileType() + " ";
+        }
+
+        row.append("<tr>")
+                .append("<td>").append(lighting.getItemName()).append(" ").append(specifications).append("</td>")
+                .append("<td>").append(formatCurrency(lighting.getQuantity())).append("</td>")
+                .append("<td>").append(lighting.getUnit()).append("</td>")
+                .append("<td>₹").append(formatCurrency(lighting.getUnitPrice())).append("</td>")
+                .append("<td>₹").append(formatCurrency(baseAmount)).append("</td>")
+                .append("</tr>");
+
+        return row.toString();
+    }
 }

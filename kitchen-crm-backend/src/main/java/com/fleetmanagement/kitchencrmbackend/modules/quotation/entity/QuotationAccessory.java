@@ -36,12 +36,6 @@ public class QuotationAccessory extends Auditable {
     @Column(name = "unit_price", precision = 10, scale = 2, nullable = false)
     private BigDecimal unitPrice;
 
-    @Column(name = "margin_amount", precision = 10, scale = 2)
-    private BigDecimal marginAmount = BigDecimal.ZERO;
-
-    @Column(name = "tax_amount", precision = 10, scale = 2)
-    private BigDecimal taxAmount = BigDecimal.ZERO;
-
     @Column(name = "total_price", precision = 10, scale = 2, nullable = false)
     private BigDecimal totalPrice;
 
@@ -54,14 +48,12 @@ public class QuotationAccessory extends Auditable {
     @Column(name = "custom_item_name")
     private String customItemName;
 
-    // Calculate total price before saving
+    // Calculate base total price (without margin/tax)
     @PrePersist
     @PreUpdate
     public void calculateTotalPrice() {
         if (unitPrice != null && quantity != null) {
-            BigDecimal baseAmount = unitPrice.multiply(BigDecimal.valueOf(quantity));
-            BigDecimal totalWithMargin = baseAmount.add(marginAmount != null ? marginAmount : BigDecimal.ZERO);
-            this.totalPrice = totalWithMargin.add(taxAmount != null ? taxAmount : BigDecimal.ZERO);
+            this.totalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
         }
     }
 }

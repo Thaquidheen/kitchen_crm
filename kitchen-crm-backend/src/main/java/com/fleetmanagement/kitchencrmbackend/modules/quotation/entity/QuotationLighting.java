@@ -30,25 +30,19 @@ public class QuotationLighting extends Auditable {
     private LightingItemType itemType;
 
     @Column(name = "item_id", nullable = false)
-    private Long itemId; // References respective table based on item_type
+    private Long itemId;
 
     @Column(name = "item_name", nullable = false)
     private String itemName;
 
     @Column(name = "quantity", precision = 10, scale = 2, nullable = false)
-    private BigDecimal quantity; // Can be meters for profiles, pieces for others
+    private BigDecimal quantity;
 
     @Column(name = "unit", nullable = false)
-    private String unit; // "meters", "pieces", etc.
+    private String unit;
 
     @Column(name = "unit_price", precision = 10, scale = 2, nullable = false)
     private BigDecimal unitPrice;
-
-    @Column(name = "margin_amount", precision = 10, scale = 2)
-    private BigDecimal marginAmount = BigDecimal.ZERO;
-
-    @Column(name = "tax_amount", precision = 10, scale = 2)
-    private BigDecimal taxAmount = BigDecimal.ZERO;
 
     @Column(name = "total_price", precision = 10, scale = 2, nullable = false)
     private BigDecimal totalPrice;
@@ -60,29 +54,27 @@ public class QuotationLighting extends Auditable {
     private String description;
 
     @Column(name = "wattage")
-    private Integer wattage; // For drivers
+    private Integer wattage;
 
     @Column(name = "profile_type")
-    private String profileType; // For light profiles: A, B, C, D
+    private String profileType;
 
     @Column(name = "sensor_type")
-    private String sensorType; // For sensors: NORMAL_SENSOR, DRAWER_SENSOR
+    private String sensorType;
 
     @Column(name = "connector_type")
-    private String connectorType; // For connectors: DRIVER_CONNECTOR, STRIP_CONNECTOR
+    private String connectorType;
 
     public enum LightingItemType {
         LIGHT_PROFILE, DRIVER, CONNECTOR, SENSOR
     }
 
-    // Calculate total price before saving
+    // Calculate base total price (without margin/tax)
     @PrePersist
     @PreUpdate
     public void calculateTotalPrice() {
         if (unitPrice != null && quantity != null) {
-            BigDecimal baseAmount = unitPrice.multiply(quantity);
-            BigDecimal totalWithMargin = baseAmount.add(marginAmount != null ? marginAmount : BigDecimal.ZERO);
-            this.totalPrice = totalWithMargin.add(taxAmount != null ? taxAmount : BigDecimal.ZERO);
+            this.totalPrice = unitPrice.multiply(quantity);
         }
     }
 }

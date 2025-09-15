@@ -49,27 +49,6 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public ApiResponse<PaymentDto> addPaymentToProject(Long projectId, PaymentCreateDto paymentCreateDto, String receivedBy) {
-        // Validate project exists
-        CustomerProject project = projectRepository.findById(projectId).orElse(null);
-        if (project == null) {
-            return ApiResponse.error("Project not found");
-        }
-
-        try {
-            // Use validation service
-            validationService.validatePayment(project, paymentCreateDto.getAmount(), paymentCreateDto.getPaymentDate());
-
-            // Validate payment method specific requirements
-            if (!validationService.isValidReferenceNumber(paymentCreateDto.getReferenceNumber(), paymentCreateDto.getPaymentMethod())) {
-                return ApiResponse.error("Reference number is required for " + paymentCreateDto.getPaymentMethod());
-            }
-
-        } catch (IllegalArgumentException e) {
-            return ApiResponse.error(e.getMessage());
-        }
-
-    @Override
     public ApiResponse<PaymentDto> getPaymentById(Long id) {
         Payment payment = paymentRepository.findById(id).orElse(null);
         if (payment == null) {
@@ -100,21 +79,17 @@ public class PaymentServiceImpl implements PaymentService {
             return ApiResponse.error("Project not found");
         }
 
-        // Validate payment amount
-        if (paymentCreateDto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            return ApiResponse.error("Payment amount must be greater than zero");
-        }
+        try {
+            // Use validation service
+            validationService.validatePayment(project, paymentCreateDto.getAmount(), paymentCreateDto.getPaymentDate());
 
-        // Check if payment exceeds remaining balance
-        BigDecimal currentBalance = project.getBalanceAmount();
-        if (paymentCreateDto.getAmount().compareTo(currentBalance) > 0) {
-            return ApiResponse.error("Payment amount (" + paymentCreateDto.getAmount() +
-                    ") exceeds remaining balance (" + currentBalance + ")");
-        }
+            // Validate payment method specific requirements
+            if (!validationService.isValidReferenceNumber(paymentCreateDto.getReferenceNumber(), paymentCreateDto.getPaymentMethod())) {
+                return ApiResponse.error("Reference number is required for " + paymentCreateDto.getPaymentMethod());
+            }
 
-        // Validate payment date
-        if (paymentCreateDto.getPaymentDate().isAfter(LocalDate.now())) {
-            return ApiResponse.error("Payment date cannot be in the future");
+        } catch (IllegalArgumentException e) {
+            return ApiResponse.error(e.getMessage());
         }
 
         // Create payment
@@ -130,6 +105,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         Payment savedPayment = paymentRepository.save(payment);
 
+        // Update project balance based on payment method
         updateProjectBalance(project, paymentCreateDto.getAmount(), paymentCreateDto.getPaymentMethod());
 
         return ApiResponse.success("Payment recorded successfully", convertToDto(savedPayment));

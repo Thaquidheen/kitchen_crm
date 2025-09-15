@@ -437,6 +437,21 @@ public class QuotationServiceImpl implements QuotationService {
     // Conversion methods
     private QuotationDto convertToDto(Quotation quotation, String userRole) {
         QuotationDto dto = new QuotationDto();
+
+        // Copy all existing fields...
+        dto.setId(quotation.getId());
+        dto.setCustomerId(quotation.getCustomer().getId());
+        dto.setCustomerName(quotation.getCustomer().getName());
+        dto.setQuotationNumber(quotation.getQuotationNumber());
+        dto.setProjectName(quotation.getProjectName());
+        dto.setTransportationPrice(quotation.getTransportationPrice());
+        dto.setInstallationPrice(quotation.getInstallationPrice());
+        dto.setTaxPercentage(quotation.getTaxPercentage());
+        dto.setSubtotal(quotation.getSubtotal());
+        dto.setTaxAmount(quotation.getTaxAmount());
+        dto.setTotalAmount(quotation.getTotalAmount());
+        dto.setStatus(quotation.getStatus());
+        dto.setValidUntil(quotation.getValidUntil());
         dto.setNotes(quotation.getNotes());
         dto.setTermsConditions(quotation.getTermsConditions());
         dto.setCreatedBy(quotation.getCreatedBy());
@@ -445,13 +460,33 @@ public class QuotationServiceImpl implements QuotationService {
         dto.setCreatedAt(quotation.getCreatedAt());
         dto.setUpdatedAt(quotation.getUpdatedAt());
 
-        // Only show margin to SUPER_ADMIN
+        // Set category-wise totals
+        dto.setAccessoriesBaseTotal(quotation.getAccessoriesBaseTotal());
+        dto.setAccessoriesFinalTotal(quotation.getAccessoriesFinalTotal());
+        dto.setCabinetsBaseTotal(quotation.getCabinetsBaseTotal());
+        dto.setCabinetsFinalTotal(quotation.getCabinetsFinalTotal());
+        dto.setDoorsBaseTotal(quotation.getDoorsBaseTotal());
+        dto.setDoorsFinalTotal(quotation.getDoorsFinalTotal());
+        dto.setLightingBaseTotal(quotation.getLightingBaseTotal());
+        dto.setLightingFinalTotal(quotation.getLightingFinalTotal());
+
+        // Only show margin details to SUPER_ADMIN
         if ("ROLE_SUPER_ADMIN".equals(userRole)) {
             dto.setMarginPercentage(quotation.getMarginPercentage());
             dto.setMarginAmount(quotation.getMarginAmount());
+
+            // Category-wise margin and tax for admin
+            dto.setAccessoriesMarginAmount(quotation.getAccessoriesMarginAmount());
+            dto.setAccessoriesTaxAmount(quotation.getAccessoriesTaxAmount());
+            dto.setCabinetsMarginAmount(quotation.getCabinetsMarginAmount());
+            dto.setCabinetsTaxAmount(quotation.getCabinetsTaxAmount());
+            dto.setDoorsMarginAmount(quotation.getDoorsMarginAmount());
+            dto.setDoorsTaxAmount(quotation.getDoorsTaxAmount());
+            dto.setLightingMarginAmount(quotation.getLightingMarginAmount());
+            dto.setLightingTaxAmount(quotation.getLightingTaxAmount());
         }
 
-        // Load line items (simplified)
+        // Load line items
         dto.setAccessories(loadAccessories(quotation.getId(), userRole));
         dto.setCabinets(loadCabinets(quotation.getId(), userRole));
         dto.setDoors(loadDoors(quotation.getId(), userRole));

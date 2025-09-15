@@ -1,6 +1,7 @@
 package com.fleetmanagement.kitchencrmbackend.modules.quotation.entity;
 
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
+import com.fleetmanagement.kitchencrmbackend.modules.project.entity.CustomerProject;
 import com.fleetmanagement.kitchencrmbackend.shared.audit.Auditable;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -26,6 +27,10 @@ public class Quotation extends Auditable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
+    private CustomerProject project;
 
     @Column(name = "quotation_number", unique = true, nullable = false)
     private String quotationNumber;
@@ -57,8 +62,60 @@ public class Quotation extends Auditable {
     @Column(name = "total_amount", precision = 12, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
+    // ACCESSORIES CATEGORY TOTALS
+    @Column(name = "accessories_base_total", precision = 12, scale = 2)
+    private BigDecimal accessoriesBaseTotal = BigDecimal.ZERO;
+
+    @Column(name = "accessories_margin_amount", precision = 12, scale = 2)
+    private BigDecimal accessoriesMarginAmount = BigDecimal.ZERO;
+
+    @Column(name = "accessories_tax_amount", precision = 12, scale = 2)
+    private BigDecimal accessoriesTaxAmount = BigDecimal.ZERO;
+
+    @Column(name = "accessories_final_total", precision = 12, scale = 2)
+    private BigDecimal accessoriesFinalTotal = BigDecimal.ZERO;
+
+    // CABINETS CATEGORY TOTALS
+    @Column(name = "cabinets_base_total", precision = 12, scale = 2)
+    private BigDecimal cabinetsBaseTotal = BigDecimal.ZERO;
+
+    @Column(name = "cabinets_margin_amount", precision = 12, scale = 2)
+    private BigDecimal cabinetsMarginAmount = BigDecimal.ZERO;
+
+    @Column(name = "cabinets_tax_amount", precision = 12, scale = 2)
+    private BigDecimal cabinetsTaxAmount = BigDecimal.ZERO;
+
+    @Column(name = "cabinets_final_total", precision = 12, scale = 2)
+    private BigDecimal cabinetsFinalTotal = BigDecimal.ZERO;
+
+    // DOORS CATEGORY TOTALS
+    @Column(name = "doors_base_total", precision = 12, scale = 2)
+    private BigDecimal doorsBaseTotal = BigDecimal.ZERO;
+
+    @Column(name = "doors_margin_amount", precision = 12, scale = 2)
+    private BigDecimal doorsMarginAmount = BigDecimal.ZERO;
+
+    @Column(name = "doors_tax_amount", precision = 12, scale = 2)
+    private BigDecimal doorsTaxAmount = BigDecimal.ZERO;
+
+    @Column(name = "doors_final_total", precision = 12, scale = 2)
+    private BigDecimal doorsFinalTotal = BigDecimal.ZERO;
+
+    // LIGHTING CATEGORY TOTALS
+    @Column(name = "lighting_base_total", precision = 12, scale = 2)
+    private BigDecimal lightingBaseTotal = BigDecimal.ZERO;
+
+    @Column(name = "lighting_margin_amount", precision = 12, scale = 2)
+    private BigDecimal lightingMarginAmount = BigDecimal.ZERO;
+
+    @Column(name = "lighting_tax_amount", precision = 12, scale = 2)
+    private BigDecimal lightingTaxAmount = BigDecimal.ZERO;
+
+    @Column(name = "lighting_final_total", precision = 12, scale = 2)
+    private BigDecimal lightingFinalTotal = BigDecimal.ZERO;
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "status")
     private QuotationStatus status = QuotationStatus.DRAFT;
 
     @Column(name = "valid_until")
@@ -80,16 +137,15 @@ public class Quotation extends Auditable {
     private LocalDate approvedAt;
 
     public enum QuotationStatus {
-        DRAFT, SENT, APPROVED, REJECTED, REVISED, EXPIRED
+        DRAFT, SENT, APPROVED, REJECTED, REVISED
     }
 
-    // Helper method to generate quotation number
+    // Generate quotation number before saving
     @PrePersist
     public void generateQuotationNumber() {
         if (this.quotationNumber == null) {
-            // Generate format: QT-YYYY-NNNNNN
-            String year = String.valueOf(java.time.LocalDate.now().getYear());
-            this.quotationNumber = "QT-" + year + "-" + System.currentTimeMillis();
+            this.quotationNumber = "QUO-" + java.time.Year.now() + "-" +
+                    String.format("%06d", System.currentTimeMillis() % 1000000);
         }
     }
 }

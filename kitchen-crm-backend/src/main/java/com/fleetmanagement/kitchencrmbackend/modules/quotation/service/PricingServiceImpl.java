@@ -1,22 +1,37 @@
 package com.fleetmanagement.kitchencrmbackend.modules.quotation.service;
 
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.*;
+import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 
 @Service
 public class PricingServiceImpl implements PricingService {
 
-    private static final BigDecimal MM_TO_SQFT_CONVERSION = BigDecimal.valueOf(0.0000107639);
+    @Autowired
+    private QuotationAccessoryRepository accessoryRepository;
+
+    @Autowired
+    private QuotationCabinetRepository cabinetRepository;
+
+    @Autowired
+    private QuotationDoorRepository doorRepository;
+
+    @Autowired
+    private QuotationLightingRepository lightingRepository;
+    @Autowired
+    private PricingService pricingService;
 
     @Override
     public BigDecimal calculateMarginAmount(BigDecimal baseAmount, BigDecimal marginPercentage) {
         if (baseAmount == null || marginPercentage == null) {
             return BigDecimal.ZERO;
         }
-        return baseAmount.multiply(marginPercentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        return baseAmount.multiply(marginPercentage.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
     }
 
     @Override
@@ -24,46 +39,7 @@ public class PricingServiceImpl implements PricingService {
         if (baseAmount == null || taxPercentage == null) {
             return BigDecimal.ZERO;
         }
-        return baseAmount.multiply(taxPercentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-    }
-
-    @Override
-    public void calculateQuotationTotals(Quotation quotation) {
-        BigDecimal subtotal = BigDecimal.ZERO;
-        BigDecimal totalMarginAmount = BigDecimal.ZERO;
-        BigDecimal totalTaxAmount = BigDecimal.ZERO;
-
-        // Calculate totals from all line items
-        // Note: In a real implementation, you would fetch these from repositories
-        // subtotal = accessories total + cabinets total + doors total + lighting total
-
-        // Add transportation and installation
-        subtotal = subtotal.add(quotation.getTransportationPrice())
-                .add(quotation.getInstallationPrice());
-
-        // Calculate margin and tax
-        totalMarginAmount = calculateMarginAmount(subtotal, quotation.getMarginPercentage());
-        totalTaxAmount = calculateTaxAmount(subtotal.add(totalMarginAmount), quotation.getTaxPercentage());
-
-        // Set calculated values
-        quotation.setSubtotal(subtotal);
-        quotation.setMarginAmount(totalMarginAmount);
-        quotation.setTaxAmount(totalTaxAmount);
-        quotation.setTotalAmount(subtotal.add(totalMarginAmount).add(totalTaxAmount));
-    }
-
-    @Override
-    public void applyMarginToLineItems(Quotation quotation, BigDecimal marginPercentage, String userRole) {
-        // Only show margin to SUPER_ADMIN role
-        if (!"ROLE_SUPER_ADMIN".equals(userRole)) {
-            marginPercentage = BigDecimal.ZERO;
-        }
-
-        // Apply margin to accessories
-        // Note: In real implementation, fetch from repositories and update
-        // For each line item:
-        // item.setMarginAmount(calculateMarginAmount(item.getBaseAmount(), marginPercentage));
-        // item.calculateTotalPrice();
+        return baseAmount.multiply(taxPercentage.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
     }
 
     @Override
@@ -81,60 +57,115 @@ public class PricingServiceImpl implements PricingService {
     }
 
     @Override
-    public void calculateAccessoryLineTotal(QuotationAccessory accessory, BigDecimal marginPercentage, BigDecimal taxPercentage) {
-        BigDecimal baseAmount = accessory.getUnitPrice().multiply(BigDecimal.valueOf(accessory.getQuantity()));
-        BigDecimal marginAmount = calculateMarginAmount(baseAmount, marginPercentage);
-        BigDecimal taxAmount = calculateTaxAmount(baseAmount.add(marginAmount), taxPercentage);
+    public void calculateQuotationTotals(Quotation quotation) {
+        // First calculate category-wise totals
+        calculateCategoryTotals(quotation);
+        pricingService.calculateQuotationTotals(quotation);
 
-        accessory.setMarginAmount(marginAmount);
-        accessory.setTaxAmount(taxAmount);
-        accessory.setTotalPrice(baseAmount.add(marginAmount).add(taxAmount));
+
+        // Calculate overall totals
+        BigDecimal totalCategoriesAmount = quotation.getAccessoriesFinalTotal()
+                .add(quotation.getCabinetsFinalTotal())
+                .add(quotation.getDoorsFinalTotal())
+                .add(quotation.getLightingFinalTotal());
+
+        BigDecimal totalWithServices = totalCategoriesAmount
+                .add(quotation.getTransportationPrice())
+                .add(quotation.getInstallationPrice());
+
+        BigDecimal totalMargin = quotation.getAccessoriesMarginAmount()
+                .add(quotation.getCabinetsMarginAmount())
+                .add(quotation.getDoorsMarginAmount())
+                .add(quotation.getLightingMarginAmount());
+
+        BigDecimal totalTax = quotation.getAccessoriesTaxAmount()
+                .add(quotation.getCabinetsTaxAmount())
+                .add(quotation.getDoorsTaxAmount())
+                .add(quotation.getLightingTaxAmount());
+
+        quotation.setSubtotal(totalWithServices);
+        quotation.setMarginAmount(totalMargin);
+        quotation.setTaxAmount(totalTax);
+        quotation.setTotalAmount(totalWithServices);
     }
 
     @Override
-    public void calculateCabinetLineTotal(QuotationCabinet cabinet, BigDecimal marginPercentage, BigDecimal taxPercentage) {
-        BigDecimal baseAmount;
+    public void calculateCategoryTotals(Quotation quotation) {
 
-        if (cabinet.getCalculatedSqft() != null) {
-            baseAmount = cabinet.getUnitPrice().multiply(cabinet.getCalculatedSqft()).multiply(BigDecimal.valueOf(cabinet.getQuantity()));
-        } else {
-            baseAmount = cabinet.getUnitPrice().multiply(BigDecimal.valueOf(cabinet.getQuantity()));
-        }
+        // 1. ACCESSORIES CATEGORY CALCULATION
+        List<QuotationAccessory> accessories = accessoryRepository.findByQuotationId(quotation.getId());
+        BigDecimal accessoriesBase = accessories.stream()
+                .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal marginAmount = calculateMarginAmount(baseAmount, marginPercentage);
-        BigDecimal taxAmount = calculateTaxAmount(baseAmount.add(marginAmount), taxPercentage);
+        BigDecimal accessoriesMargin = calculateMarginAmount(accessoriesBase, quotation.getMarginPercentage());
+        BigDecimal accessoriesWithMargin = accessoriesBase.add(accessoriesMargin);
+        BigDecimal accessoriesTax = calculateTaxAmount(accessoriesWithMargin, quotation.getTaxPercentage());
+        BigDecimal accessoriesTotal = accessoriesWithMargin.add(accessoriesTax);
 
-        cabinet.setMarginAmount(marginAmount);
-        cabinet.setTaxAmount(taxAmount);
-        cabinet.setTotalPrice(baseAmount.add(marginAmount).add(taxAmount));
-    }
+        quotation.setAccessoriesBaseTotal(accessoriesBase);
+        quotation.setAccessoriesMarginAmount(accessoriesMargin);
+        quotation.setAccessoriesTaxAmount(accessoriesTax);
+        quotation.setAccessoriesFinalTotal(accessoriesTotal);
 
-    @Override
-    public void calculateDoorLineTotal(QuotationDoor door, BigDecimal marginPercentage, BigDecimal taxPercentage) {
-        BigDecimal baseAmount;
+        // 2. CABINETS CATEGORY CALCULATION
+        List<QuotationCabinet> cabinets = cabinetRepository.findByQuotationId(quotation.getId());
+        BigDecimal cabinetsBase = cabinets.stream()
+                .map(item -> {
+                    if (item.getCalculatedSqft() != null) {
+                        return item.getUnitPrice().multiply(item.getCalculatedSqft()).multiply(BigDecimal.valueOf(item.getQuantity()));
+                    } else {
+                        return item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+                    }
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (door.getCalculatedSqft() != null) {
-            baseAmount = door.getUnitPrice().multiply(door.getCalculatedSqft()).multiply(BigDecimal.valueOf(door.getQuantity()));
-        } else {
-            baseAmount = door.getUnitPrice().multiply(BigDecimal.valueOf(door.getQuantity()));
-        }
+        BigDecimal cabinetsMargin = calculateMarginAmount(cabinetsBase, quotation.getMarginPercentage());
+        BigDecimal cabinetsWithMargin = cabinetsBase.add(cabinetsMargin);
+        BigDecimal cabinetsTax = calculateTaxAmount(cabinetsWithMargin, quotation.getTaxPercentage());
+        BigDecimal cabinetsTotal = cabinetsWithMargin.add(cabinetsTax);
 
-        BigDecimal marginAmount = calculateMarginAmount(baseAmount, marginPercentage);
-        BigDecimal taxAmount = calculateTaxAmount(baseAmount.add(marginAmount), taxPercentage);
+        quotation.setCabinetsBaseTotal(cabinetsBase);
+        quotation.setCabinetsMarginAmount(cabinetsMargin);
+        quotation.setCabinetsTaxAmount(cabinetsTax);
+        quotation.setCabinetsFinalTotal(cabinetsTotal);
 
-        door.setMarginAmount(marginAmount);
-        door.setTaxAmount(taxAmount);
-        door.setTotalPrice(baseAmount.add(marginAmount).add(taxAmount));
-    }
+        // 3. DOORS CATEGORY CALCULATION
+        List<QuotationDoor> doors = doorRepository.findByQuotationId(quotation.getId());
+        BigDecimal doorsBase = doors.stream()
+                .map(item -> {
+                    if (item.getCalculatedSqft() != null) {
+                        return item.getUnitPrice().multiply(item.getCalculatedSqft()).multiply(BigDecimal.valueOf(item.getQuantity()));
+                    } else {
+                        return item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+                    }
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-    @Override
-    public void calculateLightingLineTotal(QuotationLighting lighting, BigDecimal marginPercentage, BigDecimal taxPercentage) {
-        BigDecimal baseAmount = lighting.getUnitPrice().multiply(lighting.getQuantity());
-        BigDecimal marginAmount = calculateMarginAmount(baseAmount, marginPercentage);
-        BigDecimal taxAmount = calculateTaxAmount(baseAmount.add(marginAmount), taxPercentage);
+        BigDecimal doorsMargin = calculateMarginAmount(doorsBase, quotation.getMarginPercentage());
+        BigDecimal doorsWithMargin = doorsBase.add(doorsMargin);
+        BigDecimal doorsTax = calculateTaxAmount(doorsWithMargin, quotation.getTaxPercentage());
+        BigDecimal doorsTotal = doorsWithMargin.add(doorsTax);
 
-        lighting.setMarginAmount(marginAmount);
-        lighting.setTaxAmount(taxAmount);
-        lighting.setTotalPrice(baseAmount.add(marginAmount).add(taxAmount));
+        quotation.setDoorsBaseTotal(doorsBase);
+        quotation.setDoorsMarginAmount(doorsMargin);
+        quotation.setDoorsTaxAmount(doorsTax);
+        quotation.setDoorsFinalTotal(doorsTotal);
+
+        // 4. LIGHTING CATEGORY CALCULATION
+        List<QuotationLighting> lighting = lightingRepository.findByQuotationId(quotation.getId());
+        BigDecimal lightingBase = lighting.stream()
+                .map(item -> item.getUnitPrice().multiply(item.getQuantity()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal lightingMargin = calculateMarginAmount(lightingBase, quotation.getMarginPercentage());
+        BigDecimal lightingWithMargin = lightingBase.add(lightingMargin);
+        BigDecimal lightingTax = calculateTaxAmount(lightingWithMargin, quotation.getTaxPercentage());
+        BigDecimal lightingTotal = lightingWithMargin.add(lightingTax);
+
+        quotation.setLightingBaseTotal(lightingBase);
+        quotation.setLightingMarginAmount(lightingMargin);
+        quotation.setLightingTaxAmount(lightingTax);
+        quotation.setLightingFinalTotal(lightingTotal);
     }
 }

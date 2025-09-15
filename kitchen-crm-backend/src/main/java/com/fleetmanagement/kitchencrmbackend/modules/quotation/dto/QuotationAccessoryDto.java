@@ -19,8 +19,8 @@ public class QuotationAccessoryDto {
     private String categoryName;
     private Integer quantity;
     private BigDecimal unitPrice;
-    private BigDecimal marginAmount;
-    private BigDecimal taxAmount;
+//    private BigDecimal marginAmount;
+//    private BigDecimal taxAmount;
     private BigDecimal totalPrice;
     private String description;
     private Boolean customItem = false;
