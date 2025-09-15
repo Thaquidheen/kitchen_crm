@@ -28,4 +28,34 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     @Query("SELECT COUNT(c) FROM Customer c WHERE c.status = :status")
     Long countByStatus(@Param("status") Customer.CustomerStatus status);
+
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.createdAt BETWEEN :fromDate AND :toDate")
+    Long countByCreatedAtBetween(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
+
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.createdAt < :beforeDate")
+    Long countByCreatedAtBefore(@Param("beforeDate") LocalDateTime beforeDate);
+
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT DISTINCT p.customer.id FROM CustomerProject p WHERE p.status = 'ACTIVE')")
+    Long countActiveCustomers();
+
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT DISTINCT p.customer.id FROM CustomerProject p WHERE p.totalAmount > 500000)")
+    Long countPremiumCustomers();
+
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT DISTINCT p.customer.id FROM CustomerProject p WHERE p.totalAmount BETWEEN 100000 AND 500000)")
+    Long countStandardCustomers();
+
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT DISTINCT p.customer.id FROM CustomerProject p WHERE p.totalAmount < 100000)")
+    Long countBudgetCustomers();
+
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id NOT IN (SELECT DISTINCT p.customer.id FROM CustomerProject p)")
+    Long countProspects();
+
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT DISTINCT q.customer.id FROM Quotation q)")
+    Long countLeads();
+
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT DISTINCT p.customer.id FROM CustomerProject p WHERE p.status = 'COMPLETED')")
+    Long countCompletedCustomers();
+
+    @Query("SELECT c.id, c.name, SUM(p.receivedAmountTotal), COUNT(p) FROM Customer c JOIN CustomerProject p ON c.id = p.customer.id GROUP BY c.id, c.name ORDER BY SUM(p.receivedAmountTotal) DESC")
+    List<Object[]> getTopCustomersByRevenue(@Param("limit") int limit);
 }

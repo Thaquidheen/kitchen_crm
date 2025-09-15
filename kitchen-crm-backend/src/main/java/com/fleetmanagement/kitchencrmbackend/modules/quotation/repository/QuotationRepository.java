@@ -38,4 +38,24 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
 
     @Query("SELECT COALESCE(SUM(q.totalAmount), 0) FROM Quotation q WHERE q.status = 'APPROVED'")
     BigDecimal getTotalApprovedAmount();
+
+    // Add these methods to QuotationRepository interface
+
+    @Query("SELECT SUM(q.totalAmount) FROM Quotation q")
+    BigDecimal getTotalQuotationValue();
+
+    @Query("SELECT COUNT(q) FROM Quotation q WHERE q.createdAt BETWEEN :fromDate AND :toDate")
+    Long countByDateRange(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
+
+    @Query("SELECT COUNT(q) FROM Quotation q WHERE q.status = 'APPROVED' AND q.createdAt BETWEEN :fromDate AND :toDate")
+    Long countApprovedByDateRange(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
+
+    @Query("SELECT SUM(q.totalAmount) FROM Quotation q WHERE q.createdAt BETWEEN :fromDate AND :toDate")
+    BigDecimal getTotalValueByDateRange(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
+
+    @Query("SELECT COUNT(q) FROM Quotation q WHERE q.createdAt < :date AND q.status = 'PENDING'")
+    Long countOverdueQuotations(@Param("date") LocalDate date);
+
+    @Query("SELECT COUNT(q) FROM Quotation q WHERE q.createdAt BETWEEN :fromDate AND :toDate")
+    Long countByCreatedAtBetween(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
 }

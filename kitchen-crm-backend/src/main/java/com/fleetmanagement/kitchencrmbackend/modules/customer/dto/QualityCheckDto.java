@@ -1,0 +1,25 @@
+package com.fleetmanagement.kitchencrmbackend.modules.customer.dto;
+
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.LocalDate;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class QualityCheckDto {
+
+    @NotNull(message = "Quality check status is required")
+    private Boolean passed;
+
+    @NotNull(message = "Check date is required")
+    private LocalDate checkDate;
+
+    private String checkNotes;
+    private String checkedBy;
+}
