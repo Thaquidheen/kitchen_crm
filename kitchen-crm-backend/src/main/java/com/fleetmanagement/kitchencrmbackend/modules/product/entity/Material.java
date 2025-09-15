@@ -24,7 +24,7 @@ public class Material extends Auditable {
     @Column(nullable = false)
     private String name;
 
-    @Column(name = "unit_rate_per_sqft", nullable = false, precision = 10, scale = 2)
+    @Column(name = "unit_rate_per_sqft", precision = 10, scale = 2, nullable = false)
     private BigDecimal unitRatePerSqft;
 
     private String description;

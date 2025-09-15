@@ -1,3 +1,5 @@
+-- V2__Create_product_tables.sql
+
 -- Create materials table
 CREATE TABLE materials (
                            id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -117,11 +119,10 @@ CREATE TABLE sensors (
                          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Create indexes for better performance
+-- Create indexes for performance
 CREATE INDEX idx_accessories_category ON accessories(category_id);
 CREATE INDEX idx_accessories_brand ON accessories(brand_id);
 CREATE INDEX idx_accessories_active ON accessories(active);
-CREATE INDEX idx_accessories_material_code ON accessories(material_code);
 
 CREATE INDEX idx_cabinet_types_category ON cabinet_types(category_id);
 CREATE INDEX idx_cabinet_types_brand ON cabinet_types(brand_id);
@@ -132,7 +133,106 @@ CREATE INDEX idx_door_types_brand ON door_types(brand_id);
 CREATE INDEX idx_door_types_active ON door_types(active);
 
 CREATE INDEX idx_materials_active ON materials(active);
-CREATE INDEX idx_light_profiles_active ON light_profiles(active);
-CREATE INDEX idx_drivers_active ON drivers(active);
-CREATE INDEX idx_connectors_active ON connectors(active);
-CREATE INDEX idx_sensors_active ON sensors(active);
+
+-- Triggers to automatically calculate company_price
+DELIMITER //
+
+CREATE TRIGGER accessories_company_price_trigger
+    BEFORE INSERT ON accessories
+    FOR EACH ROW
+BEGIN
+    SET NEW.company_price = NEW.mrp * (1 - NEW.discount_percentage/100);
+END//
+
+CREATE TRIGGER accessories_company_price_update_trigger
+    BEFORE UPDATE ON accessories
+    FOR EACH ROW
+BEGIN
+    SET NEW.company_price = NEW.mrp * (1 - NEW.discount_percentage/100);
+END//
+
+CREATE TRIGGER cabinet_types_company_price_trigger
+    BEFORE INSERT ON cabinet_types
+    FOR EACH ROW
+BEGIN
+    SET NEW.company_price = NEW.mrp * (1 - NEW.discount_percentage/100);
+END//
+
+CREATE TRIGGER cabinet_types_company_price_update_trigger
+    BEFORE UPDATE ON cabinet_types
+    FOR EACH ROW
+BEGIN
+    SET NEW.company_price = NEW.mrp * (1 - NEW.discount_percentage/100);
+END//
+
+CREATE TRIGGER door_types_company_price_trigger
+    BEFORE INSERT ON door_types
+    FOR EACH ROW
+BEGIN
+    SET NEW.company_price = NEW.mrp * (1 - NEW.discount_percentage/100);
+END//
+
+CREATE TRIGGER door_types_company_price_update_trigger
+    BEFORE UPDATE ON door_types
+    FOR EACH ROW
+BEGIN
+    SET NEW.company_price = NEW.mrp * (1 - NEW.discount_percentage/100);
+END//
+
+CREATE TRIGGER light_profiles_company_price_trigger
+    BEFORE INSERT ON light_profiles
+    FOR EACH ROW
+BEGIN
+    SET NEW.company_price = NEW.mrp * (1 - NEW.discount_percentage/100);
+END//
+
+CREATE TRIGGER light_profiles_company_price_update_trigger
+    BEFORE UPDATE ON light_profiles
+    FOR EACH ROW
+BEGIN
+    SET NEW.company_price = NEW.mrp * (1 - NEW.discount_percentage/100);
+END//
+
+CREATE TRIGGER drivers_company_price_trigger
+    BEFORE INSERT ON drivers
+    FOR EACH ROW
+BEGIN
+    SET NEW.company_price = NEW.mrp * (1 - NEW.discount_percentage/100);
+END//
+
+CREATE TRIGGER drivers_company_price_update_trigger
+    BEFORE UPDATE ON drivers
+    FOR EACH ROW
+BEGIN
+    SET NEW.company_price = NEW.mrp * (1 - NEW.discount_percentage/100);
+END//
+
+CREATE TRIGGER connectors_company_price_trigger
+    BEFORE INSERT ON connectors
+    FOR EACH ROW
+BEGIN
+    SET NEW.company_price = NEW.mrp * (1 - NEW.discount_percentage/100);
+END//
+
+CREATE TRIGGER connectors_company_price_update_trigger
+    BEFORE UPDATE ON connectors
+    FOR EACH ROW
+BEGIN
+    SET NEW.company_price = NEW.mrp * (1 - NEW.discount_percentage/100);
+END//
+
+CREATE TRIGGER sensors_company_price_trigger
+    BEFORE INSERT ON sensors
+    FOR EACH ROW
+BEGIN
+    SET NEW.company_price = NEW.mrp * (1 - NEW.discount_percentage/100);
+END//
+
+CREATE TRIGGER sensors_company_price_update_trigger
+    BEFORE UPDATE ON sensors
+    FOR EACH ROW
+BEGIN
+    SET NEW.company_price = NEW.mrp * (1 - NEW.discount_percentage/100);
+END//
+
+DELIMITER ;

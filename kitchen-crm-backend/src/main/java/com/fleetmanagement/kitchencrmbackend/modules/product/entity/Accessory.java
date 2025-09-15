@@ -1,3 +1,4 @@
+// Accessory.java
 package com.fleetmanagement.kitchencrmbackend.modules.product.entity;
 
 import com.fleetmanagement.kitchencrmbackend.shared.audit.Auditable;
@@ -24,11 +25,11 @@ public class Accessory extends Auditable {
     @Column(nullable = false)
     private String name;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand_id")
     private Brand brand;
 
@@ -44,12 +45,12 @@ public class Accessory extends Auditable {
     @Column(name = "depth_mm")
     private Integer depthMm;
 
-    @Column(name = "image_url", length = 500)
+    @Column(name = "image_url")
     private String imageUrl;
 
     private String color;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(precision = 10, scale = 2, nullable = false)
     private BigDecimal mrp;
 
     @Column(name = "discount_percentage", precision = 5, scale = 2)
@@ -63,10 +64,10 @@ public class Accessory extends Auditable {
 
     @PrePersist
     @PreUpdate
-    private void calculateCompanyPrice() {
+    public void calculateCompanyPrice() {
         if (mrp != null && discountPercentage != null) {
-            BigDecimal discountMultiplier = BigDecimal.ONE.subtract(discountPercentage.divide(BigDecimal.valueOf(100)));
-            this.companyPrice = mrp.multiply(discountMultiplier);
+            BigDecimal discountAmount = mrp.multiply(discountPercentage).divide(BigDecimal.valueOf(100));
+            this.companyPrice = mrp.subtract(discountAmount);
         }
     }
 }

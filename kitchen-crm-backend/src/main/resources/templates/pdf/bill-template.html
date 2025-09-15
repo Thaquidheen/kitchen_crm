@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INVOICE - {{DOCUMENT_NUMBER}}</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #dc3545;
+            padding-bottom: 20px;
+        }
+
+        .company-info {
+            flex: 1;
+        }
+
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #dc3545;
+            margin-bottom: 10px;
+        }
+
+        .company-details {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .document-info {
+            text-align: right;
+            flex: 1;
+        }
+
+        .document-title {
+            font-size: 32px;
+            font-weight: bold;
+            color: #dc3545;
+            margin-bottom: 10px;
+        }
+
+        .document-number {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .invoice-date {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .customer-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+        }
+
+        .customer-info, .invoice-details {
+            flex: 1;
+            margin-right: 20px;
+        }
+
+        .customer-info:last-child, .invoice-details:last-child {
+            margin-right: 0;
+        }
+
+        .section-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #dc3545;
+            border-bottom: 2px solid #dc3545;
+            padding-bottom: 5px;
+        }
+
+        .info-line {
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .items-table th,
+        .items-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .items-table th {
+            background-color: #dc3545;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .items-table .category-header {
+            background-color: #f1f3f4;
+            font-weight: bold;
+            color: #dc3545;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .items-table .text-right {
+            text-align: right;
+        }
+
+        .items-table .text-center {
+            text-align: center;
+        }
+
+        .items-table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .items-table tbody tr:hover {
+            background-color: #f1f3f4;
+        }
+
+        .totals-section {
+            float: right;
+            width: 350px;
+            margin-bottom: 30px;
+        }
+
+        .totals-table {
+            width: 100%;
+            border-collapse: collapse;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .totals-table td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            font-size: 13px;
+        }
+
+        .totals-table .total-row {
+            background-color: #dc3545;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .totals-table .subtotal-row {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .payment-info {
+            clear: both;
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #e7f3ff;
+            border-left: 5px solid #007bff;
+            border-radius: 5px;
+        }
+
+        .payment-title {
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .notes-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #fff3cd;
+            border-left: 5px solid #ffc107;
+            border-radius: 5px;
+        }
+
+        .terms-section {
+            margin-top: 20px;
+            font-size: 11px;
+            color: #666;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #666;
+            font-size: 11px;
+            border-top: 2px solid #dc3545;
+            padding-top: 20px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+
+        .status-approved {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .status-paid {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        .approval-info {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .amount-in-words {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f1f3f4;
+            border-radius: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .due-date {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        @media print {
+            body {
+                margin: 0;
+                padding: 10px;
+            }
+
+            .header {
+                page-break-inside: avoid;
+            }
+
+            .items-table {
+                page-break-inside: auto;
+            }
+
+            .items-table tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- Header Section -->
+<div class="header">
+    <div class="company-info">
+        <div class="company-name">{{COMPANY_NAME}}</div>
+        <div class="company-details">
+            {{COMPANY_ADDRESS}}<br>
+            Phone: {{COMPANY_PHONE}}<br>
+            Email: {{COMPANY_EMAIL}}
+        </div>
+    </div>
+    <div class="document-info">
+        <div class="document-title">INVOICE</div>
+        <div class="document-number">{{DOCUMENT_NUMBER}}</div>
+        <div class="invoice-date">Date: {{CREATED_DATE}}</div>
+        <div class="status-badge status-approved">APPROVED</div>
+        <div class="approval-info">
+            {{APPROVED_BY}}<br>
+            {{APPROVED_DATE}}
+        </div>
+    </div>
+</div>
+
+<!-- Customer and Invoice Details -->
+<div class="customer-section">
+    <div class="customer-info">
+        <div class="section-title">BILL TO</div>
+        <div class="info-line"><strong>{{CUSTOMER_NAME}}</strong></div>
+        <div class="info-line">Project: {{PROJECT_NAME}}</div>
+    </div>
+    <div class="invoice-details">
+        <div class="section-title">INVOICE DETAILS</div>
+        <div class="info-line">Invoice Date: {{CREATED_DATE}}</div>
+        <div class="info-line">Original Quote: {{DOCUMENT_NUMBER}}</div>
+        <div class="info-line class="due-date">Payment Due: Immediate</div>
+</div>
+</div>
+
+<!-- Items Table -->
+<table class="items-table">
+    <thead>
+    <tr>
+        <th style="width: 40%;">Item Description</th>
+        <th style="width: 10%;">Qty</th>
+        <th style="width: 10%;">Unit</th>
+        <th style="width: 15%;">Rate</th>
+        <th style="width: 15%;">Amount</th>
+    </tr>
+    </thead>
+    <tbody>
+    {{LINE_ITEMS}}
+    </tbody>
+</table>
+
+<!-- Totals Section -->
+<div class="totals-section">
+    <table class="totals-table">
+        <tr class="subtotal-row">
+            <td><strong>Subtotal:</strong></td>
+            <td class="text-right"><strong>₹{{SUBTOTAL}}</strong></td>
+        </tr>
+        <tr>
+            <td><strong>Tax ({{TAX_PERCENTAGE}}%):</strong></td>
+            <td class="text-right"><strong>₹{{TAX_AMOUNT}}</strong></td>
+        </tr>
+        <tr class="total-row">
+            <td><strong>TOTAL AMOUNT DUE:</strong></td>
+            <td class="text-right"><strong>₹{{TOTAL_AMOUNT}}</strong></td>
+        </tr>
+    </table>
+</div>
+
+<!-- Amount in Words -->
+<div class="amount-in-words">
+    <strong>Amount in Words:</strong> {{AMOUNT_IN_WORDS}}
+</div>
+
+<!-- Payment Information -->
+<div class="payment-info">
+    <div class="payment-title">PAYMENT INFORMATION</div>
+    <p><strong>Payment Terms:</strong> Payment due immediately upon receipt</p>
+    <p><strong>Payment Methods:</strong> Cash, Bank Transfer, Cheque</p>
+    <p><strong>Bank Details:</strong> Will be provided separately upon request</p>
+    <p><strong>Late Payment:</strong> 2% monthly charge on overdue amounts</p>
+</div>
+
+<!-- Notes Section -->
+<div class="notes-section">
+    <div class="section-title">NOTES</div>
+    <p>{{NOTES}}</p>
+    <p><strong>Note:</strong> This invoice is generated from approved quotation {{DOCUMENT_NUMBER}}. All work has been completed as per agreed specifications.</p>
+</div>
+
+<!-- Terms and Conditions -->
+<div class="terms-section">
+    <div class="section-title">TERMS & CONDITIONS</div>
+    <div style="white-space: pre-line;">{{TERMS_CONDITIONS}}</div>
+    <hr style="margin: 15px 0;">
+    <p><strong>Warranty:</strong> 1 year manufacturer warranty on all products. Installation warranty: 6 months.</p>
+    <p><strong>Returns:</strong> Custom-made items are non-returnable. Standard items can be returned within 7 days.</p>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+    <p><strong>Thank you for your business with {{COMPANY_NAME}}!</strong></p>
+    <p>For any queries regarding this invoice, please contact us at {{COMPANY_EMAIL}} or {{COMPANY_PHONE}}</p>
+    <p style="margin-top: 10px; font-style: italic;">This is a computer-generated invoice and is valid without signature.</p>
+</div>
+</body>
+</html>
