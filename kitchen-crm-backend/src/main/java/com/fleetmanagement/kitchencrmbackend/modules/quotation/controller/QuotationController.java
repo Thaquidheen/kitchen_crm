@@ -32,7 +32,8 @@ public class QuotationController {
     @Autowired
     private QuotationService quotationService;
 
-    @Autowired(required = false)
+
+    @Autowired
     private PdfGenerationService pdfGenerationService;
 
     @GetMapping
@@ -146,39 +147,56 @@ public class QuotationController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
-        String userRole = currentUser.getAuthorities().iterator().next().getAuthority();
-        ApiResponse<Resource> response = pdfGenerationService.generateQuotationPdf(id, userRole);
-        if (pdfGenerationService == null) {
-            return ResponseEntity.ok(ApiResponse.error("PDF generation is not yet available"));
-        }
-        if (response.getSuccess()) {
-            Resource resource = response.getData();
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"quotation_" + id + ".pdf\"")
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .body(resource);
-        } else {
-            return ResponseEntity.badRequest().build();
+        try {
+            String userRole = currentUser.getAuthorities().iterator().next().getAuthority();
+
+            // Check if service is available
+            if (pdfGenerationService == null) {
+                return ResponseEntity.ok(ApiResponse.error("PDF generation service is not available"));
+            }
+
+            ApiResponse<Resource> response = pdfGenerationService.generateQuotationPdf(id, userRole);
+
+            if (response.getSuccess()) {
+                Resource resource = response.getData();
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"quotation_" + id + ".pdf\"")
+                        .contentType(MediaType.APPLICATION_PDF)
+                        .body(resource);
+            } else {
+                return ResponseEntity.ok(response);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Failed to generate PDF: " + e.getMessage()));
         }
     }
 
     @GetMapping("/{id}/bill/pdf")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<Resource> downloadBillPdf(
+    public ResponseEntity<?> downloadBillPdf(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
-        String userRole = currentUser.getAuthorities().iterator().next().getAuthority();
-        ApiResponse<Resource> response = pdfGenerationService.generateBillPdf(id, userRole);
+        try {
+            String userRole = currentUser.getAuthorities().iterator().next().getAuthority();
 
-        if (response.getSuccess()) {
-            Resource resource = response.getData();
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"bill_" + id + ".pdf\"")
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .body(resource);
-        } else {
-            return ResponseEntity.badRequest().build();
+            if (pdfGenerationService == null) {
+                return ResponseEntity.ok(ApiResponse.error("PDF generation service is not available"));
+            }
+
+            ApiResponse<Resource> response = pdfGenerationService.generateBillPdf(id, userRole);
+
+            if (response.getSuccess()) {
+                Resource resource = response.getData();
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"bill_" + id + ".pdf\"")
+                        .contentType(MediaType.APPLICATION_PDF)
+                        .body(resource);
+            } else {
+                return ResponseEntity.ok(response);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Failed to generate bill PDF: " + e.getMessage()));
         }
     }
 

@@ -82,7 +82,7 @@ public class QuotationServiceImpl implements QuotationService {
 
     @Override
     @Transactional
-    public ApiResponse<QuotationDto> createQuotation(QuotationCreateDto dto, String userRole) {
+    public ApiResponse<QuotationDto> createQuotation(QuotationCreateDto dto, String createdBy, String userRole) {
         try {
             // Validate customer exists
             Customer customer = customerRepository.findById(dto.getCustomerId()).orElse(null);
@@ -94,7 +94,13 @@ public class QuotationServiceImpl implements QuotationService {
             Quotation quotation = new Quotation();
             quotation.setCustomer(customer);
             quotation.setProjectName(dto.getProjectName());
+            quotation.setValidUntil(dto.getValidUntil());
+            quotation.setNotes(dto.getNotes());
+            quotation.setTermsConditions(dto.getTermsConditions());
 
+            // Set the createdBy field using the parameter
+            quotation.setCreatedBy(createdBy);
+            quotation.setStatus(Quotation.QuotationStatus.DRAFT);
 
             // Set default values
             quotation.setMarginPercentage(dto.getMarginPercentage() != null ? dto.getMarginPercentage() : BigDecimal.ZERO);
@@ -103,29 +109,24 @@ public class QuotationServiceImpl implements QuotationService {
             quotation.setInstallationPrice(dto.getInstallationPrice() != null ? dto.getInstallationPrice() : BigDecimal.ZERO);
 
             // Save quotation first to get ID
-            quotation = quotationRepository.save(quotation);
+            Quotation savedQuotation = quotationRepository.save(quotation);
 
+            // Save line items using your existing method
+            saveLineItems(savedQuotation, dto, userRole);
 
-            // CREATE LIGHTING ENTRIES - This was missing or incorrect
-            if (dto.getLighting() != null && !dto.getLighting().isEmpty()) {
-                createLightingEntries(quotation, dto.getLighting());
-            }
+            // Calculate totals using your existing method
+            calculateQuotationTotals(savedQuotation);
+            quotationRepository.save(savedQuotation);
 
-            // Calculate totals
-            pricingService.calculateQuotationTotals(quotation);
-
-            // Save updated quotation
-            quotation = quotationRepository.save(quotation);
-
-            // Convert to DTO and return
-            QuotationDto result = convertToDto(quotation, userRole);
-            return ApiResponse.success("Quotation created successfully", result);
+            return ApiResponse.success("Quotation created successfully", convertToDto(savedQuotation, userRole));
 
         } catch (Exception e) {
             e.printStackTrace();
             return ApiResponse.error("Failed to create quotation: " + e.getMessage());
         }
     }
+
+
     @Override
     public ApiResponse<QuotationDto> updateQuotation(Long id, QuotationDto quotationDto, String updatedBy, String userRole) {
         Quotation existingQuotation = quotationRepository.findById(id).orElse(null);
@@ -347,7 +348,7 @@ public class QuotationServiceImpl implements QuotationService {
     }
 
     private void saveLineItems(Quotation quotation, QuotationCreateDto dto, String userRole) {
-        // Save accessories (simplified - without entity references)
+        // Save accessories
         if (dto.getAccessories() != null) {
             for (QuotationAccessoryDto accessoryDto : dto.getAccessories()) {
                 QuotationAccessory accessory = new QuotationAccessory();
@@ -358,13 +359,12 @@ public class QuotationServiceImpl implements QuotationService {
                 accessory.setCustomItem(accessoryDto.getCustomItem());
                 accessory.setCustomItemName(accessoryDto.getCustomItemName());
 
-                // Calculate pricing
                 pricingService.calculateAccessoryLineTotal(accessory, quotation.getMarginPercentage(), quotation.getTaxPercentage());
                 accessoryRepository.save(accessory);
             }
         }
 
-        // Save cabinets (simplified)
+        // Save cabinets
         if (dto.getCabinets() != null) {
             for (QuotationCabinetDto cabinetDto : dto.getCabinets()) {
                 QuotationCabinet cabinet = new QuotationCabinet();
@@ -374,7 +374,6 @@ public class QuotationServiceImpl implements QuotationService {
                 cabinet.setHeightMm(cabinetDto.getHeightMm());
                 cabinet.setDepthMm(cabinetDto.getDepthMm());
                 cabinet.setUnitPrice(cabinetDto.getUnitPrice());
-
                 cabinet.setCustomDimensions(cabinetDto.getCustomDimensions() != null && cabinetDto.getCustomDimensions()
                         ? "true" : "false");
 
@@ -383,7 +382,7 @@ public class QuotationServiceImpl implements QuotationService {
             }
         }
 
-        // Save doors (simplified)
+        // Save doors
         if (dto.getDoors() != null) {
             for (QuotationDoorDto doorDto : dto.getDoors()) {
                 QuotationDoor door = new QuotationDoor();
@@ -395,54 +394,33 @@ public class QuotationServiceImpl implements QuotationService {
                 door.setDoorFinish(doorDto.getDoorFinish());
                 door.setDoorStyle(doorDto.getDoorStyle());
                 door.setDescription(doorDto.getDescription());
-                door.setCustomDimensions(doorDto.getCustomDimensions() != null ? doorDto.getCustomDimensions().toString() : null);
+                door.setCustomDimensions(doorDto.getCustomDimensions() != null ?
+                        doorDto.getCustomDimensions().toString() : null);
 
                 pricingService.calculateDoorLineTotal(door, quotation.getMarginPercentage(), quotation.getTaxPercentage());
                 doorRepository.save(door);
             }
         }
 
-        // Save cabinets
-        if (dto.getCabinets() != null) {
-            createCabinetEntries(quotation, dto.getCabinets());
-        }
-
-        // Save doors
-        if (dto.getDoors() != null) {
-            createDoorEntries(quotation, dto.getDoors());
-        }
-
-        // Save accessories
-        if (dto.getAccessories() != null) {
-            createAccessoryEntries(quotation, dto.getAccessories());
-        }
-
-        // Save lighting - MAKE SURE THIS IS INCLUDED
+        // Save lighting - THIS IS THE IMPORTANT PART FOR YOUR ISSUE
         if (dto.getLighting() != null) {
-            createLightingEntries(quotation, dto.getLighting());
+            for (QuotationLightingDto lightingDto : dto.getLighting()) {
+                QuotationLighting lighting = new QuotationLighting();
+                lighting.setQuotation(quotation);
+                lighting.setItemType(QuotationLighting.LightingItemType.valueOf(lightingDto.getItemType()));
+                lighting.setItemId(lightingDto.getItemId());
+                lighting.setQuantity(lightingDto.getQuantity());
+                lighting.setUnitPrice(lightingDto.getUnitPrice());
+
+
+
+                // POPULATE ITEM DETAILS - This will set the item_name field properly
+                populateLightingItemDetails(lighting, lightingDto.getItemType(), lightingDto.getItemId());
+
+                pricingService.calculateLightingLineTotal(lighting, quotation.getMarginPercentage(), quotation.getTaxPercentage());
+                lightingRepository.save(lighting);
+            }
         }
-        // Save lighting (simplified)
-//        if (dto.getLighting() != null) {
-//            for (QuotationLightingDto lightingDto : dto.getLighting()) {
-//                QuotationLighting lighting = new QuotationLighting();
-//                lighting.setQuotation(quotation);
-//                lighting.setItemType(QuotationLighting.LightingItemType.valueOf(lightingDto.getItemType()));
-//                lighting.setItemId(lightingDto.getItemId());
-//                lighting.setItemName(lightingDto.getItemName());
-//                lighting.setQuantity(lightingDto.getQuantity());
-//                lighting.setUnit(lightingDto.getUnit());
-//                lighting.setUnitPrice(lightingDto.getUnitPrice());
-//                lighting.setSpecifications(lightingDto.getSpecifications());
-//                lighting.setDescription(lightingDto.getDescription());
-//                lighting.setWattage(lightingDto.getWattage());
-//                lighting.setProfileType(lightingDto.getProfileType());
-//                lighting.setSensorType(lightingDto.getSensorType());
-//                lighting.setConnectorType(lightingDto.getConnectorType());
-//
-//                pricingService.calculateLightingLineTotal(lighting, quotation.getMarginPercentage(), quotation.getTaxPercentage());
-//                lightingRepository.save(lighting);
-//            }
-//        }
     }
 
     private void deleteExistingLineItems(Long quotationId) {

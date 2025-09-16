@@ -118,8 +118,76 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     }
 
     private String loadTemplate(String templatePath) throws IOException {
-        Resource resource = resourceLoader.getResource(templatePath);
-        return Files.readString(resource.getFile().toPath());
+        try {
+            Resource resource = resourceLoader.getResource(templatePath);
+            if (resource.exists()) {
+                return Files.readString(resource.getFile().toPath());
+            } else {
+                // Fallback to classpath resource reading
+                return new String(resource.getInputStream().readAllBytes());
+            }
+        } catch (Exception e) {
+            // If template loading fails, return a basic template
+            return getBasicQuotationTemplate();
+        }
+    }
+    private String getBasicQuotationTemplate() {
+        return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { border-bottom: 2px solid #007bff; padding-bottom: 20px; margin-bottom: 20px; }
+            .company-name { font-size: 24px; color: #007bff; font-weight: bold; }
+            .document-title { font-size: 28px; color: #007bff; font-weight: bold; text-align: right; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .total-row { background-color: #007bff; color: white; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="company-name">{{COMPANY_NAME}}</div>
+            <div class="document-title">{{DOCUMENT_TITLE}}</div>
+            <p>{{DOCUMENT_NUMBER}}</p>
+            <p>Date: {{CREATED_DATE}}</p>
+        </div>
+        
+        <div>
+            <h3>Customer: {{CUSTOMER_NAME}}</h3>
+            <p>Project: {{PROJECT_NAME}}</p>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Unit</th>
+                    <th>Rate</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{LINE_ITEMS}}
+            </tbody>
+        </table>
+        
+        <div style="text-align: right; margin-top: 20px;">
+            <p><strong>Subtotal: ₹{{SUBTOTAL}}</strong></p>
+            <p><strong>Tax ({{TAX_PERCENTAGE}}%): ₹{{TAX_AMOUNT}}</strong></p>
+            <p class="total-row" style="padding: 10px; background: #007bff; color: white;"><strong>Total: ₹{{TOTAL_AMOUNT}}</strong></p>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <p><strong>Notes:</strong> {{NOTES}}</p>
+        </div>
+    </body>
+    </html>
+    """;
     }
 
     private String replacePlaceholders(String htmlContent, QuotationDto quotation, String userRole, boolean isBill) {
@@ -129,14 +197,12 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         htmlContent = htmlContent.replace("{{COMPANY_PHONE}}", "+1 (555) 123-4567");
         htmlContent = htmlContent.replace("{{COMPANY_EMAIL}}", "info@kitchencrm.com");
 
-        // Document title and number
+        // Document info
         String documentTitle = isBill ? "INVOICE" : "QUOTATION";
-        String documentNumber = isBill ? quotation.getQuotationNumber().replace("QT-", "INV-") : quotation.getQuotationNumber();
-
         htmlContent = htmlContent.replace("{{DOCUMENT_TITLE}}", documentTitle);
-        htmlContent = htmlContent.replace("{{DOCUMENT_NUMBER}}", documentNumber);
+        htmlContent = htmlContent.replace("{{DOCUMENT_NUMBER}}", quotation.getQuotationNumber());
 
-        // Customer information
+        // Customer info
         htmlContent = htmlContent.replace("{{CUSTOMER_NAME}}", quotation.getCustomerName());
         htmlContent = htmlContent.replace("{{PROJECT_NAME}}", quotation.getProjectName() != null ? quotation.getProjectName() : "");
 
@@ -144,12 +210,12 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         htmlContent = htmlContent.replace("{{CREATED_DATE}}", quotation.getCreatedAt().toLocalDate().toString());
         htmlContent = htmlContent.replace("{{VALID_UNTIL}}", quotation.getValidUntil() != null ? quotation.getValidUntil().toString() : "");
 
-        // Line items table
+        // Generate line items HTML
         StringBuilder lineItemsHtml = new StringBuilder();
 
         // Add accessories
         if (quotation.getAccessories() != null && !quotation.getAccessories().isEmpty()) {
-            lineItemsHtml.append("<tr><td colspan='6' class='category-header'><strong>ACCESSORIES</strong></td></tr>");
+            lineItemsHtml.append("<tr style='background-color: #f8f9fa; font-weight: bold;'><td colspan='5'>ACCESSORIES</td></tr>");
             for (QuotationAccessoryDto accessory : quotation.getAccessories()) {
                 lineItemsHtml.append(createAccessoryLineItemRow(accessory, userRole));
             }
@@ -157,7 +223,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
 
         // Add cabinets
         if (quotation.getCabinets() != null && !quotation.getCabinets().isEmpty()) {
-            lineItemsHtml.append("<tr><td colspan='6' class='category-header'><strong>CABINETS</strong></td></tr>");
+            lineItemsHtml.append("<tr style='background-color: #f8f9fa; font-weight: bold;'><td colspan='5'>CABINETS</td></tr>");
             for (QuotationCabinetDto cabinet : quotation.getCabinets()) {
                 lineItemsHtml.append(createCabinetLineItemRow(cabinet, userRole));
             }
@@ -165,15 +231,15 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
 
         // Add doors
         if (quotation.getDoors() != null && !quotation.getDoors().isEmpty()) {
-            lineItemsHtml.append("<tr><td colspan='6' class='category-header'><strong>DOORS</strong></td></tr>");
+            lineItemsHtml.append("<tr style='background-color: #f8f9fa; font-weight: bold;'><td colspan='5'>DOORS</td></tr>");
             for (QuotationDoorDto door : quotation.getDoors()) {
                 lineItemsHtml.append(createDoorLineItemRow(door, userRole));
             }
         }
 
-        // Add lighting
+        // Add lighting - THIS IS THE KEY FIX FOR YOUR LIGHTING ITEMS
         if (quotation.getLighting() != null && !quotation.getLighting().isEmpty()) {
-            lineItemsHtml.append("<tr><td colspan='6' class='category-header'><strong>LIGHTING</strong></td></tr>");
+            lineItemsHtml.append("<tr style='background-color: #f8f9fa; font-weight: bold;'><td colspan='5'>LIGHTING & PROFILES</td></tr>");
             for (QuotationLightingDto lighting : quotation.getLighting()) {
                 lineItemsHtml.append(createLightingLineItemRow(lighting, userRole));
             }
@@ -185,13 +251,8 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                     .append("<td>Transportation</td>")
                     .append("<td>1</td>")
                     .append("<td>Service</td>")
-                    .append("<td>₹").append(formatCurrency(quotation.getTransportationPrice())).append("</td>");
-
-            if ("ROLE_SUPER_ADMIN".equals(userRole)) {
-                lineItemsHtml.append("<td>₹0.00</td>");
-            }
-
-            lineItemsHtml.append("<td>₹").append(formatCurrency(quotation.getTransportationPrice())).append("</td>")
+                    .append("<td>₹").append(formatCurrency(quotation.getTransportationPrice())).append("</td>")
+                    .append("<td>₹").append(formatCurrency(quotation.getTransportationPrice())).append("</td>")
                     .append("</tr>");
         }
 
@@ -200,13 +261,8 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                     .append("<td>Installation</td>")
                     .append("<td>1</td>")
                     .append("<td>Service</td>")
-                    .append("<td>₹").append(formatCurrency(quotation.getInstallationPrice())).append("</td>");
-
-            if ("ROLE_SUPER_ADMIN".equals(userRole)) {
-                lineItemsHtml.append("<td>₹0.00</td>");
-            }
-
-            lineItemsHtml.append("<td>₹").append(formatCurrency(quotation.getInstallationPrice())).append("</td>")
+                    .append("<td>₹").append(formatCurrency(quotation.getInstallationPrice())).append("</td>")
+                    .append("<td>₹").append(formatCurrency(quotation.getInstallationPrice())).append("</td>")
                     .append("</tr>");
         }
 
@@ -218,29 +274,8 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         htmlContent = htmlContent.replace("{{TAX_AMOUNT}}", formatCurrency(quotation.getTaxAmount()));
         htmlContent = htmlContent.replace("{{TOTAL_AMOUNT}}", formatCurrency(quotation.getTotalAmount()));
 
-        // Show margin only to super admin
-        if ("ROLE_SUPER_ADMIN".equals(userRole) && quotation.getMarginAmount() != null) {
-            String marginRow = "<tr><td colspan='4' class='text-right'><strong>Margin (" +
-                    quotation.getMarginPercentage() + "%):</strong></td>" +
-                    "<td><strong>₹" + formatCurrency(quotation.getMarginAmount()) + "</strong></td></tr>";
-            htmlContent = htmlContent.replace("{{MARGIN_ROW}}", marginRow);
-        } else {
-            htmlContent = htmlContent.replace("{{MARGIN_ROW}}", "");
-        }
-
-        // Notes and terms
+        // Notes
         htmlContent = htmlContent.replace("{{NOTES}}", quotation.getNotes() != null ? quotation.getNotes() : "");
-        htmlContent = htmlContent.replace("{{TERMS_CONDITIONS}}", quotation.getTermsConditions() != null ? quotation.getTermsConditions() : getDefaultTermsAndConditions());
-
-        // Status and approval info
-        htmlContent = htmlContent.replace("{{STATUS}}", quotation.getStatus().toString());
-        if (quotation.getApprovedBy() != null) {
-            htmlContent = htmlContent.replace("{{APPROVED_BY}}", "Approved by: " + quotation.getApprovedBy());
-            htmlContent = htmlContent.replace("{{APPROVED_DATE}}", quotation.getApprovedAt().toString());
-        } else {
-            htmlContent = htmlContent.replace("{{APPROVED_BY}}", "");
-            htmlContent = htmlContent.replace("{{APPROVED_DATE}}", "");
-        }
 
         return htmlContent;
     }
@@ -318,25 +353,26 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     private String createLightingLineItemRow(QuotationLightingDto lighting, String userRole) {
         StringBuilder row = new StringBuilder();
 
-        String specifications = "";
+        String itemDescription = lighting.getItemName();
         if (lighting.getWattage() != null) {
-            specifications += lighting.getWattage() + "W ";
+            itemDescription += " (" + lighting.getWattage() + "W)";
         }
         if (lighting.getProfileType() != null) {
-            specifications += "Profile " + lighting.getProfileType() + " ";
+            itemDescription += " - Profile " + lighting.getProfileType();
+        }
+        if (lighting.getSensorType() != null) {
+            itemDescription += " - " + lighting.getSensorType();
+        }
+        if (lighting.getConnectorType() != null) {
+            itemDescription += " - " + lighting.getConnectorType();
         }
 
         row.append("<tr>")
-                .append("<td>").append(lighting.getItemName()).append(" ").append(specifications).append("</td>")
+                .append("<td>").append(itemDescription).append("</td>")
                 .append("<td>").append(formatCurrency(lighting.getQuantity())).append("</td>")
                 .append("<td>").append(lighting.getUnit()).append("</td>")
-                .append("<td>₹").append(formatCurrency(lighting.getUnitPrice())).append("</td>");
-
-        if ("ROLE_SUPER_ADMIN".equals(userRole)) {
-            row.append("<td>₹").append(formatCurrency(lighting.getMarginAmount())).append("</td>");
-        }
-
-        row.append("<td>₹").append(formatCurrency(lighting.getTotalPrice())).append("</td>")
+                .append("<td>₹").append(formatCurrency(lighting.getUnitPrice())).append("</td>")
+                .append("<td>₹").append(formatCurrency(lighting.getTotalPrice())).append("</td>")
                 .append("</tr>");
 
         return row.toString();
@@ -350,7 +386,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
             PdfWriter writer = new PdfWriter(outputStream);
             PdfDocument pdfDoc = new PdfDocument(writer);
 
-            // Set page size and margins
+            // Set page size
             pdfDoc.setDefaultPageSize(PageSize.A4);
 
             // Create converter properties
@@ -369,6 +405,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
             outputStream.close();
         }
     }
+
 
     private String formatCurrency(BigDecimal amount) {
         if (amount == null) {
