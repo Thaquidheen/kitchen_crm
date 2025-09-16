@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: kitchen_crm_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password123
+      MYSQL_DATABASE: kitchen_crm
+      MYSQL_USER: kitchen_crm
+      MYSQL_PASSWORD: password123
+    ports:
+      - "3306:3306"
+    command: --log-bin-trust-function-creators=1  # ADD THIS LINE
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - kitchen-crm-network
+
+  adminer:
+    image: adminer
+    container_name: kitchen_crm_adminer
+    ports:
+      - "8081:8080"
+    networks:
+      - kitchen-crm-network
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:
+
+networks:
+  kitchen-crm-network:
+    driver: bridge

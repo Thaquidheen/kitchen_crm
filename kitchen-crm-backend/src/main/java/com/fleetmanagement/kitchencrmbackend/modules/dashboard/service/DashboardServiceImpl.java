@@ -56,7 +56,7 @@ public class DashboardServiceImpl implements DashboardService {
 
         // Quotation Metrics
         summary.setTotalQuotations(quotationRepository.count());
-        summary.setPendingQuotations(quotationRepository.countByStatus(Quotation.QuotationStatus.PENDING));
+        summary.setPendingQuotations(quotationRepository.countByStatus(Quotation.QuotationStatus.DRAFT));
         summary.setApprovedQuotations(quotationRepository.countByStatus(Quotation.QuotationStatus.APPROVED));
         summary.setTotalQuotationValue(getTotalQuotationValue());
         summary.setAverageQuotationValue(getAverageQuotationValue());
@@ -230,7 +230,7 @@ public class DashboardServiceImpl implements DashboardService {
         Map<String, Object> realTimeMetrics = new HashMap<>();
 
         // Current Active Metrics
-        realTimeMetrics.put("active_quotations", quotationRepository.countByStatus(Quotation.QuotationStatus.PENDING));
+        realTimeMetrics.put("active_quotations", quotationRepository.countByStatus(Quotation.QuotationStatus.DRAFT));
         realTimeMetrics.put("active_projects", projectRepository.countByStatus(CustomerProject.ProjectStatus.ACTIVE));
         realTimeMetrics.put("installations_today", getInstallationsToday());
         realTimeMetrics.put("payments_today", getPaymentsToday());
@@ -323,7 +323,7 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         // Pending Quotations Alert
-        long pendingQuotations = quotationRepository.countByStatus(Quotation.QuotationStatus.PENDING);
+        long pendingQuotations = quotationRepository.countByStatus(Quotation.QuotationStatus.DRAFT);
         if (pendingQuotations > 10) {
             Map<String, Object> alert = new HashMap<>();
             alert.put("type", "info");

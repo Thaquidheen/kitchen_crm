@@ -43,7 +43,7 @@ public interface CustomerProjectRepository extends JpaRepository<CustomerProject
     @Query("SELECT SUM(p.totalAmount) FROM CustomerProject p WHERE p.status = :status")
     BigDecimal getTotalValueByStatus(@Param("status") CustomerProject.ProjectStatus status);
 
-    @Query("SELECT SUM(p.balanceAmount) FROM CustomerProject p WHERE p.status = 'ACTIVE'")
+    @Query("SELECT SUM(p.totalAmount - COALESCE((SELECT SUM(pay.amount) FROM Payment pay WHERE pay.project.id = p.id AND pay.paymentStatus = 'COMPLETED'), 0)) FROM CustomerProject p WHERE p.status = 'ACTIVE'")
     BigDecimal getTotalPendingPayments();
 
     @Query("SELECT SUM(p.cashInHand) FROM CustomerProject p")

@@ -23,8 +23,7 @@ public class PricingServiceImpl implements PricingService {
 
     @Autowired
     private QuotationLightingRepository lightingRepository;
-    @Autowired
-    private PricingService pricingService;
+
 
     @Override
     public BigDecimal calculateMarginAmount(BigDecimal baseAmount, BigDecimal marginPercentage) {
@@ -35,11 +34,96 @@ public class PricingServiceImpl implements PricingService {
     }
 
     @Override
+    public void calculateLightingLineTotal(QuotationLighting lighting, BigDecimal marginPercentage, BigDecimal taxPercentage) {
+        if (lighting.getUnitPrice() == null || lighting.getQuantity() == null) {
+            lighting.setTotalPrice(BigDecimal.ZERO);
+            return;
+        }
+
+        // Calculate base amount
+        BigDecimal baseAmount = lighting.getUnitPrice().multiply(lighting.getQuantity());
+
+        // Calculate margin
+        BigDecimal marginAmount = calculateMarginAmount(baseAmount, marginPercentage);
+
+        // Calculate amount with margin
+        BigDecimal amountWithMargin = baseAmount.add(marginAmount);
+
+        // Calculate tax on amount with margin
+        BigDecimal taxAmount = calculateTaxAmount(amountWithMargin, taxPercentage);
+
+        // Calculate final total
+        BigDecimal totalPrice = amountWithMargin.add(taxAmount);
+
+        // Set final total
+        lighting.setTotalPrice(totalPrice);
+    }
+    @Override
     public BigDecimal calculateTaxAmount(BigDecimal baseAmount, BigDecimal taxPercentage) {
         if (baseAmount == null || taxPercentage == null) {
             return BigDecimal.ZERO;
         }
         return baseAmount.multiply(taxPercentage.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
+    }
+
+    @Override
+    public void applyMarginToLineItems(Quotation quotation, BigDecimal marginPercentage, String userRole) {
+        // Apply margin to accessories
+        List<QuotationAccessory> accessories = accessoryRepository.findByQuotationId(quotation.getId());
+        for (QuotationAccessory accessory : accessories) {
+            calculateAccessoryLineTotal(accessory, marginPercentage, quotation.getTaxPercentage());
+            accessoryRepository.save(accessory);
+        }
+
+        // Apply margin to cabinets
+        List<QuotationCabinet> cabinets = cabinetRepository.findByQuotationId(quotation.getId());
+        for (QuotationCabinet cabinet : cabinets) {
+            calculateCabinetLineTotal(cabinet, marginPercentage, quotation.getTaxPercentage());
+            cabinetRepository.save(cabinet);
+        }
+
+        // Apply margin to doors
+        List<QuotationDoor> doors = doorRepository.findByQuotationId(quotation.getId());
+        for (QuotationDoor door : doors) {
+            calculateDoorLineTotal(door, marginPercentage, quotation.getTaxPercentage());
+            doorRepository.save(door);
+        }
+
+        // Apply margin to lighting
+        List<QuotationLighting> lighting = lightingRepository.findByQuotationId(quotation.getId());
+        for (QuotationLighting lightingItem : lighting) {
+            calculateLightingLineTotal(lightingItem, marginPercentage, quotation.getTaxPercentage());
+            lightingRepository.save(lightingItem);
+        }
+
+        // After updating all line items, recalculate quotation totals
+        calculateCategoryTotals(quotation);
+        calculateQuotationTotals(quotation);
+    }
+    @Override
+    public void calculateAccessoryLineTotal(QuotationAccessory accessory, BigDecimal marginPercentage, BigDecimal taxPercentage) {
+        if (accessory.getUnitPrice() == null || accessory.getQuantity() == null) {
+            accessory.setTotalPrice(BigDecimal.ZERO);
+            return;
+        }
+
+        // Calculate base amount (accessories use simple quantity-based pricing)
+        BigDecimal baseAmount = accessory.getUnitPrice().multiply(BigDecimal.valueOf(accessory.getQuantity()));
+
+        // Calculate margin
+        BigDecimal marginAmount = calculateMarginAmount(baseAmount, marginPercentage);
+
+        // Calculate amount with margin
+        BigDecimal amountWithMargin = baseAmount.add(marginAmount);
+
+        // Calculate tax on amount with margin
+        BigDecimal taxAmount = calculateTaxAmount(amountWithMargin, taxPercentage);
+
+        // Calculate final total
+        BigDecimal totalPrice = amountWithMargin.add(taxAmount);
+
+        // Set final total price
+        accessory.setTotalPrice(totalPrice);
     }
 
     @Override
@@ -55,12 +139,43 @@ public class PricingServiceImpl implements PricingService {
 
         return sqft.multiply(unitRate);
     }
+    @Override
+    public void calculateCabinetLineTotal(QuotationCabinet cabinet, BigDecimal marginPercentage, BigDecimal taxPercentage) {
+        if (cabinet.getUnitPrice() == null || cabinet.getQuantity() == null) {
+            cabinet.setTotalPrice(BigDecimal.ZERO);
+            return;
+        }
 
+        // Calculate base amount
+        BigDecimal baseAmount;
+        if (cabinet.getCalculatedSqft() != null) {
+            // For cabinets with calculated square footage
+            baseAmount = cabinet.getUnitPrice().multiply(cabinet.getCalculatedSqft()).multiply(BigDecimal.valueOf(cabinet.getQuantity()));
+        } else {
+            // For cabinets with simple quantity-based pricing
+            baseAmount = cabinet.getUnitPrice().multiply(BigDecimal.valueOf(cabinet.getQuantity()));
+        }
+
+        // Calculate margin
+        BigDecimal marginAmount = calculateMarginAmount(baseAmount, marginPercentage);
+
+        // Calculate amount with margin
+        BigDecimal amountWithMargin = baseAmount.add(marginAmount);
+
+        // Calculate tax on amount with margin
+        BigDecimal taxAmount = calculateTaxAmount(amountWithMargin, taxPercentage);
+
+        // Calculate final total
+        BigDecimal totalPrice = amountWithMargin.add(taxAmount);
+
+        // Set final total price
+        cabinet.setTotalPrice(totalPrice);
+    }
     @Override
     public void calculateQuotationTotals(Quotation quotation) {
         // First calculate category-wise totals
         calculateCategoryTotals(quotation);
-        pricingService.calculateQuotationTotals(quotation);
+
 
 
         // Calculate overall totals
@@ -87,6 +202,39 @@ public class PricingServiceImpl implements PricingService {
         quotation.setMarginAmount(totalMargin);
         quotation.setTaxAmount(totalTax);
         quotation.setTotalAmount(totalWithServices);
+    }
+
+    @Override
+    public void calculateDoorLineTotal(QuotationDoor door, BigDecimal marginPercentage, BigDecimal taxPercentage) {
+        if (door.getUnitPrice() == null || door.getQuantity() == null) {
+            door.setTotalPrice(BigDecimal.ZERO);
+            return;
+        }
+
+        // Calculate base amount
+        BigDecimal baseAmount;
+        if (door.getCalculatedSqft() != null) {
+            // For doors with calculated square footage
+            baseAmount = door.getUnitPrice().multiply(door.getCalculatedSqft()).multiply(BigDecimal.valueOf(door.getQuantity()));
+        } else {
+            // For doors with simple quantity-based pricing
+            baseAmount = door.getUnitPrice().multiply(BigDecimal.valueOf(door.getQuantity()));
+        }
+
+        // Calculate margin
+        BigDecimal marginAmount = calculateMarginAmount(baseAmount, marginPercentage);
+
+        // Calculate amount with margin
+        BigDecimal amountWithMargin = baseAmount.add(marginAmount);
+
+        // Calculate tax on amount with margin
+        BigDecimal taxAmount = calculateTaxAmount(amountWithMargin, taxPercentage);
+
+        // Calculate final total
+        BigDecimal totalPrice = amountWithMargin.add(taxAmount);
+
+        // Set final total price
+        door.setTotalPrice(totalPrice);
     }
 
     @Override

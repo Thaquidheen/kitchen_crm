@@ -245,27 +245,27 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         return htmlContent;
     }
 
-    private String createAccessoryLineItemRow(QuotationAccessoryDto accessory, String userRole) {
-        StringBuilder row = new StringBuilder();
-
-        String itemName = accessory.getCustomItem() ? accessory.getCustomItemName() : accessory.getAccessoryName();
-        String brandInfo = accessory.getBrandName() != null ? " (" + accessory.getBrandName() + ")" : "";
-
-        row.append("<tr>")
-                .append("<td>").append(itemName).append(brandInfo).append("</td>")
-                .append("<td>").append(accessory.getQuantity()).append("</td>")
-                .append("<td>Pieces</td>")
-                .append("<td>₹").append(formatCurrency(accessory.getUnitPrice())).append("</td>");
-
-        if ("ROLE_SUPER_ADMIN".equals(userRole)) {
-            row.append("<td>₹").append(formatCurrency(accessory.getMarginAmount())).append("</td>");
-        }
-
-        row.append("<td>₹").append(formatCurrency(accessory.getTotalPrice())).append("</td>")
-                .append("</tr>");
-
-        return row.toString();
-    }
+//    private String createAccessoryLineItemRow(QuotationAccessoryDto accessory, String userRole) {
+//        StringBuilder row = new StringBuilder();
+//
+//        String itemName = accessory.getCustomItem() ? accessory.getCustomItemName() : accessory.getAccessoryName();
+//        String brandInfo = accessory.getBrandName() != null ? " (" + accessory.getBrandName() + ")" : "";
+//
+//        row.append("<tr>")
+//                .append("<td>").append(itemName).append(brandInfo).append("</td>")
+//                .append("<td>").append(accessory.getQuantity()).append("</td>")
+//                .append("<td>Pieces</td>")
+//                .append("<td>₹").append(formatCurrency(accessory.getUnitPrice())).append("</td>");
+//
+////        if ("ROLE_SUPER_ADMIN".equals(userRole)) {
+////            row.append("<td>₹").append(formatCurrency(accessory.getMarginAmount())).append("</td>");
+////        }
+//
+//        row.append("<td>₹").append(formatCurrency(accessory.getTotalPrice())).append("</td>")
+//                .append("</tr>");
+//
+//        return row.toString();
+//    }
 
     private String createCabinetLineItemRow(QuotationCabinetDto cabinet, String userRole) {
         StringBuilder row = new StringBuilder();
@@ -578,7 +578,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         row.append("<tr>")
                 .append("<td>").append(accessory.getAccessoryName()).append("</td>")
                 .append("<td>").append(accessory.getQuantity()).append("</td>")
-                .append("<td>").append(accessory.getUnit()).append("</td>")
+                .append("<td>").append(accessory.getUnitPrice()).append("</td>")
                 .append("<td>₹").append(formatCurrency(accessory.getUnitPrice())).append("</td>")
                 .append("<td>₹").append(formatCurrency(baseAmount)).append("</td>")
                 .append("</tr>");
@@ -659,6 +659,91 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 .append("<td>").append(lighting.getUnit()).append("</td>")
                 .append("<td>₹").append(formatCurrency(lighting.getUnitPrice())).append("</td>")
                 .append("<td>₹").append(formatCurrency(baseAmount)).append("</td>")
+                .append("</tr>");
+
+        return row.toString();
+    }
+
+    private String createAccessoryLineItemRow(QuotationAccessoryDto accessory, String userRole) {
+        StringBuilder row = new StringBuilder();
+
+        String itemName = accessory.getCustomItem() ?
+                accessory.getCustomItemName() : accessory.getAccessoryName();
+        String brandInfo = accessory.getBrandName() != null ?
+                " (" + accessory.getBrandName() + ")" : "";
+
+        row.append("<tr class='accessory-row'>")
+                .append("<td class='item-description'>");
+
+        // Check if accessory has an image
+        if (accessory.getImageUrl() != null && !accessory.getImageUrl().trim().isEmpty()) {
+            // Create item with image layout
+            row.append("<div class='item-with-image'>")
+                    .append("<div class='item-image'>")
+                    .append("<img src='").append(accessory.getImageUrl()).append("' ")
+                    .append("alt='").append(itemName).append(" image' ")
+                    .append("style='width: 80px; height: 80px; object-fit: cover; border-radius: 6px; ")
+                    .append("border: 1px solid #ddd; margin-right: 12px;' />")
+                    .append("</div>")
+                    .append("<div class='item-details'>")
+                    .append("<div class='item-name'><strong>").append(itemName).append(brandInfo).append("</strong></div>");
+
+            // Add dimensions if available
+            if (accessory.getWidthMm() != null && accessory.getHeightMm() != null) {
+                row.append("<div class='item-dimensions' style='font-size: 11px; color: #666; margin-top: 2px;'>")
+                        .append("Size: ").append(accessory.getWidthMm()).append("mm × ")
+                        .append(accessory.getHeightMm()).append("mm");
+
+                if (accessory.getDepthMm() != null) {
+                    row.append(" × ").append(accessory.getDepthMm()).append("mm");
+                }
+                row.append("</div>");
+            }
+
+            // Add material code if available
+            if (accessory.getMaterialCode() != null && !accessory.getMaterialCode().trim().isEmpty()) {
+                row.append("<div class='item-code' style='font-size: 10px; color: #888; margin-top: 1px;'>")
+                        .append("Code: ").append(accessory.getMaterialCode()).append("</div>");
+            }
+
+            // Add color if available
+            if (accessory.getColor() != null && !accessory.getColor().trim().isEmpty()) {
+                row.append("<div class='item-color' style='font-size: 10px; color: #888;'>")
+                        .append("Color: ").append(accessory.getColor()).append("</div>");
+            }
+
+            row.append("</div>") // Close item-details
+                    .append("</div>"); // Close item-with-image
+        } else {
+            // Fallback for items without images
+            row.append("<div class='item-text-only'>")
+                    .append("<strong>").append(itemName).append(brandInfo).append("</strong>");
+
+            if (accessory.getWidthMm() != null && accessory.getHeightMm() != null) {
+                row.append("<br><small style='color: #666;'>")
+                        .append(accessory.getWidthMm()).append("mm × ")
+                        .append(accessory.getHeightMm()).append("mm</small>");
+            }
+
+            if (accessory.getMaterialCode() != null) {
+                row.append("<br><small style='color: #888;'>Code: ")
+                        .append(accessory.getMaterialCode()).append("</small>");
+            }
+
+            row.append("</div>");
+        }
+
+        row.append("</td>")
+                .append("<td style='text-align: center; vertical-align: middle;'>")
+                .append(accessory.getQuantity()).append("</td>")
+                .append("<td style='text-align: center; vertical-align: middle;'>Pieces</td>")
+                .append("<td style='text-align: right; vertical-align: middle;'>₹")
+                .append(formatCurrency(accessory.getUnitPrice())).append("</td>");
+
+
+
+        row.append("<td style='text-align: right; vertical-align: middle;'><strong>₹")
+                .append(formatCurrency(accessory.getTotalPrice())).append("</strong></td>")
                 .append("</tr>");
 
         return row.toString();

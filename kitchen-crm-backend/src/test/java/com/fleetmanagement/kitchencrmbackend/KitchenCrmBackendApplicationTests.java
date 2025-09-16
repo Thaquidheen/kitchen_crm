@@ -8,6 +8,6 @@ class KitchenCrmBackendApplicationTests {
 
     @Test
     void contextLoads() {
+        // This test will pass if application context loads successfully
     }
-
 }

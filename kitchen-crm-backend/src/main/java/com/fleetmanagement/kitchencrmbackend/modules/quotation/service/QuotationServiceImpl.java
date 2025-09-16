@@ -1,5 +1,6 @@
 package com.fleetmanagement.kitchencrmbackend.modules.quotation.service;
 
+import com.fleetmanagement.kitchencrmbackend.modules.product.entity.Accessory;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.*;
@@ -249,9 +250,9 @@ public class QuotationServiceImpl implements QuotationService {
                 cabinet.setHeightMm(cabinetDto.getHeightMm());
                 cabinet.setDepthMm(cabinetDto.getDepthMm());
                 cabinet.setUnitPrice(cabinetDto.getUnitPrice());
-                cabinet.setCabinetFinish(cabinetDto.getCabinetFinish());
-                cabinet.setDescription(cabinetDto.getDescription());
-                cabinet.setCustomDimensions(cabinetDto.getCustomDimensions());
+
+                cabinet.setCustomDimensions(cabinetDto.getCustomDimensions() != null && cabinetDto.getCustomDimensions()
+                        ? "true" : "false");
 
                 pricingService.calculateCabinetLineTotal(cabinet, quotation.getMarginPercentage(), quotation.getTaxPercentage());
                 cabinetRepository.save(cabinet);
@@ -270,7 +271,7 @@ public class QuotationServiceImpl implements QuotationService {
                 door.setDoorFinish(doorDto.getDoorFinish());
                 door.setDoorStyle(doorDto.getDoorStyle());
                 door.setDescription(doorDto.getDescription());
-                door.setCustomDimensions(doorDto.getCustomDimensions());
+                door.setCustomDimensions(doorDto.getCustomDimensions() != null ? doorDto.getCustomDimensions().toString() : null);
 
                 pricingService.calculateDoorLineTotal(door, quotation.getMarginPercentage(), quotation.getTaxPercentage());
                 doorRepository.save(door);
@@ -320,8 +321,7 @@ public class QuotationServiceImpl implements QuotationService {
             copy.setDescription(original.getDescription());
             copy.setCustomItem(original.getCustomItem());
             copy.setCustomItemName(original.getCustomItemName());
-            copy.setMarginAmount(original.getMarginAmount());
-            copy.setTaxAmount(original.getTaxAmount());
+
             copy.setTotalPrice(original.getTotalPrice());
             accessoryRepository.save(copy);
         }
@@ -338,11 +338,9 @@ public class QuotationServiceImpl implements QuotationService {
             copy.setDepthMm(original.getDepthMm());
             copy.setCalculatedSqft(original.getCalculatedSqft());
             copy.setUnitPrice(original.getUnitPrice());
-            copy.setMarginAmount(original.getMarginAmount());
-            copy.setTaxAmount(original.getTaxAmount());
+
             copy.setTotalPrice(original.getTotalPrice());
-            copy.setCabinetFinish(original.getCabinetFinish());
-            copy.setDescription(original.getDescription());
+
             copy.setCustomDimensions(original.getCustomDimensions());
             cabinetRepository.save(copy);
         }
@@ -358,8 +356,7 @@ public class QuotationServiceImpl implements QuotationService {
             copy.setHeightMm(original.getHeightMm());
             copy.setCalculatedSqft(original.getCalculatedSqft());
             copy.setUnitPrice(original.getUnitPrice());
-            copy.setMarginAmount(original.getMarginAmount());
-            copy.setTaxAmount(original.getTaxAmount());
+
             copy.setTotalPrice(original.getTotalPrice());
             copy.setDoorFinish(original.getDoorFinish());
             copy.setDoorStyle(original.getDoorStyle());
@@ -379,8 +376,7 @@ public class QuotationServiceImpl implements QuotationService {
             copy.setQuantity(original.getQuantity());
             copy.setUnit(original.getUnit());
             copy.setUnitPrice(original.getUnitPrice());
-            copy.setMarginAmount(original.getMarginAmount());
-            copy.setTaxAmount(original.getTaxAmount());
+
             copy.setTotalPrice(original.getTotalPrice());
             copy.setSpecifications(original.getSpecifications());
             copy.setDescription(original.getDescription());
@@ -509,28 +505,52 @@ public class QuotationServiceImpl implements QuotationService {
         );
     }
 
+
     private List<QuotationAccessoryDto> loadAccessories(Long quotationId, String userRole) {
         List<QuotationAccessory> accessories = accessoryRepository.findByQuotationId(quotationId);
-        return accessories.stream().map(accessory -> {
+        return accessories.stream().map(quotationAccessory -> {
             QuotationAccessoryDto dto = new QuotationAccessoryDto();
-            dto.setId(accessory.getId());
-            dto.setQuantity(accessory.getQuantity());
-            dto.setUnitPrice(accessory.getUnitPrice());
-            dto.setTotalPrice(accessory.getTotalPrice());
-            dto.setDescription(accessory.getDescription());
-            dto.setCustomItem(accessory.getCustomItem());
-            dto.setCustomItemName(accessory.getCustomItemName());
 
-            // Only show margin to super admin
-            if ("ROLE_SUPER_ADMIN".equals(userRole)) {
-                dto.setMarginAmount(accessory.getMarginAmount());
-                dto.setTaxAmount(accessory.getTaxAmount());
+            // Basic quotation accessory fields
+            dto.setId(quotationAccessory.getId());
+            dto.setQuantity(quotationAccessory.getQuantity());
+            dto.setUnitPrice(quotationAccessory.getUnitPrice());
+            dto.setTotalPrice(quotationAccessory.getTotalPrice());
+            dto.setDescription(quotationAccessory.getDescription());
+            dto.setCustomItem(quotationAccessory.getCustomItem());
+            dto.setCustomItemName(quotationAccessory.getCustomItemName());
+
+            // Map accessory entity data for images and details
+            Accessory accessory = quotationAccessory.getAccessory();
+            if (accessory != null) {
+                dto.setAccessoryId(accessory.getId());
+                dto.setAccessoryName(accessory.getName());
+                dto.setImageUrl(accessory.getImageUrl());          // KEY: Image URL mapping
+                dto.setWidthMm(accessory.getWidthMm());
+                dto.setHeightMm(accessory.getHeightMm());
+                dto.setDepthMm(accessory.getDepthMm());
+                dto.setColor(accessory.getColor());
+                dto.setMaterialCode(accessory.getMaterialCode());
+
+                // Brand and category info
+                if (accessory.getBrand() != null) {
+                    dto.setBrandName(accessory.getBrand().getName());
+                }
+                if (accessory.getCategory() != null) {
+                    dto.setCategoryName(accessory.getCategory().getName());
+                }
+            } else if (quotationAccessory.getCustomItem()) {
+                // For custom items, use the custom name
+                dto.setAccessoryName(quotationAccessory.getCustomItemName());
             }
+
+            // Note: Your QuotationAccessory entity doesn't have marginAmount/taxAmount fields
+            // These would need to be calculated if needed for admin view
+            // For now, we'll leave them null unless you add these fields to the entity
 
             return dto;
         }).toList();
     }
-
     private List<QuotationCabinetDto> loadCabinets(Long quotationId, String userRole) {
         List<QuotationCabinet> cabinets = cabinetRepository.findByQuotationId(quotationId);
         return cabinets.stream().map(cabinet -> {
@@ -543,14 +563,24 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setCalculatedSqft(cabinet.getCalculatedSqft());
             dto.setUnitPrice(cabinet.getUnitPrice());
             dto.setTotalPrice(cabinet.getTotalPrice());
-            dto.setCabinetFinish(cabinet.getCabinetFinish());
-            dto.setDescription(cabinet.getDescription());
-            dto.setCustomDimensions(cabinet.getCustomDimensions());
+
+            dto.setCustomDimensions("true".equals(cabinet.getCustomDimensions()));
 
             // Only show margin to super admin
             if ("ROLE_SUPER_ADMIN".equals(userRole)) {
-                dto.setMarginAmount(cabinet.getMarginAmount());
-                dto.setTaxAmount(cabinet.getTaxAmount());
+                // Calculate margin and tax for this specific item
+                BigDecimal baseAmount;
+                if (cabinet.getCalculatedSqft() != null) {
+                    baseAmount = cabinet.getUnitPrice().multiply(cabinet.getCalculatedSqft()).multiply(BigDecimal.valueOf(cabinet.getQuantity()));
+                } else {
+                    baseAmount = cabinet.getUnitPrice().multiply(BigDecimal.valueOf(cabinet.getQuantity()));
+                }
+
+                BigDecimal marginAmount = pricingService.calculateMarginAmount(baseAmount, cabinet.getQuotation().getMarginPercentage());
+                BigDecimal taxAmount = pricingService.calculateTaxAmount(baseAmount.add(marginAmount), cabinet.getQuotation().getTaxPercentage());
+
+                dto.setMarginAmount(marginAmount);
+                dto.setTaxAmount(taxAmount);
             }
 
             return dto;
@@ -571,12 +601,22 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setDoorFinish(door.getDoorFinish());
             dto.setDoorStyle(door.getDoorStyle());
             dto.setDescription(door.getDescription());
-            dto.setCustomDimensions(door.getCustomDimensions());
+            dto.setCustomDimensions("true".equals(door.getCustomDimensions()));
 
             // Only show margin to super admin
             if ("ROLE_SUPER_ADMIN".equals(userRole)) {
-                dto.setMarginAmount(door.getMarginAmount());
-                dto.setTaxAmount(door.getTaxAmount());
+                BigDecimal baseAmount;
+                if (door.getCalculatedSqft() != null) {
+                    baseAmount = door.getUnitPrice().multiply(door.getCalculatedSqft()).multiply(BigDecimal.valueOf(door.getQuantity()));
+                } else {
+                    baseAmount = door.getUnitPrice().multiply(BigDecimal.valueOf(door.getQuantity()));
+                }
+
+                BigDecimal marginAmount = pricingService.calculateMarginAmount(baseAmount, door.getQuotation().getMarginPercentage());
+                BigDecimal taxAmount = pricingService.calculateTaxAmount(baseAmount.add(marginAmount), door.getQuotation().getTaxPercentage());
+
+                dto.setMarginAmount(marginAmount);
+                dto.setTaxAmount(taxAmount);
             }
 
             return dto;
@@ -604,8 +644,8 @@ public class QuotationServiceImpl implements QuotationService {
 
             // Only show margin to super admin
             if ("ROLE_SUPER_ADMIN".equals(userRole)) {
-                dto.setMarginAmount(lighting.getMarginAmount());
-                dto.setTaxAmount(lighting.getTaxAmount());
+                dto.setMarginAmount(lighting.getQuotation().getMarginAmount());
+                dto.setTaxAmount(lighting.getQuotation().getTaxAmount());
             }
 
             return dto;
