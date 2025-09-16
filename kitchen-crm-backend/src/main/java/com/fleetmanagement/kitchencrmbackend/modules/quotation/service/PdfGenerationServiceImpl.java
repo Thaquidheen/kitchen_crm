@@ -1,8 +1,11 @@
+package com.fleetmanagement.kitchencrmbackend.modules.quotation.service;
+
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.PdfGenerationService;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationService;
+
 import com.itextpdf.html2pdf.ConverterProperties;
 import com.itextpdf.html2pdf.HtmlConverter;
 import com.itextpdf.kernel.geom.PageSize;
@@ -190,78 +193,191 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     """;
     }
 
+    private String createAccessoryLineItemRowFixed(QuotationAccessoryDto accessory, String userRole) {
+        StringBuilder row = new StringBuilder();
+
+        // Get item name - handle both custom and regular accessories
+        String itemName = "";
+        if (accessory.getCustomItem() != null && accessory.getCustomItem()) {
+            itemName = accessory.getCustomItemName() != null ? accessory.getCustomItemName() : "Custom Accessory";
+        } else {
+            itemName = accessory.getAccessoryName() != null ? accessory.getAccessoryName() : "Accessory Item";
+        }
+
+        // Add brand info if available
+        String brandInfo = "";
+        if (accessory.getBrandName() != null && !accessory.getBrandName().trim().isEmpty()) {
+            brandInfo = " - " + accessory.getBrandName();
+        }
+
+        // Add specifications if available
+        String specifications = "";
+        if (accessory.getWidthMm() != null && accessory.getHeightMm() != null) {
+            specifications = " (" + accessory.getWidthMm() + "×" + accessory.getHeightMm();
+            if (accessory.getDepthMm() != null) {
+                specifications += "×" + accessory.getDepthMm();
+            }
+            specifications += "mm)";
+        }
+
+        row.append("<tr>")
+                .append("<td>").append(itemName).append(brandInfo).append(specifications).append("</td>")
+                .append("<td>").append(accessory.getQuantity()).append("</td>")
+                .append("<td>Pieces</td>")
+                .append("<td class='amount'>₹").append(formatCurrency(accessory.getTotalPrice())).append("</td>")
+                .append("</tr>");
+
+        return row.toString();
+    }
+    private String createCabinetLineItemRowFixed(QuotationCabinetDto cabinet, String userRole) {
+        StringBuilder row = new StringBuilder();
+
+        // Get cabinet name - handle both custom and regular cabinets
+        String itemName = "";
+        if (cabinet.getCabinetTypeName() != null && !cabinet.getCabinetTypeName().trim().isEmpty()) {
+            itemName = cabinet.getCabinetTypeName();
+        } else {
+            itemName = "Cabinet";
+        }
+
+        // Add dimensions
+        String dimensions = "";
+        if (cabinet.getWidthMm() != null && cabinet.getHeightMm() != null && cabinet.getDepthMm() != null) {
+            dimensions = " (" + cabinet.getWidthMm() + "×" + cabinet.getHeightMm() + "×" + cabinet.getDepthMm() + "mm)";
+        }
+
+        // Determine unit type
+        String unit = cabinet.getCalculatedSqft() != null ? "Sq.ft" : "Pieces";
+
+        row.append("<tr>")
+                .append("<td>").append(itemName).append(dimensions).append("</td>")
+                .append("<td>").append(cabinet.getQuantity()).append("</td>")
+                .append("<td>").append(unit).append("</td>")
+                .append("<td class='amount'>₹").append(formatCurrency(cabinet.getTotalPrice())).append("</td>")
+                .append("</tr>");
+
+        return row.toString();
+    }
+    private String createDoorLineItemRowFixed(QuotationDoorDto door, String userRole) {
+        StringBuilder row = new StringBuilder();
+
+        String itemName = door.getDoorTypeName() != null ? door.getDoorTypeName() : "Door";
+
+        // Add style and finish info
+        String styleInfo = "";
+        if (door.getDoorStyle() != null || door.getDoorFinish() != null) {
+            styleInfo = " (";
+            if (door.getDoorStyle() != null) {
+                styleInfo += door.getDoorStyle();
+            }
+            if (door.getDoorFinish() != null) {
+                if (door.getDoorStyle() != null) styleInfo += ", ";
+                styleInfo += door.getDoorFinish();
+            }
+            styleInfo += ")";
+        }
+
+        // Add dimensions
+        String dimensions = "";
+        if (door.getWidthMm() != null && door.getHeightMm() != null) {
+            dimensions = " - " + door.getWidthMm() + "×" + door.getHeightMm() + "mm";
+        }
+
+        String unit = door.getCalculatedSqft() != null ? "Sq.ft" : "Pieces";
+
+        row.append("<tr>")
+                .append("<td>").append(itemName).append(styleInfo).append(dimensions).append("</td>")
+                .append("<td>").append(door.getQuantity()).append("</td>")
+                .append("<td>").append(unit).append("</td>")
+                .append("<td class='amount'>₹").append(formatCurrency(door.getTotalPrice())).append("</td>")
+                .append("</tr>");
+
+        return row.toString();
+    }
+    private String createLightingLineItemRowFixed(QuotationLightingDto lighting, String userRole) {
+        StringBuilder row = new StringBuilder();
+
+        // Get lighting item name
+        String itemName = lighting.getItemName() != null ? lighting.getItemName() : "Lighting Item";
+
+        row.append("<tr>")
+                .append("<td>").append(itemName).append("</td>")
+                .append("<td>").append(lighting.getQuantity()).append("</td>")
+                .append("<td>Pieces</td>")
+                .append("<td class='amount'>₹").append(formatCurrency(lighting.getTotalPrice())).append("</td>")
+                .append("</tr>");
+
+        return row.toString();
+    }
     private String replacePlaceholders(String htmlContent, QuotationDto quotation, String userRole, boolean isBill) {
         // Company information
-        htmlContent = htmlContent.replace("{{COMPANY_NAME}}", "Kitchen CRM Solutions");
-        htmlContent = htmlContent.replace("{{COMPANY_ADDRESS}}", "123 Business Street, City, State 12345");
-        htmlContent = htmlContent.replace("{{COMPANY_PHONE}}", "+1 (555) 123-4567");
+        htmlContent = htmlContent.replace("{{COMPANY_NAME}}", "Kitchen CRM Company");
+        htmlContent = htmlContent.replace("{{COMPANY_ADDRESS}}", "123 Business Street, City, State - 12345");
+        htmlContent = htmlContent.replace("{{COMPANY_PHONE}}", "+91 9876543210");
         htmlContent = htmlContent.replace("{{COMPANY_EMAIL}}", "info@kitchencrm.com");
 
-        // Document info
-        String documentTitle = isBill ? "INVOICE" : "QUOTATION";
-        htmlContent = htmlContent.replace("{{DOCUMENT_TITLE}}", documentTitle);
+        // Document information
+        htmlContent = htmlContent.replace("{{DOCUMENT_TITLE}}", isBill ? "INVOICE" : "QUOTATION");
         htmlContent = htmlContent.replace("{{DOCUMENT_NUMBER}}", quotation.getQuotationNumber());
 
-        // Customer info
-        htmlContent = htmlContent.replace("{{CUSTOMER_NAME}}", quotation.getCustomerName());
+        // Customer information
+        htmlContent = htmlContent.replace("{{CUSTOMER_NAME}}", quotation.getCustomerName() != null ? quotation.getCustomerName() : "");
         htmlContent = htmlContent.replace("{{PROJECT_NAME}}", quotation.getProjectName() != null ? quotation.getProjectName() : "");
 
         // Dates
         htmlContent = htmlContent.replace("{{CREATED_DATE}}", quotation.getCreatedAt().toLocalDate().toString());
         htmlContent = htmlContent.replace("{{VALID_UNTIL}}", quotation.getValidUntil() != null ? quotation.getValidUntil().toString() : "");
 
-        // Generate line items HTML
+        // Generate line items HTML - FIXED VERSION
         StringBuilder lineItemsHtml = new StringBuilder();
 
-        // Add accessories
+        // Add accessories with proper names
         if (quotation.getAccessories() != null && !quotation.getAccessories().isEmpty()) {
-            lineItemsHtml.append("<tr style='background-color: #f8f9fa; font-weight: bold;'><td colspan='5'>ACCESSORIES</td></tr>");
+            lineItemsHtml.append("<tr class='category-header'><td colspan='4'>ACCESSORIES</td></tr>");
             for (QuotationAccessoryDto accessory : quotation.getAccessories()) {
-                lineItemsHtml.append(createAccessoryLineItemRow(accessory, userRole));
+                lineItemsHtml.append(createAccessoryLineItemRowFixed(accessory, userRole));
             }
         }
 
-        // Add cabinets
+        // Add cabinets with proper names
         if (quotation.getCabinets() != null && !quotation.getCabinets().isEmpty()) {
-            lineItemsHtml.append("<tr style='background-color: #f8f9fa; font-weight: bold;'><td colspan='5'>CABINETS</td></tr>");
+            lineItemsHtml.append("<tr class='category-header'><td colspan='4'>CABINETS</td></tr>");
             for (QuotationCabinetDto cabinet : quotation.getCabinets()) {
-                lineItemsHtml.append(createCabinetLineItemRow(cabinet, userRole));
+                lineItemsHtml.append(createCabinetLineItemRowFixed(cabinet, userRole));
             }
         }
 
         // Add doors
         if (quotation.getDoors() != null && !quotation.getDoors().isEmpty()) {
-            lineItemsHtml.append("<tr style='background-color: #f8f9fa; font-weight: bold;'><td colspan='5'>DOORS</td></tr>");
+            lineItemsHtml.append("<tr class='category-header'><td colspan='4'>DOORS</td></tr>");
             for (QuotationDoorDto door : quotation.getDoors()) {
-                lineItemsHtml.append(createDoorLineItemRow(door, userRole));
+                lineItemsHtml.append(createDoorLineItemRowFixed(door, userRole));
             }
         }
 
-        // Add lighting - THIS IS THE KEY FIX FOR YOUR LIGHTING ITEMS
+        // Add lighting
         if (quotation.getLighting() != null && !quotation.getLighting().isEmpty()) {
-            lineItemsHtml.append("<tr style='background-color: #f8f9fa; font-weight: bold;'><td colspan='5'>LIGHTING & PROFILES</td></tr>");
+            lineItemsHtml.append("<tr class='category-header'><td colspan='4'>LIGHTING & PROFILES</td></tr>");
             for (QuotationLightingDto lighting : quotation.getLighting()) {
-                lineItemsHtml.append(createLightingLineItemRow(lighting, userRole));
+                lineItemsHtml.append(createLightingLineItemRowFixed(lighting, userRole));
             }
         }
 
-        // Add transportation and installation
+        // Add services (transportation and installation)
         if (quotation.getTransportationPrice().compareTo(BigDecimal.ZERO) > 0) {
             lineItemsHtml.append("<tr>")
-                    .append("<td>Transportation</td>")
+                    .append("<td>Transportation Service</td>")
                     .append("<td>1</td>")
                     .append("<td>Service</td>")
-                    .append("<td>₹").append(formatCurrency(quotation.getTransportationPrice())).append("</td>")
                     .append("<td>₹").append(formatCurrency(quotation.getTransportationPrice())).append("</td>")
                     .append("</tr>");
         }
 
         if (quotation.getInstallationPrice().compareTo(BigDecimal.ZERO) > 0) {
             lineItemsHtml.append("<tr>")
-                    .append("<td>Installation</td>")
+                    .append("<td>Installation Service</td>")
                     .append("<td>1</td>")
                     .append("<td>Service</td>")
-                    .append("<td>₹").append(formatCurrency(quotation.getInstallationPrice())).append("</td>")
                     .append("<td>₹").append(formatCurrency(quotation.getInstallationPrice())).append("</td>")
                     .append("</tr>");
         }
@@ -274,12 +390,12 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         htmlContent = htmlContent.replace("{{TAX_AMOUNT}}", formatCurrency(quotation.getTaxAmount()));
         htmlContent = htmlContent.replace("{{TOTAL_AMOUNT}}", formatCurrency(quotation.getTotalAmount()));
 
-        // Notes
-        htmlContent = htmlContent.replace("{{NOTES}}", quotation.getNotes() != null ? quotation.getNotes() : "");
+        // Notes and terms
+        htmlContent = htmlContent.replace("{{NOTES}}", quotation.getNotes() != null ? quotation.getNotes() : "No special notes");
+        htmlContent = htmlContent.replace("{{TERMS_CONDITIONS}}", quotation.getTermsConditions() != null ? quotation.getTermsConditions() : "Standard terms and conditions apply");
 
         return htmlContent;
     }
-
 //    private String createAccessoryLineItemRow(QuotationAccessoryDto accessory, String userRole) {
 //        StringBuilder row = new StringBuilder();
 //

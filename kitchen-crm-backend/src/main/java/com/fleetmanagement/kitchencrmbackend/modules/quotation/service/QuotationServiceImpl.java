@@ -1,7 +1,9 @@
 package com.fleetmanagement.kitchencrmbackend.modules.quotation.service;
 
 import com.fleetmanagement.kitchencrmbackend.modules.product.entity.Accessory;
-import com.fleetmanagement.kitchencrmbackend.modules.product.repository.LightProfileRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.product.entity.CabinetType;
+import com.fleetmanagement.kitchencrmbackend.modules.product.entity.DoorType;
+import com.fleetmanagement.kitchencrmbackend.modules.product.repository.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.*;
@@ -9,13 +11,12 @@ import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerRepository;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.fleetmanagement.kitchencrmbackend.modules.product.repository.DriverRepository;
-import com.fleetmanagement.kitchencrmbackend.modules.product.repository.ConnectorRepository;
-import com.fleetmanagement.kitchencrmbackend.modules.product.repository.SensorRepository;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -59,6 +60,10 @@ public class QuotationServiceImpl implements QuotationService {
     private PricingService pricingService;
     @Autowired
     private LightProfileRepository lightProfileRepository;
+    @Autowired
+    private CabinetTypeRepository cabinetTypeRepository;
+    @Autowired
+    private DoorTypeRepository doorTypeRepository;
 
     @Override
     public ApiResponse<Page<QuotationSummaryDto>> getAllQuotations(Long customerId, Quotation.QuotationStatus status,
@@ -68,7 +73,48 @@ public class QuotationServiceImpl implements QuotationService {
         Page<QuotationSummaryDto> quotationDtos = quotations.map(this::convertToSummaryDto);
         return ApiResponse.success(quotationDtos);
     }
+    private void populateAccessoryItemDetails(QuotationAccessory quotationAccessory, Long accessoryId) {
+        if (accessoryId != null) {
+            Accessory accessory = accessoryRepository.findById(accessoryId).orElse(null);
+            if (accessory != null) {
+                quotationAccessory.setAccessory(accessory);
+                // The item name will be populated from the accessory entity in the DTO mapping
+            }
+        }
+    }
 
+    private void populateCabinetItemDetails(QuotationCabinet quotationCabinet, Long cabinetTypeId) {
+        if (cabinetTypeId != null) {
+            CabinetType cabinetType = cabinetTypeRepository.findById(cabinetTypeId).orElse(null);
+            if (cabinetType != null) {
+                quotationCabinet.setCabinetType(cabinetType);
+                // The cabinet type name will be populated in the DTO mapping
+            }
+        }
+    }
+
+    private void populateDoorItemDetails(QuotationDoor quotationDoor, Long doorTypeId) {
+        if (doorTypeId != null) {
+            DoorType doorType = doorTypeRepository.findById(doorTypeId).orElse(null);
+            if (doorType != null) {
+                quotationDoor.setDoorType(doorType);
+            }
+        }
+    }
+
+    private void populateLightingItemDetails(QuotationLighting quotationLighting, String itemType, Long itemId) {
+        if ("LIGHTING".equals(itemType) && itemId != null) {
+            Lighting lighting = lightingRepository.findById(itemId).orElse(null);
+            if (lighting != null) {
+                quotationLighting.setItemName(lighting.getName());
+            }
+        } else if ("PROFILE".equals(itemType) && itemId != null) {
+            Profile profile = lightProfileRepository.findById(itemId).orElse(null);
+            if (profile != null) {
+                quotationLighting.setItemName(profile.getName());
+            }
+        }
+    }
     @Override
     public ApiResponse<QuotationDto> getQuotationById(Long id, String userRole) {
         Quotation quotation = quotationRepository.findById(id).orElse(null);
@@ -273,82 +319,9 @@ public class QuotationServiceImpl implements QuotationService {
         }
     }
 
-    private void populateLightingItemDetails(QuotationLighting lighting, String itemType, Long itemId) {
-        try {
-            switch (itemType) {
-                case "LIGHT_PROFILE":
-                    lightProfileRepository.findById(itemId).ifPresentOrElse(profile -> {
-                        lighting.setItemName("LED Profile " + profile.getProfileType());
-                        lighting.setUnit("METER");
-                        lighting.setProfileType(profile.getProfileType().toString());
-                        lighting.setDescription("LED Profile Type " + profile.getProfileType());
-                    }, () -> {
-                        // Fallback if profile not found
-                        lighting.setItemName("LED Profile - Item ID: " + itemId);
-                        lighting.setUnit("METER");
-                        lighting.setDescription("LED Profile");
-                    });
-                    break;
-
-                case "DRIVER":
-                    driverRepository.findById(itemId).ifPresentOrElse(driver -> {
-                        lighting.setItemName(driver.getWattage() + "W LED Driver");
-                        lighting.setUnit("PIECE");
-                        lighting.setWattage(driver.getWattage());
-                        lighting.setDescription(driver.getWattage() + "W LED Driver");
-                    }, () -> {
-                        // Fallback if driver not found
-                        lighting.setItemName("LED Driver - Item ID: " + itemId);
-                        lighting.setUnit("PIECE");
-                        lighting.setDescription("LED Driver");
-                    });
-                    break;
-
-                case "CONNECTOR":
-                    connectorRepository.findById(itemId).ifPresentOrElse(connector -> {
-                        lighting.setItemName(connector.getType().toString() + " Connector");
-                        lighting.setUnit("PIECE");
-                        lighting.setConnectorType(connector.getType().toString());
-                        lighting.setDescription(connector.getType().toString() + " LED Connector");
-                    }, () -> {
-                        // Fallback if connector not found
-                        lighting.setItemName("LED Connector - Item ID: " + itemId);
-                        lighting.setUnit("PIECE");
-                        lighting.setDescription("LED Connector");
-                    });
-                    break;
-
-                case "SENSOR":
-                    sensorRepository.findById(itemId).ifPresentOrElse(sensor -> {
-                        lighting.setItemName(sensor.getType().toString() + " Sensor");
-                        lighting.setUnit("PIECE");
-                        lighting.setSensorType(sensor.getType().toString());
-                        lighting.setDescription(sensor.getType().toString() + " Motion Sensor");
-                    }, () -> {
-                        // Fallback if sensor not found
-                        lighting.setItemName("Motion Sensor - Item ID: " + itemId);
-                        lighting.setUnit("PIECE");
-                        lighting.setDescription("Motion Sensor");
-                    });
-                    break;
-
-                default:
-                    // Fallback for unknown item types
-                    lighting.setItemName("Unknown Item - ID: " + itemId);
-                    lighting.setUnit("PIECE");
-                    lighting.setDescription("Unknown lighting item");
-            }
-        } catch (Exception e) {
-            // Log error and set fallback values
-            System.err.println("Error populating lighting item details: " + e.getMessage());
-            lighting.setItemName("Lighting Item - ID: " + itemId);
-            lighting.setUnit("PIECE");
-            lighting.setDescription("Lighting item");
-        }
-    }
 
     private void saveLineItems(Quotation quotation, QuotationCreateDto dto, String userRole) {
-        // Save accessories
+        // Save accessories with proper item details
         if (dto.getAccessories() != null) {
             for (QuotationAccessoryDto accessoryDto : dto.getAccessories()) {
                 QuotationAccessory accessory = new QuotationAccessory();
@@ -359,12 +332,17 @@ public class QuotationServiceImpl implements QuotationService {
                 accessory.setCustomItem(accessoryDto.getCustomItem());
                 accessory.setCustomItemName(accessoryDto.getCustomItemName());
 
+                // IMPORTANT: Populate item details for proper name display
+                if (accessoryDto.getAccessoryId() != null) {
+                    populateAccessoryItemDetails(accessory, accessoryDto.getAccessoryId());
+                }
+
                 pricingService.calculateAccessoryLineTotal(accessory, quotation.getMarginPercentage(), quotation.getTaxPercentage());
                 accessoryRepository.save(accessory);
             }
         }
 
-        // Save cabinets
+        // Save cabinets with proper item details
         if (dto.getCabinets() != null) {
             for (QuotationCabinetDto cabinetDto : dto.getCabinets()) {
                 QuotationCabinet cabinet = new QuotationCabinet();
@@ -377,12 +355,17 @@ public class QuotationServiceImpl implements QuotationService {
                 cabinet.setCustomDimensions(cabinetDto.getCustomDimensions() != null && cabinetDto.getCustomDimensions()
                         ? "true" : "false");
 
+                // IMPORTANT: Populate cabinet type details for proper name display
+                if (cabinetDto.getCabinetTypeId() != null) {
+                    populateCabinetItemDetails(cabinet, cabinetDto.getCabinetTypeId());
+                }
+
                 pricingService.calculateCabinetLineTotal(cabinet, quotation.getMarginPercentage(), quotation.getTaxPercentage());
                 cabinetRepository.save(cabinet);
             }
         }
 
-        // Save doors
+        // Save doors with proper item details
         if (dto.getDoors() != null) {
             for (QuotationDoorDto doorDto : dto.getDoors()) {
                 QuotationDoor door = new QuotationDoor();
@@ -394,15 +377,19 @@ public class QuotationServiceImpl implements QuotationService {
                 door.setDoorFinish(doorDto.getDoorFinish());
                 door.setDoorStyle(doorDto.getDoorStyle());
                 door.setDescription(doorDto.getDescription());
-                door.setCustomDimensions(doorDto.getCustomDimensions() != null ?
-                        doorDto.getCustomDimensions().toString() : null);
+                door.setCustomDimensions(doorDto.getCustomDimensions() != null ? doorDto.getCustomDimensions().toString() : null);
+
+                // IMPORTANT: Populate door type details
+                if (doorDto.getDoorTypeId() != null) {
+                    populateDoorItemDetails(door, doorDto.getDoorTypeId());
+                }
 
                 pricingService.calculateDoorLineTotal(door, quotation.getMarginPercentage(), quotation.getTaxPercentage());
                 doorRepository.save(door);
             }
         }
 
-        // Save lighting - THIS IS THE IMPORTANT PART FOR YOUR ISSUE
+        // Save lighting with proper item details
         if (dto.getLighting() != null) {
             for (QuotationLightingDto lightingDto : dto.getLighting()) {
                 QuotationLighting lighting = new QuotationLighting();
@@ -412,9 +399,7 @@ public class QuotationServiceImpl implements QuotationService {
                 lighting.setQuantity(lightingDto.getQuantity());
                 lighting.setUnitPrice(lightingDto.getUnitPrice());
 
-
-
-                // POPULATE ITEM DETAILS - This will set the item_name field properly
+                // IMPORTANT: Populate lighting item details for proper name display
                 populateLightingItemDetails(lighting, lightingDto.getItemType(), lightingDto.getItemId());
 
                 pricingService.calculateLightingLineTotal(lighting, quotation.getMarginPercentage(), quotation.getTaxPercentage());
@@ -422,7 +407,6 @@ public class QuotationServiceImpl implements QuotationService {
             }
         }
     }
-
     private void deleteExistingLineItems(Long quotationId) {
         accessoryRepository.deleteByQuotationId(quotationId);
         cabinetRepository.deleteByQuotationId(quotationId);
@@ -631,8 +615,6 @@ public class QuotationServiceImpl implements QuotationService {
         List<QuotationAccessory> accessories = accessoryRepository.findByQuotationId(quotationId);
         return accessories.stream().map(quotationAccessory -> {
             QuotationAccessoryDto dto = new QuotationAccessoryDto();
-
-            // Basic quotation accessory fields
             dto.setId(quotationAccessory.getId());
             dto.setQuantity(quotationAccessory.getQuantity());
             dto.setUnitPrice(quotationAccessory.getUnitPrice());
@@ -641,12 +623,12 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setCustomItem(quotationAccessory.getCustomItem());
             dto.setCustomItemName(quotationAccessory.getCustomItemName());
 
-            // Map accessory entity data for images and details
+            // CRITICAL: Map accessory entity data for proper name display
             Accessory accessory = quotationAccessory.getAccessory();
             if (accessory != null) {
                 dto.setAccessoryId(accessory.getId());
-                dto.setAccessoryName(accessory.getName());
-                dto.setImageUrl(accessory.getImageUrl());          // KEY: Image URL mapping
+                dto.setAccessoryName(accessory.getName()); // THIS IS KEY FOR PDF NAME DISPLAY
+                dto.setImageUrl(accessory.getImageUrl());
                 dto.setWidthMm(accessory.getWidthMm());
                 dto.setHeightMm(accessory.getHeightMm());
                 dto.setDepthMm(accessory.getDepthMm());
@@ -665,13 +647,11 @@ public class QuotationServiceImpl implements QuotationService {
                 dto.setAccessoryName(quotationAccessory.getCustomItemName());
             }
 
-            // Note: Your QuotationAccessory entity doesn't have marginAmount/taxAmount fields
-            // These would need to be calculated if needed for admin view
-            // For now, we'll leave them null unless you add these fields to the entity
-
             return dto;
         }).toList();
     }
+
+
     private List<QuotationCabinetDto> loadCabinets(Long quotationId, String userRole) {
         List<QuotationCabinet> cabinets = cabinetRepository.findByQuotationId(quotationId);
         return cabinets.stream().map(cabinet -> {
@@ -702,6 +682,11 @@ public class QuotationServiceImpl implements QuotationService {
 
                 dto.setMarginAmount(marginAmount);
                 dto.setTaxAmount(taxAmount);
+            }
+            CabinetType cabinetType = cabinet.getCabinetType();
+            if (cabinetType != null) {
+                dto.setCabinetTypeId(cabinetType.getId());
+                dto.setCabinetTypeName(cabinetType.getName()); // THIS IS KEY FOR PDF NAME DISPLAY
             }
 
             return dto;
