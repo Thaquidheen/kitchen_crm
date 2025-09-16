@@ -9,15 +9,17 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class CabinetTypeDto {
+
     private Long id;
 
-    @NotBlank(message = "Cabinet type name is required")
+    @NotBlank(message = "Cabinet name is required")
     private String name;
 
     private Long categoryId;
@@ -37,7 +39,13 @@ public class CabinetTypeDto {
     @DecimalMin(value = "0.0", inclusive = false, message = "MRP must be greater than 0")
     private BigDecimal mrp;
 
+    @DecimalMin(value = "0.0", message = "Discount percentage cannot be negative")
     private BigDecimal discountPercentage = BigDecimal.ZERO;
+
     private BigDecimal companyPrice;
+
     private Boolean active = true;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

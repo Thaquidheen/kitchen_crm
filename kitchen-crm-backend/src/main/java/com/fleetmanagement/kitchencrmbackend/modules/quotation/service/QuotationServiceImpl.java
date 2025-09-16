@@ -1,6 +1,7 @@
 package com.fleetmanagement.kitchencrmbackend.modules.quotation.service;
 
 import com.fleetmanagement.kitchencrmbackend.modules.product.entity.Accessory;
+import com.fleetmanagement.kitchencrmbackend.modules.product.repository.LightProfileRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.*;
@@ -45,6 +46,8 @@ public class QuotationServiceImpl implements QuotationService {
 
     @Autowired
     private PricingService pricingService;
+    @Autowired
+    private LightProfileRepository lightProfileRepository;
 
     @Override
     public ApiResponse<Page<QuotationSummaryDto>> getAllQuotations(Long customerId, Quotation.QuotationStatus status,
@@ -220,7 +223,65 @@ public class QuotationServiceImpl implements QuotationService {
 
         return ApiResponse.success(stats);
     }
+    private void createLightingEntries(Quotation quotation, List<QuotationLightingDto> lightingItems) {
+        for (QuotationLightingDto lightingDto : lightingItems) {
+            QuotationLighting lighting = new QuotationLighting();
+            lighting.setQuotation(quotation);
+            lighting.setItemType(QuotationLighting.LightingItemType.valueOf(lightingDto.getItemType()));
+            lighting.setItemId(lightingDto.getItemId());
+            lighting.setQuantity(lightingDto.getQuantity());
+            lighting.setUnitPrice(lightingDto.getUnitPrice());
 
+            // Fetch and populate item details based on type
+            populateLightingItemDetails(lighting, lightingDto.getItemType(), lightingDto.getItemId());
+
+            quotation.getLighting().add(lighting);
+        }
+    }
+
+    private void populateLightingItemDetails(QuotationLighting lighting, String itemType, Long itemId) {
+        switch (itemType) {
+            case "LIGHT_PROFILE":
+                // Fetch from light_profiles table
+                lightProfileRepository.findById(itemId).ifPresent(profile -> {
+                    lighting.setItemName("LED Profile " + profile.getProfileType());
+                    lighting.setUnit("METER");
+                    lighting.setProfileType(profile.getProfileType().toString());
+                    lighting.setDescription("LED Profile Type " + profile.getProfileType());
+                });
+                break;
+
+            case "DRIVER":
+                // Fetch from drivers table
+                driverRepository.findById(itemId).ifPresent(driver -> {
+                    lighting.setItemName(driver.getWattage() + "W LED Driver");
+                    lighting.setUnit("PIECE");
+                    lighting.setWattage(driver.getWattage());
+                    lighting.setDescription(driver.getWattage() + "W LED Driver");
+                });
+                break;
+
+            case "CONNECTOR":
+                // Fetch from connectors table
+                connectorRepository.findById(itemId).ifPresent(connector -> {
+                    lighting.setItemName(connector.getType().toString() + " Connector");
+                    lighting.setUnit("PIECE");
+                    lighting.setConnectorType(connector.getType().toString());
+                    lighting.setDescription(connector.getType().toString() + " LED Connector");
+                });
+                break;
+
+            case "SENSOR":
+                // Fetch from sensors table
+                sensorRepository.findById(itemId).ifPresent(sensor -> {
+                    lighting.setItemName(sensor.getType().toString() + " Sensor");
+                    lighting.setUnit("PIECE");
+                    lighting.setSensorType(sensor.getType().toString());
+                    lighting.setDescription(sensor.getType().toString() + " Motion Sensor");
+                });
+                break;
+        }
+    }
     // Helper methods
     private void saveLineItems(Quotation quotation, QuotationCreateDto dto, String userRole) {
         // Save accessories (simplified - without entity references)
