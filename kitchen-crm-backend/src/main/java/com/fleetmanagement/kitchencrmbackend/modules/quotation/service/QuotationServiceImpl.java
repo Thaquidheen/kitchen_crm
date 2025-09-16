@@ -13,7 +13,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.fleetmanagement.kitchencrmbackend.modules.product.repository.DriverRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.product.repository.ConnectorRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.product.repository.SensorRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -40,6 +42,15 @@ public class QuotationServiceImpl implements QuotationService {
 
     @Autowired
     private QuotationLightingRepository lightingRepository;
+
+    @Autowired
+    private DriverRepository driverRepository;
+
+    @Autowired
+    private ConnectorRepository connectorRepository;
+
+    @Autowired
+    private SensorRepository sensorRepository;
 
     @Autowired
     private CustomerRepository customerRepository;
@@ -70,39 +81,51 @@ public class QuotationServiceImpl implements QuotationService {
     }
 
     @Override
-    public ApiResponse<QuotationDto> createQuotation(QuotationCreateDto quotationCreateDto, String createdBy, String userRole) {
-        // Validate customer exists
-        Customer customer = customerRepository.findById(quotationCreateDto.getCustomerId()).orElse(null);
-        if (customer == null) {
-            return ApiResponse.error("Customer not found");
+    @Transactional
+    public ApiResponse<QuotationDto> createQuotation(QuotationCreateDto dto, String userRole) {
+        try {
+            // Validate customer exists
+            Customer customer = customerRepository.findById(dto.getCustomerId()).orElse(null);
+            if (customer == null) {
+                return ApiResponse.error("Customer not found");
+            }
+
+            // Create quotation
+            Quotation quotation = new Quotation();
+            quotation.setCustomer(customer);
+            quotation.setProjectName(dto.getProjectName());
+
+
+            // Set default values
+            quotation.setMarginPercentage(dto.getMarginPercentage() != null ? dto.getMarginPercentage() : BigDecimal.ZERO);
+            quotation.setTaxPercentage(dto.getTaxPercentage() != null ? dto.getTaxPercentage() : BigDecimal.valueOf(18.0));
+            quotation.setTransportationPrice(dto.getTransportationPrice() != null ? dto.getTransportationPrice() : BigDecimal.ZERO);
+            quotation.setInstallationPrice(dto.getInstallationPrice() != null ? dto.getInstallationPrice() : BigDecimal.ZERO);
+
+            // Save quotation first to get ID
+            quotation = quotationRepository.save(quotation);
+
+
+            // CREATE LIGHTING ENTRIES - This was missing or incorrect
+            if (dto.getLighting() != null && !dto.getLighting().isEmpty()) {
+                createLightingEntries(quotation, dto.getLighting());
+            }
+
+            // Calculate totals
+            pricingService.calculateQuotationTotals(quotation);
+
+            // Save updated quotation
+            quotation = quotationRepository.save(quotation);
+
+            // Convert to DTO and return
+            QuotationDto result = convertToDto(quotation, userRole);
+            return ApiResponse.success("Quotation created successfully", result);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ApiResponse.error("Failed to create quotation: " + e.getMessage());
         }
-
-        // Create quotation
-        Quotation quotation = new Quotation();
-        quotation.setCustomer(customer);
-        quotation.setProjectName(quotationCreateDto.getProjectName());
-        quotation.setTransportationPrice(quotationCreateDto.getTransportationPrice());
-        quotation.setInstallationPrice(quotationCreateDto.getInstallationPrice());
-        quotation.setMarginPercentage(quotationCreateDto.getMarginPercentage());
-        quotation.setTaxPercentage(quotationCreateDto.getTaxPercentage());
-        quotation.setValidUntil(quotationCreateDto.getValidUntil());
-        quotation.setNotes(quotationCreateDto.getNotes());
-        quotation.setTermsConditions(quotationCreateDto.getTermsConditions());
-        quotation.setCreatedBy(createdBy);
-        quotation.setStatus(Quotation.QuotationStatus.DRAFT);
-
-        Quotation savedQuotation = quotationRepository.save(quotation);
-
-        // Save line items (simplified version)
-        saveLineItems(savedQuotation, quotationCreateDto, userRole);
-
-        // Calculate totals
-        calculateQuotationTotals(savedQuotation);
-        quotationRepository.save(savedQuotation);
-
-        return ApiResponse.success("Quotation created successfully", convertToDto(savedQuotation, userRole));
     }
-
     @Override
     public ApiResponse<QuotationDto> updateQuotation(Long id, QuotationDto quotationDto, String updatedBy, String userRole) {
         Quotation existingQuotation = quotationRepository.findById(id).orElse(null);
@@ -224,6 +247,10 @@ public class QuotationServiceImpl implements QuotationService {
         return ApiResponse.success(stats);
     }
     private void createLightingEntries(Quotation quotation, List<QuotationLightingDto> lightingItems) {
+        if (lightingItems == null || lightingItems.isEmpty()) {
+            return;
+        }
+
         for (QuotationLightingDto lightingDto : lightingItems) {
             QuotationLighting lighting = new QuotationLighting();
             lighting.setQuotation(quotation);
@@ -232,57 +259,93 @@ public class QuotationServiceImpl implements QuotationService {
             lighting.setQuantity(lightingDto.getQuantity());
             lighting.setUnitPrice(lightingDto.getUnitPrice());
 
+
+
             // Fetch and populate item details based on type
             populateLightingItemDetails(lighting, lightingDto.getItemType(), lightingDto.getItemId());
 
+            // Calculate pricing
+            pricingService.calculateLightingLineTotal(lighting, quotation.getMarginPercentage(), quotation.getTaxPercentage());
+
+            // Add to quotation's lighting list
             quotation.getLighting().add(lighting);
         }
     }
 
     private void populateLightingItemDetails(QuotationLighting lighting, String itemType, Long itemId) {
-        switch (itemType) {
-            case "LIGHT_PROFILE":
-                // Fetch from light_profiles table
-                lightProfileRepository.findById(itemId).ifPresent(profile -> {
-                    lighting.setItemName("LED Profile " + profile.getProfileType());
-                    lighting.setUnit("METER");
-                    lighting.setProfileType(profile.getProfileType().toString());
-                    lighting.setDescription("LED Profile Type " + profile.getProfileType());
-                });
-                break;
+        try {
+            switch (itemType) {
+                case "LIGHT_PROFILE":
+                    lightProfileRepository.findById(itemId).ifPresentOrElse(profile -> {
+                        lighting.setItemName("LED Profile " + profile.getProfileType());
+                        lighting.setUnit("METER");
+                        lighting.setProfileType(profile.getProfileType().toString());
+                        lighting.setDescription("LED Profile Type " + profile.getProfileType());
+                    }, () -> {
+                        // Fallback if profile not found
+                        lighting.setItemName("LED Profile - Item ID: " + itemId);
+                        lighting.setUnit("METER");
+                        lighting.setDescription("LED Profile");
+                    });
+                    break;
 
-            case "DRIVER":
-                // Fetch from drivers table
-                driverRepository.findById(itemId).ifPresent(driver -> {
-                    lighting.setItemName(driver.getWattage() + "W LED Driver");
-                    lighting.setUnit("PIECE");
-                    lighting.setWattage(driver.getWattage());
-                    lighting.setDescription(driver.getWattage() + "W LED Driver");
-                });
-                break;
+                case "DRIVER":
+                    driverRepository.findById(itemId).ifPresentOrElse(driver -> {
+                        lighting.setItemName(driver.getWattage() + "W LED Driver");
+                        lighting.setUnit("PIECE");
+                        lighting.setWattage(driver.getWattage());
+                        lighting.setDescription(driver.getWattage() + "W LED Driver");
+                    }, () -> {
+                        // Fallback if driver not found
+                        lighting.setItemName("LED Driver - Item ID: " + itemId);
+                        lighting.setUnit("PIECE");
+                        lighting.setDescription("LED Driver");
+                    });
+                    break;
 
-            case "CONNECTOR":
-                // Fetch from connectors table
-                connectorRepository.findById(itemId).ifPresent(connector -> {
-                    lighting.setItemName(connector.getType().toString() + " Connector");
-                    lighting.setUnit("PIECE");
-                    lighting.setConnectorType(connector.getType().toString());
-                    lighting.setDescription(connector.getType().toString() + " LED Connector");
-                });
-                break;
+                case "CONNECTOR":
+                    connectorRepository.findById(itemId).ifPresentOrElse(connector -> {
+                        lighting.setItemName(connector.getType().toString() + " Connector");
+                        lighting.setUnit("PIECE");
+                        lighting.setConnectorType(connector.getType().toString());
+                        lighting.setDescription(connector.getType().toString() + " LED Connector");
+                    }, () -> {
+                        // Fallback if connector not found
+                        lighting.setItemName("LED Connector - Item ID: " + itemId);
+                        lighting.setUnit("PIECE");
+                        lighting.setDescription("LED Connector");
+                    });
+                    break;
 
-            case "SENSOR":
-                // Fetch from sensors table
-                sensorRepository.findById(itemId).ifPresent(sensor -> {
-                    lighting.setItemName(sensor.getType().toString() + " Sensor");
+                case "SENSOR":
+                    sensorRepository.findById(itemId).ifPresentOrElse(sensor -> {
+                        lighting.setItemName(sensor.getType().toString() + " Sensor");
+                        lighting.setUnit("PIECE");
+                        lighting.setSensorType(sensor.getType().toString());
+                        lighting.setDescription(sensor.getType().toString() + " Motion Sensor");
+                    }, () -> {
+                        // Fallback if sensor not found
+                        lighting.setItemName("Motion Sensor - Item ID: " + itemId);
+                        lighting.setUnit("PIECE");
+                        lighting.setDescription("Motion Sensor");
+                    });
+                    break;
+
+                default:
+                    // Fallback for unknown item types
+                    lighting.setItemName("Unknown Item - ID: " + itemId);
                     lighting.setUnit("PIECE");
-                    lighting.setSensorType(sensor.getType().toString());
-                    lighting.setDescription(sensor.getType().toString() + " Motion Sensor");
-                });
-                break;
+                    lighting.setDescription("Unknown lighting item");
+            }
+        } catch (Exception e) {
+            // Log error and set fallback values
+            System.err.println("Error populating lighting item details: " + e.getMessage());
+            lighting.setItemName("Lighting Item - ID: " + itemId);
+            lighting.setUnit("PIECE");
+            lighting.setDescription("Lighting item");
         }
     }
-    // Helper methods
+
     private void saveLineItems(Quotation quotation, QuotationCreateDto dto, String userRole) {
         // Save accessories (simplified - without entity references)
         if (dto.getAccessories() != null) {
@@ -339,28 +402,47 @@ public class QuotationServiceImpl implements QuotationService {
             }
         }
 
-        // Save lighting (simplified)
-        if (dto.getLighting() != null) {
-            for (QuotationLightingDto lightingDto : dto.getLighting()) {
-                QuotationLighting lighting = new QuotationLighting();
-                lighting.setQuotation(quotation);
-                lighting.setItemType(QuotationLighting.LightingItemType.valueOf(lightingDto.getItemType()));
-                lighting.setItemId(lightingDto.getItemId());
-                lighting.setItemName(lightingDto.getItemName());
-                lighting.setQuantity(lightingDto.getQuantity());
-                lighting.setUnit(lightingDto.getUnit());
-                lighting.setUnitPrice(lightingDto.getUnitPrice());
-                lighting.setSpecifications(lightingDto.getSpecifications());
-                lighting.setDescription(lightingDto.getDescription());
-                lighting.setWattage(lightingDto.getWattage());
-                lighting.setProfileType(lightingDto.getProfileType());
-                lighting.setSensorType(lightingDto.getSensorType());
-                lighting.setConnectorType(lightingDto.getConnectorType());
-
-                pricingService.calculateLightingLineTotal(lighting, quotation.getMarginPercentage(), quotation.getTaxPercentage());
-                lightingRepository.save(lighting);
-            }
+        // Save cabinets
+        if (dto.getCabinets() != null) {
+            createCabinetEntries(quotation, dto.getCabinets());
         }
+
+        // Save doors
+        if (dto.getDoors() != null) {
+            createDoorEntries(quotation, dto.getDoors());
+        }
+
+        // Save accessories
+        if (dto.getAccessories() != null) {
+            createAccessoryEntries(quotation, dto.getAccessories());
+        }
+
+        // Save lighting - MAKE SURE THIS IS INCLUDED
+        if (dto.getLighting() != null) {
+            createLightingEntries(quotation, dto.getLighting());
+        }
+        // Save lighting (simplified)
+//        if (dto.getLighting() != null) {
+//            for (QuotationLightingDto lightingDto : dto.getLighting()) {
+//                QuotationLighting lighting = new QuotationLighting();
+//                lighting.setQuotation(quotation);
+//                lighting.setItemType(QuotationLighting.LightingItemType.valueOf(lightingDto.getItemType()));
+//                lighting.setItemId(lightingDto.getItemId());
+//                lighting.setItemName(lightingDto.getItemName());
+//                lighting.setQuantity(lightingDto.getQuantity());
+//                lighting.setUnit(lightingDto.getUnit());
+//                lighting.setUnitPrice(lightingDto.getUnitPrice());
+//                lighting.setSpecifications(lightingDto.getSpecifications());
+//                lighting.setDescription(lightingDto.getDescription());
+//                lighting.setWattage(lightingDto.getWattage());
+//                lighting.setProfileType(lightingDto.getProfileType());
+//                lighting.setSensorType(lightingDto.getSensorType());
+//                lighting.setConnectorType(lightingDto.getConnectorType());
+//
+//                pricingService.calculateLightingLineTotal(lighting, quotation.getMarginPercentage(), quotation.getTaxPercentage());
+//                lightingRepository.save(lighting);
+//            }
+//        }
     }
 
     private void deleteExistingLineItems(Long quotationId) {

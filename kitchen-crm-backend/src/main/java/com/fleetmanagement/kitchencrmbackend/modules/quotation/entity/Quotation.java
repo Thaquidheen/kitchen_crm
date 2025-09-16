@@ -4,6 +4,9 @@ import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
 import com.fleetmanagement.kitchencrmbackend.modules.project.entity.CustomerProject;
 import com.fleetmanagement.kitchencrmbackend.shared.audit.Auditable;
 import jakarta.persistence.*;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.FetchType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,6 +14,8 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "quotations")
@@ -113,6 +118,21 @@ public class Quotation extends Auditable {
 
     @Column(name = "lighting_final_total", precision = 12, scale = 2)
     private BigDecimal lightingFinalTotal = BigDecimal.ZERO;
+
+    @OneToMany(mappedBy = "quotation", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<QuotationAccessory> accessories = new ArrayList<>();
+
+    // Relationship with cabinets
+    @OneToMany(mappedBy = "quotation", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<QuotationCabinet> cabinets = new ArrayList<>();
+
+    // Relationship with doors
+    @OneToMany(mappedBy = "quotation", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<QuotationDoor> doors = new ArrayList<>();
+
+    // ADD THIS MISSING LIGHTING RELATIONSHIP:
+    @OneToMany(mappedBy = "quotation", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<QuotationLighting> lighting = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
