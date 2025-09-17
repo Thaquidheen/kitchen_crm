@@ -7,6 +7,7 @@ import com.fleetmanagement.kitchencrmbackend.modules.quotation.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import com.itextpdf.html2pdf.ConverterProperties;
 import com.itextpdf.html2pdf.HtmlConverter;
+import com.itextpdf.html2pdf.css.apply.impl.DefaultCssApplierFactory;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
@@ -73,6 +74,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
             StringBuilder imagesHtml = new StringBuilder();
             imagesHtml.append("<div class='plan-images-section'>");
             imagesHtml.append("<h2 class='plan-images-title'>Project Plan Images</h2>");
+            imagesHtml.append("<div class='plan-images-grid'>");
 
             // Group images by type for better organization
             Map<CustomerPlanImage.ImageType, List<CustomerPlanImage>> groupedImages =
@@ -764,32 +766,24 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         return row.toString();
     }
 
-    private byte[] convertHtmlToPdf(String htmlContent) throws IOException {
+    private byte[] convertHtmlToPdf(String htmlContent) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-        try {
-            // Initialize PDF writer
-            PdfWriter writer = new PdfWriter(outputStream);
-            PdfDocument pdfDoc = new PdfDocument(writer);
+        ConverterProperties properties = new ConverterProperties();
+        properties.setBaseUri(".");
 
-            // Set page size
-            pdfDoc.setDefaultPageSize(PageSize.A4);
+        // Enable CSS support
+        properties.setCssApplierFactory(new DefaultCssApplierFactory());
 
-            // Create converter properties
-            ConverterProperties converterProperties = new ConverterProperties();
+        PdfWriter writer = new PdfWriter(outputStream);
+        PdfDocument pdf = new PdfDocument(writer);
 
-            // Convert HTML to PDF
-            HtmlConverter.convertToPdf(htmlContent, pdfDoc, converterProperties);
+        // Better page setup
+        pdf.setDefaultPageSize(PageSize.A4);
 
-            pdfDoc.close();
+        HtmlConverter.convertToPdf(htmlContent, pdf, properties);
 
-            return outputStream.toByteArray();
-
-        } catch (Exception e) {
-            throw new IOException("Failed to convert HTML to PDF", e);
-        } finally {
-            outputStream.close();
-        }
+        return outputStream.toByteArray();
     }
 
     private String formatCurrency(BigDecimal amount) {

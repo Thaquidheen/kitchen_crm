@@ -3,70 +3,155 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            color: #333;
+        /* CSS Variables for consistency and easy theming */
+        :root {
+            --primary-color: #0052cc;
+            --primary-gradient: linear-gradient(135deg, #0052cc, #0066ff);
+            --secondary-color: #6c757d;
+            --accent-color: #28a745;
+            --danger-color: #dc3545;
+            --light-bg: #f8f9fa;
+            --white: #ffffff;
+            --border-color: #e9ecef;
+            --text-primary: #2c3e50;
+            --text-secondary: #6c757d;
+            --shadow-soft: 0 2px 12px rgba(0,0,0,0.08);
+            --shadow-medium: 0 4px 20px rgba(0,0,0,0.12);
+            --border-radius: 12px;
+            --font-primary: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
+        /* Modern CSS Reset */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: var(--white);
+        }
+
+        /* Advanced Flexbox Header Layout */
         .header {
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 20px;
-            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 30px;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-medium);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-gradient);
+        }
+
+        .header-left {
+            flex: 1;
         }
 
         .company-name {
-            font-size: 24px;
-            color: #007bff;
-            font-weight: bold;
+            font-size: clamp(28px, 4vw, 36px);
+            font-weight: 900;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header-right {
+            text-align: right;
+            min-width: 200px;
         }
 
         .document-title {
-            font-size: 28px;
-            color: #007bff;
-            font-weight: bold;
-            text-align: right;
+            font-size: 32px;
+            font-weight: 800;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
         }
 
-        .customer-section {
-            background: #f8f9fa;
-            padding: 20px;
-            margin: 20px 0;
+        .document-meta {
+            background: var(--white);
+            padding: 15px;
             border-radius: 8px;
+            box-shadow: var(--shadow-soft);
+            border: 1px solid var(--border-color);
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
+        .document-meta p {
+            margin: 6px 0;
+            font-weight: 500;
         }
 
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
+        /* CSS Grid Customer Section */
+        .customer-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            padding: 25px;
+            background: var(--light-bg);
+            border-radius: var(--border-radius);
+            border-left: 5px solid var(--primary-color);
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-soft);
         }
 
-        th {
-            background-color: #007bff;
-            color: white;
-            font-weight: bold;
+        .customer-section h3 {
+            grid-column: 1 / -1;
+            color: var(--primary-color);
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .total-row {
-            background-color: #007bff;
-            color: white;
-            font-weight: bold;
+        .customer-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
-        .category-header {
-            background-color: #6c757d;
-            color: white;
-            font-weight: bold;
-            text-align: center;
+        .customer-info p {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--white);
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
         }
 
-        /* NEW: Plan Images Section Styles */
+        .customer-info strong {
+            min-width: 120px;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        /* Advanced Plan Images with CSS Grid */
         .plan-images-section {
             margin: 40px 0;
             page-break-inside: avoid;
@@ -74,193 +159,380 @@
 
         .plan-images-title {
             font-size: 22px;
-            color: #007bff;
-            font-weight: bold;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 10px;
-            margin-bottom: 30px;
+            color: var(--primary-color);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 25px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid var(--primary-color);
+            position: relative;
+        }
+
+        .plan-images-title::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: var(--accent-color);
         }
 
         .plan-images-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 25px;
         }
 
         .plan-image-item {
-            border: 2px solid #e9ecef;
-            border-radius: 12px;
+            background: var(--white);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
             padding: 20px;
-            background: #f8f9fa;
+            box-shadow: var(--shadow-soft);
+            transition: all 0.3s ease;
             page-break-inside: avoid;
+            overflow: hidden;
         }
 
         .plan-image-header {
-            margin-bottom: 15px;
             text-align: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--light-bg);
         }
 
         .plan-image-header h3 {
-            color: #007bff;
-            font-size: 18px;
-            margin: 0 0 5px 0;
-            font-weight: bold;
+            color: var(--primary-color);
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
         }
 
         .image-name {
-            color: #6c757d;
-            font-size: 14px;
-            font-style: italic;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 5px;
         }
 
         .plan-image {
             width: 100%;
-            max-width: 400px;
+            max-width: 100%;
             height: auto;
             max-height: 300px;
             object-fit: contain;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             display: block;
             margin: 0 auto;
+            box-shadow: var(--shadow-soft);
         }
 
         .image-placeholder {
             width: 100%;
             height: 200px;
-            background: #e9ecef;
-            border: 2px dashed #6c757d;
+            background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+            border: 2px dashed var(--border-color);
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #6c757d;
+            flex-direction: column;
+            color: var(--text-secondary);
             font-style: italic;
         }
-        .plan-images-section {
-            margin: 20px 0;
-            page-break-inside: avoid;
+
+        /* Modern Table Design */
+        .items-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 30px 0;
+            background: var(--white);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-medium);
         }
 
-        .plan-images-title {
-            font-size: 18px;
-            color: #007bff;
-            font-weight: bold;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 8px;
-            margin-bottom: 20px;
+        .items-table thead tr {
+            background: var(--primary-gradient);
+            color: var(--white);
         }
 
-        .image-type-section {
-            margin-bottom: 30px;
-            page-break-inside: avoid;
+        .items-table th {
+            padding: 18px 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 12px;
+            text-align: left;
+            border: none;
         }
 
-        .image-type-title {
-            font-size: 16px;
-            color: #007bff;
-            font-weight: bold;
-            margin-bottom: 15px;
+        .items-table td {
+            padding: 15px 20px;
+            border-bottom: 1px solid #f1f3f4;
+            vertical-align: top;
         }
 
-        .plan-images-grid {
-            display: block; /* Change from grid to block for better PDF compatibility */
-        }
-
-        .plan-image-item {
-            margin-bottom: 20px;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 15px;
+        .items-table tbody tr:hover {
             background: #f8f9fa;
-            page-break-inside: avoid;
-            text-align: center;
         }
 
-        .plan-image-header {
-            margin-bottom: 10px;
+        .items-table tbody tr:last-child td {
+            border-bottom: none;
         }
 
-        .image-name {
-            font-weight: bold;
-            color: #495057;
+        /* Category Headers with Modern Styling */
+        .category-header {
+            background: linear-gradient(135deg, var(--secondary-color), #495057) !important;
+            color: var(--white) !important;
+            font-weight: 700 !important;
+            text-align: center !important;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .category-header td {
+            padding: 12px 20px !important;
+        }
+
+        .total-row {
+            background: var(--primary-gradient) !important;
+            color: var(--white) !important;
+            font-weight: 700 !important;
+        }
+
+        .total-row td {
+            padding: 15px 20px !important;
             font-size: 14px;
         }
 
-        .plan-image {
-            max-width: 100%;
-            height: auto;
-            max-height: 300px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            display: block;
-            margin: 0 auto;
+        /* Modern Totals Section with CSS Grid */
+        .totals-section {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 30px;
+            margin: 30px 0;
         }
 
-        .image-placeholder {
-            width: 100%;
-            height: 150px;
-            background: #e9ecef;
-            border: 2px dashed #6c757d;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #6c757d;
-            font-style: italic;
-            flex-direction: column;
+        .totals-table {
+            min-width: 350px;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: var(--white);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-medium);
+            border: 1px solid var(--border-color);
         }
 
-        .image-filename {
-            margin-top: 5px;
-            font-size: 12px;
-            color: #6c757d;
+        .totals-table td {
+            padding: 15px 20px;
+            border-bottom: 1px solid #f1f3f4;
         }
 
-        /* Responsive adjustments for smaller images */
+        .totals-table td:first-child {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .totals-table td:last-child {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .totals-table .total-row {
+            background: var(--primary-gradient) !important;
+            color: var(--white) !important;
+            font-size: 16px;
+            font-weight: 700 !important;
+        }
+
+        .totals-table .total-row td {
+            border-bottom: none;
+        }
+
+        /* Modern Notes and Terms Section */
+        .notes-section {
+            margin-top: 40px;
+            display: grid;
+            gap: 30px;
+        }
+
+        .notes-card {
+            background: var(--white);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-soft);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .notes-card h3 {
+            color: var(--primary-color);
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .notes-card p {
+            line-height: 1.8;
+            color: var(--text-primary);
+        }
+
+        /* Professional Footer */
+        .footer {
+            margin-top: 50px;
+            padding: 30px;
+            text-align: center;
+            background: linear-gradient(135deg, var(--light-bg), #e9ecef);
+            border-radius: var(--border-radius);
+            border-top: 3px solid var(--primary-color);
+            box-shadow: var(--shadow-soft);
+        }
+
+        .footer p {
+            margin: 8px 0;
+            color: var(--text-secondary);
+        }
+
+        .footer p:first-child {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        /* Responsive Design for different PDF sizes */
         @media print {
+            .header {
+                background: #f8f9fa !important;
+                -webkit-print-color-adjust: exact;
+            }
+
+            .items-table thead tr {
+                background: var(--primary-color) !important;
+                -webkit-print-color-adjust: exact;
+            }
+
+            .category-header {
+                background: var(--secondary-color) !important;
+                -webkit-print-color-adjust: exact;
+            }
+
+            .total-row {
+                background: var(--primary-color) !important;
+                -webkit-print-color-adjust: exact;
+            }
+
             .plan-images-grid {
                 grid-template-columns: 1fr;
-            }
-
-            .plan-image {
-                max-height: 250px;
+                gap: 20px;
             }
         }
 
-        /* If you want all images in a single row for larger plans */
-        .plan-images-grid.single-row {
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        /* Advanced Typography */
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        strong {
+            font-weight: 600;
+        }
+
+        /* Utility Classes for Advanced Layout */
+        .flex {
+            display: flex;
+        }
+
+        .flex-between {
+            justify-content: space-between;
+        }
+
+        .flex-center {
+            align-items: center;
+        }
+
+        .grid {
+            display: grid;
+        }
+
+        .gap-sm {
+            gap: 15px;
+        }
+
+        .gap-md {
+            gap: 25px;
+        }
+
+        .gap-lg {
+            gap: 35px;
+        }
+
+        .mb-sm {
+            margin-bottom: 15px;
+        }
+
+        .mb-md {
+            margin-bottom: 25px;
+        }
+
+        .mb-lg {
+            margin-bottom: 35px;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
         }
     </style>
 </head>
 <body>
-<!-- Header Section -->
+
+<!-- Advanced Flexbox Header -->
 <div class="header">
-    <div class="company-name">{{COMPANY_NAME}}</div>
-    <div class="document-title">QUOTATION</div>
-    <div>{{QUOTATION_NUMBER}}</div>
-    <div>Date: {{CREATED_DATE}}</div>
+    <div class="header-left">
+        <div class="company-name">{{COMPANY_NAME}}</div>
+    </div>
+    <div class="header-right">
+        <div class="document-title">QUOTATION</div>
+        <div class="document-meta">
+            <p><strong>{{QUOTATION_NUMBER}}</strong></p>
+            <p>Date: {{CREATED_DATE}}</p>
+        </div>
+    </div>
 </div>
 
-<!-- Customer Information -->
+<!-- CSS Grid Customer Information -->
 <div class="customer-section">
     <h3>Customer Information</h3>
-    <p><strong>Customer Name:</strong> {{CUSTOMER_NAME}}</p>
-    <p><strong>Project Name:</strong> {{PROJECT_NAME}}</p>
-    <p><strong>Valid Until:</strong> {{VALID_UNTIL}}</p>
+    <div class="customer-info">
+        <p><strong>Customer Name:</strong> {{CUSTOMER_NAME}}</p>
+        <p><strong>Project Name:</strong> {{PROJECT_NAME}}</p>
+    </div>
+    <div class="customer-info">
+        <p><strong>Valid Until:</strong> {{VALID_UNTIL}}</p>
+    </div>
 </div>
 
-<!-- PLAN IMAGES SECTION - NEW -->
+<!-- Modern Plan Images Section -->
 {{PLAN_IMAGES}}
 
-<!-- Line Items Table -->
+<!-- Advanced Table Design -->
 <table class="items-table">
     <thead>
     <tr>
-        <th>Item Description</th>
-        <th>Amount (₹)</th>
+        <th style="width: 70%;">Item Description</th>
+        <th style="width: 30%;">Amount (₹)</th>
     </tr>
     </thead>
     <tbody>
@@ -268,35 +540,43 @@
     </tbody>
 </table>
 
-<!-- Totals Section -->
-<table style="width: 50%; margin-left: auto;">
-    <tr>
-        <td><strong>Subtotal:</strong></td>
-        <td><strong>₹{{SUBTOTAL}}</strong></td>
-    </tr>
-    <tr>
-        <td><strong>Tax ({{TAX_PERCENTAGE}}%):</strong></td>
-        <td><strong>₹{{TAX_AMOUNT}}</strong></td>
-    </tr>
-    <tr class="total-row">
-        <td><strong>Total Amount:</strong></td>
-        <td><strong>₹{{TOTAL_AMOUNT}}</strong></td>
-    </tr>
-</table>
-
-<!-- Notes and Terms -->
-<div style="margin-top: 40px;">
-    <h3>Notes:</h3>
-    <p>{{NOTES}}</p>
-
-    <h3>Terms and Conditions:</h3>
-    <p>{{TERMS_CONDITIONS}}</p>
+<!-- Modern Totals Section -->
+<div class="totals-section">
+    <div></div> <!-- Spacer -->
+    <table class="totals-table">
+        <tr>
+            <td><strong>Subtotal:</strong></td>
+            <td><strong>₹{{SUBTOTAL}}</strong></td>
+        </tr>
+        <tr>
+            <td><strong>Tax ({{TAX_PERCENTAGE}}%):</strong></td>
+            <td><strong>₹{{TAX_AMOUNT}}</strong></td>
+        </tr>
+        <tr class="total-row">
+            <td><strong>Total Amount:</strong></td>
+            <td><strong>₹{{TOTAL_AMOUNT}}</strong></td>
+        </tr>
+    </table>
 </div>
 
-<!-- Footer -->
-<div style="margin-top: 50px; text-align: center; border-top: 1px solid #ddd; padding-top: 20px;">
+<!-- Modern Notes and Terms -->
+<div class="notes-section">
+    <div class="notes-card">
+        <h3>Notes:</h3>
+        <p>{{NOTES}}</p>
+    </div>
+
+    <div class="notes-card">
+        <h3>Terms and Conditions:</h3>
+        <p>{{TERMS_CONDITIONS}}</p>
+    </div>
+</div>
+
+<!-- Professional Footer -->
+<div class="footer">
     <p>Thank you for choosing our services!</p>
     <p>For any queries, please contact us.</p>
 </div>
+
 </body>
 </html>
