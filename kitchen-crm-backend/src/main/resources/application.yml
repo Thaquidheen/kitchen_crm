@@ -1,7 +1,6 @@
 server:
   port: 8080
 
-
 spring:
   application:
     name: kitchen-crm-backend
@@ -11,8 +10,6 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     clean-disabled: false
-
-
 
   profiles:
     active: dev
@@ -32,25 +29,27 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
 
-
-
   servlet:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
+      enabled: true
 
 app:
-  jwt:
-    secret: ${JWT_SECRET:JWT_SECRET=aW52YWxpZGF0ZWRKV1RTZWNyZXRLZXlGb3JLaXRjaGVuQ1JNQXBwbGljYXRpb25TZWN1cml0eQ==}
-    expiration: 86400000 # 24 hours
   upload-dir: uploads/plan-images
+  max-file-size: 52428800  # 50MB in bytes
   pdf:
     include-plan-images: true
-  file:
-    upload-dir: ${FILE_UPLOAD_DIR:./uploads}
-
+    max-image-width: 400
+    max-image-height: 300
+  jwt:
+    secret: ${JWT_SECRET:aW52YWxpZGF0ZWRKV1RTZWNyZXRLZXlGb3JLaXRjaGVuQ1JNQXBwbGljYXRpb25TZWN1cml0eQ==}
+    expiration: 86400000 # 24 hours
   margin:
     default-percentage: ${DEFAULT_MARGIN:15.0}
+
+file:
+  upload-dir: ${FILE_UPLOAD_DIR:./uploads}
 
 logging:
   level:

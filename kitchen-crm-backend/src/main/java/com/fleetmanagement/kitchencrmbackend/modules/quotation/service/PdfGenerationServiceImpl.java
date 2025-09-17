@@ -53,11 +53,18 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
 
     private String generatePlanImagesHtml(Long customerId) {
         if (!includePlanImages) {
-            return ""; // Don't include images if disabled
+            return "";
         }
 
         try {
             List<CustomerPlanImage> planImages = planImageRepository.findByCustomerId(customerId);
+
+            // DEBUG: Log what we found
+            System.out.println("=== DEBUG: Plan Images for Customer " + customerId + " ===");
+            System.out.println("Found " + planImages.size() + " images");
+            for (CustomerPlanImage img : planImages) {
+                System.out.println("Image ID: " + img.getId() + ", Name: " + img.getImageName() + ", URL: " + img.getImageUrl());
+            }
 
             if (planImages.isEmpty()) {
                 return "";
@@ -92,6 +99,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
 
         } catch (Exception e) {
             System.err.println("Error generating plan images HTML: " + e.getMessage());
+            e.printStackTrace();
             return "<div class='plan-images-section'><p>Error loading plan images.</p></div>";
         }
     }
@@ -104,10 +112,24 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         imageHtml.append("<span class='image-name'>").append(planImage.getImageName()).append("</span>");
         imageHtml.append("</div>");
 
-        // Try to load and convert image
-        String base64Image = imageService.convertImageToBase64WithResize(planImage.getImageUrl());
+        // DEBUG: Log image processing attempt
+        System.out.println("Processing image: " + planImage.getImageUrl());
 
-        if (base64Image != null) {
+        // Try to load and convert image
+        String base64Image = null;
+        try {
+            if (imageService != null) {
+                base64Image = imageService.convertImageToBase64WithResize(planImage.getImageUrl());
+                System.out.println("Base64 conversion result: " + (base64Image != null ? "SUCCESS" : "FAILED"));
+            } else {
+                System.err.println("ImageService is null!");
+            }
+        } catch (Exception e) {
+            System.err.println("Error processing image " + planImage.getImageUrl() + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        if (base64Image != null && !base64Image.isEmpty()) {
             imageHtml.append("<img src='data:image/jpeg;base64,").append(base64Image).append("' ");
             imageHtml.append("class='plan-image' alt='").append(planImage.getImageName()).append("' />");
         } else {

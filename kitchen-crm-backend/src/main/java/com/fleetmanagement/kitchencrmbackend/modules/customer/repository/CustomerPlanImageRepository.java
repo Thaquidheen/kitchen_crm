@@ -8,6 +8,8 @@ import java.util.List;
 
 @Repository
 public interface CustomerPlanImageRepository extends JpaRepository<CustomerPlanImage, Long> {
+    List<CustomerPlanImage> findByCustomerIdAndImageType(Long customerId, CustomerPlanImage.ImageType imageType);
     List<CustomerPlanImage> findByCustomerId(Long customerId);
+
     void deleteByCustomerId(Long customerId);
 }

@@ -28,8 +28,13 @@ public class ImageService {
 
     public String convertImageToBase64WithResize(String imageUrl) {
         try {
+            System.out.println("Attempting to load image from: " + imageUrl);
+
             BufferedImage originalImage = loadImage(imageUrl);
-            if (originalImage == null) return null;
+            if (originalImage == null) {
+                System.err.println("Failed to load image from: " + imageUrl);
+                return null;
+            }
 
             // Resize image to fit PDF constraints
             BufferedImage resizedImage = resizeImage(originalImage, maxImageWidth, maxImageHeight);
@@ -39,27 +44,78 @@ public class ImageService {
             ImageIO.write(resizedImage, "jpg", baos);
             byte[] imageBytes = baos.toByteArray();
 
-            return Base64.getEncoder().encodeToString(imageBytes);
+            String base64 = Base64.getEncoder().encodeToString(imageBytes);
+            System.out.println("Successfully converted image to base64, size: " + base64.length() + " characters");
+            return base64;
 
         } catch (Exception e) {
             System.err.println("Error processing image: " + imageUrl + " - " + e.getMessage());
+            e.printStackTrace();
             return null;
         }
     }
 
     private BufferedImage loadImage(String imageUrl) throws IOException {
-        if (imageUrl.startsWith("http")) {
-            // Load from URL
-            URL url = new URL(imageUrl);
-            return ImageIO.read(url);
+        System.out.println("Upload directory: " + uploadDir);
+        System.out.println("Image URL: " + imageUrl);
+
+        // Handle different URL formats
+        String imagePath;
+        if (imageUrl.startsWith("/uploads/plan-images/")) {
+            // Remove the leading slash and path prefix
+            imagePath = imageUrl.substring("/uploads/plan-images/".length());
+        } else if (imageUrl.startsWith("uploads/plan-images/")) {
+            // Remove the path prefix
+            imagePath = imageUrl.substring("uploads/plan-images/".length());
+        } else if (imageUrl.startsWith("/")) {
+            // Remove leading slash
+            imagePath = imageUrl.substring(1);
         } else {
-            // Load from local file system
-            Path imagePath = Paths.get(uploadDir, imageUrl.replace("/uploads/", ""));
-            if (Files.exists(imagePath)) {
-                return ImageIO.read(imagePath.toFile());
-            }
+            imagePath = imageUrl;
         }
-        return null;
+
+        System.out.println("Extracted image path: " + imagePath);
+
+        // Build full file path
+        Path fullPath = Paths.get(uploadDir, imagePath);
+        System.out.println("Full file path: " + fullPath.toAbsolutePath());
+
+        if (Files.exists(fullPath)) {
+            System.out.println("File exists, attempting to read...");
+            return ImageIO.read(fullPath.toFile());
+        } else {
+            System.err.println("File does not exist at: " + fullPath.toAbsolutePath());
+
+            // Try alternative paths
+            Path alternative1 = Paths.get(".", uploadDir, imagePath);
+            Path alternative2 = Paths.get(System.getProperty("user.dir"), uploadDir, imagePath);
+
+            System.out.println("Trying alternative path 1: " + alternative1.toAbsolutePath());
+            if (Files.exists(alternative1)) {
+                return ImageIO.read(alternative1.toFile());
+            }
+
+            System.out.println("Trying alternative path 2: " + alternative2.toAbsolutePath());
+            if (Files.exists(alternative2)) {
+                return ImageIO.read(alternative2.toFile());
+            }
+
+            // List what files are actually in the upload directory
+            Path uploadPath = Paths.get(uploadDir);
+            if (Files.exists(uploadPath)) {
+                System.out.println("Files in upload directory:");
+                try {
+                    Files.list(uploadPath).forEach(path ->
+                            System.out.println("  " + path.getFileName()));
+                } catch (Exception e) {
+                    System.err.println("Could not list files: " + e.getMessage());
+                }
+            } else {
+                System.err.println("Upload directory does not exist: " + uploadPath.toAbsolutePath());
+            }
+
+            return null;
+        }
     }
 
     private BufferedImage resizeImage(BufferedImage originalImage, int maxWidth, int maxHeight) {
