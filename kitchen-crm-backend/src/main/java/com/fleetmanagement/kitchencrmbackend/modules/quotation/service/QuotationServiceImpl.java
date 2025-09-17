@@ -3,6 +3,10 @@ package com.fleetmanagement.kitchencrmbackend.modules.quotation.service;
 import com.fleetmanagement.kitchencrmbackend.modules.product.entity.Accessory;
 import com.fleetmanagement.kitchencrmbackend.modules.product.entity.CabinetType;
 import com.fleetmanagement.kitchencrmbackend.modules.product.entity.DoorType;
+import com.fleetmanagement.kitchencrmbackend.modules.product.entity.LightProfile;
+import com.fleetmanagement.kitchencrmbackend.modules.product.entity.Driver;
+import com.fleetmanagement.kitchencrmbackend.modules.product.entity.Connector;
+import com.fleetmanagement.kitchencrmbackend.modules.product.entity.Sensor;
 import com.fleetmanagement.kitchencrmbackend.modules.product.repository.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.*;
@@ -11,7 +15,6 @@ import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerRepository;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Profile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -45,6 +48,18 @@ public class QuotationServiceImpl implements QuotationService {
     private QuotationLightingRepository lightingRepository;
 
     @Autowired
+    private AccessoryRepository productAccessoryRepository;
+
+    @Autowired
+    private CabinetTypeRepository cabinetTypeRepository;
+
+    @Autowired
+    private DoorTypeRepository doorTypeRepository;
+
+    @Autowired
+    private LightProfileRepository lightProfileRepository;
+
+    @Autowired
     private DriverRepository driverRepository;
 
     @Autowired
@@ -58,12 +73,6 @@ public class QuotationServiceImpl implements QuotationService {
 
     @Autowired
     private PricingService pricingService;
-    @Autowired
-    private LightProfileRepository lightProfileRepository;
-    @Autowired
-    private CabinetTypeRepository cabinetTypeRepository;
-    @Autowired
-    private DoorTypeRepository doorTypeRepository;
 
     @Override
     public ApiResponse<Page<QuotationSummaryDto>> getAllQuotations(Long customerId, Quotation.QuotationStatus status,
@@ -73,48 +82,7 @@ public class QuotationServiceImpl implements QuotationService {
         Page<QuotationSummaryDto> quotationDtos = quotations.map(this::convertToSummaryDto);
         return ApiResponse.success(quotationDtos);
     }
-    private void populateAccessoryItemDetails(QuotationAccessory quotationAccessory, Long accessoryId) {
-        if (accessoryId != null) {
-            Accessory accessory = accessoryRepository.findById(accessoryId).orElse(null);
-            if (accessory != null) {
-                quotationAccessory.setAccessory(accessory);
-                // The item name will be populated from the accessory entity in the DTO mapping
-            }
-        }
-    }
 
-    private void populateCabinetItemDetails(QuotationCabinet quotationCabinet, Long cabinetTypeId) {
-        if (cabinetTypeId != null) {
-            CabinetType cabinetType = cabinetTypeRepository.findById(cabinetTypeId).orElse(null);
-            if (cabinetType != null) {
-                quotationCabinet.setCabinetType(cabinetType);
-                // The cabinet type name will be populated in the DTO mapping
-            }
-        }
-    }
-
-    private void populateDoorItemDetails(QuotationDoor quotationDoor, Long doorTypeId) {
-        if (doorTypeId != null) {
-            DoorType doorType = doorTypeRepository.findById(doorTypeId).orElse(null);
-            if (doorType != null) {
-                quotationDoor.setDoorType(doorType);
-            }
-        }
-    }
-
-    private void populateLightingItemDetails(QuotationLighting quotationLighting, String itemType, Long itemId) {
-        if ("LIGHTING".equals(itemType) && itemId != null) {
-            Lighting lighting = lightingRepository.findById(itemId).orElse(null);
-            if (lighting != null) {
-                quotationLighting.setItemName(lighting.getName());
-            }
-        } else if ("PROFILE".equals(itemType) && itemId != null) {
-            Profile profile = lightProfileRepository.findById(itemId).orElse(null);
-            if (profile != null) {
-                quotationLighting.setItemName(profile.getName());
-            }
-        }
-    }
     @Override
     public ApiResponse<QuotationDto> getQuotationById(Long id, String userRole) {
         Quotation quotation = quotationRepository.findById(id).orElse(null);
@@ -157,10 +125,10 @@ public class QuotationServiceImpl implements QuotationService {
             // Save quotation first to get ID
             Quotation savedQuotation = quotationRepository.save(quotation);
 
-            // Save line items using your existing method
+            // Save line items
             saveLineItems(savedQuotation, dto, userRole);
 
-            // Calculate totals using your existing method
+            // Calculate totals
             calculateQuotationTotals(savedQuotation);
             quotationRepository.save(savedQuotation);
 
@@ -171,7 +139,6 @@ public class QuotationServiceImpl implements QuotationService {
             return ApiResponse.error("Failed to create quotation: " + e.getMessage());
         }
     }
-
 
     @Override
     public ApiResponse<QuotationDto> updateQuotation(Long id, QuotationDto quotationDto, String updatedBy, String userRole) {
@@ -293,32 +260,82 @@ public class QuotationServiceImpl implements QuotationService {
 
         return ApiResponse.success(stats);
     }
-    private void createLightingEntries(Quotation quotation, List<QuotationLightingDto> lightingItems) {
-        if (lightingItems == null || lightingItems.isEmpty()) {
-            return;
-        }
 
-        for (QuotationLightingDto lightingDto : lightingItems) {
-            QuotationLighting lighting = new QuotationLighting();
-            lighting.setQuotation(quotation);
-            lighting.setItemType(QuotationLighting.LightingItemType.valueOf(lightingDto.getItemType()));
-            lighting.setItemId(lightingDto.getItemId());
-            lighting.setQuantity(lightingDto.getQuantity());
-            lighting.setUnitPrice(lightingDto.getUnitPrice());
-
-
-
-            // Fetch and populate item details based on type
-            populateLightingItemDetails(lighting, lightingDto.getItemType(), lightingDto.getItemId());
-
-            // Calculate pricing
-            pricingService.calculateLightingLineTotal(lighting, quotation.getMarginPercentage(), quotation.getTaxPercentage());
-
-            // Add to quotation's lighting list
-            quotation.getLighting().add(lighting);
+    // FIXED: Item details population methods
+    private void populateAccessoryItemDetails(QuotationAccessory quotationAccessory, Long accessoryId) {
+        if (accessoryId != null) {
+            Accessory accessory = productAccessoryRepository.findById(accessoryId).orElse(null);
+            if (accessory != null) {
+                quotationAccessory.setAccessory(accessory);
+            }
         }
     }
 
+    private void populateCabinetItemDetails(QuotationCabinet quotationCabinet, Long cabinetTypeId) {
+        if (cabinetTypeId != null) {
+            CabinetType cabinetType = cabinetTypeRepository.findById(cabinetTypeId).orElse(null);
+            if (cabinetType != null) {
+                quotationCabinet.setCabinetType(cabinetType);
+            }
+        }
+    }
+
+    private void populateDoorItemDetails(QuotationDoor quotationDoor, Long doorTypeId) {
+        if (doorTypeId != null) {
+            DoorType doorType = doorTypeRepository.findById(doorTypeId).orElse(null);
+            if (doorType != null) {
+                quotationDoor.setDoorType(doorType);
+            }
+        }
+    }
+
+    private void populateLightingItemDetails(QuotationLighting quotationLighting, String itemType, Long itemId) {
+        if ("LIGHT_PROFILE".equals(itemType) && itemId != null) {
+            LightProfile lightProfile = lightProfileRepository.findById(itemId).orElse(null);
+            if (lightProfile != null) {
+                quotationLighting.setItemName("Light Profile - Type " + lightProfile.getProfileType());
+                quotationLighting.setProfileType(lightProfile.getProfileType().toString());
+
+                // Set appropriate unit if not already set
+                if (quotationLighting.getUnit() == null) {
+                    quotationLighting.setUnit("Meter");
+                }
+            }
+        } else if ("DRIVER".equals(itemType) && itemId != null) {
+            Driver driver = driverRepository.findById(itemId).orElse(null);
+            if (driver != null) {
+                quotationLighting.setItemName("Driver - " + driver.getWattage() + "W");
+                quotationLighting.setWattage(driver.getWattage());
+
+                // Set appropriate unit if not already set
+                if (quotationLighting.getUnit() == null) {
+                    quotationLighting.setUnit("Pieces");
+                }
+            }
+        } else if ("CONNECTOR".equals(itemType) && itemId != null) {
+            Connector connector = connectorRepository.findById(itemId).orElse(null);
+            if (connector != null) {
+                quotationLighting.setItemName("Connector - " + connector.getType().toString().replace("_", " "));
+                quotationLighting.setConnectorType(connector.getType().toString());
+
+                // Set appropriate unit if not already set
+                if (quotationLighting.getUnit() == null) {
+                    quotationLighting.setUnit("Pieces");
+                }
+            }
+        } else if ("SENSOR".equals(itemType) && itemId != null) {
+            Sensor sensor = sensorRepository.findById(itemId).orElse(null);
+            if (sensor != null) {
+                quotationLighting.setItemName("Sensor - " + sensor.getType().toString().replace("_", " "));
+                quotationLighting.setSensorType(sensor.getType().toString());
+
+                // Set appropriate unit if not already set
+                if (quotationLighting.getUnit() == null) {
+                    quotationLighting.setUnit("Pieces");
+                }
+            }
+        }
+    }
 
     private void saveLineItems(Quotation quotation, QuotationCreateDto dto, String userRole) {
         // Save accessories with proper item details
@@ -389,7 +406,7 @@ public class QuotationServiceImpl implements QuotationService {
             }
         }
 
-        // Save lighting with proper item details
+        // FIXED: Save lighting with proper item details AND unit field
         if (dto.getLighting() != null) {
             for (QuotationLightingDto lightingDto : dto.getLighting()) {
                 QuotationLighting lighting = new QuotationLighting();
@@ -399,6 +416,9 @@ public class QuotationServiceImpl implements QuotationService {
                 lighting.setQuantity(lightingDto.getQuantity());
                 lighting.setUnitPrice(lightingDto.getUnitPrice());
 
+                // CRITICAL FIX: Set the unit field based on item type
+                lighting.setUnit(determineUnit(lightingDto.getItemType()));
+
                 // IMPORTANT: Populate lighting item details for proper name display
                 populateLightingItemDetails(lighting, lightingDto.getItemType(), lightingDto.getItemId());
 
@@ -407,6 +427,23 @@ public class QuotationServiceImpl implements QuotationService {
             }
         }
     }
+
+    // NEW: Helper method to determine unit based on lighting item type
+    private String determineUnit(String itemType) {
+        switch (itemType) {
+            case "LIGHT_PROFILE":
+                return "Meter"; // Light profiles are typically sold per meter
+            case "DRIVER":
+                return "Pieces"; // Drivers are sold as individual pieces
+            case "CONNECTOR":
+                return "Pieces"; // Connectors are sold as individual pieces
+            case "SENSOR":
+                return "Pieces"; // Sensors are sold as individual pieces
+            default:
+                return "Pieces"; // Default fallback
+        }
+    }
+
     private void deleteExistingLineItems(Long quotationId) {
         accessoryRepository.deleteByQuotationId(quotationId);
         cabinetRepository.deleteByQuotationId(quotationId);
@@ -426,7 +463,6 @@ public class QuotationServiceImpl implements QuotationService {
             copy.setDescription(original.getDescription());
             copy.setCustomItem(original.getCustomItem());
             copy.setCustomItemName(original.getCustomItemName());
-
             copy.setTotalPrice(original.getTotalPrice());
             accessoryRepository.save(copy);
         }
@@ -443,9 +479,7 @@ public class QuotationServiceImpl implements QuotationService {
             copy.setDepthMm(original.getDepthMm());
             copy.setCalculatedSqft(original.getCalculatedSqft());
             copy.setUnitPrice(original.getUnitPrice());
-
             copy.setTotalPrice(original.getTotalPrice());
-
             copy.setCustomDimensions(original.getCustomDimensions());
             cabinetRepository.save(copy);
         }
@@ -461,7 +495,6 @@ public class QuotationServiceImpl implements QuotationService {
             copy.setHeightMm(original.getHeightMm());
             copy.setCalculatedSqft(original.getCalculatedSqft());
             copy.setUnitPrice(original.getUnitPrice());
-
             copy.setTotalPrice(original.getTotalPrice());
             copy.setDoorFinish(original.getDoorFinish());
             copy.setDoorStyle(original.getDoorStyle());
@@ -481,7 +514,6 @@ public class QuotationServiceImpl implements QuotationService {
             copy.setQuantity(original.getQuantity());
             copy.setUnit(original.getUnit());
             copy.setUnitPrice(original.getUnitPrice());
-
             copy.setTotalPrice(original.getTotalPrice());
             copy.setSpecifications(original.getSpecifications());
             copy.setDescription(original.getDescription());
@@ -539,7 +571,6 @@ public class QuotationServiceImpl implements QuotationService {
     private QuotationDto convertToDto(Quotation quotation, String userRole) {
         QuotationDto dto = new QuotationDto();
 
-        // Copy all existing fields...
         dto.setId(quotation.getId());
         dto.setCustomerId(quotation.getCustomer().getId());
         dto.setCustomerName(quotation.getCustomer().getName());
@@ -561,30 +592,46 @@ public class QuotationServiceImpl implements QuotationService {
         dto.setCreatedAt(quotation.getCreatedAt());
         dto.setUpdatedAt(quotation.getUpdatedAt());
 
-        // Set category-wise totals
-        dto.setAccessoriesBaseTotal(quotation.getAccessoriesBaseTotal());
-        dto.setAccessoriesFinalTotal(quotation.getAccessoriesFinalTotal());
-        dto.setCabinetsBaseTotal(quotation.getCabinetsBaseTotal());
-        dto.setCabinetsFinalTotal(quotation.getCabinetsFinalTotal());
-        dto.setDoorsBaseTotal(quotation.getDoorsBaseTotal());
-        dto.setDoorsFinalTotal(quotation.getDoorsFinalTotal());
-        dto.setLightingBaseTotal(quotation.getLightingBaseTotal());
-        dto.setLightingFinalTotal(quotation.getLightingFinalTotal());
+        // Set category-wise totals if they exist
+        if (quotation.getAccessoriesBaseTotal() != null) {
+            dto.setAccessoriesBaseTotal(quotation.getAccessoriesBaseTotal());
+            dto.setAccessoriesFinalTotal(quotation.getAccessoriesFinalTotal());
+        }
+        if (quotation.getCabinetsBaseTotal() != null) {
+            dto.setCabinetsBaseTotal(quotation.getCabinetsBaseTotal());
+            dto.setCabinetsFinalTotal(quotation.getCabinetsFinalTotal());
+        }
+        if (quotation.getDoorsBaseTotal() != null) {
+            dto.setDoorsBaseTotal(quotation.getDoorsBaseTotal());
+            dto.setDoorsFinalTotal(quotation.getDoorsFinalTotal());
+        }
+        if (quotation.getLightingBaseTotal() != null) {
+            dto.setLightingBaseTotal(quotation.getLightingBaseTotal());
+            dto.setLightingFinalTotal(quotation.getLightingFinalTotal());
+        }
 
         // Only show margin details to SUPER_ADMIN
         if ("ROLE_SUPER_ADMIN".equals(userRole)) {
             dto.setMarginPercentage(quotation.getMarginPercentage());
             dto.setMarginAmount(quotation.getMarginAmount());
 
-            // Category-wise margin and tax for admin
-            dto.setAccessoriesMarginAmount(quotation.getAccessoriesMarginAmount());
-            dto.setAccessoriesTaxAmount(quotation.getAccessoriesTaxAmount());
-            dto.setCabinetsMarginAmount(quotation.getCabinetsMarginAmount());
-            dto.setCabinetsTaxAmount(quotation.getCabinetsTaxAmount());
-            dto.setDoorsMarginAmount(quotation.getDoorsMarginAmount());
-            dto.setDoorsTaxAmount(quotation.getDoorsTaxAmount());
-            dto.setLightingMarginAmount(quotation.getLightingMarginAmount());
-            dto.setLightingTaxAmount(quotation.getLightingTaxAmount());
+            // Category-wise margin and tax for admin if they exist
+            if (quotation.getAccessoriesMarginAmount() != null) {
+                dto.setAccessoriesMarginAmount(quotation.getAccessoriesMarginAmount());
+                dto.setAccessoriesTaxAmount(quotation.getAccessoriesTaxAmount());
+            }
+            if (quotation.getCabinetsMarginAmount() != null) {
+                dto.setCabinetsMarginAmount(quotation.getCabinetsMarginAmount());
+                dto.setCabinetsTaxAmount(quotation.getCabinetsTaxAmount());
+            }
+            if (quotation.getDoorsMarginAmount() != null) {
+                dto.setDoorsMarginAmount(quotation.getDoorsMarginAmount());
+                dto.setDoorsTaxAmount(quotation.getDoorsTaxAmount());
+            }
+            if (quotation.getLightingMarginAmount() != null) {
+                dto.setLightingMarginAmount(quotation.getLightingMarginAmount());
+                dto.setLightingTaxAmount(quotation.getLightingTaxAmount());
+            }
         }
 
         // Load line items
@@ -609,7 +656,6 @@ public class QuotationServiceImpl implements QuotationService {
                 quotation.getCreatedBy()
         );
     }
-
 
     private List<QuotationAccessoryDto> loadAccessories(Long quotationId, String userRole) {
         List<QuotationAccessory> accessories = accessoryRepository.findByQuotationId(quotationId);
@@ -642,7 +688,7 @@ public class QuotationServiceImpl implements QuotationService {
                 if (accessory.getCategory() != null) {
                     dto.setCategoryName(accessory.getCategory().getName());
                 }
-            } else if (quotationAccessory.getCustomItem()) {
+            } else if (quotationAccessory.getCustomItem() != null && quotationAccessory.getCustomItem()) {
                 // For custom items, use the custom name
                 dto.setAccessoryName(quotationAccessory.getCustomItemName());
             }
@@ -650,7 +696,6 @@ public class QuotationServiceImpl implements QuotationService {
             return dto;
         }).toList();
     }
-
 
     private List<QuotationCabinetDto> loadCabinets(Long quotationId, String userRole) {
         List<QuotationCabinet> cabinets = cabinetRepository.findByQuotationId(quotationId);
@@ -665,11 +710,12 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setUnitPrice(cabinet.getUnitPrice());
             dto.setTotalPrice(cabinet.getTotalPrice());
 
-            dto.setCustomDimensions("true".equals(cabinet.getCustomDimensions()));
+            if (cabinet.getCustomDimensions() != null) {
+                dto.setCustomDimensions("true".equals(cabinet.getCustomDimensions()));
+            }
 
             // Only show margin to super admin
             if ("ROLE_SUPER_ADMIN".equals(userRole)) {
-                // Calculate margin and tax for this specific item
                 BigDecimal baseAmount;
                 if (cabinet.getCalculatedSqft() != null) {
                     baseAmount = cabinet.getUnitPrice().multiply(cabinet.getCalculatedSqft()).multiply(BigDecimal.valueOf(cabinet.getQuantity()));
@@ -683,6 +729,8 @@ public class QuotationServiceImpl implements QuotationService {
                 dto.setMarginAmount(marginAmount);
                 dto.setTaxAmount(taxAmount);
             }
+
+            // CRITICAL: Map cabinet type data for proper name display
             CabinetType cabinetType = cabinet.getCabinetType();
             if (cabinetType != null) {
                 dto.setCabinetTypeId(cabinetType.getId());
@@ -707,7 +755,10 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setDoorFinish(door.getDoorFinish());
             dto.setDoorStyle(door.getDoorStyle());
             dto.setDescription(door.getDescription());
-            dto.setCustomDimensions("true".equals(door.getCustomDimensions()));
+
+            if (door.getCustomDimensions() != null) {
+                dto.setCustomDimensions("true".equals(door.getCustomDimensions()));
+            }
 
             // Only show margin to super admin
             if ("ROLE_SUPER_ADMIN".equals(userRole)) {
@@ -725,6 +776,13 @@ public class QuotationServiceImpl implements QuotationService {
                 dto.setTaxAmount(taxAmount);
             }
 
+            // CRITICAL: Map door type data for proper name display
+            DoorType doorType = door.getDoorType();
+            if (doorType != null) {
+                dto.setDoorTypeId(doorType.getId());
+                dto.setDoorTypeName(doorType.getName()); // THIS IS KEY FOR PDF NAME DISPLAY
+            }
+
             return dto;
         }).toList();
     }
@@ -736,7 +794,7 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setId(lighting.getId());
             dto.setItemType(lighting.getItemType().name());
             dto.setItemId(lighting.getItemId());
-            dto.setItemName(lighting.getItemName());
+            dto.setItemName(lighting.getItemName()); // THIS IS KEY FOR PDF NAME DISPLAY
             dto.setQuantity(lighting.getQuantity());
             dto.setUnit(lighting.getUnit());
             dto.setUnitPrice(lighting.getUnitPrice());
@@ -750,8 +808,12 @@ public class QuotationServiceImpl implements QuotationService {
 
             // Only show margin to super admin
             if ("ROLE_SUPER_ADMIN".equals(userRole)) {
-                dto.setMarginAmount(lighting.getQuotation().getMarginAmount());
-                dto.setTaxAmount(lighting.getQuotation().getTaxAmount());
+                BigDecimal baseAmount = lighting.getUnitPrice().multiply(lighting.getQuantity());
+                BigDecimal marginAmount = pricingService.calculateMarginAmount(baseAmount, lighting.getQuotation().getMarginPercentage());
+                BigDecimal taxAmount = pricingService.calculateTaxAmount(baseAmount.add(marginAmount), lighting.getQuotation().getTaxPercentage());
+
+                dto.setMarginAmount(marginAmount);
+                dto.setTaxAmount(taxAmount);
             }
 
             return dto;

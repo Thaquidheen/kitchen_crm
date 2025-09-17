@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -181,7 +182,10 @@ public class QuotationController {
             String userRole = currentUser.getAuthorities().iterator().next().getAuthority();
 
             if (pdfGenerationService == null) {
-                return ResponseEntity.ok(ApiResponse.error("PDF generation service is not available"));
+                // Return JSON error response instead of PDF
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(ApiResponse.error("PDF generation service is not available"));
             }
 
             ApiResponse<Resource> response = pdfGenerationService.generateBillPdf(id, userRole);
@@ -193,10 +197,16 @@ public class QuotationController {
                         .contentType(MediaType.APPLICATION_PDF)
                         .body(resource);
             } else {
-                return ResponseEntity.ok(response);
+                // Return JSON error response with proper content type
+                return ResponseEntity.badRequest()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(response);
             }
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Failed to generate bill PDF: " + e.getMessage()));
+            // Return JSON error response with proper content type
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(ApiResponse.error("Failed to generate bill PDF: " + e.getMessage()));
         }
     }
 
