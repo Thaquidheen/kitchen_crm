@@ -128,8 +128,9 @@ public class QuotationServiceImpl implements QuotationService {
             // Save line items
             saveLineItems(savedQuotation, dto, userRole);
 
-            // Calculate totals
-            calculateQuotationTotals(savedQuotation);
+            // FIXED: Use PricingService instead of local method
+            // This will calculate both category totals AND overall totals
+            pricingService.calculateQuotationTotals(savedQuotation);
             quotationRepository.save(savedQuotation);
 
             return ApiResponse.success("Quotation created successfully", convertToDto(savedQuotation, userRole));
@@ -173,11 +174,53 @@ public class QuotationServiceImpl implements QuotationService {
 
         saveLineItems(existingQuotation, createDto, userRole);
 
-        // Recalculate totals
-        calculateQuotationTotals(existingQuotation);
+        // FIXED: Use PricingService instead of local method
+        // This will calculate both category totals AND overall totals
+        pricingService.calculateQuotationTotals(existingQuotation);
         Quotation updatedQuotation = quotationRepository.save(existingQuotation);
 
         return ApiResponse.success("Quotation updated successfully", convertToDto(updatedQuotation, userRole));
+    }
+    private void calculateQuotationTotals(Quotation quotation) {
+        BigDecimal subtotal = BigDecimal.ZERO;
+
+        // Calculate line items total
+        List<QuotationAccessory> accessories = accessoryRepository.findByQuotationId(quotation.getId());
+        subtotal = subtotal.add(accessories.stream()
+                .map(QuotationAccessory::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+
+        List<QuotationCabinet> cabinets = cabinetRepository.findByQuotationId(quotation.getId());
+        subtotal = subtotal.add(cabinets.stream()
+                .map(QuotationCabinet::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+
+        List<QuotationDoor> doors = doorRepository.findByQuotationId(quotation.getId());
+        subtotal = subtotal.add(doors.stream()
+                .map(QuotationDoor::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+
+        List<QuotationLighting> lighting = lightingRepository.findByQuotationId(quotation.getId());
+        subtotal = subtotal.add(lighting.stream()
+                .map(QuotationLighting::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+
+        // Add transportation and installation
+        subtotal = subtotal.add(quotation.getTransportationPrice())
+                .add(quotation.getInstallationPrice());
+
+        // Calculate margin and tax on base amount (before margin)
+        BigDecimal baseAmount = subtotal.subtract(quotation.getTransportationPrice())
+                .subtract(quotation.getInstallationPrice());
+
+        BigDecimal marginAmount = pricingService.calculateMarginAmount(baseAmount, quotation.getMarginPercentage());
+        BigDecimal taxAmount = pricingService.calculateTaxAmount(subtotal.add(marginAmount), quotation.getTaxPercentage());
+
+        // Set calculated values
+        quotation.setSubtotal(subtotal);
+        quotation.setMarginAmount(marginAmount);
+        quotation.setTaxAmount(taxAmount);
+        quotation.setTotalAmount(subtotal.add(marginAmount).add(taxAmount));
     }
 
     @Override
@@ -525,47 +568,47 @@ public class QuotationServiceImpl implements QuotationService {
         }
     }
 
-    private void calculateQuotationTotals(Quotation quotation) {
-        BigDecimal subtotal = BigDecimal.ZERO;
-
-        // Calculate line items total
-        List<QuotationAccessory> accessories = accessoryRepository.findByQuotationId(quotation.getId());
-        subtotal = subtotal.add(accessories.stream()
-                .map(QuotationAccessory::getTotalPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-
-        List<QuotationCabinet> cabinets = cabinetRepository.findByQuotationId(quotation.getId());
-        subtotal = subtotal.add(cabinets.stream()
-                .map(QuotationCabinet::getTotalPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-
-        List<QuotationDoor> doors = doorRepository.findByQuotationId(quotation.getId());
-        subtotal = subtotal.add(doors.stream()
-                .map(QuotationDoor::getTotalPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-
-        List<QuotationLighting> lighting = lightingRepository.findByQuotationId(quotation.getId());
-        subtotal = subtotal.add(lighting.stream()
-                .map(QuotationLighting::getTotalPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-
-        // Add transportation and installation
-        subtotal = subtotal.add(quotation.getTransportationPrice())
-                .add(quotation.getInstallationPrice());
-
-        // Calculate margin and tax on base amount (before margin)
-        BigDecimal baseAmount = subtotal.subtract(quotation.getTransportationPrice())
-                .subtract(quotation.getInstallationPrice());
-
-        BigDecimal marginAmount = pricingService.calculateMarginAmount(baseAmount, quotation.getMarginPercentage());
-        BigDecimal taxAmount = pricingService.calculateTaxAmount(subtotal.add(marginAmount), quotation.getTaxPercentage());
-
-        // Set calculated values
-        quotation.setSubtotal(subtotal);
-        quotation.setMarginAmount(marginAmount);
-        quotation.setTaxAmount(taxAmount);
-        quotation.setTotalAmount(subtotal.add(marginAmount).add(taxAmount));
-    }
+//    private void calculateQuotationTotals(Quotation quotation) {
+//        BigDecimal subtotal = BigDecimal.ZERO;
+//
+//        // Calculate line items total
+//        List<QuotationAccessory> accessories = accessoryRepository.findByQuotationId(quotation.getId());
+//        subtotal = subtotal.add(accessories.stream()
+//                .map(QuotationAccessory::getTotalPrice)
+//                .reduce(BigDecimal.ZERO, BigDecimal::add));
+//
+//        List<QuotationCabinet> cabinets = cabinetRepository.findByQuotationId(quotation.getId());
+//        subtotal = subtotal.add(cabinets.stream()
+//                .map(QuotationCabinet::getTotalPrice)
+//                .reduce(BigDecimal.ZERO, BigDecimal::add));
+//
+//        List<QuotationDoor> doors = doorRepository.findByQuotationId(quotation.getId());
+//        subtotal = subtotal.add(doors.stream()
+//                .map(QuotationDoor::getTotalPrice)
+//                .reduce(BigDecimal.ZERO, BigDecimal::add));
+//
+//        List<QuotationLighting> lighting = lightingRepository.findByQuotationId(quotation.getId());
+//        subtotal = subtotal.add(lighting.stream()
+//                .map(QuotationLighting::getTotalPrice)
+//                .reduce(BigDecimal.ZERO, BigDecimal::add));
+//
+//        // Add transportation and installation
+//        subtotal = subtotal.add(quotation.getTransportationPrice())
+//                .add(quotation.getInstallationPrice());
+//
+//        // Calculate margin and tax on base amount (before margin)
+//        BigDecimal baseAmount = subtotal.subtract(quotation.getTransportationPrice())
+//                .subtract(quotation.getInstallationPrice());
+//
+//        BigDecimal marginAmount = pricingService.calculateMarginAmount(baseAmount, quotation.getMarginPercentage());
+//        BigDecimal taxAmount = pricingService.calculateTaxAmount(subtotal.add(marginAmount), quotation.getTaxPercentage());
+//
+//        // Set calculated values
+//        quotation.setSubtotal(subtotal);
+//        quotation.setMarginAmount(marginAmount);
+//        quotation.setTaxAmount(taxAmount);
+//        quotation.setTotalAmount(subtotal.add(marginAmount).add(taxAmount));
+//    }
 
     // Conversion methods
     private QuotationDto convertToDto(Quotation quotation, String userRole) {

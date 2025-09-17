@@ -43,7 +43,9 @@ app:
   jwt:
     secret: ${JWT_SECRET:JWT_SECRET=aW52YWxpZGF0ZWRKV1RTZWNyZXRLZXlGb3JLaXRjaGVuQ1JNQXBwbGljYXRpb25TZWN1cml0eQ==}
     expiration: 86400000 # 24 hours
-
+  upload-dir: uploads/plan-images
+  pdf:
+    include-plan-images: true
   file:
     upload-dir: ${FILE_UPLOAD_DIR:./uploads}
 

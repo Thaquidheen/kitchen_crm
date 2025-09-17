@@ -1,1007 +1,223 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{DOCUMENT_TITLE}} - {{DOCUMENT_NUMBER}}</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            line-height: 1.6;
-            color: #2d3748;
-            font-size: 16px;
-            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-            padding: 20px;
-            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            color: #333;
         }
 
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: #ffffff;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-            border-radius: 16px;
-            overflow: hidden;
-            border: 1px solid #e2e8f0;
-        }
-
-        /* HEADER SECTION */
         .header {
-            background: linear-gradient(135deg, #1a202c 0%, #2d3748 50%, #4a5568 100%);
-            color: #ffffff;
-            padding: 40px;
-            position: relative;
-            overflow: hidden;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
         }
 
-        .header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(66, 153, 225, 0.1) 0%, transparent 70%);
-            transform: rotate(45deg);
-        }
-
-        .header-content {
-            position: relative;
-            z-index: 2;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            align-items: start;
-        }
-
-        .company-info h1 {
-            font-size: 32px;
-            font-weight: 800;
-            margin-bottom: 16px;
-            color: #ffffff;
-            letter-spacing: -0.5px;
-        }
-
-        .company-details {
-            font-size: 16px;
-            line-height: 1.8;
-            color: #cbd5e0;
-            font-weight: 400;
-        }
-
-        .document-info {
-            text-align: right;
+        .company-name {
+            font-size: 24px;
+            color: #007bff;
+            font-weight: bold;
         }
 
         .document-title {
-            font-size: 36px;
-            font-weight: 800;
-            margin-bottom: 16px;
-            color: #4299e1;
-            letter-spacing: -0.5px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            font-size: 28px;
+            color: #007bff;
+            font-weight: bold;
+            text-align: right;
         }
 
-        .document-number {
-            font-size: 18px;
-            background: rgba(66, 153, 225, 0.2);
-            color: #ffffff;
-            padding: 12px 24px;
-            border-radius: 50px;
-            display: inline-block;
-            margin-bottom: 16px;
-            border: 2px solid rgba(66, 153, 225, 0.3);
-            font-weight: 600;
-        }
-
-        .document-meta {
-            font-size: 16px;
-            color: #cbd5e0;
-            margin-top: 8px;
-        }
-
-        /* CONTENT SECTION */
-        .content {
-            padding: 40px;
-        }
-
-        /* CUSTOMER INFORMATION */
         .customer-section {
-            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-            padding: 32px;
-            margin: 0 0 40px 0;
-            border-radius: 12px;
-            border-left: 6px solid #4299e1;
-            border: 1px solid #e2e8f0;
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
         }
 
-        .customer-grid {
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+
+        .total-row {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+
+        .category-header {
+            background-color: #6c757d;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* NEW: Plan Images Section Styles */
+        .plan-images-section {
+            margin: 40px 0;
+            page-break-inside: avoid;
+        }
+
+        .plan-images-title {
+            font-size: 22px;
+            color: #007bff;
+            font-weight: bold;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+
+        .plan-images-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 40px;
-        }
-
-        .info-group h3 {
-            color: #1a202c;
-            font-size: 18px;
-            font-weight: 700;
+            gap: 30px;
             margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border-bottom: 2px solid #4299e1;
-            padding-bottom: 8px;
         }
 
-        .info-line {
-            margin-bottom: 12px;
-            font-size: 16px;
-            color: #4a5568;
-            font-weight: 500;
-        }
-
-        .info-line strong {
-            color: #1a202c;
-            font-weight: 700;
-        }
-
-        /* ITEMS TABLE */
-        .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 40px 0;
-            background: #ffffff;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        .plan-image-item {
+            border: 2px solid #e9ecef;
             border-radius: 12px;
-            overflow: hidden;
-            border: 2px solid #e2e8f0;
+            padding: 20px;
+            background: #f8f9fa;
+            page-break-inside: avoid;
         }
 
-        .items-table thead {
-            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
-        }
-
-        .items-table th {
-            padding: 24px 20px;
-            text-align: left;
-            font-weight: 700;
-            font-size: 16px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #ffffff;
-            border-bottom: 3px solid #4299e1;
-        }
-
-        .items-table th:nth-child(1) {
-            width: 70%;
-        }
-
-        .items-table th:nth-child(2) {
-            width: 30%;
-            text-align: right;
-        }
-
-        .items-table td {
-            padding: 16px 20px;
-            border-bottom: 1px solid #e2e8f0;
-            vertical-align: top;
-            font-size: 15px;
-        }
-
-        .items-table td:nth-child(2) {
-            text-align: right;
-            font-weight: 700;
-            color: #1a202c;
-            font-size: 16px;
-        }
-
-        /* CATEGORY HEADERS */
-        .category-header {
-            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%) !important;
-        }
-
-        .category-header td {
-            padding: 20px !important;
-            font-size: 18px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #1a202c !important;
-            background: #f7fafc !important;
-            text-align: left !important;
-            border: none !important;
-            border-left: 4px solid #4299e1 !important;
-        }
-
-        /* ITEM ROWS */
-        .item-row {
-            background-color: #ffffff;
-            transition: all 0.3s ease;
-        }
-
-        .item-row:nth-child(even) {
-            background-color: #f7fafc;
-        }
-
-        .item-row:hover {
-            background-color: #edf2f7;
-            transform: translateX(4px);
-            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.15);
-        }
-
-        .item-row td:first-child {
-            font-weight: 600;
-            color: #2d3748;
-            border-left: 4px solid #4299e1;
-        }
-
-        /* CATEGORY TOTALS */
-        .category-total {
-            background: #edf2f7 !important;
-        }
-
-        .category-total td {
-            padding: 18px 20px !important;
-            font-weight: 700;
-            font-size: 16px;
-            color: #1a202c !important;
-            background: #edf2f7 !important;
-            border: 2px solid #4299e1 !important;
-            border-left: 4px solid #2b6cb0 !important;
-        }
-
-        /* SPACER ROWS */
-        .spacer {
-            height: 16px;
-            background: transparent !important;
-        }
-
-        .spacer td {
-            border: none !important;
-            padding: 8px 0 !important;
-        }
-
-        /* TOTALS SECTION */
-        .totals-section {
-            margin-top: 50px;
-            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-            padding: 40px;
-            border-radius: 12px;
-            border: 2px solid #4299e1;
-        }
-
-        .totals-section h3 {
-            margin-bottom: 30px;
-            color: #1a202c;
-            font-size: 22px;
-            font-weight: 700;
+        .plan-image-header {
+            margin-bottom: 15px;
             text-align: center;
         }
 
-        .totals-table {
+        .plan-image-header h3 {
+            color: #007bff;
+            font-size: 18px;
+            margin: 0 0 5px 0;
+            font-weight: bold;
+        }
+
+        .image-name {
+            color: #6c757d;
+            font-size: 14px;
+            font-style: italic;
+        }
+
+        .plan-image {
             width: 100%;
-            max-width: 450px;
+            max-width: 400px;
+            height: auto;
+            max-height: 300px;
+            object-fit: contain;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            display: block;
             margin: 0 auto;
-            border-collapse: collapse;
         }
 
-        .totals-table td {
-            padding: 16px 24px;
-            font-size: 18px;
-            color: #2d3748;
-            font-weight: 600;
+        .image-placeholder {
+            width: 100%;
+            height: 200px;
+            background: #e9ecef;
+            border: 2px dashed #6c757d;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-style: italic;
         }
 
-        .totals-table td:last-child {
-            text-align: right;
-        }
-
-        .totals-table .total-row {
-            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
-            color: #ffffff;
-        }
-
-        .totals-table .total-row td {
-            font-weight: 800;
-            font-size: 20px;
-            padding: 20px 24px;
-        }
-
-        .totals-table .subtotal-row {
-            border-bottom: 3px solid #4299e1;
-            background: #ffffff;
-        }
-
-        .totals-table .tax-row {
-            background: #f7fafc;
-        }
-
-        /* NOTES AND TERMS */
-        .notes-section, .terms-section {
-            margin-top: 40px;
-            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-            padding: 32px;
-            border-radius: 12px;
-            border-left: 6px solid #4299e1;
-            border: 1px solid #e2e8f0;
-        }
-
-        .section-title {
-            color: #1a202c;
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border-bottom: 2px solid #4299e1;
-            padding-bottom: 8px;
-        }
-
-        .notes-section p, .terms-section div {
-            color: #4a5568;
-            font-size: 16px;
-            line-height: 1.7;
-            font-weight: 500;
-        }
-
-        /* FOOTER */
-        .footer {
-            text-align: center;
-            margin-top: 50px;
-            padding: 40px;
-            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
-            color: #ffffff;
-            border-radius: 12px;
-        }
-
-        .footer p {
-            font-size: 18px;
-            margin-bottom: 8px;
-        }
-
-        .footer p:first-child {
-            font-weight: 700;
-            font-size: 20px;
-        }
-
-        /* RESPONSIVE DESIGN - COMPREHENSIVE */
-
-        /* Extra Large Screens (4K and Ultra-wide) */
-        @media (min-width: 1920px) {
-            .container {
-                max-width: 1200px;
-            }
-
-            body {
-                font-size: 18px;
-            }
-
-            .company-info h1 {
-                font-size: 42px;
-            }
-
-            .document-title {
-                font-size: 48px;
-            }
-
-            .items-table th, .items-table td {
-                padding: 28px 24px;
-                font-size: 18px;
-            }
-
-            .totals-table td {
-                padding: 20px 28px;
-                font-size: 20px;
-            }
-        }
-
-        /* Large Desktop Screens */
-        @media (min-width: 1440px) and (max-width: 1919px) {
-            .container {
-                max-width: 1100px;
-            }
-
-            .company-info h1 {
-                font-size: 36px;
-            }
-
-            .document-title {
-                font-size: 40px;
-            }
-
-            .items-table th, .items-table td {
-                padding: 26px 22px;
-                font-size: 17px;
-            }
-        }
-
-        /* Standard Desktop Screens */
-        @media (min-width: 1200px) and (max-width: 1439px) {
-            .container {
-                max-width: 1000px;
-            }
-
-            .header {
-                padding: 35px;
-            }
-
-            .content {
-                padding: 35px;
-            }
-        }
-
-        /* Small Desktop / Large Laptop */
-        @media (min-width: 992px) and (max-width: 1199px) {
-            .container {
-                max-width: 950px;
-            }
-
-            .header-content {
-                gap: 30px;
-            }
-
-            .customer-grid {
-                gap: 30px;
-            }
-
-            .items-table th, .items-table td {
-                padding: 20px 16px;
-                font-size: 15px;
-            }
-
-            .totals-table td {
-                padding: 14px 20px;
-                font-size: 17px;
-            }
-        }
-
-        /* Tablet Landscape */
-        @media (min-width: 768px) and (max-width: 991px) {
-            .container {
-                max-width: 100%;
-                margin: 10px;
-                border-radius: 12px;
-            }
-
-            body {
-                padding: 15px;
-                font-size: 15px;
-            }
-
-            .header {
-                padding: 30px;
-            }
-
-            .content {
-                padding: 30px;
-            }
-
-            .header-content {
-                gap: 25px;
-            }
-
-            .customer-grid {
-                gap: 25px;
-            }
-
-            .company-info h1 {
-                font-size: 28px;
-            }
-
-            .document-title {
-                font-size: 32px;
-            }
-
-            .items-table th, .items-table td {
-                padding: 16px 12px;
-                font-size: 14px;
-            }
-
-            .totals-table {
-                max-width: 400px;
-            }
-
-            .totals-table td {
-                padding: 12px 18px;
-                font-size: 16px;
-            }
-        }
-
-        /* Tablet Portrait */
-        @media (min-width: 576px) and (max-width: 767px) {
-            body {
-                padding: 10px;
-                font-size: 15px;
-            }
-
-            .container {
-                margin: 5px;
-                border-radius: 10px;
-            }
-
-            .header {
-                padding: 25px;
-            }
-
-            .content {
-                padding: 25px;
-            }
-
-            .header-content {
-                grid-template-columns: 1fr;
-                gap: 25px;
-                text-align: center;
-            }
-
-            .document-info {
-                text-align: center;
-            }
-
-            .customer-grid {
-                grid-template-columns: 1fr;
-                gap: 25px;
-            }
-
-            .company-info h1 {
-                font-size: 26px;
-            }
-
-            .document-title {
-                font-size: 30px;
-            }
-
-            .items-table {
-                font-size: 14px;
-            }
-
-            .items-table th, .items-table td {
-                padding: 14px 10px;
-                font-size: 14px;
-            }
-
-            .items-table th:nth-child(1) {
-                width: 65%;
-            }
-
-            .items-table th:nth-child(2) {
-                width: 35%;
-            }
-
-            .totals-table {
-                max-width: 350px;
-            }
-
-            .totals-table td {
-                padding: 12px 16px;
-                font-size: 15px;
-            }
-
-            .totals-section h3 {
-                font-size: 20px;
-            }
-
-            .section-title {
-                font-size: 18px;
-            }
-        }
-
-        /* Mobile Landscape */
-        @media (min-width: 480px) and (max-width: 575px) {
-            body {
-                padding: 8px;
-                font-size: 14px;
-            }
-
-            .container {
-                margin: 3px;
-                border-radius: 8px;
-            }
-
-            .header {
-                padding: 20px;
-            }
-
-            .content {
-                padding: 20px;
-            }
-
-            .header-content {
-                grid-template-columns: 1fr;
-                gap: 20px;
-                text-align: center;
-            }
-
-            .document-info {
-                text-align: center;
-            }
-
-            .customer-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-
-            .company-info h1 {
-                font-size: 22px;
-            }
-
-            .document-title {
-                font-size: 26px;
-            }
-
-            .items-table th, .items-table td {
-                padding: 12px 8px;
-                font-size: 13px;
-            }
-
-            .items-table th:nth-child(1) {
-                width: 60%;
-            }
-
-            .items-table th:nth-child(2) {
-                width: 40%;
-            }
-
-            .totals-table {
-                max-width: 300px;
-            }
-
-            .totals-table td {
-                padding: 10px 14px;
-                font-size: 14px;
-            }
-
-            .totals-section h3 {
-                font-size: 18px;
-            }
-
-            .section-title {
-                font-size: 16px;
-            }
-
-            .info-group h3 {
-                font-size: 16px;
-            }
-
-            .info-line {
-                font-size: 14px;
-            }
-        }
-
-        /* Mobile Portrait */
-        @media (max-width: 479px) {
-            body {
-                padding: 5px;
-                font-size: 14px;
-            }
-
-            .container {
-                margin: 2px;
-                border-radius: 6px;
-            }
-
-            .header {
-                padding: 15px;
-            }
-
-            .content {
-                padding: 15px;
-            }
-
-            .header-content {
-                grid-template-columns: 1fr;
-                gap: 15px;
-                text-align: center;
-            }
-
-            .document-info {
-                text-align: center;
-            }
-
-            .customer-grid {
-                grid-template-columns: 1fr;
-                gap: 15px;
-            }
-
-            .customer-section {
-                padding: 20px;
-            }
-
-            .company-info h1 {
-                font-size: 20px;
-                margin-bottom: 12px;
-            }
-
-            .company-details {
-                font-size: 14px;
-            }
-
-            .document-title {
-                font-size: 24px;
-                margin-bottom: 12px;
-            }
-
-            .document-number {
-                font-size: 16px;
-                padding: 8px 16px;
-                margin-bottom: 12px;
-            }
-
-            .document-meta {
-                font-size: 14px;
-            }
-
-            .items-table {
-                border-radius: 8px;
-            }
-
-            .items-table th, .items-table td {
-                padding: 10px 6px;
-                font-size: 12px;
-            }
-
-            .items-table th:nth-child(1) {
-                width: 55%;
-            }
-
-            .items-table th:nth-child(2) {
-                width: 45%;
-            }
-
-            .category-header td {
-                padding: 15px 8px !important;
-                font-size: 14px !important;
-            }
-
-            .category-total td {
-                padding: 12px 8px !important;
-                font-size: 14px !important;
-            }
-
-            .totals-section {
-                padding: 25px;
-                margin-top: 30px;
-            }
-
-            .totals-table {
-                max-width: 100%;
-            }
-
-            .totals-table td {
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-
-            .totals-table .total-row td {
-                padding: 12px;
-                font-size: 16px;
-            }
-
-            .totals-section h3 {
-                font-size: 16px;
-                margin-bottom: 20px;
-            }
-
-            .section-title {
-                font-size: 14px;
-                margin-bottom: 15px;
-            }
-
-            .notes-section, .terms-section {
-                padding: 20px;
-                margin-top: 25px;
-            }
-
-            .notes-section p, .terms-section div {
-                font-size: 14px;
-                line-height: 1.6;
-            }
-
-            .info-group h3 {
-                font-size: 14px;
-                margin-bottom: 15px;
-            }
-
-            .info-line {
-                font-size: 13px;
-                margin-bottom: 10px;
-            }
-
-            .footer {
-                padding: 25px;
-                margin-top: 30px;
-            }
-
-            .footer p {
-                font-size: 14px;
-            }
-
-            .footer p:first-child {
-                font-size: 16px;
-            }
-        }
-
-        /* Ultra Small Devices */
-        @media (max-width: 320px) {
-            body {
-                padding: 3px;
-                font-size: 13px;
-            }
-
-            .container {
-                margin: 1px;
-            }
-
-            .header, .content {
-                padding: 12px;
-            }
-
-            .company-info h1 {
-                font-size: 18px;
-            }
-
-            .document-title {
-                font-size: 20px;
-            }
-
-            .items-table th, .items-table td {
-                padding: 8px 4px;
-                font-size: 11px;
-            }
-
-            .totals-table td {
-                padding: 6px 8px;
-                font-size: 12px;
-            }
-
-            .customer-section, .notes-section, .terms-section, .totals-section {
-                padding: 15px;
-            }
-        }
-
-        /* Landscape Orientation Adjustments */
-        @media (max-height: 500px) and (orientation: landscape) {
-            .header {
-                padding: 20px;
-            }
-
-            .content {
-                padding: 20px;
-            }
-
-            .totals-section, .notes-section, .terms-section {
-                margin-top: 25px;
-            }
-        }
-
-        /* PRINT STYLES */
+        /* Responsive adjustments for smaller images */
         @media print {
-            body {
-                padding: 0;
-                background: white;
+            .plan-images-grid {
+                grid-template-columns: 1fr;
             }
 
-            .container {
-                box-shadow: none;
-                border-radius: 0;
-                border: none;
+            .plan-image {
+                max-height: 250px;
             }
+        }
 
-            .header,
-            .items-table thead,
-            .category-header,
-            .category-total,
-            .totals-table .total-row,
-            .footer {
-                background: #1a202c !important;
-                color: white !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-
-            .item-row:hover {
-                transform: none;
-                box-shadow: none;
-            }
+        /* If you want all images in a single row for larger plans */
+        .plan-images-grid.single-row {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <!-- Header Section -->
-    <div class="header">
-        <div class="header-content">
-            <div class="company-info">
-                <h1>{{COMPANY_NAME}}</h1>
-                <div class="company-details">
-                    {{COMPANY_ADDRESS}}<br>
-                    📞 {{COMPANY_PHONE}}<br>
-                    ✉️ {{COMPANY_EMAIL}}
-                </div>
-            </div>
-            <div class="document-info">
-                <div class="document-title">{{DOCUMENT_TITLE}}</div>
-                <div class="document-number">{{DOCUMENT_NUMBER}}</div>
-                <div class="document-meta">📅 {{CREATED_DATE}}</div>
-                <div class="document-meta">⏰ Valid Until: {{VALID_UNTIL}}</div>
-            </div>
-        </div>
-    </div>
+<!-- Header Section -->
+<div class="header">
+    <div class="company-name">{{COMPANY_NAME}}</div>
+    <div class="document-title">QUOTATION</div>
+    <div>{{QUOTATION_NUMBER}}</div>
+    <div>Date: {{CREATED_DATE}}</div>
+</div>
 
-    <div class="content">
-        <!-- Customer Information -->
-        <div class="customer-section">
-            <div class="customer-grid">
-                <div class="info-group">
-                    <h3>👤 Customer Information</h3>
-                    <div class="info-line"><strong>{{CUSTOMER_NAME}}</strong></div>
-                    <div class="info-line">📋 Project: {{PROJECT_NAME}}</div>
-                </div>
-                <div class="info-group">
-                    <h3>📋 Quotation Details</h3>
-                    <div class="info-line">📄 Quote #: {{DOCUMENT_NUMBER}}</div>
-                    <div class="info-line">📅 Date: {{CREATED_DATE}}</div>
-                    <div class="info-line">⏰ Valid Until: {{VALID_UNTIL}}</div>
-                </div>
-            </div>
-        </div>
+<!-- Customer Information -->
+<div class="customer-section">
+    <h3>Customer Information</h3>
+    <p><strong>Customer Name:</strong> {{CUSTOMER_NAME}}</p>
+    <p><strong>Project Name:</strong> {{PROJECT_NAME}}</p>
+    <p><strong>Valid Until:</strong> {{VALID_UNTIL}}</p>
+</div>
 
-        <!-- Items Table -->
-        <table class="items-table">
-            <thead>
-            <tr>
-                <th>📦 Item Description</th>
-                <th>💰 Amount</th>
-            </tr>
-            </thead>
-            <tbody>
-            {{LINE_ITEMS}}
-            </tbody>
-        </table>
+<!-- PLAN IMAGES SECTION - NEW -->
+{{PLAN_IMAGES}}
 
-        <!-- Totals Section -->
-        <div class="totals-section">
-            <h3>💰 Payment Summary</h3>
-            <table class="totals-table">
-                <tr class="subtotal-row">
-                    <td>Subtotal:</td>
-                    <td><strong>₹{{SUBTOTAL}}</strong></td>
-                </tr>
-                <tr class="tax-row">
-                    <td>Tax ({{TAX_PERCENTAGE}}%):</td>
-                    <td><strong>₹{{TAX_AMOUNT}}</strong></td>
-                </tr>
-                <tr class="total-row">
-                    <td><strong>TOTAL AMOUNT:</strong></td>
-                    <td><strong>₹{{TOTAL_AMOUNT}}</strong></td>
-                </tr>
-            </table>
-        </div>
+<!-- Line Items Table -->
+<table class="items-table">
+    <thead>
+    <tr>
+        <th>Item Description</th>
+        <th>Amount (₹)</th>
+    </tr>
+    </thead>
+    <tbody>
+    {{LINE_ITEMS}}
+    </tbody>
+</table>
 
-        <!-- Notes Section -->
-        <div class="notes-section">
-            <div class="section-title">📝 Additional Notes</div>
-            <p>{{NOTES}}</p>
-        </div>
+<!-- Totals Section -->
+<table style="width: 50%; margin-left: auto;">
+    <tr>
+        <td><strong>Subtotal:</strong></td>
+        <td><strong>₹{{SUBTOTAL}}</strong></td>
+    </tr>
+    <tr>
+        <td><strong>Tax ({{TAX_PERCENTAGE}}%):</strong></td>
+        <td><strong>₹{{TAX_AMOUNT}}</strong></td>
+    </tr>
+    <tr class="total-row">
+        <td><strong>Total Amount:</strong></td>
+        <td><strong>₹{{TOTAL_AMOUNT}}</strong></td>
+    </tr>
+</table>
 
-        <!-- Terms and Conditions -->
-        <div class="terms-section">
-            <div class="section-title">📋 Terms & Conditions</div>
-            <div style="white-space: pre-line;">{{TERMS_CONDITIONS}}</div>
-        </div>
+<!-- Notes and Terms -->
+<div style="margin-top: 40px;">
+    <h3>Notes:</h3>
+    <p>{{NOTES}}</p>
 
-        <!-- Footer -->
-        <div class="footer">
-            <p><strong>Thank you for choosing {{COMPANY_NAME}}!</strong></p>
-            <p>For any questions, please contact us at {{COMPANY_EMAIL}} or {{COMPANY_PHONE}}</p>
-        </div>
-    </div>
+    <h3>Terms and Conditions:</h3>
+    <p>{{TERMS_CONDITIONS}}</p>
+</div>
+
+<!-- Footer -->
+<div style="margin-top: 50px; text-align: center; border-top: 1px solid #ddd; padding-top: 20px;">
+    <p>Thank you for choosing our services!</p>
+    <p>For any queries, please contact us.</p>
 </div>
 </body>
 </html>
