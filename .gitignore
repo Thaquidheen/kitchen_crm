@@ -1,0 +1,116 @@
+# ===================================
+# Windows Reserved Files
+# ===================================
+nul
+NUL
+con
+CON
+aux
+AUX
+prn
+PRN
+
+# ===================================
+# Documentation Files
+# ===================================
+*.md
+!README.md
+*.txt
+*.doc
+*.docx
+*.pdf
+
+# Documentation folders
+docs/
+documentation/
+
+# Implementation/Planning docs (root level)
+*_SUMMARY.md
+*_COMPLETE.md
+*_PLAN.md
+*_GUIDE.md
+*_STATUS.md
+*_IMPLEMENTATION.md
+*_REPORT.md
+*_FIX*.md
+*_EXPLANATION.md
+*_CHECKLIST.md
+
+# ===================================
+# Environment & Secrets
+# ===================================
+.env
+.env.*
+!.env.example
+*.env
+
+# ===================================
+# IDE & Editor
+# ===================================
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+*.swp
+*.swo
+*.sublime-*
+
+# ===================================
+# OS Files
+# ===================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.lnk
+
+# ===================================
+# Logs
+# ===================================
+*.log
+logs/
+hs_err_pid*.log
+replay_pid*.log
+
+# ===================================
+# Build & Dependencies
+# ===================================
+node_modules/
+target/
+build/
+dist/
+*.jar
+*.war
+*.class
+
+# ===================================
+# Temporary & Cache
+# ===================================
+*.tmp
+*.temp
+*.bak
+*.cache
+.cache/
+tmp/
+temp/
+
+# ===================================
+# Database & SQL Scripts (temp)
+# ===================================
+*.sql
+!**/db/migration/*.sql
+!**/resources/*.sql
+
+# ===================================
+# Uploads (local dev)
+# ===================================
+uploads/
+*.pdf
+
+# ===================================
+# Claude Plans
+# ===================================
+.claude/
