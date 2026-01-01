@@ -4,14 +4,10 @@
   "private": true,
   "description": "HOCH - Monorepo for Backend (Java) and Frontend (React)",
   "scripts": {
-    "prepare": "husky",
     "frontend:dev": "cd kitchen-crm-frontend && npm run dev",
     "frontend:build": "cd kitchen-crm-frontend && npm run build",
     "frontend:lint": "cd kitchen-crm-frontend && npm run lint",
     "frontend:format": "cd kitchen-crm-frontend && npm run format"
-  },
-  "devDependencies": {
-    "husky": "^9.1.7"
   },
   "workspaces": [
     "kitchen-crm-frontend"
