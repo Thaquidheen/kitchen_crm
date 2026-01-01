@@ -2,6 +2,7 @@ package com.fleetmanagement.kitchencrmbackend.modules.quotation.service;
 
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
+import com.fleetmanagement.kitchencrmbackend.modules.signature.entity.SignedDocument;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,5 +21,9 @@ public interface QuotationService {
     ApiResponse<String> updateQuotationStatus(Long id, Quotation.QuotationStatus newStatus, String updatedBy);
     ApiResponse<QuotationDto> duplicateQuotation(Long id, String createdBy, String userRole);
     ApiResponse<Map<String, Object>> getQuotationStatistics();
+
+    // Signature Integration Methods
+    ApiResponse<String> linkSignedDocument(Long quotationId, SignedDocument signedDocument);
+    ApiResponse<String> updateQuotationAfterSignature(Long quotationId, Long signedDocumentId, LocalDateTime signedAt);
 }
 

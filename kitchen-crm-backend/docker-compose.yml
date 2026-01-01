@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mysql:
     image: mysql:8.0
@@ -11,11 +9,17 @@ services:
       MYSQL_PASSWORD: password123
     ports:
       - "3306:3306"
-    command: --log-bin-trust-function-creators=1  # ADD THIS LINE
+    command: --log-bin-trust-function-creators=1
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
       - kitchen-crm-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   adminer:
     image: adminer
@@ -27,8 +31,30 @@ services:
     depends_on:
       - mysql
 
+  backend:
+    build: .
+    container_name: kitchen_crm_backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_USERNAME=kitchen_crm
+      - DB_PASSWORD=password123
+      - JWT_SECRET=${JWT_SECRET:-aW52YWxpZGF0ZWRKV1RTZWNyZXRLZXlGb3JLaXRjaGVuQ1JNQXBwbGljYXRpb25TZWN1cml0eQ==}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - EMAIL_ENABLED=${EMAIL_ENABLED:-false}
+    volumes:
+      - backend_uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - kitchen-crm-network
+    restart: unless-stopped
+
 volumes:
   mysql_data:
+  backend_uploads:
 
 networks:
   kitchen-crm-network:

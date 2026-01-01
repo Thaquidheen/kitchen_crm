@@ -58,11 +58,8 @@ public class ProductionInstallationController {
             @PathVariable Long customerId) {
         ApiResponse<ProductionInstallationDto> response = productionInstallationService
                 .getProductionInstallationByCustomer(customerId);
-        if (response.getSuccess()) {
-            return ResponseEntity.ok(response);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        // Always return 200 with proper response - let frontend handle "not found" case
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/customer/{customerId}/progress")

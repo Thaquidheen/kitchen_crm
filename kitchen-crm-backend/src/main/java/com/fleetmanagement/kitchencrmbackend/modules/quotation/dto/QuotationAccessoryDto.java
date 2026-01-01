@@ -32,4 +32,6 @@ public class QuotationAccessoryDto {
     private Integer depthMm;          // For dimensions display
     private String color;             // For additional info
     private String materialCode;      // For product identification
+    
+    private Long kitchenId;           // Reference to quotation_kitchens (nullable for backward compatibility)
 }

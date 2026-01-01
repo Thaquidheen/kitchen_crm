@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Warranty Certificate</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 0;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      padding: 25px;
+      color: #1f2937;
+      line-height: 1.6;
+    }
+    
+    .warranty-card {
+      max-width: 210mm;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 30px 35px;
+    }
+    
+    /* Page Break */
+    .page-break {
+      page-break-after: always;
+      break-after: page;
+    }
+    
+    /* Header Section - Top Left */
+    .header {
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .company-name {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 5px;
+      text-align: left;
+    }
+    
+    .company-name .brand-part {
+      color: #dc2626;
+    }
+    
+    .company-tagline {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 15px;
+      font-weight: 400;
+    }
+    
+    .company-info {
+      font-size: 12px;
+      color: #4b5563;
+      line-height: 1.8;
+      margin-top: 10px;
+    }
+    
+    .company-info span {
+      display: inline-block;
+      margin-right: 15px;
+    }
+    
+    /* Main Content */
+    .content {
+      margin-top: 20px;
+    }
+    
+    /* Section Titles */
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #dc2626;
+      margin-bottom: 18px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #dc2626;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Certificate Info Section */
+    .certificate-info {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-left: 3px solid #dc2626;
+      padding: 18px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    
+    .info-row {
+      margin-bottom: 12px;
+      font-size: 13px;
+      display: flex;
+      align-items: flex-start;
+    }
+    
+    .info-row:last-child {
+      margin-bottom: 0;
+    }
+    
+    .info-label {
+      font-weight: 600;
+      color: #374151;
+      min-width: 130px;
+      flex-shrink: 0;
+    }
+    
+    .info-value {
+      color: #1f2937;
+      flex: 1;
+      word-wrap: break-word;
+    }
+    
+    /* Project Description Box */
+    .project-description {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-left: 3px solid #dc2626;
+      border-radius: 4px;
+      padding: 15px 18px;
+      margin: 20px 0;
+      font-size: 13px;
+      color: #1f2937;
+    }
+    
+    .project-description strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #dc2626;
+      font-weight: 600;
+    }
+    
+    /* Warranty Statement */
+    .warranty-statement {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      padding: 15px 18px;
+      border-radius: 4px;
+      margin: 20px 0;
+      font-size: 13px;
+      color: #374151;
+      font-style: italic;
+      line-height: 1.7;
+    }
+    
+    /* Table Styling */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 12px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+    }
+    
+    table thead {
+      background: #dc2626;
+      color: white;
+    }
+    
+    table th {
+      padding: 12px 15px;
+      text-align: left;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 11px;
+      border: none;
+    }
+    
+    table tbody tr {
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    table tbody tr:last-child {
+      border-bottom: none;
+    }
+    
+    table tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+    
+    table td {
+      padding: 12px 15px;
+      color: #374151;
+      border: none;
+    }
+    
+    table td:first-child {
+      font-weight: 600;
+      color: #1f2937;
+    }
+    
+    table td:last-child {
+      color: #dc2626;
+      font-weight: 600;
+    }
+    
+    /* Terms & Conditions - Page 2 */
+    .terms-section {
+      font-size: 12px;
+      line-height: 1.8;
+      color: #4b5563;
+      background: #f9fafb;
+      padding: 18px;
+      border-radius: 4px;
+      border: 1px solid #e5e7eb;
+      margin-bottom: 25px;
+    }
+    
+    .terms-section p {
+      margin-bottom: 12px;
+      text-align: justify;
+    }
+    
+    .terms-section p:last-child {
+      margin-bottom: 0;
+    }
+    
+    .terms-section ul {
+      margin: 12px 0;
+      padding-left: 25px;
+    }
+    
+    .terms-section li {
+      margin-bottom: 10px;
+    }
+    
+    .terms-section li::marker {
+      color: #dc2626;
+      font-weight: bold;
+    }
+    
+    /* Notes Section */
+    .notes-section {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-left: 3px solid #dc2626;
+      padding: 18px;
+      border-radius: 4px;
+      margin: 25px 0;
+      font-size: 12px;
+      color: #4b5563;
+      line-height: 1.8;
+    }
+    
+    .notes-section p {
+      margin-bottom: 10px;
+    }
+    
+    .notes-section p:last-child {
+      margin-bottom: 0;
+    }
+    
+    /* Signatory Section */
+    .signatory-section {
+      margin-top: 35px;
+      padding-top: 25px;
+      border-top: 2px solid #e5e7eb;
+    }
+    
+    .signatory-header {
+      text-align: left;
+      margin-bottom: 15px;
+      font-weight: 600;
+      color: #374151;
+      font-size: 13px;
+    }
+    
+    .signature-box {
+      text-align: right;
+      margin-top: 50px;
+    }
+    
+    .signature-line {
+      border-top: 2px solid #1f2937;
+      width: 220px;
+      margin: 0 0 8px auto;
+    }
+    
+    .signatory-info {
+      font-size: 12px;
+      color: #4b5563;
+      text-align: right;
+      margin-top: 10px;
+    }
+    
+    .signatory-info div {
+      margin-bottom: 5px;
+    }
+    
+    .signatory-info strong {
+      color: #1f2937;
+      font-weight: 600;
+    }
+    
+    /* Footer */
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 2px solid #e5e7eb;
+      text-align: center;
+      font-size: 11px;
+      color: #6b7280;
+    }
+    
+    .footer-text {
+      line-height: 1.6;
+    }
+    
+    /* Certificate Number Highlight */
+    .cert-number-highlight {
+      color: #dc2626;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 1px;
+    }
+    
+    /* Utility Classes */
+    .text-center {
+      text-align: center;
+    }
+    
+    .mb-10 {
+      margin-bottom: 10px;
+    }
+    
+    .mb-15 {
+      margin-bottom: 15px;
+    }
+    
+    .mt-20 {
+      margin-top: 20px;
+    }
+    
+    /* Print Styles */
+    @media print {
+      body {
+        background: #f5f5f5;
+        padding: 0;
+      }
+      
+      .warranty-card {
+        box-shadow: none;
+        border-radius: 0;
+      }
+      
+      .page-break {
+        page-break-after: always;
+        break-after: page;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="warranty-card">
+    <!-- PAGE 1: Company Details, Logo, and Components Table -->
+    <div class="page-1">
+      <!-- Header - Top Left -->
+      <div class="header">
+        <div class="company-name">{{COMPANY_NAME}}</div>
+        <div class="company-tagline">{{COMPANY_TAGLINE}}</div>
+        <div class="company-info">
+          {{COMPANY_ADDRESS_LINE1}}<br>
+          {{COMPANY_ADDRESS_LINE2}}<br>
+          <span>Phone: {{COMPANY_PHONE}}</span>
+          <span>Email: {{COMPANY_EMAIL}}</span>
+          <span>Website: {{COMPANY_WEBSITE}}</span>
+        </div>
+      </div>
+
+      <!-- Main Content - Page 1 -->
+      <div class="content">
+        <div class="section-title">Warranty Certificate</div>
+        
+        <div class="certificate-info">
+          <div class="info-row">
+            <span class="info-label">Certificate No.:</span>
+            <span class="info-value">
+              <span class="cert-number-highlight">{{CERTIFICATE_NUMBER}}</span>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Date of Issue:</span>
+            <span class="info-value">{{ISSUE_DATE}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Client Name:</span>
+            <span class="info-value"><strong>{{CLIENT_NAME}}</strong></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Project Address:</span>
+            <span class="info-value">{{PROJECT_ADDRESS}}</span>
+          </div>
+        </div>
+
+        <div class="project-description">
+          <strong>Project Description</strong>
+          {{PROJECT_DESCRIPTION}}
+        </div>
+
+        <div class="info-row mb-15">
+          <span class="info-label">Project Completed:</span>
+          <span class="info-value"><strong>{{PROJECT_COMPLETION_DATE}}</strong></span>
+        </div>
+
+        <div class="warranty-statement">
+          This is to certify that the modular kitchen installed at the above-mentioned address is covered under warranty as per the terms and conditions specified on the next page.
+        </div>
+
+        <div class="section-title" style="margin-top: 25px;">Warranty Coverage</div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Warranty Period</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{WARRANTY_COMPONENTS_TABLE}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAGE 2: Terms & Conditions, Notes, and Signature -->
+    <div class="page-break"></div>
+    
+    <div class="page-2">
+      <!-- Main Content - Page 2 -->
+      <div class="content">
+        <div class="section-title">Terms & Conditions</div>
+        
+        <div class="terms-section">
+          {{WARRANTY_TERMS_TEXT}}
+        </div>
+
+        <!-- Notes/Agreement Section -->
+        <div class="notes-section">
+          <p><strong>Important Notes:</strong></p>
+          <p>This warranty certificate is issued by {{COMPANY_NAME}} and is valid only for the project mentioned on page 1. The warranty coverage is subject to proper installation, maintenance, and usage as per the manufacturer's guidelines.</p>
+          <p>For any warranty claims or inquiries, please contact us using the contact information provided above. All warranty claims must be submitted in writing along with supporting documentation.</p>
+          <p>The warranty does not cover damages caused by misuse, accidents, natural disasters, or modifications made without authorization from {{COMPANY_NAME}}.</p>
+        </div>
+
+        <!-- Authorized Signatory -->
+        <div class="signatory-section">
+          <div class="signatory-header">Authorized Signatory</div>
+          <div class="signature-box">
+            <div class="signature-line"></div>
+            <div class="signatory-info">
+              <div><strong>Name:</strong> {{AUTHORIZED_NAME}}</div>
+              <div><strong>Designation:</strong> {{AUTHORIZED_DESIGNATION}}</div>
+              <div><strong>Date:</strong> {{SIGNATURE_DATE}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <div class="footer-text">
+          This warranty certificate is issued by {{COMPANY_NAME}} and is valid only for the project mentioned above.
+          For any warranty claims or inquiries, please contact us using the information provided above.
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

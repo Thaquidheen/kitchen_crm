@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signature Confirmed - HOCH</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .success-icon {
+            font-size: 60px;
+            margin: 20px 0;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .message {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 25px;
+            line-height: 1.8;
+        }
+        .success-box {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 5px;
+        }
+        .success-box h3 {
+            margin: 0 0 10px 0;
+            color: #155724;
+            font-size: 18px;
+        }
+        .success-box p {
+            margin: 5px 0;
+            color: #155724;
+        }
+        .document-info {
+            background-color: #f8f9fa;
+            border-left: 4px solid #38ef7d;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 5px;
+        }
+        .document-info p {
+            margin: 8px 0;
+            color: #555;
+        }
+        .document-info strong {
+            color: #2c3e50;
+        }
+        .next-steps {
+            background-color: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 5px;
+        }
+        .next-steps h3 {
+            margin: 0 0 15px 0;
+            color: #0066cc;
+        }
+        .next-steps ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .next-steps li {
+            margin: 8px 0;
+            color: #004999;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 16px 40px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 20px 0;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(56, 239, 125, 0.4);
+        }
+        .footer {
+            background-color: #2c3e50;
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .footer p {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="success-icon">✅</div>
+            <h1>Signature Confirmed!</h1>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="greeting">
+                Hello {{customerName}},
+            </div>
+
+            <div class="message">
+                Thank you for approving the document! We have received your confirmation successfully.
+            </div>
+
+            <!-- Success Confirmation -->
+            <div class="success-box">
+                <h3>✓ Document Approved Successfully</h3>
+                <p>Your approval has been recorded and a signed copy of the document has been generated.</p>
+                <p><strong>Approved on:</strong> {{signedDate}} at {{signedTime}}</p>
+            </div>
+
+            <!-- Document Information -->
+            <div class="document-info">
+                <p><strong>Document Type:</strong> {{documentType}}</p>
+                <p><strong>Reference Number:</strong> {{referenceNumber}}</p>
+                <p><strong>Total Amount:</strong> {{totalAmount}}</p>
+            </div>
+
+            <!-- Next Steps -->
+            <div class="next-steps">
+                <h3>📋 What Happens Next?</h3>
+                <ul>
+                    <li>A signed copy of the document has been attached to this email</li>
+                    <li>Our team will begin processing your request immediately</li>
+                    <li>You will receive updates at each stage of the project</li>
+                    <li>You can download the signed document anytime from your customer portal</li>
+                </ul>
+            </div>
+
+            <div class="message">
+                A copy of the signed document is attached to this email for your records. Please keep it for future reference.
+            </div>
+
+            <!-- Call to Action -->
+            <center>
+                <a href="{{documentDownloadUrl}}" class="cta-button">
+                    Download Signed Document
+                </a>
+            </center>
+
+            <div class="message" style="font-size: 14px; color: #777; margin-top: 30px;">
+                If you have any questions or concerns, please don't hesitate to contact us at {{supportEmail}} or {{supportPhone}}.
+            </div>
+
+            <div class="message" style="font-size: 16px; color: #2c3e50; font-weight: 600; margin-top: 30px;">
+                Thank you for choosing HOCH! We look forward to working with you.
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>HOCH</strong></p>
+            <p>Kitchen Management System</p>
+            <p style="margin-top: 15px; font-size: 12px; color: #95a5a6;">
+                This is an automated confirmation email.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

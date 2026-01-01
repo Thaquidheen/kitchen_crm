@@ -109,7 +109,7 @@ public class ProjectController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<ProjectDto>> updateProject(
             @PathVariable Long id,
-            @Valid @RequestBody ProjectDto projectDto,
+            @RequestBody ProjectDto projectDto,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         ApiResponse<ProjectDto> response = projectService.updateProject(
@@ -136,5 +136,32 @@ public class ProjectController {
 
         return ResponseEntity.ok(projectService.updateProjectStatus(
                 id, status, currentUser.getName()));
+    }
+
+    @GetMapping("/{id}/cash-calculation")
+    public ResponseEntity<ApiResponse<ProjectCashCalculationDto>> getProjectCashCalculation(
+            @PathVariable Long id) {
+        ApiResponse<ProjectCashCalculationDto> response = projectService.getProjectCashCalculation(id);
+        if (response.getSuccess()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PutMapping("/{id}/cash-calculation")
+    public ResponseEntity<ApiResponse<ProjectDto>> updateProjectCashCalculation(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateProjectCashCalculationRequest request,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        
+        ApiResponse<ProjectDto> response = projectService.updateProjectCashCalculation(
+                id, request, currentUser.getName());
+        
+        if (response.getSuccess()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 }

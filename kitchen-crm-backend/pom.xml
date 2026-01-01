@@ -134,6 +134,13 @@
             <version>2.11.0</version>
         </dependency>
 
+        <!-- Spring Boot Mail Starter (for Gmail SMTP) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+
         <!-- OpenAPI UI -->
         <dependency>
             <groupId>org.springdoc</groupId>

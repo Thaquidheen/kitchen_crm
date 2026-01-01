@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Quotation - {{QUOTATION_NUMBER}}</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; margin: 24px; color: #222; }
+    .muted { color: #6c757d; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; }
+    .title { font-size: 22px; font-weight: 800; letter-spacing: .3px; }
+    .brand { color: #F39C12; font-weight: 800; }
+    .meta { text-align: right; font-size: 12px; }
+    .meta div { margin: 3px 0; }
+    .grid { display: flex; gap: 12px; margin-top: 12px; }
+    .card { flex: 1; background: #fafafa; border: 1px solid #eee; border-radius: 6px; padding: 10px; }
+    .label { font-size: 11px; text-transform: uppercase; color: #6b7280; font-weight: 700; margin-bottom: 4px; }
+    .section { margin-top: 16px; }
+    .section h3 { margin: 0 0 8px; font-size: 14px; letter-spacing: .3px; color: #111; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #0f3a53; color: #fff; text-align: left; padding: 8px; font-size: 12px; border-bottom: 1px solid #e5e7eb; }
+    td { padding: 8px; border-bottom: 1px dotted #cfd8df; font-size: 12px; vertical-align: top; }
+    .text-right { text-align: right; }
+    .totals { width: 45%; margin-left: auto; }
+    .totals td { border-bottom: none; }
+    .grand { background: #F39C12; color: #fff; font-weight: 800; }
+    .footer { margin-top: 14px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #6b7280; }
+    .sig { text-align: right; }
+    .sig .line { width: 180px; height: 1px; background: #bbb; margin-top: 36px; }
+
+    /* Kitchen-specific styles */
+    .kitchen-section { margin-bottom: 30px; margin-top: 20px; padding: 15px; border: 2px solid #0f3a53; border-radius: 6px; }
+    .kitchen-header { color: #0f3a53; margin-bottom: 15px; font-size: 18px; font-weight: bold; border-bottom: 2px solid #0f3a53; padding-bottom: 8px; }
+    .scope-title, .plan-images-title, .category-title, .kitchen-totals-title { font-size: 14px; margin-bottom: 8px; color: #0f3a53; font-weight: bold; }
+    .plan-images-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .plan-image-item { border: 1px solid #ddd; padding: 5px; text-align: center; }
+    .plan-image-item img { max-width: 100%; height: auto; }
+    .category-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+    .category-table th { background: #0f3a53; color: #fff; padding: 8px; text-align: left; }
+    .category-table th:first-child { width: 46%; }
+    .category-table th:nth-child(2) { width: 12%; text-align: center; }
+    .category-table th:nth-child(3) { width: 18%; }
+    .category-table th:nth-child(4), .category-table th:nth-child(5) { width: 12%; text-align: right; }
+    .kitchen-totals { margin-top: 15px; padding-top: 10px; border-top: 2px solid #0f3a53; }
+    .kitchen-totals-table { width: 100%; border-collapse: collapse; }
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <div class="title">Quotation</div>
+      <div class="brand">{{COMPANY_NAME}}</div>
+      <div class="muted">{{COMPANY_ADDRESS}}</div>
+      <div class="muted">{{COMPANY_PHONE}} · {{COMPANY_EMAIL}}</div>
+    </div>
+    <div class="meta">
+      <div><strong>No:</strong> {{QUOTATION_NUMBER}}</div>
+      <div><strong>Date:</strong> {{CREATED_DATE}}</div>
+      <div><strong>Valid Until:</strong> {{VALID_UNTIL}}</div>
+    </div>
+  </div>
+
+  <!-- Parties -->
+  <div class="grid">
+    <div class="card">
+      <div class="label">Quotation By</div>
+      <div><strong>{{COMPANY_NAME}}</strong></div>
+      <div class="muted">{{COMPANY_ADDRESS}}</div>
+      <div class="muted">{{COMPANY_PHONE}} · {{COMPANY_EMAIL}}</div>
+    </div>
+    <div class="card">
+      <div class="label">Quotation To</div>
+      <div><strong>{{CUSTOMER_NAME}}</strong></div>
+      <div class="muted">Project: {{PROJECT_NAME}}</div>
+    </div>
+  </div>
+
+  <!-- Kitchen Count -->
+  {{KITCHEN_COUNT}}
+
+  <!-- Kitchen Sections will be inserted here -->
+  {{KITCHEN_SECTIONS}}
+
+  <!-- Grand Total for Multi-Kitchen -->
+  {{GRAND_TOTAL}}
+
+  <!-- Single Kitchen Totals (hidden if multi-kitchen) -->
+  <table class="totals" style="margin-top:8px;">
+    <tbody>
+      <tr>
+        <td class="text-right"><strong>Sub Total</strong></td>
+        <td class="text-right">₹{{SUBTOTAL}}</td>
+      </tr>
+      <tr>
+        <td class="text-right">Transportation</td>
+        <td class="text-right">₹{{TRANSPORTATION_PRICE}}</td>
+      </tr>
+      <tr>
+        <td class="text-right">Installation</td>
+        <td class="text-right">₹{{INSTALLATION_PRICE}}</td>
+      </tr>
+      <tr>
+        <td class="text-right">Tax ({{TAX_PERCENTAGE}}%)</td>
+        <td class="text-right">₹{{TAX_AMOUNT}}</td>
+      </tr>
+      <tr class="grand">
+        <td class="text-right"><strong>Total</strong></td>
+        <td class="text-right"><strong>₹{{TOTAL_AMOUNT}}</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Notes & Signature -->
+  <div class="grid" style="margin-top:10px;">
+    <div class="card" style="flex:2;">
+      <div class="label">Terms & Conditions</div>
+      <div style="white-space: pre-line;">{{TERMS_CONDITIONS}}</div>
+      <div class="muted" style="margin-top:6px; font-size:12px;">{{NOTES}}</div>
+    </div>
+    <div class="sig" style="flex:1;">
+      <div class="label">Authorised Signatory</div>
+      <div class="line"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div>Thank you for considering {{COMPANY_NAME}}.</div>
+    <div>For queries: {{COMPANY_EMAIL}} · {{COMPANY_PHONE}}</div>
+  </div>
+
+</body>
+</html>

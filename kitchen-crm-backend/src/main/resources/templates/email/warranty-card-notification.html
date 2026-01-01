@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #1a1a1a;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 30px;
+            border: 1px solid #ddd;
+        }
+        .footer {
+            background-color: #1a1a1a;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            border-radius: 0 0 5px 5px;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #dc2626;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>THE HOCH</h1>
+        <p>Modular Interiors & Design Solutions</p>
+    </div>
+    
+    <div class="content">
+        <h2>Dear {{CUSTOMER_NAME}},</h2>
+        
+        <p>Thank you for choosing THE HOCH for your modular kitchen project.</p>
+        
+        <p>We are pleased to provide you with your <strong>Warranty Certificate</strong> for the completed project.</p>
+        
+        <div style="background-color: white; padding: 15px; border-left: 4px solid #dc2626; margin: 20px 0;">
+            <p style="margin: 0;"><strong>Certificate Number:</strong> {{CERTIFICATE_NUMBER}}</p>
+            <p style="margin: 5px 0 0 0;"><strong>Issue Date:</strong> {{ISSUE_DATE}}</p>
+        </div>
+        
+        <p>Your warranty certificate is attached to this email. Please keep this document safe as it will be required for any warranty claims.</p>
+        
+        <h3>Warranty Coverage Summary:</h3>
+        <ul>
+            <li>Modular Cabinet: 15 Years</li>
+            <li>Hinges & Drawer Channels: As per hardware brand warranty</li>
+            <li>Shutters & Finish: 7 Years</li>
+        </ul>
+        
+        <p>For detailed terms and conditions, please refer to the attached warranty certificate.</p>
+        
+        <p>If you have any questions or need assistance, please feel free to contact us.</p>
+        
+        <p>Best regards,<br>
+        <strong>THE HOCH Team</strong></p>
+    </div>
+    
+    <div class="footer">
+        <p>THE HOCH - Modular Interiors & Design Solutions</p>
+        <p>{{COMPANY_PHONE}} | {{COMPANY_EMAIL}} | {{COMPANY_WEBSITE}}</p>
+    </div>
+</body>
+</html>
+
+

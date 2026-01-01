@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signature Reminder - HOCH</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .message {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 25px;
+            line-height: 1.8;
+        }
+        .urgent-banner {
+            background-color: #fee;
+            border-left: 4px solid #dc3545;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 5px;
+        }
+        .urgent-banner h3 {
+            margin: 0 0 10px 0;
+            color: #dc3545;
+            font-size: 18px;
+        }
+        .urgent-banner p {
+            margin: 5px 0;
+            color: #721c24;
+        }
+        .document-info {
+            background-color: #f8f9fa;
+            border-left: 4px solid #f5576c;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 5px;
+        }
+        .document-info p {
+            margin: 8px 0;
+            color: #555;
+        }
+        .document-info strong {
+            color: #2c3e50;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 16px 40px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 20px 0;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+        }
+        .footer {
+            background-color: #2c3e50;
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .footer p {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>⏰ Signature Reminder</h1>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="greeting">
+                Hello {{customerName}},
+            </div>
+
+            <div class="message">
+                This is a friendly reminder that we are still waiting for your approval on the document we sent earlier.
+            </div>
+
+            <!-- Urgent Banner -->
+            <div class="urgent-banner">
+                <h3>⚠️ Action Required</h3>
+                <p><strong>This link will expire in {{daysRemaining}} days</strong></p>
+                <p>Please review and approve the document at your earliest convenience to avoid any delays.</p>
+            </div>
+
+            <!-- Document Information -->
+            <div class="document-info">
+                <p><strong>Document Type:</strong> {{documentType}}</p>
+                <p><strong>Reference Number:</strong> {{referenceNumber}}</p>
+                <p><strong>Sent On:</strong> {{sentDate}}</p>
+                <p><strong>Expires On:</strong> {{expiryDate}}</p>
+            </div>
+
+            <div class="message">
+                If you have already completed this action, please disregard this reminder. If you're experiencing any issues or have questions, please contact us.
+            </div>
+
+            <!-- Call to Action -->
+            <center>
+                <a href="{{signingUrl}}" class="cta-button">
+                    Approve Document Now
+                </a>
+            </center>
+
+            <div class="message" style="font-size: 14px; color: #777; margin-top: 30px;">
+                Need help? Contact us at {{supportEmail}} or {{supportPhone}}
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>HOCH</strong></p>
+            <p>Kitchen Management System</p>
+            <p style="margin-top: 15px; font-size: 12px; color: #95a5a6;">
+                This is an automated reminder. Please do not reply to this message.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

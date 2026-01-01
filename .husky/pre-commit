@@ -1,0 +1,1 @@
+cd kitchen-crm-frontend && npx lint-staged

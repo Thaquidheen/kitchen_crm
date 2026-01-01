@@ -35,12 +35,12 @@ INSERT INTO roles (name, created_at, updated_at) VALUES
 
 -- Insert default super admin user (password: admin123)
 INSERT INTO users (name, email, password, phone_number, active, created_at, updated_at) VALUES
-    ('Super Admin', 'admin@kitchen-crm.com', '$2a$10$SlXF3x8.j1aSjtKYf2ZxZu1LrqGDk2qXlFGR2k0K9V4kf5SomTuiy', '1234567890', true, NOW(), NOW())
+    ('Super Admin', 'admin@kitchen-crm.com', '$2a$10$aaM//yBg8tVpEdVLBg//xOT8btkDO2DdJVDqqvYJvNDWPRt8hVepW', '1234567890', true, NOW(), NOW())
     ON DUPLICATE KEY UPDATE email = email;
 
 -- Insert default staff user (password: staff123)
 INSERT INTO users (name, email, password, phone_number, active, created_at, updated_at) VALUES
-    ('Staff User', 'staff@kitchen-crm.com', '$2a$10$wI4ky8FQRhNqx8fP6LW5HeR9oQF5xRG.8RGzpXZQ7V5mYo7kTZR7e', '0987654321', true, NOW(), NOW())
+    ('Staff User', 'staff@kitchen-crm.com', '$2a$10$GpRERA3CLywUuFVMlBYNTOPUVts6DQbeDZUkrKQEAuVGVyVRfM1pO', '0987654321', true, NOW(), NOW())
     ON DUPLICATE KEY UPDATE email = email;
 
 -- Assign roles to users

@@ -23,6 +23,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -36,6 +37,12 @@ public class QuotationController {
 
     @Autowired
     private PdfGenerationService pdfGenerationService;
+
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerPlanImageRepository customerPlanImageRepository;
+
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.customer.repository.DesignPhaseFileRepository designPhaseFileRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<QuotationSummaryDto>>> getAllQuotations(
@@ -221,6 +228,53 @@ public class QuotationController {
                 customerId, null, null, null, null, pageable));
     }
 
+    @GetMapping("/customers/{customerId}/available-plan-images")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getCustomerAvailablePlanImages(
+            @PathVariable Long customerId) {
+        try {
+            // Fetch CustomerPlanImage entities
+            List<com.fleetmanagement.kitchencrmbackend.modules.customer.entity.CustomerPlanImage> planImages =
+                    customerPlanImageRepository.findByCustomerId(customerId);
+
+            // Fetch DesignPhaseFile entities with PLAN category
+            List<com.fleetmanagement.kitchencrmbackend.modules.customer.entity.DesignPhaseFile> designFiles =
+                    designPhaseFileRepository.findByCustomerId(customerId).stream()
+                            .filter(file -> file.getFileCategory() ==
+                                    com.fleetmanagement.kitchencrmbackend.modules.customer.entity.DesignPhaseFile.FileCategory.PLAN)
+                            .toList();
+
+            // Convert to DTOs
+            List<Map<String, Object>> planImageList = planImages.stream().map(img -> {
+                Map<String, Object> map = new java.util.HashMap<>();
+                map.put("id", img.getId());
+                map.put("type", "plan_image");
+                map.put("name", img.getImageName());
+                map.put("url", img.getImageUrl());
+                map.put("imageType", img.getImageType() != null ? img.getImageType().name() : "FLOOR_PLAN");
+                return map;
+            }).toList();
+
+            List<Map<String, Object>> designFileList = designFiles.stream().map(file -> {
+                Map<String, Object> map = new java.util.HashMap<>();
+                map.put("id", file.getId());
+                map.put("type", "design_file");
+                map.put("name", file.getOriginalFileName());
+                map.put("url", file.getFileUrl());
+                map.put("fileCategory", file.getFileCategory() != null ? file.getFileCategory().name() : "PLAN");
+                return map;
+            }).toList();
+
+            Map<String, Object> result = new java.util.HashMap<>();
+            result.put("planImages", planImageList);
+            result.put("designFiles", designFileList);
+
+            return ResponseEntity.ok(ApiResponse.success("Available plan images retrieved successfully", result));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to fetch available plan images: " + e.getMessage()));
+        }
+    }
+
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<Page<QuotationSummaryDto>>> searchQuotations(
             @RequestParam String query,
@@ -232,5 +286,57 @@ public class QuotationController {
         // Search in customer name, quotation number, or project name
         return ResponseEntity.ok(quotationService.getAllQuotations(
                 null, null, query, null, null, pageable));
+    }
+
+    @PostMapping("/{id}/pdf/approve")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<?> generateApprovedPdf(
+            @PathVariable Long id,
+            @Valid @RequestBody PdfApprovalStampDto approvalData,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        try {
+            String userRole = currentUser.getAuthorities().iterator().next().getAuthority();
+
+            // Check if service is available
+            if (pdfGenerationService == null) {
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(ApiResponse.error("PDF generation service is not available"));
+            }
+
+            // First, generate the original quotation PDF
+            ApiResponse<Resource> quotationResponse = pdfGenerationService.generateQuotationPdf(id, userRole);
+
+            if (!quotationResponse.getSuccess()) {
+                return ResponseEntity.badRequest()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(quotationResponse);
+            }
+
+            // Read the original PDF bytes
+            Resource originalResource = quotationResponse.getData();
+            byte[] originalPdfBytes = originalResource.getInputStream().readAllBytes();
+
+            // Add approval stamp to the PDF
+            byte[] approvedPdfBytes = pdfGenerationService.addApprovalStampToPdf(originalPdfBytes, approvalData);
+
+            // Create a temporary file for the approved PDF
+            java.nio.file.Path tempFile = java.nio.file.Files.createTempFile(
+                "quotation_approved_" + id + "_", ".pdf");
+            java.nio.file.Files.write(tempFile, approvedPdfBytes);
+
+            Resource approvedResource = new org.springframework.core.io.FileSystemResource(tempFile.toFile());
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"quotation_approved_" + id + ".pdf\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(approvedResource);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(ApiResponse.error("Failed to generate approved PDF: " + e.getMessage()));
+        }
     }
 }

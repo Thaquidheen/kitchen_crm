@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.util.unit.DataSize;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.lang.NonNull;
 
 import jakarta.servlet.MultipartConfigElement;
 import java.nio.file.Paths;
@@ -15,7 +16,13 @@ import java.nio.file.Paths;
 public class FileUploadConfig implements WebMvcConfigurer {
 
     @Value("${app.upload-dir:uploads/plan-images}")
-    private String uploadDir;
+    private String planImagesUploadDir;
+
+    @Value("${app.design-upload-dir:uploads/design-files}")
+    private String designFilesUploadDir;
+
+    @Value("${file.upload-dir:./uploads}")
+    private String baseUploadDir;
 
     @Bean
     public MultipartConfigElement multipartConfigElement() {
@@ -31,9 +38,17 @@ public class FileUploadConfig implements WebMvcConfigurer {
     }
 
     @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Make uploaded files accessible via URL
+    public void addResourceHandlers(@NonNull ResourceHandlerRegistry registry) {
+        // Make plan images accessible via URL
         registry.addResourceHandler("/uploads/plan-images/**")
-                .addResourceLocations("file:" + Paths.get(uploadDir).toAbsolutePath().toString() + "/");
+                .addResourceLocations("file:" + Paths.get(planImagesUploadDir).toAbsolutePath().toString() + "/");
+
+        // Make design files accessible via URL
+        registry.addResourceHandler("/uploads/design-files/**")
+                .addResourceLocations("file:" + Paths.get(designFilesUploadDir).toAbsolutePath().toString() + "/");
+
+        // Make root uploads folder accessible via URL (for background images, etc.)
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:" + Paths.get(baseUploadDir).toAbsolutePath().toString() + "/");
     }
 }

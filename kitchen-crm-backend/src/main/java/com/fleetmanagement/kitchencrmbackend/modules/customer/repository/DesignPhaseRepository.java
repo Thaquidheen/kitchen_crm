@@ -3,6 +3,7 @@ package com.fleetmanagement.kitchencrmbackend.modules.customer.repository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.DesignPhase;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,7 +20,7 @@ public interface DesignPhaseRepository extends JpaRepository<DesignPhase, Long> 
 
     List<DesignPhase> findByDesignStatus(DesignPhase.DesignStatus status);
 
-    List<DesignPhase> findByDesignerAssigned(String designerAssigned);
+    List<DesignPhase> findByStaffAssignedId(Long staffId);
 
     long countByDesignStatus(DesignPhase.DesignStatus status);
 
@@ -27,13 +28,14 @@ public interface DesignPhaseRepository extends JpaRepository<DesignPhase, Long> 
     List<DesignPhase> findMeetingsInDateRange(@Param("fromDate") LocalDateTime fromDate,
                                               @Param("toDate") LocalDateTime toDate);
 
+    @EntityGraph(attributePaths = {"customer", "staffAssigned", "quotation"})
     @Query("SELECT d FROM DesignPhase d WHERE " +
             "(:designStatus IS NULL OR d.designStatus = :designStatus) AND " +
-            "(:designerAssigned IS NULL OR LOWER(d.designerAssigned) LIKE LOWER(CONCAT('%', :designerAssigned, '%'))) AND " +
+            "(:staffAssignedId IS NULL OR (d.staffAssigned IS NOT NULL AND d.staffAssigned.id = :staffAssignedId)) AND " +
             "(:customerName IS NULL OR LOWER(d.customer.name) LIKE LOWER(CONCAT('%', :customerName, '%'))) AND " +
             "(:submittedToClient IS NULL OR d.submittedToClient = :submittedToClient)")
     Page<DesignPhase> findByFilters(@Param("designStatus") DesignPhase.DesignStatus designStatus,
-                                    @Param("designerAssigned") String designerAssigned,
+                                    @Param("staffAssignedId") Long staffAssignedId,
                                     @Param("customerName") String customerName,
                                     @Param("submittedToClient") Boolean submittedToClient,
                                     Pageable pageable);

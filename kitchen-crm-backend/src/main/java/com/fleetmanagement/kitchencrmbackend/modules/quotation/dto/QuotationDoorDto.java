@@ -29,4 +29,6 @@ public class QuotationDoorDto {
     private String doorStyle;
     private String description;
     private Boolean customDimensions = false;
+    
+    private Long kitchenId;           // Reference to quotation_kitchens (nullable for backward compatibility)
 }

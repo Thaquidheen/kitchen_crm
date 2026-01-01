@@ -2,6 +2,7 @@ package com.fleetmanagement.kitchencrmbackend.modules.quotation.entity;
 
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
 import com.fleetmanagement.kitchencrmbackend.modules.project.entity.CustomerProject;
+import com.fleetmanagement.kitchencrmbackend.modules.signature.entity.SignedDocument;
 import com.fleetmanagement.kitchencrmbackend.shared.audit.Auditable;
 import jakarta.persistence.*;
 import jakarta.persistence.OneToMany;
@@ -14,6 +15,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,6 +56,32 @@ public class Quotation extends Auditable {
 
     @Column(name = "tax_percentage", precision = 5, scale = 2)
     private BigDecimal taxPercentage = BigDecimal.ZERO;
+
+    // CATEGORY-SPECIFIC MARGIN PERCENTAGES
+    @Column(name = "accessories_margin_percentage", precision = 5, scale = 2)
+    private BigDecimal accessoriesMarginPercentage = BigDecimal.valueOf(20.00);
+
+    @Column(name = "cabinets_margin_percentage", precision = 5, scale = 2)
+    private BigDecimal cabinetsMarginPercentage = BigDecimal.valueOf(20.00);
+
+    @Column(name = "doors_margin_percentage", precision = 5, scale = 2)
+    private BigDecimal doorsMarginPercentage = BigDecimal.valueOf(20.00);
+
+    @Column(name = "lighting_margin_percentage", precision = 5, scale = 2)
+    private BigDecimal lightingMarginPercentage = BigDecimal.valueOf(20.00);
+
+    // CATEGORY-SPECIFIC TAX PERCENTAGES
+    @Column(name = "accessories_tax_percentage", precision = 5, scale = 2)
+    private BigDecimal accessoriesTaxPercentage = BigDecimal.valueOf(18.00);
+
+    @Column(name = "cabinets_tax_percentage", precision = 5, scale = 2)
+    private BigDecimal cabinetsTaxPercentage = BigDecimal.valueOf(18.00);
+
+    @Column(name = "doors_tax_percentage", precision = 5, scale = 2)
+    private BigDecimal doorsTaxPercentage = BigDecimal.valueOf(18.00);
+
+    @Column(name = "lighting_tax_percentage", precision = 5, scale = 2)
+    private BigDecimal lightingTaxPercentage = BigDecimal.valueOf(18.00);
 
     @Column(name = "subtotal", precision = 12, scale = 2)
     private BigDecimal subtotal = BigDecimal.ZERO;
@@ -155,6 +183,14 @@ public class Quotation extends Auditable {
 
     @Column(name = "approved_at")
     private LocalDate approvedAt;
+
+    // Signature Integration Fields
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "signed_document_id")
+    private SignedDocument signedDocument;
+
+    @Column(name = "quotation_signed_at")
+    private LocalDateTime quotationSignedAt;
 
     public enum QuotationStatus {
         DRAFT, SENT, APPROVED, REJECTED, REVISED

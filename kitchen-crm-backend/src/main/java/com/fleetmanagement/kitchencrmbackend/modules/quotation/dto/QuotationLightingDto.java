@@ -50,5 +50,7 @@ public class QuotationLightingDto {
     // Margin and tax (only for super admin)
     private BigDecimal marginAmount;
     private BigDecimal taxAmount;
+    
+    private Long kitchenId;           // Reference to quotation_kitchens (nullable for backward compatibility)
 }
 

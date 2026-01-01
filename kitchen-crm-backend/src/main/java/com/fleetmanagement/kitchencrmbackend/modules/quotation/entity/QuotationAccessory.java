@@ -27,6 +27,10 @@ public class QuotationAccessory extends Auditable {
     private Quotation quotation;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "kitchen_id", nullable = true)
+    private QuotationKitchen kitchen;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "accessory_id", nullable = false)
     private Accessory accessory;
 

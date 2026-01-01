@@ -9,5 +9,6 @@ import java.util.List;
 @Repository
 public interface QuotationLightingRepository extends JpaRepository<QuotationLighting, Long> {
     List<QuotationLighting> findByQuotationId(Long quotationId);
+    List<QuotationLighting> findByKitchenId(Long kitchenId);
     void deleteByQuotationId(Long quotationId);
 }

@@ -35,6 +35,19 @@ public class QuotationDto {
 
     private BigDecimal marginPercentage = BigDecimal.ZERO;
     private BigDecimal taxPercentage = BigDecimal.ZERO;
+    
+    // Category-specific margin percentages
+    private BigDecimal accessoriesMarginPercentage = BigDecimal.valueOf(20.00);
+    private BigDecimal cabinetsMarginPercentage = BigDecimal.valueOf(20.00);
+    private BigDecimal doorsMarginPercentage = BigDecimal.valueOf(20.00);
+    private BigDecimal lightingMarginPercentage = BigDecimal.valueOf(20.00);
+    
+    // Category-specific tax percentages
+    private BigDecimal accessoriesTaxPercentage = BigDecimal.valueOf(18.00);
+    private BigDecimal cabinetsTaxPercentage = BigDecimal.valueOf(18.00);
+    private BigDecimal doorsTaxPercentage = BigDecimal.valueOf(18.00);
+    private BigDecimal lightingTaxPercentage = BigDecimal.valueOf(18.00);
+    
     private BigDecimal subtotal = BigDecimal.ZERO;
     private BigDecimal marginAmount = BigDecimal.ZERO;
     private BigDecimal taxAmount = BigDecimal.ZERO;
@@ -50,6 +63,16 @@ public class QuotationDto {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // Signature Integration Fields
+    private Long signedDocumentId;
+    private LocalDateTime quotationSignedAt;
+    private String signatureStatus; // PENDING, SENT, SIGNED, REJECTED, EXPIRED
+    
+    // Signer information (from SignedDocument)
+    private String signerName;
+    private String signerEmail;
+    private String signerPhone;
 
     // ACCESSORIES CATEGORY TOTALS
     private BigDecimal accessoriesBaseTotal = BigDecimal.ZERO;
@@ -80,6 +103,9 @@ public class QuotationDto {
     private List<QuotationCabinetDto> cabinets;
     private List<QuotationDoorDto> doors;
     private List<QuotationLightingDto> lighting;
+
+    // Kitchens (multi-kitchen support)
+    private List<QuotationKitchenDto> kitchens;
 }
 
 

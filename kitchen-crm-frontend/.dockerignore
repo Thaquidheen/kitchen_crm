@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Test files
+coverage/
+*.test.*
+*.spec.*
+
+# Documentation
+*.md
+docs/
+
+# Misc
+.DS_Store
+Thumbs.db

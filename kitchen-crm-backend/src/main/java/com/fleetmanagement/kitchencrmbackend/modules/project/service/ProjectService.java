@@ -36,4 +36,8 @@ public interface ProjectService {
     ApiResponse<Map<String, Object>> getProjectStatistics();
 
     ApiResponse<Map<String, Object>> getProjectFinancialSummary(Long projectId);
+
+    ApiResponse<ProjectCashCalculationDto> getProjectCashCalculation(Long projectId);
+
+    ApiResponse<ProjectDto> updateProjectCashCalculation(Long projectId, UpdateProjectCashCalculationRequest request, String updatedBy);
 }

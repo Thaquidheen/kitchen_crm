@@ -1,6 +1,7 @@
 package com.fleetmanagement.kitchencrmbackend.modules.customer.entity;
 
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
+import com.fleetmanagement.kitchencrmbackend.modules.auth.entity.User;
 import com.fleetmanagement.kitchencrmbackend.shared.audit.Auditable;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -77,8 +78,9 @@ public class DesignPhase extends Auditable {
     @Column(name = "design_status")
     private DesignStatus designStatus = DesignStatus.PLANNING;
 
-    @Column(name = "designer_assigned")
-    private String designerAssigned;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "staff_assigned_id")
+    private User staffAssigned;
 
     @Column(name = "design_completion_percentage")
     private Integer designCompletionPercentage = 0;
@@ -93,14 +95,16 @@ public class DesignPhase extends Auditable {
     private String designFilesPath;
 
     public enum DesignStatus {
-        PLANNING,           // Initial planning phase
-        IN_PROGRESS,        // Design work in progress
-        SUBMITTED,          // Submitted to client for review
-        FEEDBACK_RECEIVED,  // Client feedback received
-        REVISION_REQUIRED,  // Revisions needed
-        APPROVED,           // Client approved design
-        FROZEN,             // Design frozen, ready for production
-        CANCELLED           // Design cancelled
+        PLANNING,                    // Initial planning phase
+        IN_PROGRESS,                 // Design work in progress
+        PENDING_SUPERADMIN_APPROVAL,  // Staff submitted for superadmin approval
+        APPROVED_BY_ADMIN,           // Superadmin approved the design
+        SUBMITTED,                   // Submitted to client for review
+        FEEDBACK_RECEIVED,           // Client feedback received
+        REVISION_REQUIRED,           // Revisions needed
+        APPROVED,                    // Client approved design
+        FROZEN,                      // Design frozen, ready for production
+        CANCELLED                    // Design cancelled
     }
 
     // Helper method to check if design can be frozen

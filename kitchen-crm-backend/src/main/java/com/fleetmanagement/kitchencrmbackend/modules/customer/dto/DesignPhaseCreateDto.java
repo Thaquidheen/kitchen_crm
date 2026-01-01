@@ -17,5 +17,5 @@ public class DesignPhaseCreateDto {
 
     private Long quotationId;
     private String designRequirements;
-    private String designerAssigned;
+    private Long staffAssignedId; // Staff user ID for assignment
 }

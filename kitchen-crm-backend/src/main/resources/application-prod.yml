@@ -1,0 +1,32 @@
+# Production profile for Docker deployment
+spring:
+  datasource:
+    url: jdbc:mysql://kitchen_crm_mysql:3306/kitchen_crm?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:kitchen_crm}
+    password: ${DB_PASSWORD:password123}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  flyway:
+    enabled: true
+    validate-on-migrate: true
+
+# File upload directories (Docker volume mounted)
+app:
+  upload-dir: /app/uploads/plan-images
+  design-upload-dir: /app/uploads/design-files
+
+file:
+  upload-dir: /app/uploads
+
+# Logging - reduced for production
+logging:
+  level:
+    root: INFO
+    com.fleetmanagement.kitchencrmbackend: INFO
+    org.springframework.security: WARN
+    org.springframework.mail: WARN
+    org.hibernate.SQL: WARN

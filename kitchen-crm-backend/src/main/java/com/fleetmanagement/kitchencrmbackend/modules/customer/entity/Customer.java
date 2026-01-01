@@ -1,5 +1,6 @@
 package com.fleetmanagement.kitchencrmbackend.modules.customer.entity;
 
+import com.fleetmanagement.kitchencrmbackend.modules.architect.entity.Architect;
 import com.fleetmanagement.kitchencrmbackend.shared.audit.Auditable;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -36,7 +37,25 @@ public class Customer extends Auditable {
     @Column(nullable = false)
     private CustomerStatus status = CustomerStatus.LEAD;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "architect_id")
+    private Architect architect;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "lead_source_type")
+    private LeadSourceType leadSourceType = LeadSourceType.NONE;
+
+    @Column(name = "manual_lead_name")
+    private String manualLeadName;
+
+    @Column(name = "manual_lead_contact")
+    private String manualLeadContact;
+
     public enum CustomerStatus {
         LEAD, PROSPECT, ACTIVE, COMPLETED, INACTIVE
+    }
+
+    public enum LeadSourceType {
+        NONE, ARCHITECT, MANUAL
     }
 }

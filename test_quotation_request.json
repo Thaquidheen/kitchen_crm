@@ -1,0 +1,175 @@
+{
+  "customerId": 1,
+  "projectName": "Multi-Kitchen Test Quotation",
+  "transportationPrice": 5000,
+  "installationPrice": 8000,
+  "marginPercentage": 15,
+  "taxPercentage": 18,
+  "validUntil": "2025-12-31",
+  "notes": "Test quotation with multiple kitchens to verify PDF generation",
+  "termsConditions": "Standard terms and conditions apply",
+  "kitchens": [
+    {
+      "kitchenName": "Main Kitchen",
+      "kitchenOrder": 1,
+      "transportationPrice": 3000,
+      "installationPrice": 5000,
+      "accessories": [
+        {
+          "accessoryName": "Premium Sink Mixer",
+          "brandName": "Jaquar",
+          "categoryName": "Faucets",
+          "quantity": 1.0,
+          "unitPrice": 15000.00,
+          "totalPrice": 15000,
+          "description": "Chrome finish single handle mixer",
+          "customItem": false,
+          "widthMm": 50,
+          "heightMm": 150,
+          "color": "Chrome"
+        },
+        {
+          "accessoryName": "Undermount Sink",
+          "brandName": "Franke",
+          "categoryName": "Sinks",
+          "quantity": 1.0,
+          "unitPrice": 12000.00,
+          "totalPrice": 12000,
+          "description": "Stainless steel double bowl sink",
+          "customItem": false,
+          "widthMm": 800,
+          "heightMm": 500,
+          "depthMm": 200,
+          "color": "Steel"
+        }
+      ],
+      "cabinets": [
+        {
+          "cabinetName": "Base Cabinet with Drawers",
+          "brandName": "Hettich",
+          "categoryName": "Base Cabinets",
+          "quantity": 2.0,
+          "unitPrice": 8500.00,
+          "totalPrice": 17000,
+          "description": "Soft close drawers with matte finish",
+          "customItem": false,
+          "widthMm": 600,
+          "heightMm": 720,
+          "depthMm": 560,
+          "color": "White"
+        },
+        {
+          "cabinetName": "Wall Cabinet",
+          "brandName": "Hettich",
+          "categoryName": "Wall Cabinets",
+          "quantity": 3,
+          "unitPrice": 6200.00,
+          "totalPrice": 18600,
+          "description": "Wall mounted cabinet with glass door",
+          "customItem": false,
+          "widthMm": 400,
+          "heightMm": 700,
+          "depthMm": 350,
+          "color": "White"
+        }
+      ],
+      "doors": [
+        {
+          "doorName": "Plywood Main Door",
+          "brandName": "Greenply",
+          "categoryName": "Main Doors",
+          "quantity": 1.0,
+          "unitPrice": 4500.00,
+          "totalPrice": 4500,
+          "description": "Matte finish plywood door with handle",
+          "customItem": false,
+          "widthMm": 800,
+          "heightMm": 2000,
+          "depthMm": 35,
+          "color": "Brown"
+        }
+      ],
+      "lighting": [
+        {
+          "itemType": "LIGHT_PROFILE",
+          "itemId": 1,
+          "itemName": "LED Strip Light",
+          "quantity": 2.0,
+          "unit": "Pieces",
+          "unitPrice": 2500.00,
+          "totalPrice": 5000,
+          "description": "Under cabinet LED warm white light",
+          "wattage": 12,
+          "profileType": "LED_STRIP"
+        }
+      ]
+    },
+    {
+      "kitchenName": "Secondary Kitchen",
+      "kitchenOrder": 2,
+      "transportationPrice": 2000,
+      "installationPrice": 3000,
+      "accessories": [
+        {
+          "accessoryName": "Kitchen Chimney",
+          "brandName": "Elica",
+          "categoryName": "Chimneys",
+          "quantity": 1.0,
+          "unitPrice": 18000.00,
+          "totalPrice": 18000,
+          "description": "Auto clean chimney with touch control",
+          "customItem": false,
+          "widthMm": 600,
+          "heightMm": 750,
+          "color": "Black"
+        }
+      ],
+      "cabinets": [
+        {
+          "cabinetName": "Tall Unit",
+          "brandName": "Hettich",
+          "categoryName": "Storage Units",
+          "quantity": 1.0,
+          "unitPrice": 12000.00,
+          "totalPrice": 12000,
+          "description": "Tall storage unit with adjustable shelves",
+          "customItem": false,
+          "widthMm": 600,
+          "heightMm": 2100,
+          "depthMm": 560,
+          "color": "White"
+        }
+      ],
+      "doors": [
+        {
+          "doorName": "Sliding Door",
+          "brandName": "Godrej",
+          "categoryName": "Utility Doors",
+          "quantity": 1.0,
+          "unitPrice": 6500.00,
+          "totalPrice": 6500,
+          "description": "Aluminum sliding door for utility area",
+          "customItem": false,
+          "widthMm": 700,
+          "heightMm": 2000,
+          "depthMm": 40,
+          "color": "Silver"
+        }
+      ],
+      "lighting": [
+        {
+          "itemType": "LIGHT_PROFILE",
+          "itemId": 2,
+          "itemName": "Ceiling LED Light",
+          "quantity": 1.0,
+          "unit": "Pieces",
+          "unitPrice": 3500.00,
+          "totalPrice": 3500,
+          "description": "Round ceiling light with remote control",
+          "wattage": 24,
+          "profileType": "CEILING_LIGHT"
+        }
+      ]
+    }
+  ]
+}

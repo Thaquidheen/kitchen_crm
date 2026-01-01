@@ -6,8 +6,12 @@ import com.fleetmanagement.kitchencrmbackend.modules.project.repository.Customer
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
+import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.QuotationKitchen;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.QuotationRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.QuotationKitchenRepository;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,10 +20,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,6 +39,12 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Autowired
     private QuotationRepository quotationRepository;
+
+    @Autowired
+    private QuotationKitchenRepository kitchenRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Override
     public ApiResponse<Page<ProjectSummaryDto>> getAllProjects(Long customerId,
@@ -119,19 +130,85 @@ public class ProjectServiceImpl implements ProjectService {
             return ApiResponse.error("Project not found");
         }
 
-        // Update project details
-        existingProject.setProjectName(projectDto.getProjectName());
-        existingProject.setProjectDescription(projectDto.getProjectDescription());
-        existingProject.setStartDate(projectDto.getStartDate());
-        existingProject.setExpectedCompletionDate(projectDto.getExpectedCompletionDate());
-        existingProject.setActualCompletionDate(projectDto.getActualCompletionDate());
-        existingProject.setTotalAmount(projectDto.getTotalAmount());
-        existingProject.setTotalTaxAmount(projectDto.getTotalTaxAmount());
-        existingProject.setCashInHand(projectDto.getCashInHand());
-        existingProject.setCashInAccount(projectDto.getCashInAccount());
-        existingProject.setReceivedAmountTotal(projectDto.getReceivedAmountTotal());
-        existingProject.setTotalExpense(projectDto.getTotalExpense());
-        existingProject.setStatus(projectDto.getStatus());
+        // Update project details only if provided
+        if (projectDto.getProjectName() != null) {
+            existingProject.setProjectName(projectDto.getProjectName());
+        }
+        if (projectDto.getProjectDescription() != null) {
+            existingProject.setProjectDescription(projectDto.getProjectDescription());
+        }
+        if (projectDto.getStartDate() != null) {
+            existingProject.setStartDate(projectDto.getStartDate());
+        }
+        if (projectDto.getExpectedCompletionDate() != null) {
+            existingProject.setExpectedCompletionDate(projectDto.getExpectedCompletionDate());
+        }
+        if (projectDto.getActualCompletionDate() != null) {
+            existingProject.setActualCompletionDate(projectDto.getActualCompletionDate());
+        }
+        if (projectDto.getTotalAmount() != null) {
+            existingProject.setTotalAmount(projectDto.getTotalAmount());
+        }
+        if (projectDto.getTotalTaxAmount() != null) {
+            existingProject.setTotalTaxAmount(projectDto.getTotalTaxAmount());
+        }
+        if (projectDto.getCommittedInHand() != null) {
+            existingProject.setCommittedInHand(projectDto.getCommittedInHand());
+        }
+        if (projectDto.getCommittedInAccount() != null) {
+            existingProject.setCommittedInAccount(projectDto.getCommittedInAccount());
+        }
+        if (projectDto.getReceivedInHand() != null) {
+            existingProject.setReceivedInHand(projectDto.getReceivedInHand());
+        }
+        if (projectDto.getReceivedInAccount() != null) {
+            existingProject.setReceivedInAccount(projectDto.getReceivedInAccount());
+        }
+        if (projectDto.getReceivedAmountTotal() != null) {
+            existingProject.setReceivedAmountTotal(projectDto.getReceivedAmountTotal());
+        }
+        if (projectDto.getTotalExpense() != null) {
+            existingProject.setTotalExpense(projectDto.getTotalExpense());
+        }
+        if (projectDto.getStatus() != null) {
+            existingProject.setStatus(projectDto.getStatus());
+        }
+
+        // Handle quotation update
+        if (projectDto.getQuotationId() != null) {
+            // If quotationId is being changed (or set for the first time)
+            Long newQuotationId = projectDto.getQuotationId();
+            Long currentQuotationId = existingProject.getQuotation() != null ? existingProject.getQuotation().getId() : null;
+
+            // Only process if quotation is actually changing
+            if (currentQuotationId == null || !newQuotationId.equals(currentQuotationId)) {
+                Quotation quotation = quotationRepository.findById(newQuotationId).orElse(null);
+                if (quotation == null) {
+                    return ApiResponse.error("Quotation not found");
+                }
+
+                // Check if quotation is already converted to another project
+                Optional<CustomerProject> existingProjectWithQuotation = projectRepository.findByQuotationId(newQuotationId);
+                if (existingProjectWithQuotation.isPresent()) {
+                    CustomerProject projectWithQuotation = existingProjectWithQuotation.get();
+                    // Allow if it's the current project, otherwise error
+                    if (!projectWithQuotation.getId().equals(existingProject.getId())) {
+                        return ApiResponse.error("Quotation is already associated with another project");
+                    }
+                }
+
+                // Update quotation association
+                existingProject.setQuotation(quotation);
+
+                // Update amounts from quotation
+                existingProject.setTotalAmount(quotation.getTotalAmount());
+                existingProject.setTotalTaxAmount(quotation.getTaxAmount());
+            }
+        } else if (projectDto.getQuotationId() == null && existingProject.getQuotation() != null) {
+            // Allow removing quotation association by explicitly setting to null
+            // (This would be represented as quotationId being null/not provided)
+            // For now, we only update if quotationId is explicitly provided
+        }
 
         CustomerProject updatedProject = projectRepository.save(existingProject);
         return ApiResponse.success("Project updated successfully", convertToDto(updatedProject));
@@ -227,11 +304,7 @@ public class ProjectServiceImpl implements ProjectService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalReceived = activeProjects.stream()
-                .map(p -> {
-                    BigDecimal cash = p.getCashInHand() != null ? p.getCashInHand() : BigDecimal.ZERO;
-                    BigDecimal account = p.getCashInAccount() != null ? p.getCashInAccount() : BigDecimal.ZERO;
-                    return cash.add(account);
-                })
+                .map(p -> p.getReceivedAmountTotal() != null ? p.getReceivedAmountTotal() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         stats.put("total_active_project_value", totalActiveValue);
@@ -254,15 +327,18 @@ public class ProjectServiceImpl implements ProjectService {
         financialSummary.put("project_name", project.getProjectName());
         financialSummary.put("total_amount", project.getTotalAmount());
         financialSummary.put("total_tax_amount", project.getTotalTaxAmount());
-        financialSummary.put("cash_in_hand", project.getCashInHand());
-        financialSummary.put("cash_in_account", project.getCashInAccount());
+        financialSummary.put("committed_in_hand", project.getCommittedInHand());
+        financialSummary.put("committed_in_account", project.getCommittedInAccount());
+        financialSummary.put("received_in_hand", project.getReceivedInHand());
+        financialSummary.put("received_in_account", project.getReceivedInAccount());
+        financialSummary.put("balance_in_hand", project.getBalanceInHand());
+        financialSummary.put("balance_in_account", project.getBalanceInAccount());
         financialSummary.put("balance_amount", project.getBalanceAmount());
         financialSummary.put("received_amount_total", project.getReceivedAmountTotal());
         financialSummary.put("total_expense", project.getTotalExpense());
 
         // Calculate profit/loss
-        BigDecimal totalReceived = (project.getCashInHand() != null ? project.getCashInHand() : BigDecimal.ZERO)
-                .add(project.getCashInAccount() != null ? project.getCashInAccount() : BigDecimal.ZERO);
+        BigDecimal totalReceived = project.getReceivedAmountTotal() != null ? project.getReceivedAmountTotal() : BigDecimal.ZERO;
         BigDecimal profit = totalReceived.subtract(project.getTotalExpense() != null ? project.getTotalExpense() : BigDecimal.ZERO);
 
         financialSummary.put("profit_loss", profit);
@@ -272,6 +348,417 @@ public class ProjectServiceImpl implements ProjectService {
                         BigDecimal.ZERO);
 
         return ApiResponse.success(financialSummary);
+    }
+
+    @Override
+    public ApiResponse<ProjectCashCalculationDto> getProjectCashCalculation(Long projectId) {
+        CustomerProject project = projectRepository.findById(projectId).orElse(null);
+        if (project == null) {
+            return ApiResponse.error("Project not found");
+        }
+
+        if (project.getQuotation() == null) {
+            return ApiResponse.error("Project does not have an associated quotation");
+        }
+
+        Quotation quotation = project.getQuotation();
+        ProjectCashCalculationDto dto = new ProjectCashCalculationDto();
+
+        // Check if quotation has kitchens
+        List<QuotationKitchen> kitchens = kitchenRepository.findByQuotationIdOrderByKitchenOrderAsc(quotation.getId());
+        
+        if (kitchens != null && !kitchens.isEmpty()) {
+            // Multi-kitchen mode: Calculate per-kitchen cash calculations
+            dto.setIsMultiKitchen(true);
+            
+            // Set quotation-level tax percentages (used for all kitchens)
+            dto.setAccessoriesTaxPercentage(quotation.getAccessoriesTaxPercentage());
+            dto.setCabinetsTaxPercentage(quotation.getCabinetsTaxPercentage());
+            dto.setDoorsTaxPercentage(quotation.getDoorsTaxPercentage());
+            dto.setLightingTaxPercentage(quotation.getLightingTaxPercentage());
+            
+            // Set transportation and installation (quotation-level)
+            dto.setTransportationPrice(quotation.getTransportationPrice());
+            dto.setInstallationPrice(quotation.getInstallationPrice());
+            
+            // Load per-kitchen tax percentages from JSON
+            Map<Long, KitchenTaxPercentages> kitchenTaxMap = new HashMap<>();
+            if (project.getKitchenTaxPercentagesJson() != null && !project.getKitchenTaxPercentagesJson().trim().isEmpty()) {
+                try {
+                    Map<String, Map<String, Object>> jsonMap = objectMapper.readValue(
+                        project.getKitchenTaxPercentagesJson(),
+                        new TypeReference<Map<String, Map<String, Object>>>() {}
+                    );
+                    for (Map.Entry<String, Map<String, Object>> entry : jsonMap.entrySet()) {
+                        Long kitchenId = Long.parseLong(entry.getKey());
+                        kitchenTaxMap.put(kitchenId, KitchenTaxPercentages.fromMap(entry.getValue()));
+                    }
+                } catch (Exception e) {
+                    // If JSON parsing fails, use project-level tax percentages as fallback
+                    System.err.println("Error parsing kitchen tax percentages JSON: " + e.getMessage());
+                }
+            }
+            
+            // Get default edited tax percentages from project (fallback if not set per kitchen)
+            BigDecimal defaultEditedAccessoriesTax = project.getAccessoriesTaxPercentage() != null ? 
+                project.getAccessoriesTaxPercentage() : quotation.getAccessoriesTaxPercentage();
+            BigDecimal defaultEditedCabinetsTax = project.getCabinetsTaxPercentage() != null ? 
+                project.getCabinetsTaxPercentage() : quotation.getCabinetsTaxPercentage();
+            BigDecimal defaultEditedDoorsTax = project.getDoorsTaxPercentage() != null ? 
+                project.getDoorsTaxPercentage() : quotation.getDoorsTaxPercentage();
+            BigDecimal defaultEditedLightingTax = project.getLightingTaxPercentage() != null ? 
+                project.getLightingTaxPercentage() : quotation.getLightingTaxPercentage();
+            
+            // Calculate cash for each kitchen
+            BigDecimal totalCashInHand = BigDecimal.ZERO;
+            BigDecimal totalCashInAccount = BigDecimal.ZERO;
+            BigDecimal totalAccessoriesBase = BigDecimal.ZERO;
+            BigDecimal totalCabinetsBase = BigDecimal.ZERO;
+            BigDecimal totalDoorsBase = BigDecimal.ZERO;
+            BigDecimal totalLightingBase = BigDecimal.ZERO;
+            BigDecimal totalAccessoriesMargin = BigDecimal.ZERO;
+            BigDecimal totalCabinetsMargin = BigDecimal.ZERO;
+            BigDecimal totalDoorsMargin = BigDecimal.ZERO;
+            BigDecimal totalLightingMargin = BigDecimal.ZERO;
+            
+            List<KitchenCashCalculationDto> kitchenCashDtos = new ArrayList<>();
+            
+            for (QuotationKitchen kitchen : kitchens) {
+                KitchenCashCalculationDto kitchenDto = new KitchenCashCalculationDto();
+                kitchenDto.setKitchenId(kitchen.getId());
+                kitchenDto.setKitchenName(kitchen.getKitchenName());
+                kitchenDto.setKitchenOrder(kitchen.getKitchenOrder());
+                
+                // Set kitchen category totals
+                kitchenDto.setAccessoriesBaseTotal(kitchen.getAccessoriesBaseTotal());
+                kitchenDto.setCabinetsBaseTotal(kitchen.getCabinetsBaseTotal());
+                kitchenDto.setDoorsBaseTotal(kitchen.getDoorsBaseTotal());
+                kitchenDto.setLightingBaseTotal(kitchen.getLightingBaseTotal());
+                
+                kitchenDto.setAccessoriesMarginAmount(kitchen.getAccessoriesMarginAmount());
+                kitchenDto.setCabinetsMarginAmount(kitchen.getCabinetsMarginAmount());
+                kitchenDto.setDoorsMarginAmount(kitchen.getDoorsMarginAmount());
+                kitchenDto.setLightingMarginAmount(kitchen.getLightingMarginAmount());
+                
+                // Set tax percentages (from quotation, same for all kitchens)
+                kitchenDto.setAccessoriesTaxPercentage(quotation.getAccessoriesTaxPercentage());
+                kitchenDto.setCabinetsTaxPercentage(quotation.getCabinetsTaxPercentage());
+                kitchenDto.setDoorsTaxPercentage(quotation.getDoorsTaxPercentage());
+                kitchenDto.setLightingTaxPercentage(quotation.getLightingTaxPercentage());
+                
+                // Get per-kitchen tax percentages or use defaults
+                KitchenTaxPercentages kitchenTax = kitchenTaxMap.get(kitchen.getId());
+                BigDecimal editedAccessoriesTax = (kitchenTax != null && kitchenTax.getAccessoriesTaxPercentage() != null) ?
+                    kitchenTax.getAccessoriesTaxPercentage() : defaultEditedAccessoriesTax;
+                BigDecimal editedCabinetsTax = (kitchenTax != null && kitchenTax.getCabinetsTaxPercentage() != null) ?
+                    kitchenTax.getCabinetsTaxPercentage() : defaultEditedCabinetsTax;
+                BigDecimal editedDoorsTax = (kitchenTax != null && kitchenTax.getDoorsTaxPercentage() != null) ?
+                    kitchenTax.getDoorsTaxPercentage() : defaultEditedDoorsTax;
+                BigDecimal editedLightingTax = (kitchenTax != null && kitchenTax.getLightingTaxPercentage() != null) ?
+                    kitchenTax.getLightingTaxPercentage() : defaultEditedLightingTax;
+                
+                // Set edited tax percentages (per-kitchen or default)
+                kitchenDto.setEditedAccessoriesTaxPercentage(editedAccessoriesTax);
+                kitchenDto.setEditedCabinetsTaxPercentage(editedCabinetsTax);
+                kitchenDto.setEditedDoorsTaxPercentage(editedDoorsTax);
+                kitchenDto.setEditedLightingTaxPercentage(editedLightingTax);
+                
+                // Calculate cash values for this kitchen
+                calculateKitchenCashValues(kitchenDto);
+                
+                // Accumulate totals
+                totalCashInHand = totalCashInHand.add(kitchenDto.getCashInHand());
+                totalCashInAccount = totalCashInAccount.add(kitchenDto.getCashInAccount());
+                totalAccessoriesBase = totalAccessoriesBase.add(kitchen.getAccessoriesBaseTotal());
+                totalCabinetsBase = totalCabinetsBase.add(kitchen.getCabinetsBaseTotal());
+                totalDoorsBase = totalDoorsBase.add(kitchen.getDoorsBaseTotal());
+                totalLightingBase = totalLightingBase.add(kitchen.getLightingBaseTotal());
+                totalAccessoriesMargin = totalAccessoriesMargin.add(kitchen.getAccessoriesMarginAmount());
+                totalCabinetsMargin = totalCabinetsMargin.add(kitchen.getCabinetsMarginAmount());
+                totalDoorsMargin = totalDoorsMargin.add(kitchen.getDoorsMarginAmount());
+                totalLightingMargin = totalLightingMargin.add(kitchen.getLightingMarginAmount());
+                
+                kitchenCashDtos.add(kitchenDto);
+            }
+            
+            // Add transportation and installation to total cash in hand
+            if (quotation.getTransportationPrice() != null) {
+                totalCashInHand = totalCashInHand.add(quotation.getTransportationPrice());
+            }
+            if (quotation.getInstallationPrice() != null) {
+                totalCashInHand = totalCashInHand.add(quotation.getInstallationPrice());
+            }
+            
+            // Set aggregated totals for backward compatibility
+            dto.setAccessoriesBaseTotal(totalAccessoriesBase);
+            dto.setCabinetsBaseTotal(totalCabinetsBase);
+            dto.setDoorsBaseTotal(totalDoorsBase);
+            dto.setLightingBaseTotal(totalLightingBase);
+            dto.setAccessoriesMarginAmount(totalAccessoriesMargin);
+            dto.setCabinetsMarginAmount(totalCabinetsMargin);
+            dto.setDoorsMarginAmount(totalDoorsMargin);
+            dto.setLightingMarginAmount(totalLightingMargin);
+            // Use default tax percentages for aggregated totals (backward compatibility)
+            dto.setEditedAccessoriesTaxPercentage(defaultEditedAccessoriesTax);
+            dto.setEditedCabinetsTaxPercentage(defaultEditedCabinetsTax);
+            dto.setEditedDoorsTaxPercentage(defaultEditedDoorsTax);
+            dto.setEditedLightingTaxPercentage(defaultEditedLightingTax);
+            dto.setCashInHand(totalCashInHand);
+            dto.setCashInAccount(totalCashInAccount);
+            dto.setKitchens(kitchenCashDtos);
+        } else {
+            // Single kitchen mode: Use existing logic
+            dto.setIsMultiKitchen(false);
+            
+            // Set base amounts from quotation
+            dto.setAccessoriesBaseTotal(quotation.getAccessoriesBaseTotal());
+            dto.setCabinetsBaseTotal(quotation.getCabinetsBaseTotal());
+            dto.setDoorsBaseTotal(quotation.getDoorsBaseTotal());
+            dto.setLightingBaseTotal(quotation.getLightingBaseTotal());
+
+            // Set margin amounts from quotation
+            dto.setAccessoriesMarginAmount(quotation.getAccessoriesMarginAmount());
+            dto.setCabinetsMarginAmount(quotation.getCabinetsMarginAmount());
+            dto.setDoorsMarginAmount(quotation.getDoorsMarginAmount());
+            dto.setLightingMarginAmount(quotation.getLightingMarginAmount());
+
+            // Set original tax percentages from quotation
+            dto.setAccessoriesTaxPercentage(quotation.getAccessoriesTaxPercentage());
+            dto.setCabinetsTaxPercentage(quotation.getCabinetsTaxPercentage());
+            dto.setDoorsTaxPercentage(quotation.getDoorsTaxPercentage());
+            dto.setLightingTaxPercentage(quotation.getLightingTaxPercentage());
+
+            // Set edited tax percentages from project (if any)
+            dto.setEditedAccessoriesTaxPercentage(project.getAccessoriesTaxPercentage());
+            dto.setEditedCabinetsTaxPercentage(project.getCabinetsTaxPercentage());
+            dto.setEditedDoorsTaxPercentage(project.getDoorsTaxPercentage());
+            dto.setEditedLightingTaxPercentage(project.getLightingTaxPercentage());
+
+            // Set transportation and installation
+            dto.setTransportationPrice(quotation.getTransportationPrice());
+            dto.setInstallationPrice(quotation.getInstallationPrice());
+
+            // Calculate cash in hand and cash in account
+            calculateCashValues(dto);
+        }
+
+        return ApiResponse.success(dto);
+    }
+
+    @Override
+    public ApiResponse<ProjectDto> updateProjectCashCalculation(Long projectId, UpdateProjectCashCalculationRequest request, String updatedBy) {
+        CustomerProject project = projectRepository.findById(projectId).orElse(null);
+        if (project == null) {
+            return ApiResponse.error("Project not found");
+        }
+
+        if (project.getQuotation() == null) {
+            return ApiResponse.error("Project does not have an associated quotation");
+        }
+
+        // Update edited tax percentages (project-level, for backward compatibility)
+        project.setAccessoriesTaxPercentage(request.getAccessoriesTaxPercentage());
+        project.setCabinetsTaxPercentage(request.getCabinetsTaxPercentage());
+        project.setDoorsTaxPercentage(request.getDoorsTaxPercentage());
+        project.setLightingTaxPercentage(request.getLightingTaxPercentage());
+        
+        // Save per-kitchen tax percentages as JSON
+        if (request.getKitchenTaxPercentages() != null && !request.getKitchenTaxPercentages().isEmpty()) {
+            try {
+                Map<String, Map<String, BigDecimal>> jsonMap = new HashMap<>();
+                for (Map.Entry<Long, KitchenTaxPercentages> entry : request.getKitchenTaxPercentages().entrySet()) {
+                    KitchenTaxPercentages ktp = entry.getValue();
+                    Map<String, BigDecimal> taxMap = new HashMap<>();
+                    taxMap.put("accessoriesTaxPercentage", ktp.getAccessoriesTaxPercentage());
+                    taxMap.put("cabinetsTaxPercentage", ktp.getCabinetsTaxPercentage());
+                    taxMap.put("doorsTaxPercentage", ktp.getDoorsTaxPercentage());
+                    taxMap.put("lightingTaxPercentage", ktp.getLightingTaxPercentage());
+                    jsonMap.put(entry.getKey().toString(), taxMap);
+                }
+                project.setKitchenTaxPercentagesJson(objectMapper.writeValueAsString(jsonMap));
+            } catch (Exception e) {
+                System.err.println("Error serializing kitchen tax percentages to JSON: " + e.getMessage());
+                // Continue without per-kitchen tax percentages if serialization fails
+            }
+        } else {
+            // Clear per-kitchen tax percentages if not provided
+            project.setKitchenTaxPercentagesJson(null);
+        }
+
+        // Calculate cash in hand and cash in account
+        ProjectCashCalculationDto calcDto = new ProjectCashCalculationDto();
+        Quotation quotation = project.getQuotation();
+
+        calcDto.setAccessoriesBaseTotal(quotation.getAccessoriesBaseTotal());
+        calcDto.setCabinetsBaseTotal(quotation.getCabinetsBaseTotal());
+        calcDto.setDoorsBaseTotal(quotation.getDoorsBaseTotal());
+        calcDto.setLightingBaseTotal(quotation.getLightingBaseTotal());
+
+        calcDto.setAccessoriesMarginAmount(quotation.getAccessoriesMarginAmount());
+        calcDto.setCabinetsMarginAmount(quotation.getCabinetsMarginAmount());
+        calcDto.setDoorsMarginAmount(quotation.getDoorsMarginAmount());
+        calcDto.setLightingMarginAmount(quotation.getLightingMarginAmount());
+
+        calcDto.setAccessoriesTaxPercentage(quotation.getAccessoriesTaxPercentage());
+        calcDto.setCabinetsTaxPercentage(quotation.getCabinetsTaxPercentage());
+        calcDto.setDoorsTaxPercentage(quotation.getDoorsTaxPercentage());
+        calcDto.setLightingTaxPercentage(quotation.getLightingTaxPercentage());
+
+        calcDto.setEditedAccessoriesTaxPercentage(request.getAccessoriesTaxPercentage());
+        calcDto.setEditedCabinetsTaxPercentage(request.getCabinetsTaxPercentage());
+        calcDto.setEditedDoorsTaxPercentage(request.getDoorsTaxPercentage());
+        calcDto.setEditedLightingTaxPercentage(request.getLightingTaxPercentage());
+
+        calcDto.setTransportationPrice(quotation.getTransportationPrice());
+        calcDto.setInstallationPrice(quotation.getInstallationPrice());
+
+        calculateCashValues(calcDto);
+
+        // Update committed amounts
+        project.setCommittedInHand(calcDto.getCashInHand());
+        project.setCommittedInAccount(calcDto.getCashInAccount());
+
+        CustomerProject savedProject = projectRepository.save(project);
+        return ApiResponse.success("Cash calculation updated successfully", convertToDto(savedProject));
+    }
+
+    /**
+     * Calculate cash in hand and cash in account based on category tax percentages
+     */
+    private void calculateCashValues(ProjectCashCalculationDto dto) {
+        BigDecimal cashInHand = BigDecimal.ZERO;
+        BigDecimal cashInAccount = BigDecimal.ZERO;
+
+        // Process each category
+        BigDecimal[] accessories = calculateCategoryCash(
+                dto.getAccessoriesBaseTotal(),
+                dto.getAccessoriesMarginAmount(),
+                dto.getAccessoriesTaxPercentage(),
+                dto.getEditedAccessoriesTaxPercentage());
+        cashInHand = cashInHand.add(accessories[0]);
+        cashInAccount = cashInAccount.add(accessories[1]);
+
+        BigDecimal[] cabinets = calculateCategoryCash(
+                dto.getCabinetsBaseTotal(),
+                dto.getCabinetsMarginAmount(),
+                dto.getCabinetsTaxPercentage(),
+                dto.getEditedCabinetsTaxPercentage());
+        cashInHand = cashInHand.add(cabinets[0]);
+        cashInAccount = cashInAccount.add(cabinets[1]);
+
+        BigDecimal[] doors = calculateCategoryCash(
+                dto.getDoorsBaseTotal(),
+                dto.getDoorsMarginAmount(),
+                dto.getDoorsTaxPercentage(),
+                dto.getEditedDoorsTaxPercentage());
+        cashInHand = cashInHand.add(doors[0]);
+        cashInAccount = cashInAccount.add(doors[1]);
+
+        BigDecimal[] lighting = calculateCategoryCash(
+                dto.getLightingBaseTotal(),
+                dto.getLightingMarginAmount(),
+                dto.getLightingTaxPercentage(),
+                dto.getEditedLightingTaxPercentage());
+        cashInHand = cashInHand.add(lighting[0]);
+        cashInAccount = cashInAccount.add(lighting[1]);
+
+        // Add transportation and installation to cash in hand
+        if (dto.getTransportationPrice() != null) {
+            cashInHand = cashInHand.add(dto.getTransportationPrice());
+        }
+        if (dto.getInstallationPrice() != null) {
+            cashInHand = cashInHand.add(dto.getInstallationPrice());
+        }
+
+        dto.setCashInHand(cashInHand);
+        dto.setCashInAccount(cashInAccount);
+    }
+
+    /**
+     * Calculate cash values for a kitchen
+     */
+    private void calculateKitchenCashValues(KitchenCashCalculationDto kitchenDto) {
+        BigDecimal cashInHand = BigDecimal.ZERO;
+        BigDecimal cashInAccount = BigDecimal.ZERO;
+
+        // Process each category
+        BigDecimal[] accessories = calculateCategoryCash(
+                kitchenDto.getAccessoriesBaseTotal(),
+                kitchenDto.getAccessoriesMarginAmount(),
+                kitchenDto.getAccessoriesTaxPercentage(),
+                kitchenDto.getEditedAccessoriesTaxPercentage());
+        cashInHand = cashInHand.add(accessories[0]);
+        cashInAccount = cashInAccount.add(accessories[1]);
+
+        BigDecimal[] cabinets = calculateCategoryCash(
+                kitchenDto.getCabinetsBaseTotal(),
+                kitchenDto.getCabinetsMarginAmount(),
+                kitchenDto.getCabinetsTaxPercentage(),
+                kitchenDto.getEditedCabinetsTaxPercentage());
+        cashInHand = cashInHand.add(cabinets[0]);
+        cashInAccount = cashInAccount.add(cabinets[1]);
+
+        BigDecimal[] doors = calculateCategoryCash(
+                kitchenDto.getDoorsBaseTotal(),
+                kitchenDto.getDoorsMarginAmount(),
+                kitchenDto.getDoorsTaxPercentage(),
+                kitchenDto.getEditedDoorsTaxPercentage());
+        cashInHand = cashInHand.add(doors[0]);
+        cashInAccount = cashInAccount.add(doors[1]);
+
+        BigDecimal[] lighting = calculateCategoryCash(
+                kitchenDto.getLightingBaseTotal(),
+                kitchenDto.getLightingMarginAmount(),
+                kitchenDto.getLightingTaxPercentage(),
+                kitchenDto.getEditedLightingTaxPercentage());
+        cashInHand = cashInHand.add(lighting[0]);
+        cashInAccount = cashInAccount.add(lighting[1]);
+
+        kitchenDto.setCashInHand(cashInHand);
+        kitchenDto.setCashInAccount(cashInAccount);
+    }
+
+    /**
+     * Calculate cash in hand and cash in account for a single category
+     * Returns array: [cashInHand, cashInAccount]
+     */
+    private BigDecimal[] calculateCategoryCash(
+            BigDecimal baseAmount,
+            BigDecimal marginAmount,
+            BigDecimal originalTaxPercent,
+            BigDecimal editedTaxPercent) {
+
+        if (baseAmount == null || baseAmount.compareTo(BigDecimal.ZERO) == 0) {
+            return new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO};
+        }
+
+        BigDecimal base = baseAmount != null ? baseAmount : BigDecimal.ZERO;
+        BigDecimal margin = marginAmount != null ? marginAmount : BigDecimal.ZERO;
+        BigDecimal originalTax = originalTaxPercent != null ? originalTaxPercent : BigDecimal.ZERO;
+        BigDecimal editedTax = editedTaxPercent != null ? editedTaxPercent : originalTax;
+
+        // Calculate total before tax and tax amount
+        BigDecimal totalBeforeTax = base.add(margin);
+        BigDecimal taxAmount = totalBeforeTax.multiply(editedTax).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal finalAmount = totalBeforeTax.add(taxAmount);
+
+        BigDecimal categoryCashInHand = BigDecimal.ZERO;
+        BigDecimal categoryCashInAccount = BigDecimal.ZERO;
+
+        // If edited tax is half of original tax, split the category
+        BigDecimal halfOfOriginal = originalTax.divide(BigDecimal.valueOf(2), 2, java.math.RoundingMode.HALF_UP);
+        
+        if (editedTax.compareTo(halfOfOriginal) == 0 && originalTax.compareTo(BigDecimal.ZERO) > 0) {
+            // Split: half of (base + margin) to cash in hand, half of (base + margin) + tax to cash in account
+            BigDecimal halfTotalBeforeTax = totalBeforeTax.divide(BigDecimal.valueOf(2), 2, java.math.RoundingMode.HALF_UP);
+            categoryCashInHand = halfTotalBeforeTax;
+            categoryCashInAccount = halfTotalBeforeTax.add(taxAmount);
+        } else {
+            // Full amount goes to cash in account
+            categoryCashInAccount = finalAmount;
+        }
+
+        return new BigDecimal[]{categoryCashInHand, categoryCashInAccount};
     }
 
     // Helper methods for DTO conversion
@@ -289,10 +776,15 @@ public class ProjectServiceImpl implements ProjectService {
         dto.setProjectName(project.getProjectName());
         dto.setTotalAmount(project.getTotalAmount());
         dto.setTotalTaxAmount(project.getTotalTaxAmount());
-        dto.setCashInHand(project.getCashInHand());
-        dto.setCashInAccount(project.getCashInAccount());
+        dto.setCommittedInHand(project.getCommittedInHand());
+        dto.setCommittedInAccount(project.getCommittedInAccount());
+        dto.setReceivedInHand(project.getReceivedInHand());
+        dto.setReceivedInAccount(project.getReceivedInAccount());
+        dto.setBalanceInHand(project.getBalanceInHand());
+        dto.setBalanceInAccount(project.getBalanceInAccount());
         dto.setBalanceAmount(project.getBalanceAmount());
         dto.setReceivedAmountTotal(project.getReceivedAmountTotal());
+        dto.setProfitAmount(project.getProfitAmount());
         dto.setTotalExpense(project.getTotalExpense());
         dto.setStatus(project.getStatus());
         dto.setStartDate(project.getStartDate());
@@ -302,6 +794,12 @@ public class ProjectServiceImpl implements ProjectService {
         dto.setCreatedBy(project.getCreatedBy());
         dto.setCreatedAt(project.getCreatedAt());
         dto.setUpdatedAt(project.getUpdatedAt());
+
+        // Category tax percentages
+        dto.setAccessoriesTaxPercentage(project.getAccessoriesTaxPercentage());
+        dto.setCabinetsTaxPercentage(project.getCabinetsTaxPercentage());
+        dto.setDoorsTaxPercentage(project.getDoorsTaxPercentage());
+        dto.setLightingTaxPercentage(project.getLightingTaxPercentage());
 
         return dto;
     }

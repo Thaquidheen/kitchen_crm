@@ -3,6 +3,7 @@ package com.fleetmanagement.kitchencrmbackend.modules.customer.service;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.*;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.*;
+import com.fleetmanagement.kitchencrmbackend.modules.architect.repository.ArchitectRepository;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -26,6 +27,9 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Autowired
     private WorkflowHistoryRepository workflowHistoryRepository;
+
+    @Autowired
+    private ArchitectRepository architectRepository;
 
     @Override
     public ApiResponse<Page<CustomerDto>> getAllCustomers(String name, String email,
@@ -52,6 +56,24 @@ public class CustomerServiceImpl implements CustomerService {
         }
 
         Customer customer = convertToEntity(customerCreateDto);
+        
+        // Handle lead tracking
+        if (customerCreateDto.getArchitectId() != null) {
+            architectRepository.findById(customerCreateDto.getArchitectId()).ifPresent(architect -> {
+                customer.setArchitect(architect);
+                customer.setLeadSourceType(Customer.LeadSourceType.ARCHITECT);
+                customer.setManualLeadName(null);
+                customer.setManualLeadContact(null);
+            });
+        } else if (customerCreateDto.getManualLeadName() != null && !customerCreateDto.getManualLeadName().trim().isEmpty()) {
+            customer.setLeadSourceType(Customer.LeadSourceType.MANUAL);
+            customer.setManualLeadName(customerCreateDto.getManualLeadName());
+            customer.setManualLeadContact(customerCreateDto.getManualLeadContact());
+            customer.setArchitect(null);
+        } else {
+            customer.setLeadSourceType(Customer.LeadSourceType.NONE);
+        }
+        
         Customer savedCustomer = customerRepository.save(customer);
 
         // Create initial pipeline entry
@@ -91,6 +113,28 @@ public class CustomerServiceImpl implements CustomerService {
         existingCustomer.setEmail(customerDto.getEmail());
         existingCustomer.setAddress(customerDto.getAddress());
         existingCustomer.setKitchenTypes(customerDto.getKitchenTypes());
+
+        // Handle lead tracking updates
+        if (customerDto.getArchitectId() != null) {
+            architectRepository.findById(customerDto.getArchitectId()).ifPresent(architect -> {
+                existingCustomer.setArchitect(architect);
+                existingCustomer.setLeadSourceType(Customer.LeadSourceType.ARCHITECT);
+                existingCustomer.setManualLeadName(null);
+                existingCustomer.setManualLeadContact(null);
+            });
+        } else if (customerDto.getManualLeadName() != null && !customerDto.getManualLeadName().trim().isEmpty()) {
+            existingCustomer.setLeadSourceType(Customer.LeadSourceType.MANUAL);
+            existingCustomer.setManualLeadName(customerDto.getManualLeadName());
+            existingCustomer.setManualLeadContact(customerDto.getManualLeadContact());
+            existingCustomer.setArchitect(null);
+        } else if (customerDto.getLeadSourceType() != null) {
+            existingCustomer.setLeadSourceType(customerDto.getLeadSourceType());
+            if (customerDto.getLeadSourceType() == Customer.LeadSourceType.NONE) {
+                existingCustomer.setArchitect(null);
+                existingCustomer.setManualLeadName(null);
+                existingCustomer.setManualLeadContact(null);
+            }
+        }
 
         Customer updatedCustomer = customerRepository.save(existingCustomer);
 
@@ -158,17 +202,27 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     private CustomerDto convertToDto(Customer customer) {
-        return new CustomerDto(
-                customer.getId(),
-                customer.getName(),
-                customer.getContact(),
-                customer.getEmail(),
-                customer.getAddress(),
-                customer.getKitchenTypes(),
-                customer.getStatus(),
-                customer.getCreatedAt(),
-                customer.getUpdatedAt()
-        );
+        CustomerDto dto = new CustomerDto();
+        dto.setId(customer.getId());
+        dto.setName(customer.getName());
+        dto.setContact(customer.getContact());
+        dto.setEmail(customer.getEmail());
+        dto.setAddress(customer.getAddress());
+        dto.setKitchenTypes(customer.getKitchenTypes());
+        dto.setStatus(customer.getStatus());
+        dto.setCreatedAt(customer.getCreatedAt());
+        dto.setUpdatedAt(customer.getUpdatedAt());
+        
+        // Lead tracking fields
+        if (customer.getArchitect() != null) {
+            dto.setArchitectId(customer.getArchitect().getId());
+            dto.setArchitectName(customer.getArchitect().getArchitectureName());
+        }
+        dto.setLeadSourceType(customer.getLeadSourceType());
+        dto.setManualLeadName(customer.getManualLeadName());
+        dto.setManualLeadContact(customer.getManualLeadContact());
+        
+        return dto;
     }
 
     private Customer convertToEntity(CustomerCreateDto dto) {

@@ -32,11 +32,16 @@ public class ProjectDto {
 
     private BigDecimal totalAmount;
     private BigDecimal totalTaxAmount;
-    private BigDecimal cashInHand;
-    private BigDecimal cashInAccount;
+    private BigDecimal committedInHand;
+    private BigDecimal committedInAccount;
+    private BigDecimal receivedInHand;
+    private BigDecimal receivedInAccount;
+    private BigDecimal balanceInHand;
+    private BigDecimal balanceInAccount;
     private BigDecimal balanceAmount;
     private BigDecimal receivedAmountTotal;
     private BigDecimal totalExpense;
+    private BigDecimal profitAmount;
 
     @NotNull(message = "Project status is required")
     private CustomerProject.ProjectStatus status;
@@ -49,4 +54,10 @@ public class ProjectDto {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // CATEGORY-SPECIFIC EDITED TAX PERCENTAGES (for cash calculation)
+    private BigDecimal accessoriesTaxPercentage;
+    private BigDecimal cabinetsTaxPercentage;
+    private BigDecimal doorsTaxPercentage;
+    private BigDecimal lightingTaxPercentage;
 }

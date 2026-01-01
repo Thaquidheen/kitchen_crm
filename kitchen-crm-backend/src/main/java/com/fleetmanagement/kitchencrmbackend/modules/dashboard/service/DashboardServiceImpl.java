@@ -364,32 +364,38 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private BigDecimal getTotalProjectValue() {
-        return projectRepository.getTotalProjectValue();
+        BigDecimal result = projectRepository.getTotalProjectValue();
+        return result != null ? result : BigDecimal.ZERO;
     }
 
     private BigDecimal getCompletedProjectValue() {
-        return projectRepository.getTotalValueByStatus(CustomerProject.ProjectStatus.COMPLETED);
+        BigDecimal result = projectRepository.getTotalValueByStatus(CustomerProject.ProjectStatus.COMPLETED);
+        return result != null ? result : BigDecimal.ZERO;
     }
 
     private BigDecimal getTotalPaymentsReceived() {
-        return paymentRepository.getTotalPaymentsBetweenDates(LocalDate.of(2020, 1, 1), LocalDate.now());
+        BigDecimal result = paymentRepository.getTotalPaymentsBetweenDates(LocalDate.of(2020, 1, 1), LocalDate.now());
+        return result != null ? result : BigDecimal.ZERO;
     }
 
     private BigDecimal getPaymentsThisMonth() {
         LocalDate startOfMonth = LocalDate.now().withDayOfMonth(1);
-        return paymentRepository.getTotalPaymentsBetweenDates(startOfMonth, LocalDate.now());
+        BigDecimal result = paymentRepository.getTotalPaymentsBetweenDates(startOfMonth, LocalDate.now());
+        return result != null ? result : BigDecimal.ZERO;
     }
 
     private BigDecimal getPendingPayments() {
-        return projectRepository.getTotalPendingPayments();
+        return projectRepository.getTotalPendingPayments(CustomerProject.ProjectStatus.ACTIVE);
     }
 
     private BigDecimal getTotalCashInHand() {
-        return projectRepository.getTotalCashInHand();
+        BigDecimal result = projectRepository.getTotalCashInHand();
+        return result != null ? result : BigDecimal.ZERO;
     }
 
     private BigDecimal getTotalCashInAccount() {
-        return projectRepository.getTotalCashInAccount();
+        BigDecimal result = projectRepository.getTotalCashInAccount();
+        return result != null ? result : BigDecimal.ZERO;
     }
 
     private Double calculateConversionRate() {
@@ -405,7 +411,8 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private Integer calculateAverageProjectDuration() {
-        return projectRepository.getAverageProjectDuration();
+        Integer duration = projectRepository.getAverageProjectDuration();
+        return duration != null ? duration : 0;
     }
 
     private List<RevenueAnalyticsDto.MonthlyRevenueDto> getMonthlyRevenueData(LocalDate fromDate, LocalDate toDate) {
@@ -422,7 +429,8 @@ public class DashboardServiceImpl implements DashboardService {
             // Mock target data - in real implementation, this would come from a targets table
             BigDecimal target = BigDecimal.valueOf(500000);
 
-            int projectsCompleted = projectRepository.countCompletedProjectsBetweenDates(current, monthEnd);
+            Integer projectsCompletedCount = projectRepository.countCompletedProjectsBetweenDates(current, monthEnd);
+            int projectsCompleted = projectsCompletedCount != null ? projectsCompletedCount : 0;
 
             RevenueAnalyticsDto.MonthlyRevenueDto monthlyDto = new RevenueAnalyticsDto.MonthlyRevenueDto(
                     current.format(formatter), monthlyRevenue, target, projectsCompleted);
@@ -479,6 +487,10 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDate startOfMonth = LocalDate.now().withDayOfMonth(1);
         BigDecimal currentMonthRevenue = paymentRepository.getTotalPaymentsBetweenDates(startOfMonth, LocalDate.now());
 
+        if (currentMonthRevenue == null) {
+            return BigDecimal.ZERO;
+        }
+
         // Simple projection based on current pace
         int daysInMonth = LocalDate.now().lengthOfMonth();
         int daysPassed = LocalDate.now().getDayOfMonth();
@@ -501,7 +513,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private BigDecimal getTotalOutstanding() {
-        return projectRepository.getTotalPendingPayments();
+        return projectRepository.getTotalPendingPayments(CustomerProject.ProjectStatus.ACTIVE);
     }
 
     private BigDecimal getAveragePaymentTime() {
@@ -530,7 +542,13 @@ public class DashboardServiceImpl implements DashboardService {
             String customerName = (String) row[1];
             Integer estimatedDays = (Integer) row[2];
             Integer actualDays = (Integer) row[3];
-            String status = (String) row[4];
+            // Handle enum status - convert to String
+            String status;
+            if (row[4] instanceof CustomerProject.ProjectStatus) {
+                status = ((CustomerProject.ProjectStatus) row[4]).name();
+            } else {
+                status = row[4] != null ? row[4].toString() : null;
+            }
             BigDecimal projectValue = (BigDecimal) row[5];
 
             timelineData.add(new ProjectAnalyticsDto.ProjectTimelineDto(
@@ -692,6 +710,10 @@ public class DashboardServiceImpl implements DashboardService {
         BigDecimal target = BigDecimal.valueOf(1000000); // Monthly target
         BigDecimal achieved = getPaymentsThisMonth();
 
+        if (target.compareTo(BigDecimal.ZERO) == 0) {
+            return 0.0;
+        }
+
         return achieved.multiply(BigDecimal.valueOf(100))
                 .divide(target, 2, RoundingMode.HALF_UP).doubleValue();
     }
@@ -743,7 +765,8 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private BigDecimal getPaymentsToday() {
-        return paymentRepository.getTotalPaymentsBetweenDates(LocalDate.now(), LocalDate.now());
+        BigDecimal result = paymentRepository.getTotalPaymentsBetweenDates(LocalDate.now(), LocalDate.now());
+        return result != null ? result : BigDecimal.ZERO;
     }
 
     private Long getOverdueQuotations() {
@@ -809,7 +832,8 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         report.put("project_status_distribution", statusCounts);
-        report.put("completed_projects", projectRepository.countCompletedProjectsBetweenDates(fromDate, toDate));
+        Integer completedProjects = projectRepository.countCompletedProjectsBetweenDates(fromDate, toDate);
+        report.put("completed_projects", completedProjects != null ? completedProjects : 0);
         report.put("average_project_duration", calculateAverageProjectDuration());
 
         return report;

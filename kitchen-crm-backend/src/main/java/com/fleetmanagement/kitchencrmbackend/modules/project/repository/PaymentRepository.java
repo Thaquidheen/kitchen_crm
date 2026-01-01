@@ -43,7 +43,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
                                 @Param("customerName") String customerName,
                                 Pageable pageable);
 
-    @Query("SELECT SUM(p.amount) FROM Payment p WHERE p.paymentDate BETWEEN :fromDate AND :toDate AND p.paymentStatus = 'COMPLETED'")
+    @Query("SELECT SUM(p.amount) FROM Payment p WHERE p.paymentDate >= :fromDate AND p.paymentDate <= :toDate AND p.paymentStatus = 'COMPLETED'")
     BigDecimal getTotalPaymentsBetweenDates(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
     @Query("SELECT p.paymentMethod, SUM(p.amount) FROM Payment p WHERE p.paymentStatus = 'COMPLETED' GROUP BY p.paymentMethod")

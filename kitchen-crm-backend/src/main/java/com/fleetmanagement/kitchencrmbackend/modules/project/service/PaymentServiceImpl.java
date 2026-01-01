@@ -88,6 +88,32 @@ public class PaymentServiceImpl implements PaymentService {
                 return ApiResponse.error("Reference number is required for " + paymentCreateDto.getPaymentMethod());
             }
 
+            // CRITICAL: Validate that payment doesn't exceed commitment
+            Payment.PaymentMethod method = paymentCreateDto.getPaymentMethod();
+            BigDecimal amount = paymentCreateDto.getAmount();
+            
+            if (method == Payment.PaymentMethod.CASH) {
+                BigDecimal balanceInHand = project.getBalanceInHand();
+                if (balanceInHand == null || balanceInHand.compareTo(amount) < 0) {
+                    BigDecimal committed = project.getCommittedInHand() != null ? project.getCommittedInHand() : BigDecimal.ZERO;
+                    BigDecimal received = project.getReceivedInHand() != null ? project.getReceivedInHand() : BigDecimal.ZERO;
+                    return ApiResponse.error(String.format(
+                        "Payment exceeds committed cash amount. Committed: ₹%s, Already received: ₹%s, This payment: ₹%s",
+                        committed, received, amount
+                    ));
+                }
+            } else {
+                BigDecimal balanceInAccount = project.getBalanceInAccount();
+                if (balanceInAccount == null || balanceInAccount.compareTo(amount) < 0) {
+                    BigDecimal committed = project.getCommittedInAccount() != null ? project.getCommittedInAccount() : BigDecimal.ZERO;
+                    BigDecimal received = project.getReceivedInAccount() != null ? project.getReceivedInAccount() : BigDecimal.ZERO;
+                    return ApiResponse.error(String.format(
+                        "Payment exceeds committed account amount. Committed: ₹%s, Already received: ₹%s, This payment: ₹%s",
+                        committed, received, amount
+                    ));
+                }
+            }
+
         } catch (IllegalArgumentException e) {
             return ApiResponse.error(e.getMessage());
         }
@@ -258,11 +284,11 @@ public class PaymentServiceImpl implements PaymentService {
     // Helper methods
     private void updateProjectBalance(CustomerProject project, BigDecimal amount, Payment.PaymentMethod method) {
         if (method == Payment.PaymentMethod.CASH) {
-            BigDecimal currentCash = project.getCashInHand() != null ? project.getCashInHand() : BigDecimal.ZERO;
-            project.setCashInHand(currentCash.add(amount));
+            BigDecimal currentCash = project.getReceivedInHand() != null ? project.getReceivedInHand() : BigDecimal.ZERO;
+            project.setReceivedInHand(currentCash.add(amount));
         } else {
-            BigDecimal currentAccount = project.getCashInAccount() != null ? project.getCashInAccount() : BigDecimal.ZERO;
-            project.setCashInAccount(currentAccount.add(amount));
+            BigDecimal currentAccount = project.getReceivedInAccount() != null ? project.getReceivedInAccount() : BigDecimal.ZERO;
+            project.setReceivedInAccount(currentAccount.add(amount));
         }
 
         BigDecimal currentTotal = project.getReceivedAmountTotal() != null ? project.getReceivedAmountTotal() : BigDecimal.ZERO;
@@ -273,11 +299,11 @@ public class PaymentServiceImpl implements PaymentService {
 
     private void reverseProjectBalance(CustomerProject project, BigDecimal amount, Payment.PaymentMethod method) {
         if (method == Payment.PaymentMethod.CASH) {
-            BigDecimal currentCash = project.getCashInHand() != null ? project.getCashInHand() : BigDecimal.ZERO;
-            project.setCashInHand(currentCash.subtract(amount));
+            BigDecimal currentCash = project.getReceivedInHand() != null ? project.getReceivedInHand() : BigDecimal.ZERO;
+            project.setReceivedInHand(currentCash.subtract(amount));
         } else {
-            BigDecimal currentAccount = project.getCashInAccount() != null ? project.getCashInAccount() : BigDecimal.ZERO;
-            project.setCashInAccount(currentAccount.subtract(amount));
+            BigDecimal currentAccount = project.getReceivedInAccount() != null ? project.getReceivedInAccount() : BigDecimal.ZERO;
+            project.setReceivedInAccount(currentAccount.subtract(amount));
         }
 
         BigDecimal currentTotal = project.getReceivedAmountTotal() != null ? project.getReceivedAmountTotal() : BigDecimal.ZERO;

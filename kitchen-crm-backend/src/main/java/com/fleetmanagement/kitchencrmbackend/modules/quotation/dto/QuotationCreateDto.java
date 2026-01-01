@@ -23,6 +23,19 @@ public class QuotationCreateDto {
     private BigDecimal installationPrice = BigDecimal.ZERO;
     private BigDecimal marginPercentage = BigDecimal.ZERO;
     private BigDecimal taxPercentage = BigDecimal.ZERO;
+    
+    // Category-specific margin percentages
+    private BigDecimal accessoriesMarginPercentage = BigDecimal.valueOf(20.00);
+    private BigDecimal cabinetsMarginPercentage = BigDecimal.valueOf(20.00);
+    private BigDecimal doorsMarginPercentage = BigDecimal.valueOf(20.00);
+    private BigDecimal lightingMarginPercentage = BigDecimal.valueOf(20.00);
+    
+    // Category-specific tax percentages
+    private BigDecimal accessoriesTaxPercentage = BigDecimal.valueOf(18.00);
+    private BigDecimal cabinetsTaxPercentage = BigDecimal.valueOf(18.00);
+    private BigDecimal doorsTaxPercentage = BigDecimal.valueOf(18.00);
+    private BigDecimal lightingTaxPercentage = BigDecimal.valueOf(18.00);
+    
     private LocalDate validUntil;
     private String notes;
     private String termsConditions;
@@ -32,4 +45,7 @@ public class QuotationCreateDto {
     private List<QuotationCabinetDto> cabinets;
     private List<QuotationDoorDto> doors;
     private List<QuotationLightingDto> lighting;
+
+    // Kitchens (multi-kitchen support)
+    private List<QuotationKitchenCreateDto> kitchens;
 }

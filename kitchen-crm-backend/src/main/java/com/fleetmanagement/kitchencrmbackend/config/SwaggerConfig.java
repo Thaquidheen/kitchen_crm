@@ -22,11 +22,11 @@ public class SwaggerConfig {
                                         .scheme("bearer")
                                         .bearerFormat("JWT")))
                 .info(new Info()
-                        .title("Kitchen CRM API")
-                        .description("Kitchen CRM Management System REST API Documentation")
+                        .title("HOCH API")
+                        .description("HOCH Management System REST API Documentation")
                         .version("1.0.0")
                         .contact(new Contact()
-                                .name("Kitchen CRM Team")
+                                .name("HOCH Team")
                                 .email("support@kitchen-crm.com")))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
     }

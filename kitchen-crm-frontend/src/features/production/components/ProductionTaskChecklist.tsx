@@ -1,0 +1,548 @@
+import React, { useState } from 'react';
+import { toast } from 'react-hot-toast';
+import {
+  CheckCircle,
+  Circle,
+  Loader2,
+  Plus,
+  Trash2,
+  Save,
+  ChevronDown,
+  ChevronRight,
+  FolderPlus,
+  Edit2,
+  X
+} from 'lucide-react';
+import type { ProductionInstallation, ProductionCustomTask, ProductionTaskGroup, TaskPriority } from '../types';
+import {
+  useGetTaskGroupsByCustomerQuery,
+  useCreateTaskGroupMutation,
+  useUpdateTaskGroupMutation,
+  useDeleteTaskGroupMutation,
+  useCreateCustomTaskMutation,
+  useToggleCustomTaskMutation,
+  useDeleteCustomTaskMutation,
+} from '../productionAPI';
+
+const PRIORITY_COLORS: Record<string, string> = {
+  LOW: 'text-gray-400',
+  MEDIUM: 'text-blue-400',
+  HIGH: 'text-orange-400',
+  URGENT: 'text-red-400',
+};
+
+const PRIORITY_BG: Record<string, string> = {
+  LOW: 'bg-gray-500/10',
+  MEDIUM: 'bg-blue-500/10',
+  HIGH: 'bg-orange-500/10',
+  URGENT: 'bg-red-500/10',
+};
+
+interface ProductionTaskChecklistProps {
+  production: ProductionInstallation;
+  customerId: number;
+  onTaskUpdate: (data: { taskName: string; completed: boolean; completionDate?: string }) => Promise<void>;
+}
+
+export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = ({
+  production,
+  customerId,
+}) => {
+  const [loadingTasks, setLoadingTasks] = useState<Set<string>>(new Set());
+  const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set());
+  const [showAddGroupForm, setShowAddGroupForm] = useState(false);
+  const [showAddTaskFormForGroup, setShowAddTaskFormForGroup] = useState<number | null>(null);
+  const [editingGroupId, setEditingGroupId] = useState<number | null>(null);
+  const [editingGroupTitle, setEditingGroupTitle] = useState('');
+  const [newGroup, setNewGroup] = useState({ groupTitle: '', groupDescription: '' });
+  const [newTask, setNewTask] = useState({
+    taskTitle: '',
+    taskDescription: '',
+    priority: 'MEDIUM' as TaskPriority,
+  });
+
+  // Task Groups API hooks
+  const { data: taskGroupsResponse, isLoading: isLoadingGroups } = useGetTaskGroupsByCustomerQuery(customerId);
+  const [createTaskGroup, { isLoading: isCreatingGroup }] = useCreateTaskGroupMutation();
+  const [updateTaskGroup] = useUpdateTaskGroupMutation();
+  const [deleteTaskGroup] = useDeleteTaskGroupMutation();
+  const [createCustomTask, { isLoading: isCreatingTask }] = useCreateCustomTaskMutation();
+  const [toggleCustomTask] = useToggleCustomTaskMutation();
+  const [deleteCustomTask] = useDeleteCustomTaskMutation();
+
+  const taskGroups = taskGroupsResponse?.success ? taskGroupsResponse.data || [] : [];
+
+  // Initialize expanded groups
+  React.useEffect(() => {
+    if (taskGroups.length > 0 && expandedGroups.size === 0) {
+      const allGroupIds = new Set(taskGroups.map(g => g.id));
+      setExpandedGroups(allGroupIds);
+    }
+  }, [taskGroups]);
+
+  const toggleGroupExpanded = (groupId: number) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+      return next;
+    });
+  };
+
+  const handleCreateGroup = async () => {
+    if (!newGroup.groupTitle.trim()) {
+      toast.error('Group title is required');
+      return;
+    }
+
+    try {
+      await createTaskGroup({
+        customerId,
+        groupTitle: newGroup.groupTitle,
+        groupDescription: newGroup.groupDescription,
+      }).unwrap();
+
+      toast.success('Group created successfully');
+      setNewGroup({ groupTitle: '', groupDescription: '' });
+      setShowAddGroupForm(false);
+    } catch (error) {
+      console.error('Error creating group:', error);
+      toast.error('Failed to create group');
+    }
+  };
+
+  const handleUpdateGroupTitle = async (groupId: number) => {
+    if (!editingGroupTitle.trim()) {
+      toast.error('Group title is required');
+      return;
+    }
+
+    try {
+      await updateTaskGroup({
+        groupId,
+        data: { groupTitle: editingGroupTitle },
+        customerId,
+      }).unwrap();
+
+      toast.success('Group updated successfully');
+      setEditingGroupId(null);
+      setEditingGroupTitle('');
+    } catch (error) {
+      console.error('Error updating group:', error);
+      toast.error('Failed to update group');
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: number) => {
+    if (!confirm('Are you sure you want to delete this group and all its tasks?')) return;
+
+    try {
+      await deleteTaskGroup({ groupId, customerId }).unwrap();
+      toast.success('Group deleted successfully');
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      toast.error('Failed to delete group');
+    }
+  };
+
+  const handleCreateTask = async (groupId: number) => {
+    if (!newTask.taskTitle.trim()) {
+      toast.error('Task title is required');
+      return;
+    }
+
+    try {
+      await createCustomTask({
+        customerId,
+        taskTitle: newTask.taskTitle,
+        taskDescription: newTask.taskDescription,
+        phase: 'CUSTOM',
+        priority: newTask.priority,
+        taskGroupId: groupId,
+      }).unwrap();
+
+      toast.success('Task created successfully');
+      setNewTask({ taskTitle: '', taskDescription: '', priority: 'MEDIUM' });
+      setShowAddTaskFormForGroup(null);
+    } catch (error) {
+      console.error('Error creating task:', error);
+      toast.error('Failed to create task');
+    }
+  };
+
+  const handleToggleTask = async (task: ProductionCustomTask) => {
+    const taskKey = `task-${task.id}`;
+    setLoadingTasks(prev => new Set(prev).add(taskKey));
+
+    try {
+      await toggleCustomTask({ taskId: task.id, customerId }).unwrap();
+      toast.success(task.completed ? 'Task marked as pending' : 'Task marked as completed');
+    } catch (error) {
+      console.error('Error toggling task:', error);
+      toast.error('Failed to update task');
+    } finally {
+      setLoadingTasks(prev => {
+        const next = new Set(prev);
+        next.delete(taskKey);
+        return next;
+      });
+    }
+  };
+
+  const handleDeleteTask = async (taskId: number) => {
+    if (!confirm('Are you sure you want to delete this task?')) return;
+
+    try {
+      await deleteCustomTask({ taskId, customerId }).unwrap();
+      toast.success('Task deleted successfully');
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast.error('Failed to delete task');
+    }
+  };
+
+  // Calculate overall progress
+  const totalTasks = taskGroups.reduce((sum, g) => sum + g.totalTasks, 0);
+  const completedTasks = taskGroups.reduce((sum, g) => sum + g.completedTasks, 0);
+  const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  const renderTask = (task: ProductionCustomTask) => {
+    const taskKey = `task-${task.id}`;
+    const isLoading = loadingTasks.has(taskKey);
+
+    return (
+      <div
+        key={taskKey}
+        className={`flex items-center justify-between p-3 pl-10 bg-background-900 hover:bg-background-800 transition-colors border-t border-background-700 ${
+          isLoading ? 'opacity-50' : ''
+        }`}
+      >
+        <div
+          className="flex items-center gap-3 flex-1 cursor-pointer"
+          onClick={() => !isLoading && handleToggleTask(task)}
+        >
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 text-primary-500 animate-spin" />
+          ) : task.completed ? (
+            <CheckCircle className="w-4 h-4 text-green-500" />
+          ) : (
+            <Circle className="w-4 h-4 text-text-600" />
+          )}
+          <div className="flex flex-col flex-1">
+            <div className="flex items-center gap-2">
+              <span className={`text-sm ${task.completed ? 'text-text-600 line-through' : 'text-text-900'}`}>
+                {task.taskTitle}
+              </span>
+              <span className={`text-xs px-1.5 py-0.5 rounded ${PRIORITY_BG[task.priority]} ${PRIORITY_COLORS[task.priority]}`}>
+                {task.priority}
+              </span>
+            </div>
+            {task.taskDescription && (
+              <span className="text-xs text-text-500 mt-0.5">{task.taskDescription}</span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {task.completionDate && (
+            <span className="text-xs text-text-500">
+              {new Date(task.completionDate).toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'short',
+              })}
+            </span>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteTask(task.id);
+            }}
+            className="p-1 text-red-400 hover:text-red-300 transition-colors"
+            title="Delete task"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderAddTaskForm = (groupId: number) => (
+    <div className="p-3 pl-10 bg-background-800 space-y-2 border-t border-background-700">
+      <input
+        type="text"
+        placeholder="Task title *"
+        value={newTask.taskTitle}
+        onChange={(e) => setNewTask({ ...newTask, taskTitle: e.target.value })}
+        className="w-full px-3 py-2 bg-background-900 border border-background-600 rounded-lg text-sm text-text-900 placeholder-text-500 focus:outline-none focus:border-primary-500"
+        autoFocus
+      />
+      <input
+        type="text"
+        placeholder="Description (optional)"
+        value={newTask.taskDescription}
+        onChange={(e) => setNewTask({ ...newTask, taskDescription: e.target.value })}
+        className="w-full px-3 py-2 bg-background-900 border border-background-600 rounded-lg text-sm text-text-900 placeholder-text-500 focus:outline-none focus:border-primary-500"
+      />
+      <div className="flex items-center gap-2">
+        <select
+          value={newTask.priority}
+          onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as TaskPriority })}
+          className="flex-1 px-3 py-2 bg-background-900 border border-background-600 rounded-lg text-sm text-text-900 focus:outline-none focus:border-primary-500"
+        >
+          <option value="LOW">Low</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HIGH">High</option>
+          <option value="URGENT">Urgent</option>
+        </select>
+        <button
+          onClick={() => {
+            setShowAddTaskFormForGroup(null);
+            setNewTask({ taskTitle: '', taskDescription: '', priority: 'MEDIUM' });
+          }}
+          className="p-2 text-text-600 hover:text-text-900 transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => handleCreateTask(groupId)}
+          disabled={isCreatingTask || !newTask.taskTitle.trim()}
+          className="px-3 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+        >
+          {isCreatingTask ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+          Save
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderGroup = (group: ProductionTaskGroup) => {
+    const isExpanded = expandedGroups.has(group.id);
+    const isEditing = editingGroupId === group.id;
+    const groupProgress = group.totalTasks > 0 ? Math.round((group.completedTasks / group.totalTasks) * 100) : 0;
+
+    return (
+      <div key={group.id} className="border border-background-600 rounded-lg overflow-hidden mb-3">
+        {/* Group Header */}
+        <div className="flex items-center justify-between p-3 bg-background-800 cursor-pointer">
+          <div className="flex items-center gap-2 flex-1" onClick={() => toggleGroupExpanded(group.id)}>
+            {isExpanded ? (
+              <ChevronDown className="w-5 h-5 text-text-600" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-text-600" />
+            )}
+            {isEditing ? (
+              <input
+                type="text"
+                value={editingGroupTitle}
+                onChange={(e) => setEditingGroupTitle(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleUpdateGroupTitle(group.id);
+                  if (e.key === 'Escape') {
+                    setEditingGroupId(null);
+                    setEditingGroupTitle('');
+                  }
+                }}
+                className="flex-1 px-2 py-1 bg-background-900 border border-primary-500 rounded text-text-900 text-sm focus:outline-none"
+                autoFocus
+              />
+            ) : (
+              <span className="font-semibold text-text-900">{group.groupTitle}</span>
+            )}
+            <span className="text-xs text-text-500 ml-2">
+              {group.completedTasks}/{group.totalTasks}
+            </span>
+            {group.totalTasks > 0 && (
+              <div className="w-16 h-1.5 bg-background-700 rounded-full overflow-hidden ml-2">
+                <div
+                  className="h-full bg-primary-500 transition-all"
+                  style={{ width: `${groupProgress}%` }}
+                />
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            {isEditing ? (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleUpdateGroupTitle(group.id);
+                  }}
+                  className="p-1.5 text-green-400 hover:text-green-300 transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingGroupId(null);
+                    setEditingGroupTitle('');
+                  }}
+                  className="p-1.5 text-text-600 hover:text-text-900 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingGroupId(group.id);
+                    setEditingGroupTitle(group.groupTitle);
+                  }}
+                  className="p-1.5 text-text-600 hover:text-text-900 transition-colors"
+                  title="Edit group"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteGroup(group.id);
+                  }}
+                  className="p-1.5 text-red-400 hover:text-red-300 transition-colors"
+                  title="Delete group"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Group Content (Tasks) */}
+        {isExpanded && (
+          <div className="bg-background-900">
+            {group.tasks && group.tasks.length > 0 ? (
+              group.tasks.map(task => renderTask(task))
+            ) : (
+              <div className="p-4 pl-10 text-center text-text-500 text-sm border-t border-background-700">
+                No tasks in this group yet
+              </div>
+            )}
+
+            {/* Add Task Form or Button */}
+            {showAddTaskFormForGroup === group.id ? (
+              renderAddTaskForm(group.id)
+            ) : (
+              <button
+                onClick={() => setShowAddTaskFormForGroup(group.id)}
+                className="w-full p-2 pl-10 text-sm text-primary-400 hover:text-primary-300 hover:bg-background-800 transition-colors flex items-center gap-2 border-t border-background-700"
+              >
+                <Plus className="w-4 h-4" />
+                Add Task
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-text-900">Task Checklist</h3>
+        <div className="text-sm text-text-600">
+          {completedTasks}/{totalTasks} tasks completed
+        </div>
+      </div>
+
+      {/* Loading State */}
+      {isLoadingGroups ? (
+        <div className="p-8 text-center border border-background-600 rounded-lg">
+          <Loader2 className="w-6 h-6 text-primary-500 animate-spin mx-auto" />
+          <p className="mt-2 text-text-600">Loading tasks...</p>
+        </div>
+      ) : taskGroups.length === 0 && !showAddGroupForm ? (
+        /* Empty State */
+        <div className="p-8 text-center border border-background-600 rounded-lg">
+          <p className="text-text-600 mb-4">No task groups yet. Create your first group to get started.</p>
+          <button
+            onClick={() => setShowAddGroupForm(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <FolderPlus className="w-4 h-4" />
+            Add Group
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* Task Groups */}
+          {taskGroups.map(group => renderGroup(group))}
+
+          {/* Add Group Form */}
+          {showAddGroupForm ? (
+            <div className="p-4 bg-background-800 rounded-lg border border-background-600 space-y-3">
+              <input
+                type="text"
+                placeholder="Group title (e.g., Production Phase, Installation) *"
+                value={newGroup.groupTitle}
+                onChange={(e) => setNewGroup({ ...newGroup, groupTitle: e.target.value })}
+                className="w-full px-3 py-2 bg-background-900 border border-background-600 rounded-lg text-text-900 placeholder-text-500 focus:outline-none focus:border-primary-500"
+                autoFocus
+              />
+              <input
+                type="text"
+                placeholder="Description (optional)"
+                value={newGroup.groupDescription}
+                onChange={(e) => setNewGroup({ ...newGroup, groupDescription: e.target.value })}
+                className="w-full px-3 py-2 bg-background-900 border border-background-600 rounded-lg text-text-900 placeholder-text-500 focus:outline-none focus:border-primary-500"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setShowAddGroupForm(false);
+                    setNewGroup({ groupTitle: '', groupDescription: '' });
+                  }}
+                  className="px-4 py-2 text-text-600 hover:text-text-900 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateGroup}
+                  disabled={isCreatingGroup || !newGroup.groupTitle.trim()}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isCreatingGroup ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Create Group
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAddGroupForm(true)}
+              className="w-full p-3 border border-dashed border-background-600 rounded-lg text-primary-400 hover:text-primary-300 hover:border-primary-500 transition-colors flex items-center justify-center gap-2"
+            >
+              <FolderPlus className="w-5 h-5" />
+              Add New Group
+            </button>
+          )}
+        </>
+      )}
+
+      {/* Progress Summary */}
+      {totalTasks > 0 && (
+        <div className="p-4 bg-background-800 rounded-lg border border-background-600">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-text-600">Overall Progress</span>
+            <span className="text-lg font-bold text-text-900">{progressPercentage}%</span>
+          </div>
+          <div className="h-3 bg-background-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-primary-500 to-green-500 transition-all"
+              style={{ width: `${progressPercentage}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ProductionTaskChecklist;

@@ -43,13 +43,13 @@ public interface CustomerProjectRepository extends JpaRepository<CustomerProject
     @Query("SELECT SUM(p.totalAmount) FROM CustomerProject p WHERE p.status = :status")
     BigDecimal getTotalValueByStatus(@Param("status") CustomerProject.ProjectStatus status);
 
-    @Query("SELECT SUM(p.totalAmount - COALESCE((SELECT SUM(pay.amount) FROM Payment pay WHERE pay.project.id = p.id AND pay.paymentStatus = 'COMPLETED'), 0)) FROM CustomerProject p WHERE p.status = 'ACTIVE'")
-    BigDecimal getTotalPendingPayments();
+    @Query("SELECT SUM(p.totalAmount - COALESCE((SELECT SUM(pay.amount) FROM Payment pay WHERE pay.project.id = p.id AND pay.paymentStatus = 'COMPLETED'), 0)) FROM CustomerProject p WHERE p.status = :status")
+    BigDecimal getTotalPendingPayments(@Param("status") CustomerProject.ProjectStatus status);
 
-    @Query("SELECT SUM(p.cashInHand) FROM CustomerProject p")
+    @Query("SELECT SUM(p.receivedInHand) FROM CustomerProject p")
     BigDecimal getTotalCashInHand();
 
-    @Query("SELECT SUM(p.cashInAccount) FROM CustomerProject p")
+    @Query("SELECT SUM(p.receivedInAccount) FROM CustomerProject p")
     BigDecimal getTotalCashInAccount();
 
     @Query("SELECT AVG(DATEDIFF(p.actualCompletionDate, p.startDate)) FROM CustomerProject p WHERE p.actualCompletionDate IS NOT NULL")

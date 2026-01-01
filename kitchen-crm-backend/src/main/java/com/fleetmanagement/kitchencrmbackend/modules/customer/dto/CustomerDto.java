@@ -29,6 +29,13 @@ public class CustomerDto {
     private String kitchenTypes;
     private Customer.CustomerStatus status;
 
+    // Lead tracking fields
+    private Long architectId;
+    private String architectName;
+    private Customer.LeadSourceType leadSourceType;
+    private String manualLeadName;
+    private String manualLeadContact;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

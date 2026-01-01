@@ -1,0 +1,155 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* CSS Variable defaults - will be overridden by ThemeProvider */
+  :root {
+    --color-background-900: #0A0A0F;
+    --color-background-800: #12121A;
+    --color-background-700: #1A1A24;
+    --color-background-600: #252530;
+    --color-background-500: #3A3A45;
+    --color-primary-900: #4C1D95;
+    --color-primary-800: #5B21B6;
+    --color-primary-700: #6D28D9;
+    --color-primary-600: #7C3AED;
+    --color-primary-500: #8B5CF6;
+    --color-primary-400: #A78BFA;
+    --color-primary-300: #C4B5FD;
+    --color-primary-200: #DDD6FE;
+    --color-primary-100: #EDE9FE;
+    --color-accent-900: #0E7490;
+    --color-accent-800: #155E75;
+    --color-accent-700: #0891B2;
+    --color-accent-600: #06B6D4;
+    --color-accent-500: #22D3EE;
+    --color-accent-400: #67E8F9;
+    --color-accent-300: #A5F3FC;
+    --color-accent-200: #CFFAFE;
+    --color-accent-100: #ECFEFF;
+    --color-text-900: #FFFFFF;
+    --color-text-800: #F5F5F5;
+    --color-text-700: #E5E5E5;
+    --color-text-600: #D5D5D5;
+    --color-text-500: #C5C5C5;
+    --color-text-400: #B5B5B5;
+    --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-info: #3B82F6;
+    --color-error: #EF4444;
+  }
+
+  /* Base styles with dynamic theme support */
+  * {
+    border-color: var(--color-background-600);
+    box-sizing: border-box;
+  }
+
+  html {
+    @apply antialiased;
+  }
+
+  body {
+    background-color: var(--color-background-900);
+    color: var(--color-text-900);
+    @apply font-sans;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Scrollbar styling - theme aware */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background-color: var(--color-background-800);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-background-600);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-primary-700);
+  }
+
+  /* Focus ring styling - theme aware */
+  *:focus-visible {
+    outline: none;
+    ring-width: 2px;
+    ring-color: var(--color-primary-700);
+    ring-offset-width: 2px;
+    ring-offset-color: var(--color-background-900);
+  }
+
+  /* Selection styling - theme aware */
+  ::selection {
+    background-color: var(--color-primary-700);
+    color: var(--color-text-900);
+  }
+}
+
+@layer components {
+  /* Custom component utilities - theme aware */
+  .gradient-primary {
+    background: linear-gradient(135deg, var(--color-background-900) 0%, var(--color-background-700) 100%);
+  }
+
+  .gradient-accent {
+    background: linear-gradient(135deg, var(--color-primary-900) 0%, var(--color-primary-600) 50%, var(--color-accent-600) 100%);
+  }
+
+  .gradient-card {
+    background: linear-gradient(145deg, var(--color-background-700) 0%, var(--color-background-800) 100%);
+  }
+
+  .text-gradient {
+    background: linear-gradient(to right, var(--color-primary-700), var(--color-primary-500));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+@layer utilities {
+  /* Custom utility classes */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Theme-aware hover utilities for sidebar */
+  [data-theme="light"] .hover-bg-sidebar:hover {
+    background-color: var(--color-background-600);
+  }
+
+  [data-theme="dark"] .hover-bg-sidebar:hover {
+    background-color: var(--color-background-700);
+  }
+
+  /* Enhanced sidebar hover with better contrast */
+  [data-theme="light"] .sidebar-nav-item:hover {
+    background-color: var(--color-background-600);
+    color: var(--color-text-900);
+  }
+
+  [data-theme="dark"] .sidebar-nav-item:hover {
+    background-color: var(--color-background-700);
+    color: var(--color-text-900);
+  }
+}
+

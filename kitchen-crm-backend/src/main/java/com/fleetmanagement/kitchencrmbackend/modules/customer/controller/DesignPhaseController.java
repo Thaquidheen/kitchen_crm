@@ -33,20 +33,38 @@ public class DesignPhaseController {
     @GetMapping
     public ResponseEntity<ApiResponse<Page<DesignPhaseDto>>> getAllDesignPhases(
             @RequestParam(required = false) DesignPhase.DesignStatus designStatus,
-            @RequestParam(required = false) String designerAssigned,
+            @RequestParam(required = false) Long staffAssignedId,
             @RequestParam(required = false) String customerName,
             @RequestParam(required = false) Boolean submittedToClient,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
 
         Sort sort = sortDir.equalsIgnoreCase("desc") ?
                 Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
+        // Auto-filter by assigned staff if user is staff and no explicit filter provided
+        Long finalStaffAssignedId = staffAssignedId;
+        if (finalStaffAssignedId == null && currentUser != null) {
+            boolean isStaff = currentUser.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_STAFF"));
+            if (isStaff) {
+                finalStaffAssignedId = currentUser.getId();
+                System.out.println("Auto-filtering by staff ID: " + finalStaffAssignedId);
+            } else {
+                System.out.println("User is not staff, showing all design phases (including unassigned)");
+            }
+        } else if (finalStaffAssignedId != null) {
+            System.out.println("Using explicit staff filter: " + finalStaffAssignedId);
+        } else {
+            System.out.println("No staff filter applied, showing all design phases (including unassigned)");
+        }
+
         return ResponseEntity.ok(designPhaseService.getAllDesignPhases(
-                designStatus, designerAssigned, customerName, submittedToClient, pageable));
+                designStatus, finalStaffAssignedId, customerName, submittedToClient, pageable));
     }
 
     @GetMapping("/statistics")
@@ -58,23 +76,19 @@ public class DesignPhaseController {
     public ResponseEntity<ApiResponse<DesignPhaseDto>> getDesignPhaseByCustomer(
             @PathVariable Long customerId) {
         ApiResponse<DesignPhaseDto> response = designPhaseService.getDesignPhaseByCustomer(customerId);
-        if (response.getSuccess()) {
-            return ResponseEntity.ok(response);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/customer/{customerId}/exists")
+    public ResponseEntity<ApiResponse<Boolean>> checkDesignPhaseExists(
+            @PathVariable Long customerId) {
+        return ResponseEntity.ok(designPhaseService.checkDesignPhaseExists(customerId));
     }
 
     @GetMapping("/status/{status}")
     public ResponseEntity<ApiResponse<List<DesignPhaseDto>>> getDesignsByStatus(
             @PathVariable DesignPhase.DesignStatus status) {
         return ResponseEntity.ok(designPhaseService.getDesignsByStatus(status));
-    }
-
-    @GetMapping("/designer/{designerAssigned}")
-    public ResponseEntity<ApiResponse<List<DesignPhaseDto>>> getDesignsByDesigner(
-            @PathVariable String designerAssigned) {
-        return ResponseEntity.ok(designPhaseService.getDesignsByDesigner(designerAssigned));
     }
 
     @GetMapping("/meetings/upcoming")
@@ -116,12 +130,12 @@ public class DesignPhaseController {
     }
 
     @PostMapping("/customer/{customerId}/submit-to-client")
-    public ResponseEntity<ApiResponse<String>> submitDesignToClient(
+    public ResponseEntity<ApiResponse<DesignPhaseDto>> submitDesignToClient(
             @PathVariable Long customerId,
             @Valid @RequestBody DesignSubmissionDto submissionDto,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
-        ApiResponse<String> response = designPhaseService.submitDesignToClient(
+        ApiResponse<DesignPhaseDto> response = designPhaseService.submitDesignToClient(
                 customerId, submissionDto, currentUser.getName());
 
         if (response.getSuccess()) {
@@ -212,5 +226,44 @@ public class DesignPhaseController {
 
         return ResponseEntity.ok(designPhaseService.approveDesign(
                 customerId, currentUser.getName()));
+    }
+
+    @PostMapping("/customer/{customerId}/submit-for-approval")
+    @PreAuthorize("hasRole('ROLE_STAFF')")
+    public ResponseEntity<ApiResponse<DesignPhaseDto>> submitForSuperadminApproval(
+            @PathVariable Long customerId,
+            @Valid @RequestBody DesignSubmissionDto submissionDto,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        ApiResponse<DesignPhaseDto> response = designPhaseService.submitForSuperadminApproval(
+                customerId, submissionDto, currentUser.getName());
+
+        if (response.getSuccess()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PostMapping("/customer/{customerId}/approve-staff-submission")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<DesignPhaseDto>> approveStaffSubmission(
+            @PathVariable Long customerId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        ApiResponse<DesignPhaseDto> response = designPhaseService.approveStaffSubmission(
+                customerId, currentUser.getName());
+
+        if (response.getSuccess()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/staff/{staffId}")
+    public ResponseEntity<ApiResponse<List<DesignPhaseDto>>> getDesignPhasesByAssignedStaff(
+            @PathVariable Long staffId) {
+        return ResponseEntity.ok(designPhaseService.getDesignPhasesByAssignedStaff(staffId));
     }
 }

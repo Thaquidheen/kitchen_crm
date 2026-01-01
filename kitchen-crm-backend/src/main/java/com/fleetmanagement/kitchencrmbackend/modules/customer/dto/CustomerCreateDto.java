@@ -22,4 +22,9 @@ public class CustomerCreateDto {
 
     private String address;
     private String kitchenTypes;
+
+    // Lead tracking fields
+    private Long architectId;
+    private String manualLeadName;
+    private String manualLeadContact;
 }

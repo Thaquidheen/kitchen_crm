@@ -25,6 +25,10 @@ public class QuotationLighting extends Auditable {
     @JoinColumn(name = "quotation_id", nullable = false)
     private Quotation quotation;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "kitchen_id", nullable = true)
+    private QuotationKitchen kitchen;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "item_type", nullable = false)
     private LightingItemType itemType;

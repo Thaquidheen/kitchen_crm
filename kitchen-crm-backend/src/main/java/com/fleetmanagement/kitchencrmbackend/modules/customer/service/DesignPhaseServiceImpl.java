@@ -7,6 +7,8 @@ import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.WorkflowHis
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.DesignPhaseRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.WorkflowHistoryRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.auth.entity.User;
+import com.fleetmanagement.kitchencrmbackend.modules.auth.repository.UserRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.QuotationRepository;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
@@ -21,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,14 +42,29 @@ public class DesignPhaseServiceImpl implements DesignPhaseService {
     @Autowired
     private WorkflowHistoryRepository workflowHistoryRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @Override
     public ApiResponse<Page<DesignPhaseDto>> getAllDesignPhases(DesignPhase.DesignStatus designStatus,
-                                                                String designerAssigned,
+                                                                Long staffAssignedId,
                                                                 String customerName,
                                                                 Boolean submittedToClient,
                                                                 Pageable pageable) {
+        // Log the filters for debugging
+        System.out.println("Getting design phases with filters: " +
+                "designStatus=" + designStatus +
+                ", staffAssignedId=" + staffAssignedId +
+                ", customerName=" + customerName +
+                ", submittedToClient=" + submittedToClient +
+                ", page=" + pageable.getPageNumber() +
+                ", size=" + pageable.getPageSize());
+        
         Page<DesignPhase> designPhases = designPhaseRepository.findByFilters(
-                designStatus, designerAssigned, customerName, submittedToClient, pageable);
+                designStatus, staffAssignedId, customerName, submittedToClient, pageable);
+
+        System.out.println("Found " + designPhases.getTotalElements() + " design phases (total), " +
+                designPhases.getContent().size() + " in current page");
 
         Page<DesignPhaseDto> designPhaseDtos = designPhases.map(this::convertToDto);
         return ApiResponse.success(designPhaseDtos);
@@ -56,9 +74,15 @@ public class DesignPhaseServiceImpl implements DesignPhaseService {
     public ApiResponse<DesignPhaseDto> getDesignPhaseByCustomer(Long customerId) {
         DesignPhase designPhase = designPhaseRepository.findByCustomerId(customerId).orElse(null);
         if (designPhase == null) {
-            return ApiResponse.error("Design phase not found for customer");
+            return ApiResponse.success("No design phase found for customer", null);
         }
         return ApiResponse.success(convertToDto(designPhase));
+    }
+
+    @Override
+    public ApiResponse<Boolean> checkDesignPhaseExists(Long customerId) {
+        boolean exists = designPhaseRepository.findByCustomerId(customerId).isPresent();
+        return ApiResponse.success(exists);
     }
 
     @Override
@@ -70,8 +94,9 @@ public class DesignPhaseServiceImpl implements DesignPhaseService {
         }
 
         // Check if design phase already exists for customer
-        if (designPhaseRepository.findByCustomerId(designPhaseCreateDto.getCustomerId()).isPresent()) {
-            return ApiResponse.error("Design phase already exists for this customer");
+        Optional<DesignPhase> existingDesignPhase = designPhaseRepository.findByCustomerId(designPhaseCreateDto.getCustomerId());
+        if (existingDesignPhase.isPresent()) {
+            return ApiResponse.error("Design phase already exists for this customer. Use update instead.");
         }
 
         // Validate quotation if provided
@@ -83,14 +108,34 @@ public class DesignPhaseServiceImpl implements DesignPhaseService {
             }
         }
 
+        // Validate staff user if provided
+        User staffAssigned = null;
+        if (designPhaseCreateDto.getStaffAssignedId() != null) {
+            staffAssigned = userRepository.findById(designPhaseCreateDto.getStaffAssignedId()).orElse(null);
+            if (staffAssigned == null) {
+                return ApiResponse.error("Staff user not found");
+            }
+            // Verify user has ROLE_STAFF
+            boolean isStaff = staffAssigned.getRoles().stream()
+                    .anyMatch(role -> role.getName().name().equals("ROLE_STAFF"));
+            if (!isStaff) {
+                return ApiResponse.error("User is not a staff member");
+            }
+        }
+
         DesignPhase designPhase = new DesignPhase();
         designPhase.setCustomer(customer);
         designPhase.setQuotation(quotation);
         designPhase.setDesignRequirements(designPhaseCreateDto.getDesignRequirements());
-        designPhase.setDesignerAssigned(designPhaseCreateDto.getDesignerAssigned());
+        designPhase.setStaffAssigned(staffAssigned); // Set Staff User entity
         designPhase.setDesignStatus(DesignPhase.DesignStatus.PLANNING);
 
         DesignPhase savedDesignPhase = designPhaseRepository.save(designPhase);
+
+        System.out.println("Design phase created successfully: ID=" + savedDesignPhase.getId() +
+                ", CustomerID=" + savedDesignPhase.getCustomer().getId() +
+                ", Status=" + savedDesignPhase.getDesignStatus() +
+                ", StaffAssignedID=" + (savedDesignPhase.getStaffAssigned() != null ? savedDesignPhase.getStaffAssigned().getId() : "null"));
 
         // Create workflow history
         createWorkflowHistory(customer, "Design Phase Created", "PLANNING", createdBy, "Design phase initiated");
@@ -109,7 +154,26 @@ public class DesignPhaseServiceImpl implements DesignPhaseService {
         existingDesignPhase.setPlan(designPhaseDto.getPlan());
         existingDesignPhase.setDesign(designPhaseDto.getDesign());
         existingDesignPhase.setDesignRequirements(designPhaseDto.getDesignRequirements());
-        existingDesignPhase.setDesignerAssigned(designPhaseDto.getDesignerAssigned());
+        
+        // Handle staff assignment update
+        if (designPhaseDto.getStaffAssignedId() != null) {
+            User staffAssigned = userRepository.findById(designPhaseDto.getStaffAssignedId()).orElse(null);
+            if (staffAssigned == null) {
+                return ApiResponse.error("Staff user not found");
+            }
+            // Verify user has ROLE_STAFF
+            boolean isStaff = staffAssigned.getRoles().stream()
+                    .anyMatch(role -> role.getName().name().equals("ROLE_STAFF"));
+            if (!isStaff) {
+                return ApiResponse.error("User is not a staff member");
+            }
+            existingDesignPhase.setStaffAssigned(staffAssigned);
+            // Update status to IN_PROGRESS when staff is assigned
+            if (existingDesignPhase.getDesignStatus() == DesignPhase.DesignStatus.PLANNING) {
+                existingDesignPhase.setDesignStatus(DesignPhase.DesignStatus.IN_PROGRESS);
+            }
+        }
+        
         existingDesignPhase.setDesignCompletionPercentage(designPhaseDto.getDesignCompletionPercentage());
         existingDesignPhase.setDesignFilesPath(designPhaseDto.getDesignFilesPath());
 
@@ -123,29 +187,42 @@ public class DesignPhaseServiceImpl implements DesignPhaseService {
     }
 
     @Override
-    public ApiResponse<String> submitDesignToClient(Long customerId, DesignSubmissionDto submissionDto, String submittedBy) {
+    public ApiResponse<DesignPhaseDto> submitDesignToClient(Long customerId, DesignSubmissionDto submissionDto, String submittedBy) {
         DesignPhase designPhase = designPhaseRepository.findByCustomerId(customerId).orElse(null);
         if (designPhase == null) {
             return ApiResponse.error("Design phase not found for customer");
         }
 
+        // If design status is not IN_PROGRESS, update it automatically
         if (designPhase.getDesignStatus() != DesignPhase.DesignStatus.IN_PROGRESS) {
-            return ApiResponse.error("Design must be in progress to submit to client");
+            designPhase.setDesignStatus(DesignPhase.DesignStatus.IN_PROGRESS);
+            designPhaseRepository.save(designPhase);
+            
+            // Create workflow history for status update
+            createWorkflowHistory(designPhase.getCustomer(), "Design Status Updated", "IN_PROGRESS", submittedBy,
+                    "Design status automatically updated to In Progress for submission");
         }
 
+        // Check if design was approved by admin before submitting to client
+        if (designPhase.getDesignStatus() != DesignPhase.DesignStatus.APPROVED_BY_ADMIN && 
+            designPhase.getDesignStatus() != DesignPhase.DesignStatus.IN_PROGRESS) {
+            return ApiResponse.error("Design must be approved by admin or in progress before submitting to client");
+        }
+
+        // Now proceed with the submission
         designPhase.setDesign(submissionDto.getDesign());
         designPhase.setDesignFilesPath(submissionDto.getDesignFilesPath());
         designPhase.setSubmittedToClient(true);
         designPhase.setSubmissionDate(LocalDateTime.now());
         designPhase.setDesignStatus(DesignPhase.DesignStatus.SUBMITTED);
 
-        designPhaseRepository.save(designPhase);
+        DesignPhase savedDesignPhase = designPhaseRepository.save(designPhase);
 
-        // Create workflow history
+        // Create workflow history for submission
         createWorkflowHistory(designPhase.getCustomer(), "Design Submitted", "SUBMITTED", submittedBy,
                 "Design submitted to client for review");
 
-        return ApiResponse.success("Design submitted to client successfully");
+        return ApiResponse.success("Design submitted to client successfully", convertToDto(savedDesignPhase));
     }
 
     @Override
@@ -325,8 +402,62 @@ public class DesignPhaseServiceImpl implements DesignPhaseService {
     }
 
     @Override
-    public ApiResponse<List<DesignPhaseDto>> getDesignsByStatus(DesignPhase.DesignStatus status) {
-        List<DesignPhase> designPhases = designPhaseRepository.findByDesignStatus(status);
+    public ApiResponse<DesignPhaseDto> submitForSuperadminApproval(Long customerId, DesignSubmissionDto submissionDto, String submittedBy) {
+        DesignPhase designPhase = designPhaseRepository.findByCustomerId(customerId).orElse(null);
+        if (designPhase == null) {
+            return ApiResponse.error("Design phase not found for customer");
+        }
+
+        // Check if design phase is in a valid state for submission
+        if (designPhase.getDesignStatus() != DesignPhase.DesignStatus.IN_PROGRESS) {
+            return ApiResponse.error("Design must be in progress to submit for approval");
+        }
+
+        // Update design content
+        designPhase.setDesign(submissionDto.getDesign());
+        designPhase.setDesignFilesPath(submissionDto.getDesignFilesPath());
+        designPhase.setDesignStatus(DesignPhase.DesignStatus.PENDING_SUPERADMIN_APPROVAL);
+        designPhase.setDesignCompletionPercentage(50); // Update progress
+
+        DesignPhase savedDesignPhase = designPhaseRepository.save(designPhase);
+
+        // Create workflow history
+        createWorkflowHistory(designPhase.getCustomer(), "Design Submitted for Approval", "PENDING_SUPERADMIN_APPROVAL", submittedBy,
+                "Design submitted to superadmin for approval");
+
+        return ApiResponse.success("Design submitted for approval successfully", convertToDto(savedDesignPhase));
+    }
+
+    @Override
+    public ApiResponse<DesignPhaseDto> approveStaffSubmission(Long customerId, String approvedBy) {
+        DesignPhase designPhase = designPhaseRepository.findByCustomerId(customerId).orElse(null);
+        if (designPhase == null) {
+            return ApiResponse.error("Design phase not found for customer");
+        }
+
+        if (designPhase.getDesignStatus() != DesignPhase.DesignStatus.PENDING_SUPERADMIN_APPROVAL) {
+            return ApiResponse.error("Design must be pending superadmin approval");
+        }
+
+        // Update status to approved by admin
+        designPhase.setDesignStatus(DesignPhase.DesignStatus.APPROVED_BY_ADMIN);
+        designPhase.setDesignCompletionPercentage(75); // Update progress
+
+        DesignPhase savedDesignPhase = designPhaseRepository.save(designPhase);
+
+        // Create workflow history
+        createWorkflowHistory(designPhase.getCustomer(), "Design Approved by Admin", "APPROVED_BY_ADMIN", approvedBy,
+                "Design approved by superadmin. Ready to submit to client.");
+
+        // Note: Files are already uploaded during submission, they will appear in Files tab automatically
+        // The designFilesPath contains reference to the files
+
+        return ApiResponse.success("Design approved successfully. Ready to submit to client.", convertToDto(savedDesignPhase));
+    }
+
+    @Override
+    public ApiResponse<List<DesignPhaseDto>> getDesignPhasesByAssignedStaff(Long staffId) {
+        List<DesignPhase> designPhases = designPhaseRepository.findByStaffAssignedId(staffId);
         List<DesignPhaseDto> designPhaseDtos = designPhases.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
@@ -334,8 +465,8 @@ public class DesignPhaseServiceImpl implements DesignPhaseService {
     }
 
     @Override
-    public ApiResponse<List<DesignPhaseDto>> getDesignsByDesigner(String designerAssigned) {
-        List<DesignPhase> designPhases = designPhaseRepository.findByDesignerAssigned(designerAssigned);
+    public ApiResponse<List<DesignPhaseDto>> getDesignsByStatus(DesignPhase.DesignStatus status) {
+        List<DesignPhase> designPhases = designPhaseRepository.findByDesignStatus(status);
         List<DesignPhaseDto> designPhaseDtos = designPhases.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
@@ -424,7 +555,13 @@ public class DesignPhaseServiceImpl implements DesignPhaseService {
         dto.setClientGroupCreated(designPhase.getClientGroupCreated());
         dto.setWhatsappGroupLink(designPhase.getWhatsappGroupLink());
         dto.setDesignStatus(designPhase.getDesignStatus());
-        dto.setDesignerAssigned(designPhase.getDesignerAssigned());
+        
+        // Handle staff assignment
+        if (designPhase.getStaffAssigned() != null) {
+            dto.setStaffAssignedId(designPhase.getStaffAssigned().getId());
+            dto.setStaffAssignedName(designPhase.getStaffAssigned().getName());
+        }
+        
         dto.setDesignCompletionPercentage(designPhase.getDesignCompletionPercentage());
         dto.setRevisionCount(designPhase.getRevisionCount());
         dto.setClientApprovalDate(designPhase.getClientApprovalDate());

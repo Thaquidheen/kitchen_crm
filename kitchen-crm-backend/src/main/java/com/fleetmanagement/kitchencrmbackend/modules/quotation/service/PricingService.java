@@ -16,5 +16,8 @@ public interface PricingService {
     void calculateAccessoryLineTotal(QuotationAccessory accessory, BigDecimal marginPercentage, BigDecimal taxPercentage);
     void calculateCabinetLineTotal(QuotationCabinet cabinet, BigDecimal marginPercentage, BigDecimal taxPercentage);
     void calculateDoorLineTotal(QuotationDoor door, BigDecimal marginPercentage, BigDecimal taxPercentage);
+    
+    // Kitchen calculation methods
+    void calculateKitchenTotals(QuotationKitchen kitchen, Quotation quotation);
 
 }

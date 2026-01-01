@@ -46,7 +46,8 @@ public class DesignPhaseDto {
     private String whatsappGroupLink;
 
     private DesignPhase.DesignStatus designStatus;
-    private String designerAssigned;
+    private Long staffAssignedId; // Staff user ID
+    private String staffAssignedName; // Staff user name
     private Integer designCompletionPercentage;
     private Integer revisionCount;
     private LocalDateTime clientApprovalDate;

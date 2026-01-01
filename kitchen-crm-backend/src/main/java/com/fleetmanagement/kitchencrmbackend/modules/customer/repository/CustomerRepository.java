@@ -36,7 +36,7 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     @Query("SELECT COUNT(c) FROM Customer c WHERE c.createdAt < :beforeDate")
     Long countByCreatedAtBefore(@Param("beforeDate") LocalDateTime beforeDate);
 
-    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT DISTINCT p.customer.id FROM CustomerProject p WHERE p.status = 'ACTIVE')")
+    @Query(value = "SELECT COUNT(DISTINCT c.id) FROM customers c INNER JOIN customer_projects p ON c.id = p.customer_id WHERE p.status = 'ACTIVE'", nativeQuery = true)
     Long countActiveCustomers();
 
     @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT DISTINCT p.customer.id FROM CustomerProject p WHERE p.totalAmount > 500000)")
@@ -54,7 +54,7 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT DISTINCT q.customer.id FROM Quotation q)")
     Long countLeads();
 
-    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT DISTINCT p.customer.id FROM CustomerProject p WHERE p.status = 'COMPLETED')")
+    @Query(value = "SELECT COUNT(DISTINCT c.id) FROM customers c INNER JOIN customer_projects p ON c.id = p.customer_id WHERE p.status = 'COMPLETED'", nativeQuery = true)
     Long countCompletedCustomers();
 
     @Query("SELECT c.id, c.name, SUM(p.receivedAmountTotal), COUNT(p) FROM Customer c JOIN CustomerProject p ON c.id = p.customer.id GROUP BY c.id, c.name ORDER BY SUM(p.receivedAmountTotal) DESC")

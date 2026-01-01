@@ -14,18 +14,20 @@ import java.util.Map;
 public interface DesignPhaseService {
 
     ApiResponse<Page<DesignPhaseDto>> getAllDesignPhases(DesignPhase.DesignStatus designStatus,
-                                                         String designerAssigned,
+                                                         Long staffAssignedId,
                                                          String customerName,
                                                          Boolean submittedToClient,
                                                          Pageable pageable);
 
     ApiResponse<DesignPhaseDto> getDesignPhaseByCustomer(Long customerId);
 
+    ApiResponse<Boolean> checkDesignPhaseExists(Long customerId);
+
     ApiResponse<DesignPhaseDto> createDesignPhase(DesignPhaseCreateDto designPhaseCreateDto, String createdBy);
 
     ApiResponse<DesignPhaseDto> updateDesignPhase(Long customerId, DesignPhaseDto designPhaseDto, String updatedBy);
 
-    ApiResponse<String> submitDesignToClient(Long customerId, DesignSubmissionDto submissionDto, String submittedBy);
+    ApiResponse<DesignPhaseDto> submitDesignToClient(Long customerId, DesignSubmissionDto submissionDto, String submittedBy);
 
     ApiResponse<String> recordClientFeedback(Long customerId, ClientFeedbackDto feedbackDto, String recordedBy);
 
@@ -41,9 +43,13 @@ public interface DesignPhaseService {
 
     ApiResponse<String> approveDesign(Long customerId, String approvedBy);
 
+    ApiResponse<DesignPhaseDto> submitForSuperadminApproval(Long customerId, DesignSubmissionDto submissionDto, String submittedBy);
+
+    ApiResponse<DesignPhaseDto> approveStaffSubmission(Long customerId, String approvedBy);
+
     ApiResponse<List<DesignPhaseDto>> getDesignsByStatus(DesignPhase.DesignStatus status);
 
-    ApiResponse<List<DesignPhaseDto>> getDesignsByDesigner(String designerAssigned);
+    ApiResponse<List<DesignPhaseDto>> getDesignPhasesByAssignedStaff(Long staffId);
 
     ApiResponse<List<DesignPhaseDto>> getUpcomingMeetings(LocalDateTime fromDate, LocalDateTime toDate);
 

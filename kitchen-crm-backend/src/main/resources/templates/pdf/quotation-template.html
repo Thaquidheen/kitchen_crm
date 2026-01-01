@@ -1,582 +1,860 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <style>
-        /* CSS Variables for consistency and easy theming */
-        :root {
-            --primary-color: #0052cc;
-            --primary-gradient: linear-gradient(135deg, #0052cc, #0066ff);
-            --secondary-color: #6c757d;
-            --accent-color: #28a745;
-            --danger-color: #dc3545;
-            --light-bg: #f8f9fa;
-            --white: #ffffff;
-            --border-color: #e9ecef;
-            --text-primary: #2c3e50;
-            --text-secondary: #6c757d;
-            --shadow-soft: 0 2px 12px rgba(0,0,0,0.08);
-            --shadow-medium: 0 4px 20px rgba(0,0,0,0.12);
-            --border-radius: 12px;
-            --font-primary: 'Segoe UI', system-ui, -apple-system, sans-serif;
-        }
-
-        /* Modern CSS Reset */
-        *, *::before, *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        @page {
-            size: A4;
-            margin: 15mm;
-        }
-
-        body {
-            font-family: var(--font-primary);
-            font-size: 13px;
-            line-height: 1.6;
-            color: var(--text-primary);
-            background: var(--white);
-        }
-
-        /* Advanced Flexbox Header Layout */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding: 30px;
-            margin-bottom: 30px;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-medium);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .header::before {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: var(--primary-gradient);
-        }
-
-        .header-left {
-            flex: 1;
-        }
-
-        .company-name {
-            font-size: clamp(28px, 4vw, 36px);
-            font-weight: 900;
-            color: var(--text-primary);
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .header-right {
-            text-align: right;
-            min-width: 200px;
-        }
-
-        .document-title {
-            font-size: 32px;
-            font-weight: 800;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 12px;
-        }
-
-        .document-meta {
-            background: var(--white);
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: var(--shadow-soft);
-            border: 1px solid var(--border-color);
-        }
-
-        .document-meta p {
-            margin: 6px 0;
-            font-weight: 500;
-        }
-
-        /* CSS Grid Customer Section */
-        .customer-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
-            padding: 25px;
-            background: var(--light-bg);
-            border-radius: var(--border-radius);
-            border-left: 5px solid var(--primary-color);
-            margin-bottom: 30px;
-            box-shadow: var(--shadow-soft);
-        }
-
-        .customer-section h3 {
-            grid-column: 1 / -1;
-            color: var(--primary-color);
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .customer-info {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .customer-info p {
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            background: var(--white);
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-        }
-
-        .customer-info strong {
-            min-width: 120px;
-            color: var(--primary-color);
-            font-weight: 600;
-        }
-
-        /* Advanced Plan Images with CSS Grid */
-        .plan-images-section {
-            margin: 40px 0;
-            page-break-inside: avoid;
-        }
-
-        .plan-images-title {
-            font-size: 22px;
-            color: var(--primary-color);
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 25px;
-            padding-bottom: 12px;
-            border-bottom: 3px solid var(--primary-color);
-            position: relative;
-        }
-
-        .plan-images-title::after {
-            content: '';
-            position: absolute;
-            bottom: -3px;
-            left: 0;
-            width: 60px;
-            height: 3px;
-            background: var(--accent-color);
-        }
-
-        .plan-images-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
-            margin-bottom: 25px;
-        }
-
-        .plan-image-item {
-            background: var(--white);
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius);
-            padding: 20px;
-            box-shadow: var(--shadow-soft);
-            transition: all 0.3s ease;
-            page-break-inside: avoid;
-            overflow: hidden;
-        }
-
-        .plan-image-header {
-            text-align: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid var(--light-bg);
-        }
-
-        .plan-image-header h3 {
-            color: var(--primary-color);
-            font-size: 16px;
-            font-weight: 600;
-            margin: 0;
-        }
-
-        .image-name {
-            color: var(--text-secondary);
-            font-size: 12px;
-            font-weight: 500;
-            margin-top: 5px;
-        }
-
-        .plan-image {
-            width: 100%;
-            max-width: 100%;
-            height: auto;
-            max-height: 300px;
-            object-fit: contain;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            display: block;
-            margin: 0 auto;
-            box-shadow: var(--shadow-soft);
-        }
-
-        .image-placeholder {
-            width: 100%;
-            height: 200px;
-            background: linear-gradient(45deg, #f8f9fa, #e9ecef);
-            border: 2px dashed var(--border-color);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            color: var(--text-secondary);
-            font-style: italic;
-        }
-
-        /* Modern Table Design */
-        .items-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            margin: 30px 0;
-            background: var(--white);
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            box-shadow: var(--shadow-medium);
-        }
-
-        .items-table thead tr {
-            background: var(--primary-gradient);
-            color: var(--white);
-        }
-
-        .items-table th {
-            padding: 18px 20px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-size: 12px;
-            text-align: left;
-            border: none;
-        }
-
-        .items-table td {
-            padding: 15px 20px;
-            border-bottom: 1px solid #f1f3f4;
-            vertical-align: top;
-        }
-
-        .items-table tbody tr:hover {
-            background: #f8f9fa;
-        }
-
-        .items-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* Category Headers with Modern Styling */
-        .category-header {
-            background: linear-gradient(135deg, var(--secondary-color), #495057) !important;
-            color: var(--white) !important;
-            font-weight: 700 !important;
-            text-align: center !important;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .category-header td {
-            padding: 12px 20px !important;
-        }
-
-        .total-row {
-            background: var(--primary-gradient) !important;
-            color: var(--white) !important;
-            font-weight: 700 !important;
-        }
-
-        .total-row td {
-            padding: 15px 20px !important;
-            font-size: 14px;
-        }
-
-        /* Modern Totals Section with CSS Grid */
-        .totals-section {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 30px;
-            margin: 30px 0;
-        }
-
-        .totals-table {
-            min-width: 350px;
-            border-collapse: separate;
-            border-spacing: 0;
-            background: var(--white);
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            box-shadow: var(--shadow-medium);
-            border: 1px solid var(--border-color);
-        }
-
-        .totals-table td {
-            padding: 15px 20px;
-            border-bottom: 1px solid #f1f3f4;
-        }
-
-        .totals-table td:first-child {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .totals-table td:last-child {
-            text-align: right;
-            font-weight: 600;
-        }
-
-        .totals-table .total-row {
-            background: var(--primary-gradient) !important;
-            color: var(--white) !important;
-            font-size: 16px;
-            font-weight: 700 !important;
-        }
-
-        .totals-table .total-row td {
-            border-bottom: none;
-        }
-
-        /* Modern Notes and Terms Section */
-        .notes-section {
-            margin-top: 40px;
-            display: grid;
-            gap: 30px;
-        }
-
-        .notes-card {
-            background: var(--white);
-            padding: 25px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-soft);
-            border-left: 4px solid var(--primary-color);
-        }
-
-        .notes-card h3 {
-            color: var(--primary-color);
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .notes-card p {
-            line-height: 1.8;
-            color: var(--text-primary);
-        }
-
-        /* Professional Footer */
-        .footer {
-            margin-top: 50px;
-            padding: 30px;
-            text-align: center;
-            background: linear-gradient(135deg, var(--light-bg), #e9ecef);
-            border-radius: var(--border-radius);
-            border-top: 3px solid var(--primary-color);
-            box-shadow: var(--shadow-soft);
-        }
-
-        .footer p {
-            margin: 8px 0;
-            color: var(--text-secondary);
-        }
-
-        .footer p:first-child {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--primary-color);
-        }
-
-        /* Responsive Design for different PDF sizes */
-        @media print {
-            .header {
-                background: #f8f9fa !important;
-                -webkit-print-color-adjust: exact;
-            }
-
-            .items-table thead tr {
-                background: var(--primary-color) !important;
-                -webkit-print-color-adjust: exact;
-            }
-
-            .category-header {
-                background: var(--secondary-color) !important;
-                -webkit-print-color-adjust: exact;
-            }
-
-            .total-row {
-                background: var(--primary-color) !important;
-                -webkit-print-color-adjust: exact;
-            }
-
-            .plan-images-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-        }
-
-        /* Advanced Typography */
-        h1, h2, h3, h4, h5, h6 {
-            font-weight: 700;
-            line-height: 1.2;
-        }
-
-        strong {
-            font-weight: 600;
-        }
-
-        /* Utility Classes for Advanced Layout */
-        .flex {
-            display: flex;
-        }
-
-        .flex-between {
-            justify-content: space-between;
-        }
-
-        .flex-center {
-            align-items: center;
-        }
-
-        .grid {
-            display: grid;
-        }
-
-        .gap-sm {
-            gap: 15px;
-        }
-
-        .gap-md {
-            gap: 25px;
-        }
-
-        .gap-lg {
-            gap: 35px;
-        }
-
-        .mb-sm {
-            margin-bottom: 15px;
-        }
-
-        .mb-md {
-            margin-bottom: 25px;
-        }
-
-        .mb-lg {
-            margin-bottom: 35px;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .text-right {
-            text-align: right;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Quotation - {{QUOTATION_NUMBER}}</title>
+  <style>
+    @page {
+      margin: 0;
+      size: A4;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      color: #000;
+      line-height: 1.6;
+      background-color: #F5F5F0; /* Kitchen-themed light cream/beige background */
+    }
+
+    /* Ensure all table elements have transparent background */
+    table, thead, tbody, tr, td, th {
+      background: transparent !important;
+    }
+
+    /* Quotation Header - Appears on every page */
+    .quotation-header {
+      width: 100%;
+      padding: 5px 0;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #000;
+      background: transparent;
+    }
+
+    .quotation-header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    .quotation-header-left {
+      flex: 1;
+    }
+
+    .quotation-header-logo {
+      font-size: 24px;
+      font-weight: 800;
+      color: #000;
+      margin-bottom: 4px;
+      letter-spacing: 1px;
+    }
+
+    .quotation-header-tagline {
+      font-size: 11px;
+      color: #000;
+      font-style: italic;
+      margin-bottom: 6px;
+    }
+
+    .quotation-header-info {
+      font-size: 9px;
+      color: #000;
+      line-height: 1.4;
+    }
+
+    .quotation-header-info div {
+      margin-bottom: 2px;
+    }
+
+    .quotation-header-right {
+      text-align: right;
+      flex: 0 0 auto;
+      font-size: 9px;
+      color: #000;
+      line-height: 1.4;
+    }
+
+    .quotation-header-right div {
+      margin-bottom: 2px;
+    }
+
+    /* Page break utility */
+    .page-break {
+      page-break-before: always;
+    }
+
+    .page {
+      min-height: 100vh;
+      padding: 10px 15px;
+      background: transparent;
+    }
+
+    /* Standard spacing units */
+    .spacing-xs { margin: 5px 0; }
+    .spacing-sm { margin: 10px 0; }
+    .spacing-md { margin: 15px 0; }
+    .spacing-lg { margin: 25px 0; }
+    .spacing-xl { margin: 30px 0; }
+
+    /* Cover Page Styles - Redesigned */
+    .cover-page {
+      display: block;
+      width: 100%;
+      height: 100%;
+      page-break-after: always;
+      page-break-inside: avoid;
+    }
+
+    .cover-content {
+      width: 100%;
+      padding: 5px 0;
+      margin: 0;
+      background: transparent;
+    }
+
+    .cover-welcome-message {
+      text-align: center;
+      margin: 15px 0 20px 0;
+      padding: 0;
+    }
+
+    .cover-welcome-message p {
+      font-size: 14px;
+      color: #000;
+      line-height: 1.5;
+      margin: 5px 0;
+    }
+
+    .cover-details-section {
+      margin-top: 25px;
+      width: 100%;
+    }
+
+    .cover-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: #000;
+      margin-bottom: 18px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-align: center;
+      line-height: 1.2;
+      word-wrap: break-word;
+    }
+
+    .cover-details-table {
+      width: 100%;
+      max-width: 100%;
+      border-collapse: collapse;
+      margin: 0 auto;
+      background: transparent;
+      table-layout: fixed;
+    }
+
+    .cover-details-table td {
+      padding: 10px 12px;
+      border: 1px solid #000;
+      font-size: 13px;
+      line-height: 1.5;
+      background: transparent;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    .cover-details-table td:first-child {
+      width: 35%;
+    }
+
+    .cover-details-table td:last-child {
+      width: 65%;
+    }
+
+    /* Overview Page Styles */
+    .overview-page {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .overview-content {
+      width: 100%;
+      page-break-inside: avoid;
+      background: transparent;
+    }
+
+    .page-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #000;
+      text-align: center;
+      margin-bottom: 25px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #000;
+      line-height: 1.3;
+    }
+
+    .kitchen-count {
+      text-align: center;
+      font-size: 18px;
+      color: #000;
+      margin-bottom: 25px;
+      line-height: 1.5;
+    }
+
+    .kitchen-overview-table {
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      border-collapse: collapse;
+      border: 1px solid #000;
+    }
+
+    .kitchen-overview-table thead {
+      background: transparent;
+      color: #000;
+    }
+
+    .kitchen-overview-table th {
+      padding: 12px 15px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 13px;
+      border: 1px solid #000;
+      line-height: 1.5;
+      color: #000;
+    }
+
+    .kitchen-overview-table th:first-child {
+      width: 30%;
+    }
+
+    .kitchen-overview-table th:last-child {
+      width: 70%;
+    }
+
+    .kitchen-overview-table td {
+      padding: 12px 15px;
+      border: 1px solid #000;
+      font-size: 13px;
+      line-height: 1.5;
+      background: transparent;
+    }
+
+    .kitchen-overview-table th {
+      background: transparent;
+    }
+
+    .kitchen-overview-table tbody {
+      background: transparent;
+    }
+
+    .kitchen-overview-table tbody tr {
+      background: transparent;
+    }
+
+    .kitchen-overview-table td:first-child {
+      text-align: center;
+    }
+
+    .kitchen-overview-table td:last-child {
+      text-align: left;
+    }
+
+    .kitchen-overview-table tbody tr:hover {
+      background: transparent;
+    }
+
+    /* Kitchen Page Styles */
+    .kitchen-page-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #000;
+      margin-bottom: 25px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #000;
+      line-height: 1.3;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #000;
+      margin: 30px 0 15px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      line-height: 1.4;
+    }
+
+    .section-title:first-of-type {
+      margin-top: 0;
+    }
+
+    .category-subtitle {
+      font-size: 14px;
+      font-weight: 600;
+      color: #000;
+      margin: 25px 0 12px 0;
+      padding-left: 8px;
+      border-left: 2px solid #000;
+      line-height: 1.4;
+    }
+
+    /* Scope Table Styles */
+    .scope-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      border: 1px solid #000;
+    }
+
+    .scope-table thead {
+      background: transparent;
+      color: #000;
+    }
+
+    .scope-table th {
+      padding: 12px 15px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+      border: 1px solid #000;
+      line-height: 1.5;
+      color: #000;
+    }
+
+    .scope-table th:first-child {
+      width: 40%;
+    }
+
+    .scope-table th:last-child {
+      width: 60%;
+    }
+
+    .scope-table td {
+      padding: 12px 15px;
+      border: 1px solid #000;
+      font-size: 12px;
+      line-height: 1.6;
+      vertical-align: top;
+      background: transparent;
+    }
+
+    .scope-table th {
+      background: transparent;
+      color: #000;
+    }
+
+    .scope-table tbody {
+      background: transparent;
+    }
+
+    .scope-table tbody tr {
+      background: transparent;
+    }
+
+    .scope-table tbody tr:nth-child(even) {
+      background: transparent;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    /* Plan Images Styles */
+    .plan-images-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-top: 20px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .plan-image-item {
+      border: 1px solid #000;
+      padding: 10px;
+      background: transparent;
+      text-align: center;
+    }
+
+    .plan-image-item img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .plan-image-label {
+      font-size: 11px;
+      color: #000;
+      margin-top: 5px;
+      line-height: 1.4;
+    }
+
+    .plan-image-placeholder {
+      padding: 40px 20px;
+      color: #000;
+      font-size: 12px;
+      background: transparent !important;
+      border: 1px solid #000;
+      line-height: 1.5;
+    }
+
+    /* Products Table Styles */
+    .products-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 25px;
+      border: 1px solid #000;
+    }
+
+    .products-table thead {
+      background: transparent;
+      color: #000;
+    }
+
+    .products-table th {
+      padding: 12px 10px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+      border: 1px solid #000;
+      line-height: 1.4;
+      color: #000;
+    }
+
+    .products-table th.text-right {
+      text-align: right;
+    }
+
+    .products-table th.text-center {
+      text-align: center;
+    }
+
+    /* Combined Cabinets/Doors Table Column Widths */
+    .products-table th:nth-child(1) { width: 15%; } /* Cabinet */
+    .products-table th:nth-child(2) { width: 6%; text-align: center; } /* Qty */
+    .products-table th:nth-child(3) { width: 8%; text-align: center; } /* Width (mm) */
+    .products-table th:nth-child(4) { width: 8%; text-align: center; } /* Depth (mm) */
+    .products-table th:nth-child(5) { width: 8%; text-align: center; } /* Height (mm) */
+    .products-table th:nth-child(6) { width: 15%; } /* Door */
+    .products-table th:nth-child(7) { width: 6%; text-align: center; } /* Qty */
+    .products-table th:nth-child(8) { width: 8%; text-align: center; } /* Width (mm) */
+    .products-table th:nth-child(9) { width: 8%; text-align: center; } /* Height (mm) */
+
+    /* Regular Products Table Column Widths */
+    .products-table th:only-child,
+    .products-table th:first-child:nth-last-child(3) { width: 50%; } /* Item */
+    .products-table th:nth-child(2):nth-last-child(2) { width: 15%; text-align: center; } /* Qty */
+    .products-table th:nth-child(3):last-child { width: 35%; } /* Details */
+
+    .products-table td {
+      padding: 12px 10px;
+      border: 1px solid #000;
+      font-size: 12px;
+      line-height: 1.5;
+      vertical-align: top;
+      background: transparent;
+    }
+
+    .products-table th {
+      background: transparent;
+      color: #000;
+    }
+
+    .products-table tbody {
+      background: transparent;
+    }
+
+    .products-table tbody tr {
+      background: transparent;
+    }
+
+    .products-table td.text-center {
+      text-align: center;
+    }
+
+    .products-table tbody tr:nth-child(even) {
+      background: transparent;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    /* Totals Table Styles */
+    .totals-breakdown-table {
+      width: 100%;
+      max-width: 500px;
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+
+    .totals-breakdown-table {
+      width: 100%;
+      max-width: 500px;
+      margin: 25px auto 0;
+      border-collapse: collapse;
+      border: 1px solid #000;
+    }
+
+    .totals-breakdown-table td {
+      padding: 12px 15px;
+      border: 1px solid #000;
+      font-size: 13px;
+      line-height: 1.5;
+      background: transparent;
+    }
+
+    .totals-breakdown-table tbody {
+      background: transparent;
+    }
+
+    .totals-breakdown-table tbody tr {
+      background: transparent;
+    }
+
+    .totals-breakdown-table td:first-child {
+      text-align: left;
+      width: 60%;
+    }
+
+    .totals-breakdown-table td:last-child {
+      text-align: right;
+      width: 40%;
+    }
+
+    .totals-breakdown-table tr.subtotal-row {
+      border-top: 1px solid #000;
+      background: transparent;
+    }
+
+    .totals-breakdown-table tr.grand-total-row {
+      background: transparent;
+      color: #000;
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .totals-breakdown-table tr.grand-total-row td {
+      border: 1px solid #000;
+    }
+
+    /* No Content Styles */
+    .no-content {
+      text-align: center;
+      padding: 40px 20px;
+      color: #000;
+      font-size: 13px;
+      font-style: italic;
+      background: transparent !important;
+    }
+
+    /* Project Overview Page Styles */
+    .project-overview-page {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .project-overview-content {
+      width: 100%;
+    }
+
+    .project-overview-box {
+      background: transparent;
+      border: 1px solid #000;
+      border-radius: 0;
+      padding: 30px;
+      margin: 30px 0;
+    }
+
+    .project-overview-item {
+      display: flex;
+      margin-bottom: 20px;
+      align-items: baseline;
+    }
+
+    .project-overview-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .project-overview-label {
+      font-weight: 600;
+      color: #000;
+      font-size: 14px;
+      min-width: 150px;
+      margin-right: 15px;
+    }
+
+    .project-overview-value {
+      font-size: 14px;
+      color: #000;
+      flex: 1;
+    }
+
+    .project-overview-description {
+      margin-top: 40px;
+      line-height: 1.8;
+    }
+
+    .project-overview-description p {
+      margin-bottom: 15px;
+      font-size: 13px;
+      color: #000;
+      text-align: justify;
+    }
+
+    /* Terms & Conditions Page Styles */
+    .terms-page {
+      padding: 30px;
+    }
+
+    .terms-content {
+      margin-top: 25px;
+      max-width: 100%;
+      background: transparent;
+    }
+
+    .terms-section {
+      margin-bottom: 30px;
+    }
+
+    .terms-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .terms-section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #000;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #000;
+      line-height: 1.4;
+    }
+
+    .terms-list {
+      list-style: none;
+      padding-left: 0;
+      margin: 15px 0;
+    }
+
+    .terms-list li {
+      padding: 10px 0 10px 25px;
+      position: relative;
+      font-size: 12px;
+      line-height: 1.7;
+      color: #000;
+      margin-bottom: 8px;
+    }
+
+    .terms-list li:last-child {
+      margin-bottom: 0;
+    }
+
+    .terms-list li:before {
+      content: "•";
+      position: absolute;
+      left: 8px;
+      color: #000;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .terms-paragraph {
+      font-size: 12px;
+      line-height: 1.8;
+      color: #000;
+      margin: 15px 0;
+      text-align: justify;
+    }
+
+    /* Signature Section Styles */
+    .signature-section {
+      margin-top: 40px;
+      padding-top: 25px;
+      border-top: 1px solid #000;
+    }
+
+    .signature-box {
+      display: flex;
+      justify-content: space-between;
+      gap: 50px;
+      margin-top: 30px;
+      max-width: 100%;
+    }
+
+    .signature-item {
+      flex: 1;
+      text-align: center;
+      min-width: 200px;
+    }
+
+    .signature-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #000;
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .signature-line {
+      width: 100%;
+      height: 1px;
+      background: #000;
+      margin: 35px 0 8px 0;
+    }
+
+    .signature-name {
+      font-size: 12px;
+      color: #000;
+      margin-top: 5px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    .signature-date {
+      font-size: 11px;
+      color: #000;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    /* Legacy styles for backward compatibility */
+    .muted { color: #6c757d; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; }
+    .title { font-size: 22px; font-weight: 800; letter-spacing: .3px; }
+    .brand { color: #0f3a53; font-weight: 800; }
+    .meta { text-align: right; font-size: 12px; }
+    .meta div { margin: 3px 0; }
+    .grid { display: flex; gap: 12px; margin-top: 12px; }
+    .card { flex: 1; background: #fafafa; border: 1px solid #eee; border-radius: 6px; padding: 10px; }
+    .label { font-size: 11px; text-transform: uppercase; color: #6b7280; font-weight: 700; margin-bottom: 4px; }
+    .section { margin-top: 16px; }
+    .section h3 { margin: 0 0 8px; font-size: 14px; letter-spacing: .3px; color: #111; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: transparent; color: #000; text-align: left; padding: 8px; font-size: 12px; border-bottom: 1px solid #e5e7eb; }
+    td { padding: 8px; border-bottom: 1px dotted #cfd8df; font-size: 12px; vertical-align: top; }
+    .totals { width: 45%; margin-left: auto; }
+    .totals td { border-bottom: none; }
+    .grand { background: transparent; color: #000; font-weight: 800; }
+    .footer { margin-top: 14px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #6b7280; }
+    .sig { text-align: right; }
+    .sig .line { width: 180px; height: 1px; background: #bbb; margin-top: 36px; }
+    .kitchen-section { margin-bottom: 30px; margin-top: 20px; padding: 15px; border: 2px solid #0f3a53; border-radius: 6px; }
+    .kitchen-header { color: #0f3a53; margin-bottom: 15px; font-size: 18px; font-weight: bold; border-bottom: 2px solid #0f3a53; padding-bottom: 8px; }
+    .scope-title, .plan-images-title, .category-title, .kitchen-totals-title { font-size: 14px; margin-bottom: 8px; color: #0f3a53; font-weight: bold; }
+    .plan-images-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .plan-image-item { border: 1px solid #ddd; padding: 5px; text-align: center; }
+    .plan-image-item img { max-width: 100%; height: auto; }
+    .category-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+    .category-table th { background: transparent; color: #000; padding: 8px; text-align: left; }
+    .category-table th:first-child { width: 46%; }
+    .category-table th:nth-child(2) { width: 12%; text-align: center; }
+    .category-table th:nth-child(3) { width: 18%; }
+    .category-table th:nth-child(4), .category-table th:nth-child(5) { width: 12%; text-align: right; }
+    .kitchen-totals { margin-top: 15px; padding-top: 10px; border-top: 2px solid #0f3a53; }
+    .kitchen-totals-table { width: 100%; border-collapse: collapse; }
+  </style>
 </head>
 <body>
 
-<!-- Advanced Flexbox Header -->
-<div class="header">
-    <div class="header-left">
-        <div class="company-name">{{COMPANY_NAME}}</div>
-    </div>
-    <div class="header-right">
-        <div class="document-title">QUOTATION</div>
-        <div class="document-meta">
-            <p><strong>{{QUOTATION_NUMBER}}</strong></p>
-            <p>Date: {{CREATED_DATE}}</p>
-        </div>
-    </div>
-</div>
+  <!-- Structured Pages (New Format) -->
+  {{STRUCTURED_PAGES}}
 
-<!-- CSS Grid Customer Information -->
-<div class="customer-section">
-    <h3>Customer Information</h3>
-    <div class="customer-info">
-        <p><strong>Customer Name:</strong> {{CUSTOMER_NAME}}</p>
-        <p><strong>Project Name:</strong> {{PROJECT_NAME}}</p>
+  <!-- Legacy Format (for backward compatibility - hidden by default) -->
+  <div style="display: none;">
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <div class="title">Quotation</div>
+        <div class="brand">{{COMPANY_NAME}}</div>
+        <div class="muted">{{COMPANY_ADDRESS}}</div>
+        <div class="muted">{{COMPANY_PHONE}} · {{COMPANY_EMAIL}}</div>
+      </div>
+      <div class="meta">
+        <div><strong>No:</strong> {{QUOTATION_NUMBER}}</div>
+        <div><strong>Date:</strong> {{CREATED_DATE}}</div>
+        <div><strong>Valid Until:</strong> {{VALID_UNTIL}}</div>
+      </div>
     </div>
-    <div class="customer-info">
-        <p><strong>Valid Until:</strong> {{VALID_UNTIL}}</p>
+
+    <!-- Parties -->
+    <div class="grid">
+      <div class="card">
+        <div class="label">Quotation By</div>
+        <div><strong>{{COMPANY_NAME}}</strong></div>
+        <div class="muted">{{COMPANY_ADDRESS}}</div>
+        <div class="muted">{{COMPANY_PHONE}} · {{COMPANY_EMAIL}}</div>
+      </div>
+      <div class="card">
+        <div class="label">Quotation To</div>
+        <div><strong>{{CUSTOMER_NAME}}</strong></div>
+        <div class="muted">Project: {{PROJECT_NAME}}</div>
+      </div>
     </div>
-</div>
 
-<!-- Modern Plan Images Section -->
-{{PLAN_IMAGES}}
+    <!-- Kitchen Count -->
+    {{KITCHEN_COUNT}}
 
-<!-- Advanced Table Design -->
-<table class="items-table">
-    <thead>
-    <tr>
-        <th style="width: 70%;">Item Description</th>
-        <th style="width: 30%;">Amount (₹)</th>
-    </tr>
-    </thead>
-    <tbody>
-    {{LINE_ITEMS}}
-    </tbody>
-</table>
+    <!-- Kitchen Sections will be inserted here -->
+    {{KITCHEN_SECTIONS}}
 
-<!-- Modern Totals Section -->
-<div class="totals-section">
-    <div></div> <!-- Spacer -->
-    <table class="totals-table">
+    <!-- Grand Total for Multi-Kitchen -->
+    {{GRAND_TOTAL}}
+
+    <!-- Single Kitchen Totals (hidden if multi-kitchen) -->
+    <table class="totals" style="margin-top:8px;">
+      <tbody>
         <tr>
-            <td><strong>Subtotal:</strong></td>
-            <td><strong>₹{{SUBTOTAL}}</strong></td>
+          <td class="text-right"><strong>Sub Total</strong></td>
+          <td class="text-right">₹{{SUBTOTAL}}</td>
         </tr>
         <tr>
-            <td><strong>Tax ({{TAX_PERCENTAGE}}%):</strong></td>
-            <td><strong>₹{{TAX_AMOUNT}}</strong></td>
+          <td class="text-right">Transportation</td>
+          <td class="text-right">₹{{TRANSPORTATION_PRICE}}</td>
         </tr>
-        <tr class="total-row">
-            <td><strong>Total Amount:</strong></td>
-            <td><strong>₹{{TOTAL_AMOUNT}}</strong></td>
+        <tr>
+          <td class="text-right">Installation</td>
+          <td class="text-right">₹{{INSTALLATION_PRICE}}</td>
         </tr>
+        <tr>
+          <td class="text-right">Tax ({{TAX_PERCENTAGE}}%)</td>
+          <td class="text-right">₹{{TAX_AMOUNT}}</td>
+        </tr>
+        <tr class="grand">
+          <td class="text-right"><strong>Total</strong></td>
+          <td class="text-right"><strong>₹{{TOTAL_AMOUNT}}</strong></td>
+        </tr>
+      </tbody>
     </table>
-</div>
 
-<!-- Modern Notes and Terms -->
-<div class="notes-section">
-    <div class="notes-card">
-        <h3>Notes:</h3>
-        <p>{{NOTES}}</p>
+    <!-- Notes & Signature -->
+    <div class="grid" style="margin-top:10px;">
+      <div class="card" style="flex:2;">
+        <div class="label">Terms & Conditions</div>
+        <div style="white-space: pre-line;">{{TERMS_CONDITIONS}}</div>
+        <div class="muted" style="margin-top:6px; font-size:12px;">{{NOTES}}</div>
+      </div>
+      <div class="sig" style="flex:1;">
+        <div class="label">Authorised Signatory</div>
+        <div class="line"></div>
+      </div>
     </div>
 
-    <div class="notes-card">
-        <h3>Terms and Conditions:</h3>
-        <p>{{TERMS_CONDITIONS}}</p>
+    <div class="footer">
+      <div>Thank you for considering {{COMPANY_NAME}}.</div>
+      <div>For queries: {{COMPANY_EMAIL}} · {{COMPANY_PHONE}}</div>
     </div>
-</div>
-
-<!-- Professional Footer -->
-<div class="footer">
-    <p>Thank you for choosing our services!</p>
-    <p>For any queries, please contact us.</p>
-</div>
+  </div>
 
 </body>
 </html>
