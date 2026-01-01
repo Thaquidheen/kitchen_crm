@@ -24,11 +24,8 @@ export function RevenueChart() {
   const { data, isLoading, error } = useGetRevenueAnalyticsQuery(dateRange);
 
   // Custom tooltip
-  const CustomTooltip = ({
-    active,
-    payload,
-    label,
-  }: TooltipProps<number, string>) => {
+  const CustomTooltip = (props: TooltipProps<number, string>) => {
+    const { active, payload, label } = props;
     if (active && payload && payload.length) {
       return (
         <div className="bg-background-800 border border-primary-600 rounded-lg p-3 shadow-lg">

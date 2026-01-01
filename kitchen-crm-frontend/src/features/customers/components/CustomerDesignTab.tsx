@@ -28,7 +28,7 @@ export const CustomerDesignTab: React.FC<CustomerDesignTabProps> = ({ customerId
         customerId: data.customerId,
         quotationId: data.quotationId,
         designRequirements: data.designRequirements,
-        designerId: data.designerId
+        staffAssignedId: data.staffAssignedId
       }).unwrap();
 
       if (result.success) {
@@ -149,14 +149,14 @@ export const CustomerDesignTab: React.FC<CustomerDesignTabProps> = ({ customerId
         </div>
       </div>
 
-      {/* Designer Information */}
-      {designPhase.designerAssigned && (
+      {/* Staff Information */}
+      {designPhase.staffAssignedName && (
         <div className="bg-background-800 border border-background-600 rounded-lg p-4">
           <div className="flex items-center gap-3 mb-2">
             <Users className="w-5 h-5 text-primary-500" />
-            <h3 className="text-lg font-semibold text-text-900">Assigned Designer</h3>
+            <h3 className="text-lg font-semibold text-text-900">Assigned Staff</h3>
           </div>
-          <p className="text-text-900 ml-8">{designPhase.designerAssigned}</p>
+          <p className="text-text-900 ml-8">{designPhase.staffAssignedName}</p>
         </div>
       )}
 

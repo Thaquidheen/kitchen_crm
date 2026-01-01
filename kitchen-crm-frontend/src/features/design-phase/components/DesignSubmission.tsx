@@ -136,8 +136,6 @@ export function DesignSubmission({ designPhase, onUpdate, onRefresh }: DesignSub
       setUploadedFiles([]);
       setUploadProgress({});
 
-      console.log('Design submission result:', result);
-
       onRefresh(); // Refresh after successful submission
     } catch (error: any) {
       console.error('Full error object:', error);

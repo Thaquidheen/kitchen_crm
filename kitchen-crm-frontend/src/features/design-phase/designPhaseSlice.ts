@@ -87,7 +87,6 @@ const initialFormData: DesignPhaseFormData = {
   customerId: 0,
   quotationId: undefined,
   designRequirements: '',
-  designerAssigned: '',
   plan: '',
   design: '',
   meetingDateTime: '',

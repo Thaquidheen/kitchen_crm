@@ -22,9 +22,9 @@ export const customersAPI = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // List customers (paginated, filtered)
     getCustomers: builder.query<Customer[], CustomerListParams | void>({
-      query: (params = {}) => ({
+      query: (params) => ({
         url: API_ENDPOINTS.CUSTOMERS.BASE,
-        params,
+        params: params || {},
       }),
       transformResponse: (response: PaginatedApiResponse<Customer>) =>
         response.data?.content ?? [],
@@ -39,9 +39,9 @@ export const customersAPI = baseApi.injectEndpoints({
 
     // Get paginated response meta if needed
     getCustomersPage: builder.query<PaginatedApiResponse<Customer>['data'], CustomerListParams | void>({
-      query: (params = {}) => ({
+      query: (params) => ({
         url: API_ENDPOINTS.CUSTOMERS.BASE,
-        params,
+        params: params || {},
       }),
       transformResponse: (response: PaginatedApiResponse<Customer>) => response.data,
       providesTags: [{ type: 'Customers', id: 'PAGE' }],

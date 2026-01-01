@@ -46,7 +46,7 @@ export function DesignerAssignment({ designPhase, onUpdate }: DesignerAssignment
   const availableDesigners = designersResponse?.data || [];
   
   const [formData, setFormData] = useState({
-    designerId: designPhase.designerId || 0,
+    staffAssignedId: designPhase.staffAssignedId || 0,
     designRequirements: designPhase.designRequirements || '',
     designStatus: designPhase.designStatus,
   });
@@ -61,15 +61,15 @@ export function DesignerAssignment({ designPhase, onUpdate }: DesignerAssignment
       // Check if status changed
       const statusChanged = formData.designStatus !== designPhase.designStatus;
 
-      // Update design phase details (designer and requirements)
-      if (formData.designerId !== (designPhase.designerId || 0) ||
+      // Update design phase details (staff and requirements)
+      if (formData.staffAssignedId !== (designPhase.staffAssignedId || 0) ||
           formData.designRequirements !== (designPhase.designRequirements || '')) {
         await updateDesignPhase({
           customerId: designPhase.customerId,
           designPhaseData: {
             id: designPhase.id,
             customerId: designPhase.customerId,
-            designerId: formData.designerId || undefined,
+            staffAssignedId: formData.staffAssignedId || undefined,
             designRequirements: formData.designRequirements,
           }
         }).unwrap();
@@ -93,7 +93,7 @@ export function DesignerAssignment({ designPhase, onUpdate }: DesignerAssignment
 
   const handleReset = () => {
     setFormData({
-      designerId: designPhase.designerId || 0,
+      staffAssignedId: designPhase.staffAssignedId || 0,
       designRequirements: designPhase.designRequirements || '',
       designStatus: designPhase.designStatus,
     });
@@ -117,8 +117,8 @@ export function DesignerAssignment({ designPhase, onUpdate }: DesignerAssignment
     return colors[status] || 'text-text-500';
   };
 
-  const hasChanges = 
-    formData.designerId !== (designPhase.designerId || 0) ||
+  const hasChanges =
+    formData.staffAssignedId !== (designPhase.staffAssignedId || 0) ||
     formData.designRequirements !== (designPhase.designRequirements || '') ||
     formData.designStatus !== designPhase.designStatus;
 
@@ -139,7 +139,7 @@ export function DesignerAssignment({ designPhase, onUpdate }: DesignerAssignment
             <div className="flex items-center gap-3 p-3 bg-background-800 border border-background-600 rounded-lg">
               <User className="h-4 w-4 text-text-600" />
               <span className="text-text-900 font-medium">
-                {designPhase.designer?.name || designPhase.designerAssigned || 'Unassigned'}
+                {designPhase.staffAssignedName || 'Unassigned'}
               </span>
             </div>
           </div>
@@ -169,8 +169,8 @@ export function DesignerAssignment({ designPhase, onUpdate }: DesignerAssignment
               Assign Designer
             </label>
             <Select
-              value={formData.designerId}
-              onChange={(e) => setFormData(prev => ({ ...prev, designerId: parseInt(e.target.value) || 0 }))}
+              value={formData.staffAssignedId}
+              onChange={(e) => setFormData(prev => ({ ...prev, staffAssignedId: parseInt(e.target.value) || 0 }))}
               disabled={designersLoading}
             >
               <option value="0">Select a designer...</option>
@@ -246,8 +246,8 @@ export function DesignerAssignment({ designPhase, onUpdate }: DesignerAssignment
       </Card>
 
       {/* Designer Information */}
-      {formData.designerId > 0 && (() => {
-        const selectedDesigner = availableDesigners.find(d => d.id === formData.designerId);
+      {formData.staffAssignedId > 0 && (() => {
+        const selectedDesigner = availableDesigners.find(d => d.id === formData.staffAssignedId);
         return selectedDesigner ? (
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-text-900 mb-4">Designer Information</h3>
@@ -311,7 +311,7 @@ export function DesignerAssignment({ designPhase, onUpdate }: DesignerAssignment
               <User className="h-4 w-4 text-text-600" />
               <div>
                 <p className="text-text-900 font-medium">
-                  {designPhase.designer?.name || designPhase.designerAssigned || 'Unassigned'}
+                  {designPhase.staffAssignedName || 'Unassigned'}
                 </p>
                 <p className="text-sm text-text-600">Current assignment</p>
               </div>

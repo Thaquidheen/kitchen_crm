@@ -43,10 +43,8 @@ export function ProjectAnalytics() {
   const dateRange = useAppSelector(selectProjectAnalyticsDateRange);
   const { data, isLoading, error } = useGetProjectAnalyticsQuery(dateRange);
 
-  const CustomTooltip = ({
-    active,
-    payload,
-  }: TooltipProps<number, string>) => {
+  const CustomTooltip = (props: TooltipProps<number, string>) => {
+    const { active, payload } = props;
     if (active && payload && payload.length) {
       return (
         <div className="bg-background-800 border border-primary-600 rounded-lg p-3 shadow-lg">

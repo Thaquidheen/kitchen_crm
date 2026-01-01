@@ -33,12 +33,12 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
     {
       label: 'Profile',
       icon: <User size={16} />,
-      onClick: () => toast.info('Profile clicked'),
+      onClick: () => toast('Profile clicked'),
     },
     {
       label: 'Settings',
       icon: <Settings size={16} />,
-      onClick: () => toast.info('Settings clicked'),
+      onClick: () => toast('Settings clicked'),
     },
     {
       label: 'Logout',

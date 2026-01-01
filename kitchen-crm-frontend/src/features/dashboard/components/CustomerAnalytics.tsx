@@ -29,11 +29,8 @@ export function CustomerAnalytics() {
   const dateRange = useAppSelector(selectCustomerAnalyticsDateRange);
   const { data, isLoading, error } = useGetCustomerAnalyticsQuery(dateRange);
 
-  const CustomTooltip = ({
-    active,
-    payload,
-    label,
-  }: TooltipProps<number, string>) => {
+  const CustomTooltip = (props: TooltipProps<number, string>) => {
+    const { active, payload, label } = props;
     if (active && payload && payload.length) {
       return (
         <div className="bg-background-800 border border-primary-600 rounded-lg p-3 shadow-lg">

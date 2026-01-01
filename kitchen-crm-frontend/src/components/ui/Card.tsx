@@ -12,6 +12,7 @@ export interface CardProps {
   noPadding?: boolean;
   bordered?: boolean;
   onClick?: () => void;
+  style?: React.CSSProperties;
 }
 
 export interface CardHeaderProps {
@@ -36,6 +37,7 @@ export const Card = ({
   noPadding = false,
   bordered = true,
   onClick,
+  style,
 }: CardProps) => {
   return (
     <div
@@ -47,6 +49,7 @@ export const Card = ({
         className
       )}
       onClick={onClick}
+      style={style}
     >
       {children}
     </div>

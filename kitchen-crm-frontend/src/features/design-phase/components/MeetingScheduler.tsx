@@ -317,7 +317,7 @@ export function MeetingScheduler({ designPhase, onUpdate }: MeetingSchedulerProp
                     {formatDateTime(designPhase.meetingScheduled)}
                   </p>
                   <p className="text-sm text-text-600">
-                    {designPhase.meetingPurpose || 'General meeting'}
+                    {designPhase.meetingNotes || 'General meeting'}
                   </p>
                 </div>
               </div>

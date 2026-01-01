@@ -28,12 +28,12 @@ export const dashboardAPI = baseApi.injectEndpoints({
 
     // Get Revenue Analytics
     getRevenueAnalytics: builder.query<RevenueAnalytics, DateRangeParams | void>({
-      query: (params = {}) => ({
+      query: (params) => ({
         url: '/dashboard/revenue-analytics',
-        params: {
-          fromDate: params?.fromDate,
-          toDate: params?.toDate,
-        },
+        params: params ? {
+          fromDate: params.fromDate,
+          toDate: params.toDate,
+        } : {},
       }),
       transformResponse: (response: DashboardApiResponse<RevenueAnalytics>) =>
         response.data,
@@ -42,12 +42,12 @@ export const dashboardAPI = baseApi.injectEndpoints({
 
     // Get Project Analytics
     getProjectAnalytics: builder.query<ProjectAnalytics, DateRangeParams | void>({
-      query: (params = {}) => ({
+      query: (params) => ({
         url: '/dashboard/project-analytics',
-        params: {
-          fromDate: params?.fromDate,
-          toDate: params?.toDate,
-        },
+        params: params ? {
+          fromDate: params.fromDate,
+          toDate: params.toDate,
+        } : {},
       }),
       transformResponse: (response: DashboardApiResponse<ProjectAnalytics>) =>
         response.data,
@@ -56,12 +56,12 @@ export const dashboardAPI = baseApi.injectEndpoints({
 
     // Get Customer Analytics
     getCustomerAnalytics: builder.query<CustomerAnalytics, DateRangeParams | void>({
-      query: (params = {}) => ({
+      query: (params) => ({
         url: '/dashboard/customer-analytics',
-        params: {
-          fromDate: params?.fromDate,
-          toDate: params?.toDate,
-        },
+        params: params ? {
+          fromDate: params.fromDate,
+          toDate: params.toDate,
+        } : {},
       }),
       transformResponse: (response: DashboardApiResponse<CustomerAnalytics>) =>
         response.data,
@@ -70,12 +70,12 @@ export const dashboardAPI = baseApi.injectEndpoints({
 
     // Get Performance Metrics
     getPerformanceMetrics: builder.query<PerformanceMetrics, DateRangeParams | void>({
-      query: (params = {}) => ({
+      query: (params) => ({
         url: '/dashboard/performance-metrics',
-        params: {
-          fromDate: params?.fromDate,
-          toDate: params?.toDate,
-        },
+        params: params ? {
+          fromDate: params.fromDate,
+          toDate: params.toDate,
+        } : {},
       }),
       transformResponse: (response: DashboardApiResponse<PerformanceMetrics>) =>
         response.data,

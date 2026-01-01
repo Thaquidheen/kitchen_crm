@@ -271,6 +271,8 @@ export class DesignPhaseUtils {
     const statusProgressMap: Record<DesignStatus, number> = {
       [DesignStatus.PLANNING]: 10,
       [DesignStatus.IN_PROGRESS]: 30,
+      [DesignStatus.PENDING_SUPERADMIN_APPROVAL]: 40,
+      [DesignStatus.APPROVED_BY_ADMIN]: 45,
       [DesignStatus.SUBMITTED]: 50,
       [DesignStatus.FEEDBACK_RECEIVED]: 60,
       [DesignStatus.REVISION_REQUIRED]: 70,
@@ -319,6 +321,8 @@ export class DesignPhaseUtils {
     const statusStepMap: Record<DesignStatus, string> = {
       [DesignStatus.PLANNING]: 'planning',
       [DesignStatus.IN_PROGRESS]: 'design',
+      [DesignStatus.PENDING_SUPERADMIN_APPROVAL]: 'review',
+      [DesignStatus.APPROVED_BY_ADMIN]: 'submission',
       [DesignStatus.SUBMITTED]: 'feedback',
       [DesignStatus.FEEDBACK_RECEIVED]: 'revision',
       [DesignStatus.REVISION_REQUIRED]: 'revision',
@@ -345,6 +349,8 @@ export class DesignPhaseUtils {
     const timeEstimates: Record<DesignStatus, string> = {
       [DesignStatus.PLANNING]: '2-3 days',
       [DesignStatus.IN_PROGRESS]: '5-7 days',
+      [DesignStatus.PENDING_SUPERADMIN_APPROVAL]: '1-2 days',
+      [DesignStatus.APPROVED_BY_ADMIN]: '1 day',
       [DesignStatus.SUBMITTED]: '1-2 days',
       [DesignStatus.FEEDBACK_RECEIVED]: '2-3 days',
       [DesignStatus.REVISION_REQUIRED]: '3-5 days',

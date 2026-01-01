@@ -144,7 +144,7 @@ export function ClientFeedbackForm({ designPhase, onUpdate }: ClientFeedbackForm
             <div className="flex items-center gap-3 mb-3">
               <Checkbox
                 checked={feedbackForm.requiresRevision}
-                onChange={(checked) => setFeedbackForm(prev => ({ ...prev, requiresRevision: checked }))}
+                onChange={(e) => setFeedbackForm(prev => ({ ...prev, requiresRevision: e.target.checked }))}
               />
               <label className="text-sm font-medium text-text-700">
                 Requires Revision
