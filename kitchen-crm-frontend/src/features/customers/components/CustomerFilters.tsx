@@ -42,10 +42,9 @@ export function CustomerFilters({
 
   const statusOptions: Array<{ value: CustomerStatus; label: string }> = [
     { value: 'LEAD', label: 'Lead' },
-    { value: 'PROSPECT', label: 'Prospect' },
-    { value: 'ACTIVE', label: 'Active' },
-    { value: 'COMPLETED', label: 'Completed' },
-    { value: 'INACTIVE', label: 'Inactive' },
+    { value: 'POTENTIAL', label: 'Potential' },
+    { value: 'PLANNING', label: 'Planning' },
+    { value: 'CONFIRMED', label: 'Confirmed' },
   ];
 
   return (

@@ -110,20 +110,32 @@ export const CustomerDesignTab: React.FC<CustomerDesignTabProps> = ({ customerId
 
   if (!designPhase) {
     return (
-      <div className="bg-background-800 border border-background-600 rounded-lg p-12 text-center">
-        <Palette className="w-12 h-12 text-text-600 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-text-900 mb-2">No Design Phase Yet</h3>
-        <p className="text-text-600 mb-6">
-          Design phase has not been initiated for this customer
-        </p>
-        <button 
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary-700 hover:bg-primary-600 text-text-900 rounded-md transition-colors"
-          onClick={() => setIsCreateModalOpen(true)}
-        >
-          <Palette className="w-4 h-4" />
-          Initiate Design Phase
-        </button>
-      </div>
+      <>
+        <div className="bg-background-800 border border-background-600 rounded-lg p-12 text-center">
+          <Palette className="w-12 h-12 text-text-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-text-900 mb-2">No Design Phase Yet</h3>
+          <p className="text-text-600 mb-6">
+            Design phase has not been initiated for this customer
+          </p>
+          <button
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-700 hover:bg-primary-600 text-text-900 rounded-md transition-colors"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            <Palette className="w-4 h-4" />
+            Initiate Design Phase
+          </button>
+        </div>
+
+        {/* Design Phase Create Modal */}
+        <DesignPhaseCreateModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSubmit={handleCreateDesignPhase}
+          customerId={customerId}
+          mode="create"
+          title="Create Design Phase"
+        />
+      </>
     );
   }
 

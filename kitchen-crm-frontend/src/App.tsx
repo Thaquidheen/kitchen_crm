@@ -10,6 +10,8 @@ import { PublicRoute } from './routes/PublicRoute';
 import { ROUTES } from './routes/routes.config';
 import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import ComponentShowcase from './pages/ComponentShowcase';
 import AdvancedComponentShowcase from './pages/AdvancedComponentShowcase';
@@ -84,6 +86,22 @@ function App() {
           element={
             <PublicRoute>
               <SignupPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path={ROUTES.FORGOT_PASSWORD}
+          element={
+            <PublicRoute>
+              <ForgotPasswordPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path={ROUTES.RESET_PASSWORD}
+          element={
+            <PublicRoute>
+              <ResetPasswordPage />
             </PublicRoute>
           }
         />

@@ -48,30 +48,28 @@ CREATE TABLE quotation_kitchens (
 ) COMMENT='Kitchens within a quotation, each with its own products and totals';
 
 -- Create quotation_kitchen_plan_images table
+-- Note: CHECK constraint removed because MySQL doesn't allow CHECK on columns with ON DELETE SET NULL foreign keys
+-- Validation is handled in application layer
 CREATE TABLE quotation_kitchen_plan_images (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     kitchen_id BIGINT NOT NULL,
-    
+
     -- Reference to existing customer files (one will be set)
     customer_plan_image_id BIGINT NULL COMMENT 'Reference to CustomerPlanImage if selected from plan images',
     design_phase_file_id BIGINT NULL COMMENT 'Reference to DesignPhaseFile if selected from design phase files (PLAN category)',
-    
+
     -- Copied for reference and PDF generation
     image_name VARCHAR(255) NOT NULL COMMENT 'Image name for display',
     image_url VARCHAR(500) NOT NULL COMMENT 'Image URL path',
     image_order INT NOT NULL COMMENT 'Order of image (1-4)',
-    
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     FOREIGN KEY (kitchen_id) REFERENCES quotation_kitchens(id) ON DELETE CASCADE,
     FOREIGN KEY (customer_plan_image_id) REFERENCES customer_plan_images(id) ON DELETE SET NULL,
     FOREIGN KEY (design_phase_file_id) REFERENCES design_phase_files(id) ON DELETE SET NULL,
     INDEX idx_kitchen_plan_images_kitchen (kitchen_id),
-    INDEX idx_kitchen_plan_images_order (kitchen_id, image_order),
-    CONSTRAINT chk_plan_image_reference CHECK (
-        (customer_plan_image_id IS NOT NULL AND design_phase_file_id IS NULL) OR
-        (customer_plan_image_id IS NULL AND design_phase_file_id IS NOT NULL)
-    )
+    INDEX idx_kitchen_plan_images_order (kitchen_id, image_order)
 ) COMMENT='Plan images selected for each kitchen from customer design phase files';
 
 -- Create quotation_kitchen_scope_details table

@@ -66,10 +66,9 @@ export function CustomerStatistics() {
   // Map status to display info
   const statusInfo: Record<CustomerStatus, { label: string; icon: React.ElementType; variant: StatCardProps['variant'] }> = {
     LEAD: { label: 'Leads', icon: Clock, variant: 'warning' },
-    PROSPECT: { label: 'Prospects', icon: TrendingUp, variant: 'primary' },
-    ACTIVE: { label: 'Active', icon: UserCheck, variant: 'success' },
-    COMPLETED: { label: 'Completed', icon: Users, variant: 'default' },
-    INACTIVE: { label: 'Inactive', icon: UserX, variant: 'inactive' },
+    POTENTIAL: { label: 'Potential', icon: TrendingUp, variant: 'primary' },
+    PLANNING: { label: 'Planning', icon: Users, variant: 'default' },
+    CONFIRMED: { label: 'Confirmed', icon: UserCheck, variant: 'success' },
   };
 
   return (
@@ -84,7 +83,7 @@ export function CustomerStatistics() {
       />
 
       {/* Status breakdown */}
-      {(['LEAD', 'PROSPECT', 'ACTIVE', 'COMPLETED', 'INACTIVE'] as CustomerStatus[]).map((status) => {
+      {(['LEAD', 'POTENTIAL', 'PLANNING', 'CONFIRMED'] as CustomerStatus[]).map((status) => {
         const info = statusInfo[status];
         return (
           <StatCard

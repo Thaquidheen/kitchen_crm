@@ -4,12 +4,13 @@
  */
 
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Bell, Search, Settings, LogOut, User, Menu } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { logout } from '../../features/auth/authSlice';
+import { useLogoutMutation } from '../../features/auth/authApi';
 import { ROUTES } from '../../routes/routes.config';
-import { Dropdown, Badge } from '../ui';
+import { Dropdown } from '../ui';
 import toast from 'react-hot-toast';
 
 export interface HeaderProps {
@@ -22,8 +23,15 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const [notificationCount] = useState(3);
+  const [logoutApi] = useLogoutMutation();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // Call backend to blacklist token
+      await logoutApi().unwrap();
+    } catch {
+      // Continue with logout even if backend call fails
+    }
     dispatch(logout());
     toast.success('Logged out successfully');
     navigate(ROUTES.LOGIN);

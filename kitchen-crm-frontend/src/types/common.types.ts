@@ -21,10 +21,9 @@ export interface User {
 // Customer statuses
 export const CustomerStatus = {
   LEAD: 'LEAD',
-  PROSPECT: 'PROSPECT',
-  ACTIVE: 'ACTIVE',
-  COMPLETED: 'COMPLETED',
-  INACTIVE: 'INACTIVE',
+  POTENTIAL: 'POTENTIAL',
+  PLANNING: 'PLANNING',
+  CONFIRMED: 'CONFIRMED',
 } as const;
 
 export type CustomerStatus = typeof CustomerStatus[keyof typeof CustomerStatus];

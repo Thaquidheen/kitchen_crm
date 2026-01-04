@@ -1,25 +1,17 @@
 package com.fleetmanagement.kitchencrmbackend.modules.auth.dto;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.Set;
-
 @Getter
 @Setter
-public class SignupRequest {
+public class ResetPasswordRequest {
 
-    @NotBlank(message = "Name is required")
-    @Size(min = 2, max = 50, message = "Name must be between 2 and 50 characters")
-    private String name;
-
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email should be valid")
-    private String email;
+    @NotBlank(message = "Token is required")
+    private String token;
 
     @NotBlank(message = "Password is required")
     @Size(min = 8, max = 50, message = "Password must be between 8 and 50 characters")
@@ -27,10 +19,5 @@ public class SignupRequest {
         regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*$",
         message = "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     )
-    private String password;
-
-    @Pattern(regexp = "^$|^\\+?[0-9]{10,15}$", message = "Phone number must be valid (10-15 digits)")
-    private String phoneNumber;
-
-    private Set<String> roles;
+    private String newPassword;
 }

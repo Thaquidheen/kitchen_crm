@@ -3,8 +3,8 @@
  * Multi-step quotation builder with customer selection and product selection
  */
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useBlocker } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/app/store';
 import { Card } from '@/components/ui/Card';
@@ -13,6 +13,7 @@ import { Tabs } from '@/components/ui/Tabs';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
 import { FileText, ArrowLeft, Save, Send } from 'lucide-react';
+import { UnsavedChangesDialog } from '@/components/ui/UnsavedChangesDialog';
 import { CustomerSelector } from '@/features/quotations/components/CustomerSelector';
 import { ProductSelector } from '@/features/quotations/components/ProductSelector';
 import { SelectedProductsList } from '@/features/quotations/components/SelectedProductsList';
@@ -45,6 +46,9 @@ export function QuotationBuilderPage() {
   const { data: marginsResponse, isLoading: isMarginsLoading } = useGetMarginsQuery();
 
   const [currentStep, setCurrentStep] = useState<BuilderStep>('customer');
+  const [customerKitchenTypes, setCustomerKitchenTypes] = useState<string[]>([]);
+  const [isDirty, setIsDirty] = useState(false);
+  const initialFormDataRef = useRef<string | null>(null);
   const [formData, setFormData] = useState<Partial<QuotationFormData>>({
     customerId: 0,
     projectName: '',
@@ -227,6 +231,50 @@ export function QuotationBuilderPage() {
       }),
     });
   }, [isEditMode, existingQuotation]);
+
+  // Track initial form data for dirty state detection
+  useEffect(() => {
+    // Only set initial snapshot after margins are loaded (for new) or quotation is loaded (for edit)
+    if (!isEditMode && marginsResponse?.data && initialFormDataRef.current === null) {
+      // Small delay to let margins apply to formData
+      const timer = setTimeout(() => {
+        initialFormDataRef.current = JSON.stringify(formData);
+      }, 100);
+      return () => clearTimeout(timer);
+    } else if (isEditMode && existingQuotation && initialFormDataRef.current === null) {
+      // For edit mode, snapshot after quotation is loaded
+      const timer = setTimeout(() => {
+        initialFormDataRef.current = JSON.stringify(formData);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [marginsResponse, existingQuotation, isEditMode, formData]);
+
+  // Track dirty state
+  useEffect(() => {
+    if (initialFormDataRef.current !== null) {
+      const currentFormData = JSON.stringify(formData);
+      setIsDirty(currentFormData !== initialFormDataRef.current);
+    }
+  }, [formData]);
+
+  // Browser navigation protection (beforeunload)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = ''; // Required for Chrome
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  // React Router navigation blocker
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      isDirty && currentLocation.pathname !== nextLocation.pathname
+  );
 
   // API mutations
   const [createQuotation, { isLoading: isCreating }] = useCreateQuotationMutation();
@@ -421,6 +469,19 @@ export function QuotationBuilderPage() {
 
   const handleCustomerSelect = (customerId: number) => {
     setFormData({ ...formData, customerId });
+
+    // Extract kitchen types from the selected customer
+    const customer = customersData?.content?.find((c) => c.id === customerId);
+    if (customer?.kitchenTypes) {
+      // Parse comma-separated kitchen types
+      const types = customer.kitchenTypes
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
+      setCustomerKitchenTypes(types);
+    } else {
+      setCustomerKitchenTypes([]);
+    }
   };
 
   const handleNext = () => {
@@ -479,6 +540,9 @@ export function QuotationBuilderPage() {
         toast.success('Quotation draft saved successfully');
       }
 
+      // Reset dirty state after successful save
+      initialFormDataRef.current = JSON.stringify(formData);
+      setIsDirty(false);
       navigate('/quotations');
     } catch (error: any) {
       console.error('Error saving draft:', error);
@@ -505,11 +569,46 @@ export function QuotationBuilderPage() {
         toast.success('Quotation created and sent successfully');
       }
 
+      // Reset dirty state after successful save
+      initialFormDataRef.current = JSON.stringify(formData);
+      setIsDirty(false);
       navigate('/quotations');
     } catch (error: any) {
       console.error('Error submitting quotation:', error);
       toast.error(error?.data?.message || 'Failed to submit quotation');
     }
+  };
+
+  // Blocker dialog handlers
+  const handleBlockerSave = async () => {
+    try {
+      const requestData = convertFormDataToRequest(true);
+      if (isEditMode && id) {
+        await updateQuotation({ id: parseInt(id), ...requestData }).unwrap();
+        toast.success('Quotation draft saved');
+      } else {
+        await createQuotation(requestData).unwrap();
+        toast.success('Quotation draft saved');
+      }
+      // Reset dirty state and proceed with navigation
+      initialFormDataRef.current = JSON.stringify(formData);
+      setIsDirty(false);
+      blocker.proceed?.();
+    } catch (error: any) {
+      console.error('Error saving draft:', error);
+      toast.error(error?.data?.message || 'Failed to save draft');
+    }
+  };
+
+  const handleBlockerDiscard = () => {
+    // Reset dirty state and proceed with navigation
+    initialFormDataRef.current = null;
+    setIsDirty(false);
+    blocker.proceed?.();
+  };
+
+  const handleBlockerCancel = () => {
+    blocker.reset?.();
   };
 
   const steps = [
@@ -615,6 +714,7 @@ export function QuotationBuilderPage() {
                 <KitchenSelector
                   kitchens={formData.kitchens || []}
                   onKitchensChange={(kitchens) => setFormData({ ...formData, kitchens })}
+                  suggestedKitchenTypes={customerKitchenTypes}
                 />
 
                 {/* Kitchen Details */}
@@ -962,6 +1062,15 @@ export function QuotationBuilderPage() {
           </Card>
         </div>
       </div>
+
+      {/* Unsaved Changes Dialog */}
+      <UnsavedChangesDialog
+        isOpen={blocker.state === 'blocked'}
+        onSave={handleBlockerSave}
+        onDiscard={handleBlockerDiscard}
+        onCancel={handleBlockerCancel}
+        isSaving={isCreating || isUpdating}
+      />
     </div>
   );
 }

@@ -18,7 +18,7 @@ const customerSchema = z.object({
   contact: z.string().optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),
   kitchenTypes: z.string().optional().or(z.literal('')),
-  status: z.enum(['LEAD', 'PROSPECT', 'ACTIVE', 'COMPLETED', 'INACTIVE']).optional(),
+  status: z.enum(['LEAD', 'POTENTIAL', 'PLANNING', 'CONFIRMED']).optional(),
   // Lead tracking fields
   leadSourceType: z.enum(['NONE', 'ARCHITECT', 'MANUAL']).optional(),
   architectId: z.number().optional(),
@@ -357,7 +357,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
             {...register('status')}
             disabled={disabled}
           >
-            {(['LEAD', 'PROSPECT', 'ACTIVE', 'COMPLETED', 'INACTIVE'] as CustomerStatus[]).map((s) => (
+            {(['LEAD', 'POTENTIAL', 'PLANNING', 'CONFIRMED'] as CustomerStatus[]).map((s) => (
               <option value={s} key={s}>
                 {s}
               </option>

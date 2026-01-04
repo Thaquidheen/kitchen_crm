@@ -7,6 +7,8 @@ export const ROUTES = {
   // Public routes
   LOGIN: '/login',
   SIGNUP: '/signup',
+  FORGOT_PASSWORD: '/forgot-password',
+  RESET_PASSWORD: '/reset-password',
   APPROVAL: '/sign/:token',
 
   // Private routes

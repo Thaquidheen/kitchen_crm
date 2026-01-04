@@ -8,7 +8,6 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
-import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { useScheduleMeetingMutation, useCompleteMeetingMutation } from '@/features/design-phase/designPhaseApi';
 import { type DesignPhase } from '@/features/design-phase/types';
@@ -200,17 +199,11 @@ export function MeetingScheduler({ designPhase, onUpdate }: MeetingSchedulerProp
                 <label className="block text-sm font-medium text-text-700 mb-2">
                   Purpose
                 </label>
-                <Select
+                <Input
+                  placeholder="Enter meeting purpose (e.g., Requirements Gathering, Design Review)"
                   value={meetingForm.meetingPurpose}
                   onChange={(e) => setMeetingForm(prev => ({ ...prev, meetingPurpose: e.target.value }))}
-                >
-                  <option value="">Select purpose...</option>
-                  <option value="requirements">Requirements Gathering</option>
-                  <option value="review">Design Review</option>
-                  <option value="feedback">Feedback Discussion</option>
-                  <option value="approval">Final Approval</option>
-                  <option value="other">Other</option>
-                </Select>
+                />
               </div>
             </div>
 

@@ -170,10 +170,9 @@ export const CustomerDetail: React.FC<CustomerDetailProps> = ({ customer }) => {
               disabled={isUpdatingStatus}
             >
               <option value="LEAD">LEAD</option>
-              <option value="PROSPECT">PROSPECT</option>
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="COMPLETED">COMPLETED</option>
-              <option value="INACTIVE">INACTIVE</option>
+              <option value="POTENTIAL">POTENTIAL</option>
+              <option value="PLANNING">PLANNING</option>
+              <option value="CONFIRMED">CONFIRMED</option>
             </select>
           </div>
         </div>

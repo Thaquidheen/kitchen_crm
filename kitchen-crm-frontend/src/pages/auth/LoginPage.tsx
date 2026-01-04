@@ -25,6 +25,7 @@ const LoginPage = () => {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const [login, { isLoading }] = useLoginMutation();
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const {
     register,
@@ -44,7 +45,7 @@ const LoginPage = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       const loginData = {
-        email: data.username || '',
+        email: data.email || '',
         password: data.password || '',
       };
 
@@ -54,6 +55,8 @@ const LoginPage = () => {
         try {
           const raw = response.data as any;
           const token: string | undefined = raw.accessToken || raw.token;
+          const refreshToken: string | undefined = raw.refreshToken;
+          const expiresIn: number | undefined = raw.expiresIn;
           const roles: string[] | undefined = raw.user?.roles || raw.roles;
           const primaryRole = (roles && roles.length > 0 ? roles[0] : undefined) as keyof typeof UserRole | undefined;
           const mappedUser: User | undefined = raw.user
@@ -79,6 +82,9 @@ const LoginPage = () => {
             setCredentials({
               user: mappedUser,
               token,
+              refreshToken,
+              expiresIn,
+              rememberMe,
             })
           );
 
@@ -125,15 +131,15 @@ const LoginPage = () => {
                   <Mail className="form-input-icon" strokeWidth={1.5} />
                   <input
                     type="email"
-                    {...register('username')}
-                    className={`form-input ${errors.username ? 'error' : ''}`}
+                    {...register('email')}
+                    className={`form-input ${errors.email ? 'error' : ''}`}
                     placeholder="name@company.com"
                     disabled={isLoading}
                     autoComplete="email"
                   />
                 </div>
-                {errors.username && (
-                  <p className="error-message">{errors.username.message}</p>
+                {errors.email && (
+                  <p className="error-message">{errors.email.message}</p>
                 )}
               </div>
 
@@ -167,10 +173,14 @@ const LoginPage = () => {
               {/* Remember Me & Forgot Password */}
               <div className="form-options">
                 <label className="remember-me">
-                  <input type="checkbox" name="remember-me" />
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
                   <span>Keep me signed in</span>
                 </label>
-                <Link to="#" className="forgot-password">
+                <Link to={ROUTES.FORGOT_PASSWORD} className="forgot-password">
                   Forgot password?
                 </Link>
               </div>

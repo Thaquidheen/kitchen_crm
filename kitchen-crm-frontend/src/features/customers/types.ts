@@ -7,10 +7,9 @@ import type { PaginatedResponse } from '../../types/common.types';
 // Customer Status as per backend enum
 export type CustomerStatus =
   | 'LEAD'
-  | 'PROSPECT'
-  | 'ACTIVE'
-  | 'COMPLETED'
-  | 'INACTIVE';
+  | 'POTENTIAL'
+  | 'PLANNING'
+  | 'CONFIRMED';
 
 export type LeadSourceType = 'NONE' | 'ARCHITECT' | 'MANUAL';
 
@@ -59,10 +58,9 @@ export interface CustomerListParams {
 export interface CustomerStatistics {
   total: number;
   lead?: number;
-  prospect?: number;
-  active?: number;
-  completed?: number;
-  inactive?: number;
+  potential?: number;
+  planning?: number;
+  confirmed?: number;
   [key: string]: number | undefined;
 }
 

@@ -14,14 +14,16 @@ public class UserPrincipal implements UserDetails {
     private String name;
     private String email;
     private String password;
+    private boolean active;
     private Collection<? extends GrantedAuthority> authorities;
 
     public UserPrincipal(Long id, String name, String email, String password,
-                         Collection<? extends GrantedAuthority> authorities) {
+                         boolean active, Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.name = name;
         this.email = email;
         this.password = password;
+        this.active = active;
         this.authorities = authorities;
     }
 
@@ -35,6 +37,7 @@ public class UserPrincipal implements UserDetails {
                 user.getName(),
                 user.getEmail(),
                 user.getPassword(),
+                Boolean.TRUE.equals(user.getActive()),
                 authorities
         );
     }
@@ -79,6 +82,6 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return active;
     }
 }

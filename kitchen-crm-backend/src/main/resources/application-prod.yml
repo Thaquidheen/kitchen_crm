@@ -13,6 +13,7 @@ spring:
   flyway:
     enabled: true
     validate-on-migrate: true
+    out-of-order: true
 
 # File upload directories (Docker volume mounted)
 app:

@@ -29,10 +29,9 @@ export const CustomerOverviewTab: React.FC<CustomerOverviewTabProps> = ({ custom
   const getStatusColor = (status: CustomerStatus) => {
     const colors = {
       LEAD: 'bg-info/20 text-info border-info',
-      PROSPECT: 'bg-warning/20 text-warning border-warning',
-      ACTIVE: 'bg-success/20 text-success border-success',
-      COMPLETED: 'bg-background-500/20 text-text-500 border-background-500',
-      INACTIVE: 'bg-error/20 text-error border-error',
+      POTENTIAL: 'bg-warning/20 text-warning border-warning',
+      PLANNING: 'bg-background-500/20 text-text-500 border-background-500',
+      CONFIRMED: 'bg-success/20 text-success border-success',
     };
     return colors[status] || colors.LEAD;
   };

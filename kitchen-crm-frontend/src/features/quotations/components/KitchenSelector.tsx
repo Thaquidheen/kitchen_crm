@@ -7,25 +7,31 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Plus, Trash2, Edit2, Check, X } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, Sparkles } from 'lucide-react';
 import type { QuotationKitchenFormData } from '@/features/quotations/types';
 
 export interface KitchenSelectorProps {
   kitchens: QuotationKitchenFormData[];
   onKitchensChange: (kitchens: QuotationKitchenFormData[]) => void;
+  suggestedKitchenTypes?: string[];
 }
 
-export function KitchenSelector({ kitchens, onKitchensChange }: KitchenSelectorProps) {
+export function KitchenSelector({ kitchens, onKitchensChange, suggestedKitchenTypes = [] }: KitchenSelectorProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [newKitchenName, setNewKitchenName] = useState('');
 
-  const handleAddKitchen = () => {
-    if (!newKitchenName.trim()) {
-      return;
-    }
+  // Helper to add a kitchen with a specific name
+  const addKitchenWithName = (name: string) => {
+    if (!name.trim()) return;
+
+    // Check if kitchen with this name already exists
+    const exists = kitchens.some(
+      (k) => k.kitchenName.toLowerCase() === name.trim().toLowerCase()
+    );
+    if (exists) return;
 
     const newKitchen: QuotationKitchenFormData = {
-      kitchenName: newKitchenName.trim(),
+      kitchenName: name.trim(),
       kitchenOrder: kitchens.length,
       transportationPrice: 0,
       installationPrice: 0,
@@ -38,8 +44,21 @@ export function KitchenSelector({ kitchens, onKitchensChange }: KitchenSelectorP
     };
 
     onKitchensChange([...kitchens, newKitchen]);
+  };
+
+  const handleAddKitchen = () => {
+    if (!newKitchenName.trim()) {
+      return;
+    }
+
+    addKitchenWithName(newKitchenName);
     setNewKitchenName('');
   };
+
+  // Filter out suggestions that are already added
+  const availableSuggestions = suggestedKitchenTypes.filter(
+    (type) => !kitchens.some((k) => k.kitchenName.toLowerCase() === type.toLowerCase())
+  );
 
   const handleDeleteKitchen = (index: number) => {
     const updatedKitchens = kitchens.filter((_, i) => i !== index).map((k, i) => ({
@@ -112,6 +131,26 @@ export function KitchenSelector({ kitchens, onKitchensChange }: KitchenSelectorP
           )}
         </div>
       </div>
+
+      {/* Suggested Kitchen Types from Customer */}
+      {availableSuggestions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 p-3 bg-primary-600/10 border border-primary-600/30 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-primary-500">
+            <Sparkles className="h-4 w-4" />
+            <span className="font-medium">Customer's kitchen types:</span>
+          </div>
+          {availableSuggestions.map((type) => (
+            <button
+              key={type}
+              onClick={() => addKitchenWithName(type)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-full bg-primary-600/20 text-primary-400 hover:bg-primary-600/40 hover:text-primary-300 transition-colors border border-primary-600/30"
+            >
+              <Plus className="h-3 w-3" />
+              {type}
+            </button>
+          ))}
+        </div>
+      )}
 
       {kitchens.length === 0 ? (
         <Card className="p-4 sm:p-6 bg-background-800 border-background-600 text-center">

@@ -17,6 +17,11 @@ export type Status =
   | 'cancelled'
   | 'draft'
   | 'published'
+  // Customer Statuses
+  | 'LEAD'
+  | 'POTENTIAL'
+  | 'CONFIRMED'
+  // Design Phase Statuses
   | 'PLANNING'
   | 'IN_PROGRESS'
   | 'PENDING_SUPERADMIN_APPROVAL'
@@ -56,6 +61,10 @@ const statusConfig: Record<
   cancelled: { variant: 'danger', label: 'Cancelled' },
   draft: { variant: 'default', label: 'Draft' },
   published: { variant: 'primary', label: 'Published' },
+  // Customer Statuses
+  LEAD: { variant: 'info', label: 'Lead', dot: true },
+  POTENTIAL: { variant: 'warning', label: 'Potential', dot: true },
+  CONFIRMED: { variant: 'success', label: 'Confirmed', dot: true },
   // Design Phase Statuses
   PLANNING: { variant: 'default', label: 'Planning', dot: true },
   IN_PROGRESS: { variant: 'info', label: 'In Progress', dot: true },

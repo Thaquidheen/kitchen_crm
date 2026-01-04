@@ -123,10 +123,9 @@ export function CustomerList({
   const getStatusVariant = (status: CustomerStatus): 'default' | 'info' | 'warning' | 'success' | 'danger' => {
     const map: Record<CustomerStatus, 'default' | 'info' | 'warning' | 'success' | 'danger'> = {
       LEAD: 'info',
-      PROSPECT: 'warning',
-      ACTIVE: 'success',
-      COMPLETED: 'default',
-      INACTIVE: 'danger',
+      POTENTIAL: 'warning',
+      PLANNING: 'default',
+      CONFIRMED: 'success',
     };
     return map[status] || 'default';
   };

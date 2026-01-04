@@ -11,14 +11,15 @@ spring:
     baseline-on-migrate: true
     clean-disabled: false
     validate-on-migrate: false
+    out-of-order: true
 
   profiles:
     active: dev
 
   datasource:
     url: jdbc:mysql://localhost:3306/kitchen_crm?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: ${DB_USERNAME:kitchen_crm}
-    password: ${DB_PASSWORD:password123}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -49,8 +50,12 @@ app:
   notifications:
     attach-quotation-pdf: true
   jwt:
-    secret: ${JWT_SECRET:aW52YWxpZGF0ZWRKV1RTZWNyZXRLZXlGb3JLaXRjaGVuQ1JNQXBwbGljYXRpb25TZWN1cml0eQ==}
-    expiration: 86400000 # 24 hours
+    secret: ${JWT_SECRET}
+    access-expiration: ${JWT_ACCESS_EXPIRATION:900000}     # 15 minutes
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7 days
+    expiration: ${JWT_EXPIRATION:900000} # Legacy fallback
+  auth:
+    default-role: ${DEFAULT_ROLE:ROLE_STAFF} # Options: ROLE_STAFF, ROLE_SUPER_ADMIN
   margin:
     default-percentage: ${DEFAULT_MARGIN:15.0}
 
@@ -62,12 +67,12 @@ app:
 
     # Gmail SMTP Configuration (Free up to 500 emails/day)
     smtp:
-      host: smtp.gmail.com
-      port: 587
-      username: thaquidheen@gmail.com
-      password: xfhemzassuywbyvu
-      from-email: thaquidheen@gmail.com
-      from-name: HOCH
+      host: ${SMTP_HOST:smtp.gmail.com}
+      port: ${SMTP_PORT:587}
+      username: ${SMTP_USERNAME}
+      password: ${SMTP_PASSWORD}
+      from-email: ${SMTP_FROM_EMAIL}
+      from-name: ${SMTP_FROM_NAME:HOCH}
       auth: true
       starttls: true
 

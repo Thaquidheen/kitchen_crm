@@ -9,6 +9,8 @@ import type {
   LoginRequest,
   LoginResponse,
   SignupRequest,
+  RefreshTokenRequest,
+  RefreshTokenResponse,
   ApiResponse,
 } from '../../types/api.types';
 
@@ -40,13 +42,55 @@ export const authApi = baseApi.injectEndpoints({
       providesTags: ['Auth'],
     }),
 
-    // Logout endpoint (if backend provides one)
-    logout: builder.mutation<void, void>({
-      query: () => ({
+    // Logout endpoint - sends refresh token for revocation
+    logout: builder.mutation<ApiResponse<string>, { refreshToken?: string } | void>({
+      query: (data) => ({
         url: API_ENDPOINTS.AUTH.LOGOUT,
+        method: 'POST',
+        body: data && 'refreshToken' in data ? { refreshToken: data.refreshToken } : undefined,
+      }),
+      invalidatesTags: ['Auth'],
+    }),
+
+    // Refresh token endpoint
+    refreshToken: builder.mutation<ApiResponse<RefreshTokenResponse>, RefreshTokenRequest>({
+      query: (data) => ({
+        url: API_ENDPOINTS.AUTH.REFRESH,
+        method: 'POST',
+        body: data,
+      }),
+    }),
+
+    // Logout from all devices
+    logoutAllDevices: builder.mutation<ApiResponse<string>, void>({
+      query: () => ({
+        url: API_ENDPOINTS.AUTH.LOGOUT_ALL,
         method: 'POST',
       }),
       invalidatesTags: ['Auth'],
+    }),
+
+    // Forgot password endpoint
+    forgotPassword: builder.mutation<ApiResponse<string>, { email: string }>({
+      query: (data) => ({
+        url: API_ENDPOINTS.AUTH.FORGOT_PASSWORD,
+        method: 'POST',
+        body: data,
+      }),
+    }),
+
+    // Reset password endpoint
+    resetPassword: builder.mutation<ApiResponse<string>, { token: string; newPassword: string }>({
+      query: (data) => ({
+        url: API_ENDPOINTS.AUTH.RESET_PASSWORD,
+        method: 'POST',
+        body: data,
+      }),
+    }),
+
+    // Validate reset token endpoint
+    validateResetToken: builder.query<ApiResponse<boolean>, string>({
+      query: (token) => `${API_ENDPOINTS.AUTH.VALIDATE_RESET_TOKEN}?token=${token}`,
     }),
   }),
 });
@@ -56,4 +100,9 @@ export const {
   useSignupMutation,
   useGetCurrentUserQuery,
   useLogoutMutation,
+  useRefreshTokenMutation,
+  useLogoutAllDevicesMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
+  useValidateResetTokenQuery,
 } = authApi;

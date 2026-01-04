@@ -173,7 +173,7 @@ export function CustomersPage() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <span className="text-xs sm:text-sm text-text-700 font-medium sm:mr-2 whitespace-nowrap">Change Status:</span>
                   <div className="flex flex-wrap gap-2">
-                    {(['LEAD', 'PROSPECT', 'ACTIVE', 'COMPLETED', 'INACTIVE'] as CustomerStatus[]).map(
+                    {(['LEAD', 'POTENTIAL', 'PLANNING', 'CONFIRMED'] as CustomerStatus[]).map(
                       (status) => (
                         <Button
                           key={status}

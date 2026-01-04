@@ -78,48 +78,25 @@ const SignupPage = () => {
 
         {/* Signup Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Full Name Field */}
+          {/* Name Field */}
           <div>
             <label className="block text-white-800 text-sm font-medium mb-2">
               Full Name
             </label>
             <input
               type="text"
-              {...register('fullName')}
+              {...register('name')}
               className={`w-full px-4 py-3 bg-black-700 border rounded-lg text-white-900 focus:outline-none focus:ring-2 transition-all ${
-                errors.fullName
+                errors.name
                   ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                   : 'border-black-600 focus:border-red-700 focus:ring-red-700'
               }`}
               placeholder="Enter your full name"
               disabled={isLoading}
             />
-            {errors.fullName && (
+            {errors.name && (
               <p className="mt-1 text-sm text-red-400">
-                {errors.fullName.message}
-              </p>
-            )}
-          </div>
-
-          {/* Username Field */}
-          <div>
-            <label className="block text-white-800 text-sm font-medium mb-2">
-              Username
-            </label>
-            <input
-              type="text"
-              {...register('username')}
-              className={`w-full px-4 py-3 bg-black-700 border rounded-lg text-white-900 focus:outline-none focus:ring-2 transition-all ${
-                errors.username
-                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                  : 'border-black-600 focus:border-red-700 focus:ring-red-700'
-              }`}
-              placeholder="Choose a username"
-              disabled={isLoading}
-            />
-            {errors.username && (
-              <p className="mt-1 text-sm text-red-400">
-                {errors.username.message}
+                {errors.name.message}
               </p>
             )}
           </div>
@@ -161,6 +138,9 @@ const SignupPage = () => {
               placeholder="Create a password"
               disabled={isLoading}
             />
+            <p className="mt-1 text-xs text-white-600">
+              Min 8 characters with uppercase, lowercase, and number
+            </p>
             {errors.password && (
               <p className="mt-1 text-sm text-red-400">
                 {errors.password.message}

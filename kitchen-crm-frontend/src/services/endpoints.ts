@@ -10,6 +10,11 @@ export const API_ENDPOINTS = {
     SIGNUP: '/auth/signup',
     ME: '/auth/me',
     LOGOUT: '/auth/logout',
+    REFRESH: '/auth/refresh',
+    LOGOUT_ALL: '/auth/logout-all',
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    RESET_PASSWORD: '/auth/reset-password',
+    VALIDATE_RESET_TOKEN: '/auth/validate-reset-token',
   },
 
   // Customers

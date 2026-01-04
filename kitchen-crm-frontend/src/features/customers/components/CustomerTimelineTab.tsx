@@ -12,10 +12,9 @@ export const CustomerTimelineTab: React.FC<CustomerTimelineTabProps> = ({ custom
   const getStateColor = (state: string) => {
     const stateColors: Record<string, string> = {
       LEAD: 'bg-info',
-      PROSPECT: 'bg-warning',
-      ACTIVE: 'bg-success',
-      COMPLETED: 'bg-background-500',
-      INACTIVE: 'bg-error',
+      POTENTIAL: 'bg-warning',
+      PLANNING: 'bg-background-500',
+      CONFIRMED: 'bg-success',
       // Add more states as needed
     };
     return stateColors[state] || 'bg-background-500';
