@@ -81,8 +81,7 @@ public class CategoryServiceImpl implements CategoryService {
             return ApiResponse.error("Category not found");
         }
 
-        category.setActive(false);
-        categoryRepository.save(category);
+        categoryRepository.delete(category);
         return ApiResponse.success("Category deleted successfully");
     }
 

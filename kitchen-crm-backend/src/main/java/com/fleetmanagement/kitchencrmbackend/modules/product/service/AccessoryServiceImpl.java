@@ -96,8 +96,7 @@ public class AccessoryServiceImpl implements AccessoryService {
             return ApiResponse.error("Accessory not found");
         }
 
-        accessory.setActive(false);
-        accessoryRepository.save(accessory);
+        accessoryRepository.delete(accessory);
         return ApiResponse.success("Accessory deleted successfully");
     }
 

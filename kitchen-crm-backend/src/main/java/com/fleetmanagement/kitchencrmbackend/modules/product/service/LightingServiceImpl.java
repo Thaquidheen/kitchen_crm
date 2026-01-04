@@ -84,8 +84,7 @@ public class LightingServiceImpl implements LightingService {
             return ApiResponse.error("Light profile not found");
         }
 
-        lightProfile.setActive(false);
-        lightProfileRepository.save(lightProfile);
+        lightProfileRepository.delete(lightProfile);
         return ApiResponse.success("Light profile deleted successfully");
     }
 
@@ -148,8 +147,7 @@ public class LightingServiceImpl implements LightingService {
             return ApiResponse.error("Driver not found");
         }
 
-        driver.setActive(false);
-        driverRepository.save(driver);
+        driverRepository.delete(driver);
         return ApiResponse.success("Driver deleted successfully");
     }
 
@@ -212,8 +210,7 @@ public class LightingServiceImpl implements LightingService {
             return ApiResponse.error("Connector not found");
         }
 
-        connector.setActive(false);
-        connectorRepository.save(connector);
+        connectorRepository.delete(connector);
         return ApiResponse.success("Connector deleted successfully");
     }
 
@@ -276,8 +273,7 @@ public class LightingServiceImpl implements LightingService {
             return ApiResponse.error("Sensor not found");
         }
 
-        sensor.setActive(false);
-        sensorRepository.save(sensor);
+        sensorRepository.delete(sensor);
         return ApiResponse.success("Sensor deleted successfully");
     }
 

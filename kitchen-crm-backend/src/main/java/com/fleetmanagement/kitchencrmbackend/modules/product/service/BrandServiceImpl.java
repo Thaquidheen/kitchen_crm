@@ -85,9 +85,7 @@ public class BrandServiceImpl implements BrandService {
             return ApiResponse.error("Brand not found");
         }
 
-        // Soft delete - just mark as inactive
-        brand.setActive(false);
-        brandRepository.save(brand);
+        brandRepository.delete(brand);
         return ApiResponse.success("Brand deleted successfully");
     }
 

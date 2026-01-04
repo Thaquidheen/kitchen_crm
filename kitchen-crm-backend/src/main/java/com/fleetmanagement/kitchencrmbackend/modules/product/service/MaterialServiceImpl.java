@@ -82,8 +82,7 @@ public class MaterialServiceImpl implements MaterialService {
             return ApiResponse.error("Material not found");
         }
 
-        material.setActive(false);
-        materialRepository.save(material);
+        materialRepository.delete(material);
         return ApiResponse.success("Material deleted successfully");
     }
 
