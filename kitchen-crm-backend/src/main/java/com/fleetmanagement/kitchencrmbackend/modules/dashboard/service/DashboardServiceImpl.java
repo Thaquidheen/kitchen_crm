@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -772,7 +774,8 @@ public class DashboardServiceImpl implements DashboardService {
     private Long getOverdueQuotations() {
         // Quotations older than 30 days without response
         LocalDate thirtyDaysAgo = LocalDate.now().minusDays(30);
-        return quotationRepository.countOverdueQuotations(thirtyDaysAgo);
+        LocalDateTime thirtyDaysAgoDateTime = thirtyDaysAgo.atTime(LocalTime.MAX);
+        return quotationRepository.countOverdueQuotations(thirtyDaysAgoDateTime);
     }
 
     private Long getPendingApprovals() {
@@ -803,9 +806,12 @@ public class DashboardServiceImpl implements DashboardService {
     private Map<String, Object> generateSalesReport(LocalDate fromDate, LocalDate toDate) {
         Map<String, Object> report = new HashMap<>();
 
-        report.put("total_quotations", quotationRepository.countByDateRange(fromDate, toDate));
-        report.put("approved_quotations", quotationRepository.countApprovedByDateRange(fromDate, toDate));
-        report.put("total_quotation_value", quotationRepository.getTotalValueByDateRange(fromDate, toDate));
+        LocalDateTime fromDateTime = fromDate.atStartOfDay();
+        LocalDateTime toDateTime = toDate.atTime(LocalTime.MAX);
+
+        report.put("total_quotations", quotationRepository.countByDateRange(fromDateTime, toDateTime));
+        report.put("approved_quotations", quotationRepository.countApprovedByDateRange(fromDateTime, toDateTime));
+        report.put("total_quotation_value", quotationRepository.getTotalValueByDateRange(fromDateTime, toDateTime));
         report.put("conversion_rate", calculateConversionRate());
 
         return report;
