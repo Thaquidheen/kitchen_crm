@@ -153,16 +153,16 @@ const routes = [
             element: <QuotationsPage />,
           },
           {
-            path: ROUTES.QUOTATIONS_DETAIL,
-            element: <QuotationDetailPage />,
-          },
-          {
             path: ROUTES.QUOTATIONS_NEW,
             element: <QuotationBuilderPage />,
           },
           {
             path: ROUTES.QUOTATIONS_EDIT,
             element: <QuotationBuilderPage />,
+          },
+          {
+            path: ROUTES.QUOTATIONS_DETAIL,
+            element: <QuotationDetailPage />,
           },
 
           // Projects
