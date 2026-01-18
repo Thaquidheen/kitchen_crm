@@ -27,7 +27,9 @@ const publicClient = axios.create({
 
 // Add request interceptor to include auth token
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
+  // Check both localStorage and sessionStorage for token
+  // (matches authSlice behavior which stores in sessionStorage when rememberMe=false)
+  const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
