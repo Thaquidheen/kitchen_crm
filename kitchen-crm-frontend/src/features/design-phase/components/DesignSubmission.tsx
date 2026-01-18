@@ -44,8 +44,8 @@ export function DesignSubmission({ designPhase, onUpdate, onRefresh }: DesignSub
   const isLoading = isSubmitting || isSubmittingForApproval || isUploading;
 
   // Determine which submission handler to use based on user role and status
-  const canSubmitForApproval = isStaff && designPhase.designStatus === DesignStatus.IN_PROGRESS;
-  const canSubmitToClient = isSuperAdmin && (designPhase.designStatus === DesignStatus.APPROVED_BY_ADMIN || designPhase.designStatus === DesignStatus.IN_PROGRESS);
+  const canSubmitForApproval = isStaff && (designPhase.designStatus === DesignStatus.IN_PROGRESS || designPhase.designStatus === DesignStatus.PLANNING);
+  const canSubmitToClient = isSuperAdmin && (designPhase.designStatus === DesignStatus.APPROVED_BY_ADMIN || designPhase.designStatus === DesignStatus.IN_PROGRESS || designPhase.designStatus === DesignStatus.PLANNING);
 
   const handleSubmitDesign = async () => {
     try {
