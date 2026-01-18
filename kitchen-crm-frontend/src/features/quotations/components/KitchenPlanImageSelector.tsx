@@ -11,7 +11,7 @@ import { Image, CheckCircle, X, Upload, Loader2 } from 'lucide-react';
 import { 
   useGetCustomerAvailablePlanImagesQuery,
   useUploadPlanImageMutation 
-} from '@/features/quotations/quotationsAPI';
+} from '@/app/baseApi';
 import type { QuotationKitchenPlanImage } from '@/features/quotations/types';
 import { getImageUrl } from '@/utils/imageUtils';
 

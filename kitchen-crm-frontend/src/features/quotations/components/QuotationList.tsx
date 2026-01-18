@@ -11,7 +11,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import SignatureStatusBadge from '@/components/quotations/SignatureStatusBadge';
 import { Eye, Edit } from 'lucide-react';
 import type { QuotationFilters, QuotationSummary } from '../types';
-import { useGetQuotationsQuery } from '../quotationsAPI';
+import { useGetQuotationsQuery } from '@/app/baseApi';
 
 export interface QuotationListProps {
   filters: QuotationFilters;

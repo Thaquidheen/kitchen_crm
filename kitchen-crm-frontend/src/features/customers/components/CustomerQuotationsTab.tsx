@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Plus, Eye, Download, Copy, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useGetQuotationsByCustomerQuery } from '@/features/quotations/quotationsAPI';
+import { useGetQuotationsByCustomerQuery } from '@/app/baseApi';
 import toast from 'react-hot-toast';
 
 export interface CustomerQuotationsTabProps {

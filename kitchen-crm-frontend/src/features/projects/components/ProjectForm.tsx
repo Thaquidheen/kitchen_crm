@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
 import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
-import { useGetQuotationsQuery } from '@/features/quotations/quotationsAPI';
+import { useGetQuotationsQuery } from '@/app/baseApi';
 import { useCreateProjectMutation, useUpdateProjectMutation } from '../projectsAPI';
 import { type Project, type CreateProjectRequest } from '../types';
 import toast from 'react-hot-toast';

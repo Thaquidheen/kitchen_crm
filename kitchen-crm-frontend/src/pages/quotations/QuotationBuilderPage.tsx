@@ -27,7 +27,7 @@ import { KitchenProductTabs } from '@/features/quotations/components/KitchenProd
 import type { QuotationFormData, CreateQuotationRequest, QuotationAccessory, QuotationCabinet, QuotationDoor, QuotationLighting, QuotationKitchenFormData } from '@/features/quotations/types';
 import toast from 'react-hot-toast';
 import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
-import { useCreateQuotationMutation, useUpdateQuotationMutation, useGetQuotationByIdQuery } from '@/features/quotations/quotationsAPI';
+import { useCreateQuotationMutation, useUpdateQuotationMutation, useGetQuotationByIdQuery } from '@/app/baseApi';
 import { useGetMarginsQuery } from '@/services/settingsAPI';
 import { useParams } from 'react-router-dom';
 

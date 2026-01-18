@@ -277,7 +277,187 @@ export const baseApi = createApi({
     'WarrantyComponents',
     'Staff',
   ],
-  endpoints: () => ({}),
+  endpoints: (builder) => ({
+    // ==================== QUOTATION ENDPOINTS ====================
+
+    // Get all quotations with filters
+    getQuotations: builder.query<any, any>({
+      query: (filters) => {
+        const params = new URLSearchParams();
+
+        if (filters.customerId) params.append('customerId', filters.customerId.toString());
+        if (filters.status) params.append('status', filters.status);
+        if (filters.customerName) params.append('customerName', filters.customerName);
+        if (filters.fromDate) params.append('fromDate', filters.fromDate);
+        if (filters.toDate) params.append('toDate', filters.toDate);
+        if (filters.page !== undefined) params.append('page', filters.page.toString());
+        if (filters.size !== undefined) params.append('size', filters.size.toString());
+        if (filters.sortBy) params.append('sortBy', filters.sortBy);
+        if (filters.sortDir) params.append('sortDir', filters.sortDir);
+
+        return {
+          url: '/quotations',
+          params: Object.fromEntries(params),
+        };
+      },
+      transformResponse: (response: any) => response?.data ?? { content: [], totalElements: 0, totalPages: 0 },
+      providesTags: ['Quotations'],
+    }),
+
+    // Get quotation statistics
+    getQuotationStatistics: builder.query<any, void>({
+      query: () => '/quotations/statistics',
+      providesTags: ['Quotations'],
+    }),
+
+    // Get quotation by ID
+    getQuotationById: builder.query<any, number>({
+      query: (id) => `/quotations/${id}`,
+      transformResponse: (response: any) => {
+        console.log('Raw API response for getQuotationById:', response);
+        // Backend returns ApiResponse<QuotationDto>, so extract the data
+        return response?.data || response;
+      },
+      providesTags: (_result, _error, id) => [{ type: 'Quotations', id }],
+    }),
+
+    // Get quotations by customer
+    getQuotationsByCustomer: builder.query<any, number>({
+      query: (customerId) => `/quotations/customer/${customerId}`,
+      providesTags: (_result, _error, customerId) => [
+        { type: 'Quotations', id: `customer-${customerId}` }
+      ],
+    }),
+
+    // Search quotations
+    searchQuotations: builder.query<any, string>({
+      query: (searchTerm) => `/quotations/search?q=${encodeURIComponent(searchTerm)}`,
+      providesTags: ['Quotations'],
+    }),
+
+    // Create quotation
+    createQuotation: builder.mutation<any, any>({
+      query: (quotation) => ({
+        url: '/quotations',
+        method: 'POST',
+        body: quotation,
+      }),
+      invalidatesTags: ['Quotations'],
+    }),
+
+    // Update quotation
+    updateQuotation: builder.mutation<any, any>({
+      query: ({ id, ...quotation }) => ({
+        url: `/quotations/${id}`,
+        method: 'PUT',
+        body: quotation,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Quotations', id },
+        'Quotations',
+      ],
+    }),
+
+    // Delete quotation (SUPER_ADMIN only)
+    deleteQuotation: builder.mutation<any, number>({
+      query: (id) => ({
+        url: `/quotations/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Quotations'],
+    }),
+
+    // Update quotation status (SUPER_ADMIN only)
+    updateQuotationStatus: builder.mutation<any, { id: number; status: string }>({
+      query: ({ id, status }) => ({
+        url: `/quotations/${id}/status`,
+        method: 'PATCH',
+        body: { status },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Quotations', id },
+        'Quotations',
+      ],
+    }),
+
+    // Duplicate quotation
+    duplicateQuotation: builder.mutation<any, number>({
+      query: (id) => ({
+        url: `/quotations/${id}/duplicate`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Quotations'],
+    }),
+
+    // Download quotation PDF
+    downloadQuotationPDF: builder.mutation<Blob, number>({
+      query: (id) => ({
+        url: `/quotations/${id}/pdf`,
+        method: 'GET',
+        headers: { accept: 'application/pdf' },
+        // Force blob parsing to avoid JSON parser errors
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
+
+    // Download quotation bill PDF (SUPER_ADMIN only)
+    downloadQuotationBillPDF: builder.mutation<Blob, number>({
+      query: (id) => ({
+        url: `/quotations/${id}/bill/pdf`,
+        method: 'GET',
+        headers: { accept: 'application/pdf' },
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
+
+    // Get available plan images for a customer
+    getCustomerAvailablePlanImages: builder.query<any, number>({
+      query: (customerId) => `/quotations/customers/${customerId}/available-plan-images`,
+      transformResponse: (response: any) => response?.data || { planImages: [], designFiles: [] },
+      providesTags: (result, error, customerId) => [
+        { type: 'Quotations', id: `plan-images-${customerId}` },
+      ],
+    }),
+
+    // Upload plan image for a customer
+    uploadPlanImage: builder.mutation<any, { customerId: number; file: File; imageType: string; description?: string }>({
+      query: ({ customerId, file, imageType, description }) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('customerId', customerId.toString());
+        formData.append('imageType', imageType);
+        if (description) {
+          formData.append('description', description);
+        }
+        return {
+          url: `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'}/customers/plan-images/upload`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      invalidatesTags: (_result, _error, { customerId }) => [
+        { type: 'Quotations', id: `plan-images-${customerId}` },
+      ],
+    }),
+  }),
 });
+
+// Export hooks
+export const {
+  useGetQuotationsQuery,
+  useGetQuotationStatisticsQuery,
+  useGetQuotationByIdQuery,
+  useGetQuotationsByCustomerQuery,
+  useSearchQuotationsQuery,
+  useCreateQuotationMutation,
+  useUpdateQuotationMutation,
+  useDeleteQuotationMutation,
+  useUpdateQuotationStatusMutation,
+  useDuplicateQuotationMutation,
+  useDownloadQuotationPDFMutation,
+  useDownloadQuotationBillPDFMutation,
+  useGetCustomerAvailablePlanImagesQuery,
+  useUploadPlanImageMutation,
+} = baseApi;
 
 export default baseApi;

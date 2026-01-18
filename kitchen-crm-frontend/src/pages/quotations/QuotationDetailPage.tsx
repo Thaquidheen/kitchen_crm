@@ -6,7 +6,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { useGetQuotationByIdQuery, useDuplicateQuotationMutation, useDownloadQuotationPDFMutation } from '@/features/quotations/quotationsAPI';
+import { useGetQuotationByIdQuery, useDuplicateQuotationMutation, useDownloadQuotationPDFMutation } from '@/app/baseApi';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import SignatureManagement from '@/components/quotations/SignatureManagement';
 import { Copy, Download, Edit } from 'lucide-react';

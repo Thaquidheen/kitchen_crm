@@ -6,7 +6,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { setupListeners } from '@reduxjs/toolkit/query';
 import { baseApi } from './baseApi';
-import quotationsApi from '../features/quotations/quotationsAPI';
 import projectsApi from '../features/projects/projectsAPI';
 import { settingsApi } from '../services/settingsAPI';
 import { vendorsApi } from '../features/vendors/vendorsAPI';
@@ -25,7 +24,6 @@ export const store = configureStore({
   reducer: {
     // Add the RTK Query API reducers
     [baseApi.reducerPath]: baseApi.reducer,
-    [quotationsApi.reducerPath]: quotationsApi.reducer,
     [projectsApi.reducerPath]: projectsApi.reducer,
     [settingsApi.reducerPath]: settingsApi.reducer,
     [vendorsApi.reducerPath]: vendorsApi.reducer,
@@ -43,7 +41,7 @@ export const store = configureStore({
   },
   // Adding the api middleware enables caching, invalidation, polling, and other features of RTK Query
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(baseApi.middleware, quotationsApi.middleware, projectsApi.middleware, settingsApi.middleware, vendorsApi.middleware, expensesApi.middleware),
+    getDefaultMiddleware().concat(baseApi.middleware, projectsApi.middleware, settingsApi.middleware, vendorsApi.middleware, expensesApi.middleware),
   devTools: import.meta.env.MODE !== 'production',
 });
 

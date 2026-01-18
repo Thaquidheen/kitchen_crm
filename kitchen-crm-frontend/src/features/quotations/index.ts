@@ -4,8 +4,8 @@
 export * from './types';
 
 // API
-export { default as quotationsApi } from './quotationsAPI';
-export * from './quotationsAPI';
+export { default as quotationsApi } from '@/app/baseApi';
+export * from '@/app/baseApi';
 
 // Redux slice
 export { default as quotationsReducer } from './quotationsSlice';

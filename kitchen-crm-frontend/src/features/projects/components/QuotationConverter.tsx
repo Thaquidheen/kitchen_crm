@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select } from '@/components/ui/Select';
-import { useGetQuotationsQuery } from '@/features/quotations/quotationsAPI';
+import { useGetQuotationsQuery } from '@/app/baseApi';
 import { useConvertQuotationToProjectMutation } from '../projectsAPI';
 import { ProjectStatus } from '../types';
 import { QuotationStatus } from '@/features/quotations/types';
