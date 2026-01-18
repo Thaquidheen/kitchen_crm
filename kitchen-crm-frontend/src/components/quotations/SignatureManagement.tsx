@@ -53,6 +53,7 @@ export default function SignatureManagement({
   const [sending, setSending] = useState(false);
   const [documents, setDocuments] = useState<SignedDocument[]>([]);
   const [showCopied, setShowCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Debug logging
   console.log('SignatureManagement props:', {
@@ -72,14 +73,30 @@ export default function SignatureManagement({
 
   const fetchDocuments = async () => {
     setLoading(true);
+    setError(null);
     try {
+      console.log(`[SignatureManagement] Fetching documents for quotation ${quotationId}`);
       const docs = await approvalService.getSignedDocuments(quotationId);
-      console.log('Fetched documents:', docs);
+      console.log(`[SignatureManagement] Received ${docs.length} documents`);
       // Ensure docs is always an array
       setDocuments(Array.isArray(docs) ? docs : []);
     } catch (error: any) {
-      console.error('Failed to fetch documents:', error);
-      toast.error('Failed to load signature documents');
+      console.error('[SignatureManagement] Failed to fetch documents:', error);
+
+      // More specific error messages
+      let errorMessage = 'Failed to load signature documents';
+      if (error.response?.status === 404) {
+        errorMessage = 'Quotation not found';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Server error while loading signatures';
+      } else if (error.response?.status === 403) {
+        errorMessage = 'You do not have permission to view signature documents';
+      } else if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+
+      setError(errorMessage);
+      toast.error(errorMessage);
       // Set empty array on error to prevent undefined
       setDocuments([]);
     } finally {
@@ -256,6 +273,13 @@ export default function SignatureManagement({
           </button>
         )}
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="bg-error/20 border border-error/40 rounded-lg p-4 mb-4">
+          <p className="text-sm text-error">{error}</p>
+        </div>
+      )}
 
       {/* Signature Status */}
       {signedDocumentId && signatureStatus && (

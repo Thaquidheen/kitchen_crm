@@ -105,20 +105,46 @@ class ApprovalService {
    * Get signed documents for a quotation (Admin API)
    */
   async getSignedDocuments(quotationId: number): Promise<any[]> {
-    console.log('approvalService.getSignedDocuments called with:', quotationId);
-    console.log('API endpoint:', `/signatures/quotations/${quotationId}/documents`);
-    
+    console.log(`[approvalService] Fetching signature documents for quotation ${quotationId}`);
+
     try {
       const response = await apiClient.get(`/signatures/quotations/${quotationId}/documents`);
-      console.log('API response:', response.data);
-      
+
+      console.log('[approvalService] Response received:', {
+        status: response.status,
+        dataType: typeof response.data,
+        isArray: Array.isArray(response.data),
+        hasDataProperty: response.data && 'data' in response.data,
+        data: response.data
+      });
+
       // Handle different response structures
-      const documents = response.data?.data || response.data || [];
-      console.log('Extracted documents:', documents);
-      
-      return Array.isArray(documents) ? documents : [];
-    } catch (error) {
-      console.error('API error in getSignedDocuments:', error);
+      let documents: any[];
+
+      if (Array.isArray(response.data)) {
+        // Backend returns array directly
+        console.log('[approvalService] Response is array directly');
+        documents = response.data;
+      } else if (response.data?.data && Array.isArray(response.data.data)) {
+        // Backend wraps in ApiResponse with data property
+        console.log('[approvalService] Response wrapped in data property');
+        documents = response.data.data;
+      } else {
+        console.warn('[approvalService] Unexpected response structure, defaulting to empty array');
+        documents = [];
+      }
+
+      console.log(`[approvalService] Parsed ${documents.length} documents`);
+
+      return documents;
+    } catch (error: any) {
+      console.error('[approvalService] Error fetching quotation signature documents:', {
+        quotationId,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+      });
       throw error;
     }
   }
