@@ -2,6 +2,7 @@ package com.fleetmanagement.kitchencrmbackend.modules.product.service;
 
 import com.fleetmanagement.kitchencrmbackend.modules.product.dto.MaterialDto;
 import com.fleetmanagement.kitchencrmbackend.modules.product.entity.Material;
+import com.fleetmanagement.kitchencrmbackend.modules.product.repository.CabinetTypeRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.product.repository.MaterialRepository;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,9 @@ public class MaterialServiceImpl implements MaterialService {
 
     @Autowired
     private MaterialRepository materialRepository;
+
+    @Autowired
+    private CabinetTypeRepository cabinetTypeRepository;
 
     @Override
     public ApiResponse<List<MaterialDto>> getAllMaterials() {
@@ -80,6 +84,11 @@ public class MaterialServiceImpl implements MaterialService {
         Material material = materialRepository.findById(id).orElse(null);
         if (material == null) {
             return ApiResponse.error("Material not found");
+        }
+
+        // Check if material is in use by any cabinet types
+        if (!cabinetTypeRepository.findByMaterialId(id).isEmpty()) {
+            return ApiResponse.error("Cannot delete material: It is being used by one or more cabinet types. Please remove the material from those cabinets first.");
         }
 
         materialRepository.delete(material);
