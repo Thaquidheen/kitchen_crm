@@ -64,7 +64,7 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
     base = (cabinets || []).map((c: any) => ({
       id: c.id,
       name: c.name,
-      price: Number(c.companyPrice ?? c.mrp ?? 0),
+      price: -1, // Price varies based on material selection
       raw: c,
     }));
   } else if (category === 'doors') {
@@ -145,7 +145,13 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
             )}
             <span className="truncate">{item.name}</span>
           </div>
-          <div className="text-xs sm:text-sm text-text-700 mt-1">₹{item.price.toLocaleString('en-IN')}</div>
+          <div className="text-xs sm:text-sm text-text-700 mt-1">
+            {item.price === -1 ? (
+              <span className="text-primary-400">Select to configure</span>
+            ) : (
+              <>₹{item.price.toLocaleString('en-IN')}</>
+            )}
+          </div>
           <div className="mt-2 sm:mt-3">
             {category === 'accessories' || category === 'lighting' ? (
               (() => {

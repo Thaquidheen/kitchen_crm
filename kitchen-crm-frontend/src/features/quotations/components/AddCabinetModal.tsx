@@ -18,11 +18,13 @@ const BLUM_ACCESSORIES_COST = 3000;
 export interface CabinetWithDimensions {
   cabinetTypeId: number;
   cabinetType?: CabinetType;
+  cabinetTypeName?: string;
   widthMm: number;
   heightMm: number;
   depthMm: number;
   quantity: number;
   surfaceArea?: number;
+  calculatedSqft?: number;
   // Material selection for sqft-based pricing
   materialId?: number;
   materialName?: string;
@@ -31,6 +33,10 @@ export interface CabinetWithDimensions {
   lightingCost?: number;
   // Accessories cost (BLUM standard accessories)
   accessoriesCost?: number;
+  // Pricing
+  unitPrice?: number;
+  totalPrice?: number;
+  description?: string;
   linkedDoor?: {
     doorTypeId: number;
     doorType?: DoorType;
@@ -138,16 +144,22 @@ export function AddCabinetModal({
     onAdd({
       cabinetTypeId: cabinet.id,
       cabinetType: cabinet,
+      cabinetTypeName: cabinet.name,
       widthMm,
       heightMm,
       depthMm,
       quantity,
       surfaceArea,
+      calculatedSqft: surfaceArea,
       materialId: selectedMaterial?.id,
       materialName: selectedMaterial?.name,
       materialRate: materialRate,
       lightingCost: includeLighting ? lightingCost : 0,
       accessoriesCost: includeAccessories ? accessoriesCost : 0,
+      // Set unit price (per unit) and total price for display
+      unitPrice: perUnitTotal,
+      totalPrice: totalCabinetPrice,
+      description: `${cabinet.name} (${widthMm}×${heightMm}×${depthMm}mm)`,
       linkedDoor: addDoor && selectedDoor ? {
         doorTypeId: selectedDoor.id,
         doorType: selectedDoor,
