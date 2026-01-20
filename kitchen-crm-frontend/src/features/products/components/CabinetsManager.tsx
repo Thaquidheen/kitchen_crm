@@ -148,21 +148,11 @@ export const CabinetsManager = () => {
                 </button>
               </div>
 
-              <div className="bg-background-700 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3 space-y-1.5 sm:space-y-2">
+              <div className="bg-background-700 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-text-600">Base Price:</span>
-                  <span className="text-xs sm:text-sm font-semibold text-text-900">₹{cabinet.basePrice.toLocaleString()}</span>
+                  <span className="text-xs sm:text-sm font-medium text-text-700">Fixed Price:</span>
+                  <span className="text-sm sm:text-base font-bold text-success">₹{cabinet.fixedPrice.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-text-600">MRP:</span>
-                  <span className="text-xs sm:text-sm font-semibold text-text-900">₹{cabinet.mrp.toLocaleString()}</span>
-                </div>
-                {cabinet.companyPrice && (
-                  <div className="flex justify-between items-center pt-1.5 sm:pt-2 border-t border-background-600">
-                    <span className="text-xs sm:text-sm font-medium text-text-700">Company Price:</span>
-                    <span className="text-sm sm:text-base font-bold text-success">₹{cabinet.companyPrice.toLocaleString()}</span>
-                  </div>
-                )}
               </div>
 
               <div className="flex items-center gap-2 pt-2 sm:pt-3 border-t border-background-600">
@@ -201,9 +191,7 @@ function CabinetForm({ initialValues, categories, onSubmit, onCancel, isLoading 
   const [formData, setFormData] = useState<Partial<CabinetType>>({
     name: initialValues?.name || '',
     categoryId: initialValues?.categoryId,
-    basePrice: initialValues?.basePrice || 0,
-    mrp: initialValues?.mrp || 0,
-    discountPercentage: initialValues?.discountPercentage || 0,
+    fixedPrice: initialValues?.fixedPrice || 0,
     active: initialValues?.active ?? true,
   });
 
@@ -211,10 +199,6 @@ function CabinetForm({ initialValues, categories, onSubmit, onCancel, isLoading 
     e.preventDefault();
     onSubmit(formData);
   };
-
-  const companyPrice = formData.mrp && formData.discountPercentage
-    ? formData.mrp - (formData.mrp * (formData.discountPercentage / 100))
-    : formData.mrp;
 
   return (
     <Card className="p-4 sm:p-6">
@@ -252,56 +236,19 @@ function CabinetForm({ initialValues, categories, onSubmit, onCancel, isLoading 
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-              Base Price (₹) <span className="text-error">*</span>
-            </label>
-            <Input
-              type="number"
-              required
-              min="0"
-              step="0.01"
-              value={formData.basePrice}
-              onChange={(e) => setFormData({ ...formData, basePrice: Number(e.target.value) })}
-              className="text-sm sm:text-base"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-              MRP (₹) <span className="text-error">*</span>
-            </label>
-            <Input
-              type="number"
-              required
-              min="0"
-              step="0.01"
-              value={formData.mrp}
-              onChange={(e) => setFormData({ ...formData, mrp: Number(e.target.value) })}
-              className="text-sm sm:text-base"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">Discount (%)</label>
-            <Input
-              type="number"
-              min="0"
-              max="100"
-              step="0.01"
-              value={formData.discountPercentage}
-              onChange={(e) => setFormData({ ...formData, discountPercentage: Number(e.target.value) })}
-              className="text-sm sm:text-base"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">Company Price</label>
-            <div className="px-2 sm:px-3 py-1.5 sm:py-2 bg-background-800 border border-background-600 rounded-md text-success font-semibold text-sm sm:text-base">
-              ₹{companyPrice ? companyPrice.toLocaleString() : '0'}
-            </div>
-          </div>
+        <div>
+          <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
+            Fixed Price (₹) <span className="text-error">*</span>
+          </label>
+          <Input
+            type="number"
+            required
+            min="0"
+            step="0.01"
+            value={formData.fixedPrice}
+            onChange={(e) => setFormData({ ...formData, fixedPrice: Number(e.target.value) })}
+            className="text-sm sm:text-base max-w-xs"
+          />
         </div>
 
         <div className="flex items-center gap-2">

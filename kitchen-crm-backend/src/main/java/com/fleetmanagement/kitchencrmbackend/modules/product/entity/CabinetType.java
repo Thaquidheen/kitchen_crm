@@ -36,27 +36,9 @@ public class CabinetType extends Auditable {
     @JoinColumn(name = "material_id")
     private Material material;
 
-    @Column(name = "base_price", precision = 10, scale = 2, nullable = false)
-    private BigDecimal basePrice;
-
-    @Column(precision = 10, scale = 2, nullable = false)
-    private BigDecimal mrp;
-
-    @Column(name = "discount_percentage", precision = 5, scale = 2)
-    private BigDecimal discountPercentage = BigDecimal.ZERO;
-
-    @Column(name = "company_price", precision = 10, scale = 2)
-    private BigDecimal companyPrice;
+    @Column(name = "fixed_price", precision = 10, scale = 2, nullable = false)
+    private BigDecimal fixedPrice;
 
     @Column(nullable = false)
     private Boolean active = true;
-
-    @PrePersist
-    @PreUpdate
-    public void calculateCompanyPrice() {
-        if (mrp != null && discountPercentage != null) {
-            BigDecimal discountAmount = mrp.multiply(discountPercentage).divide(BigDecimal.valueOf(100));
-            this.companyPrice = mrp.subtract(discountAmount);
-        }
-    }
 }

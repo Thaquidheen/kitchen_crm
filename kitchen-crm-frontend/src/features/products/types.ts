@@ -30,10 +30,7 @@ export interface CabinetType {
   brandName?: string;
   materialId?: number;
   materialName?: string;
-  basePrice: number;
-  mrp: number;
-  discountPercentage?: number;
-  companyPrice?: number;
+  fixedPrice: number;
   active: boolean;
   createdAt?: string;
   updatedAt?: string;

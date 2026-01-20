@@ -151,10 +151,7 @@ public class CabinetServiceImpl implements CabinetService {
         dto.setBrandName(cabinet.getBrand() != null ? cabinet.getBrand().getName() : null);
         dto.setMaterialId(cabinet.getMaterial() != null ? cabinet.getMaterial().getId() : null);
         dto.setMaterialName(cabinet.getMaterial() != null ? cabinet.getMaterial().getName() : null);
-        dto.setBasePrice(cabinet.getBasePrice());
-        dto.setMrp(cabinet.getMrp());
-        dto.setDiscountPercentage(cabinet.getDiscountPercentage());
-        dto.setCompanyPrice(cabinet.getCompanyPrice());
+        dto.setFixedPrice(cabinet.getFixedPrice());
         dto.setActive(cabinet.getActive());
         dto.setCreatedAt(cabinet.getCreatedAt());
         dto.setUpdatedAt(cabinet.getUpdatedAt());
@@ -164,9 +161,7 @@ public class CabinetServiceImpl implements CabinetService {
     private CabinetType convertToEntity(CabinetTypeDto dto) {
         CabinetType cabinet = new CabinetType();
         cabinet.setName(dto.getName());
-        cabinet.setBasePrice(dto.getBasePrice());
-        cabinet.setMrp(dto.getMrp());
-        cabinet.setDiscountPercentage(dto.getDiscountPercentage());
+        cabinet.setFixedPrice(dto.getFixedPrice());
         cabinet.setActive(dto.getActive() != null ? dto.getActive() : true);
 
         // Set relationships
@@ -185,9 +180,7 @@ public class CabinetServiceImpl implements CabinetService {
 
     private void updateEntityFromDto(CabinetType cabinet, CabinetTypeDto dto) {
         cabinet.setName(dto.getName());
-        cabinet.setBasePrice(dto.getBasePrice());
-        cabinet.setMrp(dto.getMrp());
-        cabinet.setDiscountPercentage(dto.getDiscountPercentage());
+        cabinet.setFixedPrice(dto.getFixedPrice());
         cabinet.setActive(dto.getActive());
 
         // Update relationships

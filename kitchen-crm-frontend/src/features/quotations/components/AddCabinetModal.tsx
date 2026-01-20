@@ -79,7 +79,8 @@ export function AddCabinetModal({
   };
 
   const surfaceArea = calculateCabinetSurfaceArea();
-  const cabinetPrice = surfaceArea * (cabinet.basePrice || 0) * quantity;
+  // Cabinet uses flat pricing (fixedPrice × quantity), not sqft-based
+  const cabinetPrice = (cabinet.fixedPrice || 0) * quantity;
 
   const selectedDoor = availableDoors.find(d => d.id === Number(selectedDoorId));
   const doorArea = calculateDoorFaceArea();
@@ -118,7 +119,7 @@ export function AddCabinetModal({
         <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-background-700 rounded-lg border border-background-600">
           <div className="text-text-900 font-semibold text-base sm:text-lg">{cabinet.name}</div>
           <div className="text-text-700 mt-1 text-sm sm:text-base">
-            Base Price: ₹{cabinet.basePrice?.toLocaleString('en-IN')}/sqft
+            Fixed Price: ₹{cabinet.fixedPrice?.toLocaleString('en-IN')}
           </div>
           {cabinet.categoryName && (
             <div className="text-text-600 text-xs sm:text-sm mt-1">Category: {cabinet.categoryName}</div>
@@ -168,13 +169,17 @@ export function AddCabinetModal({
         </div>
 
         {/* Calculated Cabinet Price */}
-        {surfaceArea > 0 && (
+        {quantity > 0 && (
           <div className="mb-4 sm:mb-6 p-2 sm:p-3 bg-primary-900/10 border border-primary-700/30 rounded-lg">
             <div className="text-text-800 text-xs sm:text-sm">Cabinet Calculation:</div>
             <div className="text-text-900 font-semibold mt-1 text-xs sm:text-sm">
-              {surfaceArea.toFixed(2)} sqft × ₹{cabinet.basePrice?.toLocaleString('en-IN')} × {quantity} = ₹
-              {cabinetPrice.toFixed(2)}
+              ₹{cabinet.fixedPrice?.toLocaleString('en-IN')} × {quantity} = ₹{cabinetPrice.toFixed(2)}
             </div>
+            {surfaceArea > 0 && (
+              <div className="text-text-600 text-xs mt-1">
+                Surface Area: {surfaceArea.toFixed(2)} sqft (for reference)
+              </div>
+            )}
           </div>
         )}
 
@@ -220,7 +225,7 @@ export function AddCabinetModal({
         )}
 
         {/* Total Preview */}
-        {surfaceArea > 0 && (
+        {quantity > 0 && (
           <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-background-800 border-2 border-primary-700 rounded-lg">
             <div className="text-text-800 text-xs sm:text-sm">Estimated Total (before margin & tax):</div>
             <div className="text-text-900 font-bold text-lg sm:text-xl mt-1">

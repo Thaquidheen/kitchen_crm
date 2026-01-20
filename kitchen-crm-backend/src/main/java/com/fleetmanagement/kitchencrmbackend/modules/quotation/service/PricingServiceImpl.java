@@ -198,41 +198,40 @@ public class PricingServiceImpl implements PricingService {
     }
     @Override
     public void calculateCabinetLineTotal(QuotationCabinet cabinet, BigDecimal marginPercentage, BigDecimal taxPercentage) {
-        // Calculate surface area from dimensions using Excel formula
+        // Calculate surface area from dimensions using Excel formula (for reference/display)
         BigDecimal surfaceArea = calculateCabinetSurfaceArea(
-            cabinet.getWidthMm(), 
-            cabinet.getHeightMm(), 
+            cabinet.getWidthMm(),
+            cabinet.getHeightMm(),
             cabinet.getDepthMm()
         );
-        
-        // Store calculated square footage
+
+        // Store calculated square footage for reference
         cabinet.setCalculatedSqft(surfaceArea);
-        
-        // Get base price from cabinet type (₹ per sqft)
-        BigDecimal basePrice = BigDecimal.ZERO;
-        if (cabinet.getCabinetType() != null && cabinet.getCabinetType().getBasePrice() != null) {
-            basePrice = cabinet.getCabinetType().getBasePrice();
+
+        // Get fixed price from cabinet type (flat price per cabinet)
+        BigDecimal fixedPrice = BigDecimal.ZERO;
+        if (cabinet.getCabinetType() != null && cabinet.getCabinetType().getFixedPrice() != null) {
+            fixedPrice = cabinet.getCabinetType().getFixedPrice();
         }
-        
-        // Calculate base amount: surfaceArea × basePrice × quantity
-        BigDecimal baseAmount = surfaceArea
-            .multiply(basePrice)
+
+        // Calculate base amount: fixedPrice × quantity (flat pricing, not sqft-based)
+        BigDecimal baseAmount = fixedPrice
             .multiply(BigDecimal.valueOf(cabinet.getQuantity() != null ? cabinet.getQuantity() : 1));
-        
+
         // Calculate margin
         BigDecimal marginAmount = calculateMarginAmount(baseAmount, marginPercentage);
-        
+
         // Calculate amount with margin
         BigDecimal amountWithMargin = baseAmount.add(marginAmount);
-        
+
         // Calculate tax on amount with margin
         BigDecimal taxAmount = calculateTaxAmount(amountWithMargin, taxPercentage);
-        
+
         // Calculate final total
         BigDecimal totalPrice = amountWithMargin.add(taxAmount);
-        
+
         // Set unit price and total price
-        cabinet.setUnitPrice(basePrice);
+        cabinet.setUnitPrice(fixedPrice);
         cabinet.setTotalPrice(totalPrice);
     }
     @Override
@@ -387,15 +386,10 @@ public class PricingServiceImpl implements PricingService {
         quotation.setAccessoriesFinalTotal(accessoriesTotal);
 
         // 2. CABINETS CATEGORY CALCULATION (use category-specific margin/tax)
+        // Cabinet pricing is flat (fixedPrice × quantity), not sqft-based
         List<QuotationCabinet> cabinets = cabinetRepository.findByQuotationId(quotation.getId());
         BigDecimal cabinetsBase = cabinets.stream()
-                .map(item -> {
-                    if (item.getCalculatedSqft() != null) {
-                        return item.getUnitPrice().multiply(item.getCalculatedSqft()).multiply(BigDecimal.valueOf(item.getQuantity()));
-                    } else {
-                        return item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
-                    }
-                })
+                .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal cabinetsMargin = calculateMarginAmount(cabinetsBase, quotation.getCabinetsMarginPercentage());
@@ -466,15 +460,10 @@ public class PricingServiceImpl implements PricingService {
         kitchen.setAccessoriesFinalTotal(accessoriesTotal);
 
         // 2. CABINETS CATEGORY CALCULATION
+        // Cabinet pricing is flat (fixedPrice × quantity), not sqft-based
         List<QuotationCabinet> cabinets = cabinetRepository.findByKitchenId(kitchen.getId());
         BigDecimal cabinetsBase = cabinets.stream()
-                .map(item -> {
-                    if (item.getCalculatedSqft() != null) {
-                        return item.getUnitPrice().multiply(item.getCalculatedSqft()).multiply(BigDecimal.valueOf(item.getQuantity()));
-                    } else {
-                        return item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
-                    }
-                })
+                .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal cabinetsMargin = calculateMarginAmount(cabinetsBase, quotation.getCabinetsMarginPercentage());

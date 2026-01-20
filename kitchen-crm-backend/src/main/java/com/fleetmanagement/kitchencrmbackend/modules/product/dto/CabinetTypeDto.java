@@ -31,18 +31,9 @@ public class CabinetTypeDto {
     private Long materialId;
     private String materialName;
 
-    @NotNull(message = "Base price is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Base price must be greater than 0")
-    private BigDecimal basePrice;
-
-    @NotNull(message = "MRP is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "MRP must be greater than 0")
-    private BigDecimal mrp;
-
-    @DecimalMin(value = "0.0", message = "Discount percentage cannot be negative")
-    private BigDecimal discountPercentage = BigDecimal.ZERO;
-
-    private BigDecimal companyPrice;
+    @NotNull(message = "Fixed price is required")
+    @DecimalMin(value = "0.0", inclusive = true, message = "Fixed price cannot be negative")
+    private BigDecimal fixedPrice;
 
     private Boolean active = true;
 
