@@ -243,7 +243,7 @@ export function AddCabinetModal({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="flex items-center">
             <Checkbox
-              label={`Include Standard Accessories (BLUM) - ₹${BLUM_ACCESSORIES_COST.toLocaleString('en-IN')}`}
+              label={`Fixed Price - ₹${BLUM_ACCESSORIES_COST.toLocaleString('en-IN')}`}
               checked={includeAccessories}
               onChange={(e) => setIncludeAccessories(e.target.checked)}
             />
