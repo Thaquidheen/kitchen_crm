@@ -129,7 +129,8 @@ export function QuotationBuilderPage() {
         id: a.accessoryId || a.id,
         quantity: a.quantity,
         unitPrice: Number(a.unitPrice || 0),
-        totalPrice: Number(a.totalPrice || 0),
+        // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
+        totalPrice: Number(a.unitPrice || 0) * (a.quantity || 1),
         name: a.description || a.accessoryName || 'Accessory',
         description: a.description || a.accessoryName || 'Accessory',
         price: Number(a.unitPrice || 0),
@@ -143,7 +144,8 @@ export function QuotationBuilderPage() {
         customDimensions: c.customDimensions,
         quantity: c.quantity,
         unitPrice: Number(c.unitPrice || 0),
-        totalPrice: Number(c.totalPrice || 0),
+        // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
+        totalPrice: Number(c.unitPrice || 0) * (c.quantity || 1),
         cabinetTypeName: c.cabinetType?.name || c.description || 'Cabinet',
         description: c.description || `${c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.heightMm}×${c.depthMm}mm)`,
         // Material, lighting, and accessories fields
@@ -160,7 +162,8 @@ export function QuotationBuilderPage() {
         customDimensions: d.customDimensions,
         quantity: d.quantity,
         unitPrice: Number(d.unitPrice || 0),
-        totalPrice: Number(d.totalPrice || 0),
+        // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
+        totalPrice: Number(d.unitPrice || 0) * (d.quantity || 1),
         doorTypeName: d.doorType?.name || d.description || 'Door',
         description: d.description || `${d.doorType?.name || 'Door'} (${d.widthMm}×${d.heightMm}mm)`,
       })),
@@ -185,7 +188,8 @@ export function QuotationBuilderPage() {
           id: a.accessoryId || a.id,
           quantity: a.quantity,
           unitPrice: Number(a.unitPrice || 0),
-          totalPrice: Number(a.totalPrice || 0),
+          // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
+          totalPrice: Number(a.unitPrice || 0) * (a.quantity || 1),
           name: a.description || a.accessoryName || 'Accessory',
           description: a.description || a.accessoryName || 'Accessory',
           price: Number(a.unitPrice || 0),
@@ -199,7 +203,8 @@ export function QuotationBuilderPage() {
           customDimensions: c.customDimensions,
           quantity: c.quantity,
           unitPrice: Number(c.unitPrice || 0),
-          totalPrice: Number(c.totalPrice || 0),
+          // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
+          totalPrice: Number(c.unitPrice || 0) * (c.quantity || 1),
           cabinetTypeName: c.cabinetType?.name || c.description || 'Cabinet',
           description: c.description || `${c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.heightMm}×${c.depthMm}mm)`,
           // Material, lighting, and accessories fields
@@ -216,7 +221,8 @@ export function QuotationBuilderPage() {
           customDimensions: d.customDimensions,
           quantity: d.quantity,
           unitPrice: Number(d.unitPrice || 0),
-          totalPrice: Number(d.totalPrice || 0),
+          // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
+          totalPrice: Number(d.unitPrice || 0) * (d.quantity || 1),
           doorTypeName: d.doorType?.name || d.description || 'Door',
           description: d.description || `${d.doorType?.name || 'Door'} (${d.widthMm}×${d.heightMm}mm)`,
         })),
@@ -227,7 +233,8 @@ export function QuotationBuilderPage() {
             id: l.itemId || l.id,
             quantity: l.quantity,
             unitPrice: Number(l.unitPrice || 0),
-            totalPrice: Number(l.totalPrice || 0),
+            // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
+            totalPrice: Number(l.unitPrice || 0) * (l.quantity || 1),
             name: displayName,
             description: displayName,
             itemType: itemType,
@@ -245,7 +252,8 @@ export function QuotationBuilderPage() {
           id: l.itemId || l.id,
           quantity: l.quantity,
           unitPrice: Number(l.unitPrice || 0),
-          totalPrice: Number(l.totalPrice || 0),
+          // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
+          totalPrice: Number(l.unitPrice || 0) * (l.quantity || 1),
           name: displayName,
           description: displayName,
           itemType: itemType,

@@ -3,7 +3,7 @@
  * Modal for entering cabinet dimensions with material selection, lighting, and accessories
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Modal, ModalBody, ModalFooter } from '../../../components/ui/Modal';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
@@ -78,6 +78,20 @@ export function AddCabinetModal({
   const [selectedMaterialId, setSelectedMaterialId] = useState<number | string>('');
   const [includeAccessories, setIncludeAccessories] = useState<boolean>(true);
   const [includeLighting, setIncludeLighting] = useState<boolean>(true);
+
+  // Refs for Enter key navigation
+  const widthRef = useRef<HTMLInputElement>(null);
+  const depthRef = useRef<HTMLInputElement>(null);
+  const heightRef = useRef<HTMLInputElement>(null);
+  const quantityRef = useRef<HTMLInputElement>(null);
+
+  // Handle Enter key to move to next field
+  const handleKeyDown = (e: React.KeyboardEvent, nextRef: React.RefObject<HTMLInputElement | null>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      nextRef.current?.focus();
+    }
+  };
 
   // Fetch active materials
   const { data: materials = [], isLoading: materialsLoading } = useGetActiveMaterialsQuery();
@@ -208,40 +222,47 @@ export function AddCabinetModal({
           )}
         </div>
 
-        {/* Dimension Inputs */}
+        {/* Dimension Inputs - Order: Width, Depth, Height */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <Input
+            ref={widthRef}
             label="Width (mm) *"
             type="number"
             value={widthMm || ''}
             onChange={(e) => setWidthMm(Number(e.target.value))}
+            onKeyDown={(e) => handleKeyDown(e, depthRef)}
             placeholder="e.g., 600"
             min={100}
             max={5000}
           />
           <Input
-            label="Height (mm) *"
-            type="number"
-            value={heightMm || ''}
-            onChange={(e) => setHeightMm(Number(e.target.value))}
-            placeholder="e.g., 800"
-            min={100}
-            max={3000}
-          />
-          <Input
+            ref={depthRef}
             label="Depth (mm) *"
             type="number"
             value={depthMm || ''}
             onChange={(e) => setDepthMm(Number(e.target.value))}
+            onKeyDown={(e) => handleKeyDown(e, heightRef)}
             placeholder="e.g., 550"
             min={100}
             max={1000}
+          />
+          <Input
+            ref={heightRef}
+            label="Height (mm) *"
+            type="number"
+            value={heightMm || ''}
+            onChange={(e) => setHeightMm(Number(e.target.value))}
+            onKeyDown={(e) => handleKeyDown(e, quantityRef)}
+            placeholder="e.g., 800"
+            min={100}
+            max={3000}
           />
         </div>
 
         {/* Quantity and Material Selection */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <Input
+            ref={quantityRef}
             label="Quantity"
             type="number"
             value={quantity}
