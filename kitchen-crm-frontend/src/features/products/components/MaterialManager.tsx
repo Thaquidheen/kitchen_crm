@@ -45,8 +45,12 @@ export const MaterialManager: React.FC = () => {
     }
 
     try {
-      await deleteMaterial(id).unwrap();
-      toast.success('Material deleted successfully');
+      const response = await deleteMaterial(id).unwrap();
+      if (response.success === false) {
+        toast.error(response.message || 'Failed to delete material');
+      } else {
+        toast.success('Material deleted successfully');
+      }
     } catch (e: any) {
       toast.error(e?.data?.message || 'Failed to delete material');
     }
