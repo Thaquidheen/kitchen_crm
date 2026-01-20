@@ -1,6 +1,6 @@
 /**
  * AddCabinetModal Component
- * Modal for entering cabinet dimensions and optionally adding a related door
+ * Modal for entering cabinet dimensions with material selection, lighting, and accessories
  */
 
 import { useState, useEffect } from 'react';
@@ -9,7 +9,11 @@ import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import { Select } from '../../../components/ui/Select';
-import type { CabinetType, DoorType } from '../../products/types';
+import type { CabinetType, DoorType, Material } from '../../products/types';
+import { useGetActiveMaterialsQuery } from '../../products/productsAPI';
+
+// Fixed cost for BLUM standard accessories
+const BLUM_ACCESSORIES_COST = 3000;
 
 export interface CabinetWithDimensions {
   cabinetTypeId: number;
@@ -18,14 +22,22 @@ export interface CabinetWithDimensions {
   heightMm: number;
   depthMm: number;
   quantity: number;
-  surfaceArea?: number; // Add this for price calculation
+  surfaceArea?: number;
+  // Material selection for sqft-based pricing
+  materialId?: number;
+  materialName?: string;
+  materialRate?: number;
+  // Lighting cost (Width mm × 2)
+  lightingCost?: number;
+  // Accessories cost (BLUM standard accessories)
+  accessoriesCost?: number;
   linkedDoor?: {
     doorTypeId: number;
     doorType?: DoorType;
     widthMm: number;
     heightMm: number;
     quantity: number;
-    faceArea?: number; // Add this for price calculation
+    faceArea?: number;
   };
 }
 
@@ -51,6 +63,14 @@ export function AddCabinetModal({
   const [addDoor, setAddDoor] = useState<boolean>(false);
   const [selectedDoorId, setSelectedDoorId] = useState<number | string>('');
 
+  // New state for material, lighting, and accessories
+  const [selectedMaterialId, setSelectedMaterialId] = useState<number | string>('');
+  const [includeAccessories, setIncludeAccessories] = useState<boolean>(true);
+  const [includeLighting, setIncludeLighting] = useState<boolean>(true);
+
+  // Fetch active materials
+  const { data: materials = [], isLoading: materialsLoading } = useGetActiveMaterialsQuery();
+
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -60,6 +80,9 @@ export function AddCabinetModal({
       setQuantity(1);
       setAddDoor(false);
       setSelectedDoorId('');
+      setSelectedMaterialId('');
+      setIncludeAccessories(true);
+      setIncludeLighting(true);
     }
   }, [isOpen]);
 
@@ -78,15 +101,35 @@ export function AddCabinetModal({
     return (widthMm / 304) * (heightMm / 304);
   };
 
-  const surfaceArea = calculateCabinetSurfaceArea();
-  // Cabinet uses flat pricing (fixedPrice × quantity), not sqft-based
-  const cabinetPrice = (cabinet.fixedPrice || 0) * quantity;
+  // Get selected material
+  const selectedMaterial = materials.find(m => m.id === Number(selectedMaterialId));
+  const materialRate = selectedMaterial?.unitRatePerSqft || 0;
 
+  // Calculate surface area
+  const surfaceArea = calculateCabinetSurfaceArea();
+
+  // Calculate cabinet price: surfaceArea × materialRate
+  const cabinetPrice = surfaceArea * materialRate;
+
+  // Calculate lighting cost: Width (mm) × 2
+  const lightingCost = includeLighting ? widthMm * 2 : 0;
+
+  // Accessories cost (fixed BLUM accessories)
+  const accessoriesCost = includeAccessories ? BLUM_ACCESSORIES_COST : 0;
+
+  // Per-unit total
+  const perUnitTotal = cabinetPrice + lightingCost + accessoriesCost;
+
+  // Total cabinet price (with quantity)
+  const totalCabinetPrice = perUnitTotal * quantity;
+
+  // Door calculations
   const selectedDoor = availableDoors.find(d => d.id === Number(selectedDoorId));
   const doorArea = calculateDoorFaceArea();
   const doorPrice = selectedDoor ? doorArea * (selectedDoor.companyPrice || 0) * quantity : 0;
 
-  const isValid = widthMm > 0 && heightMm > 0 && depthMm > 0 && quantity > 0;
+  // Validation
+  const isValid = widthMm > 0 && heightMm > 0 && depthMm > 0 && quantity > 0 && selectedMaterialId;
   const isDoorValid = !addDoor || (addDoor && selectedDoorId);
 
   const handleAdd = () => {
@@ -99,14 +142,19 @@ export function AddCabinetModal({
       heightMm,
       depthMm,
       quantity,
-      surfaceArea, // Pass calculated surface area
+      surfaceArea,
+      materialId: selectedMaterial?.id,
+      materialName: selectedMaterial?.name,
+      materialRate: materialRate,
+      lightingCost: includeLighting ? lightingCost : 0,
+      accessoriesCost: includeAccessories ? accessoriesCost : 0,
       linkedDoor: addDoor && selectedDoor ? {
         doorTypeId: selectedDoor.id,
         doorType: selectedDoor,
         widthMm,
         heightMm,
         quantity,
-        faceArea: doorArea, // Pass calculated face area
+        faceArea: doorArea,
       } : undefined,
     });
     onClose();
@@ -118,9 +166,6 @@ export function AddCabinetModal({
         {/* Cabinet Info */}
         <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-background-700 rounded-lg border border-background-600">
           <div className="text-text-900 font-semibold text-base sm:text-lg">{cabinet.name}</div>
-          <div className="text-text-700 mt-1 text-sm sm:text-base">
-            Fixed Price: ₹{cabinet.fixedPrice?.toLocaleString('en-IN')}
-          </div>
           {cabinet.categoryName && (
             <div className="text-text-600 text-xs sm:text-sm mt-1">Category: {cabinet.categoryName}</div>
           )}
@@ -157,7 +202,8 @@ export function AddCabinetModal({
           />
         </div>
 
-        <div className="mb-6">
+        {/* Quantity and Material Selection */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <Input
             label="Quantity"
             type="number"
@@ -166,20 +212,101 @@ export function AddCabinetModal({
             placeholder="1"
             min={1}
           />
+          <Select
+            label="Material *"
+            value={selectedMaterialId}
+            onChange={(e) => setSelectedMaterialId(e.target.value)}
+            placeholder="Select Material"
+            disabled={materialsLoading}
+          >
+            {materials.map((material) => (
+              <option key={material.id} value={material.id}>
+                {material.name} - ₹{material.unitRatePerSqft?.toLocaleString('en-IN')}/sqft
+              </option>
+            ))}
+          </Select>
         </div>
 
-        {/* Calculated Cabinet Price */}
-        {quantity > 0 && (
-          <div className="mb-4 sm:mb-6 p-2 sm:p-3 bg-primary-900/10 border border-primary-700/30 rounded-lg">
-            <div className="text-text-800 text-xs sm:text-sm">Cabinet Calculation:</div>
-            <div className="text-text-900 font-semibold mt-1 text-xs sm:text-sm">
-              ₹{cabinet.fixedPrice?.toLocaleString('en-IN')} × {quantity} = ₹{cabinetPrice.toFixed(2)}
+        {/* Accessories and Lighting Options */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="flex items-center">
+            <Checkbox
+              label={`Include Standard Accessories (BLUM) - ₹${BLUM_ACCESSORIES_COST.toLocaleString('en-IN')}`}
+              checked={includeAccessories}
+              onChange={(e) => setIncludeAccessories(e.target.checked)}
+            />
+          </div>
+          <div className="flex items-center">
+            <Checkbox
+              label="Include Lighting"
+              checked={includeLighting}
+              onChange={(e) => setIncludeLighting(e.target.checked)}
+            />
+          </div>
+        </div>
+
+        {/* Pricing Breakdown */}
+        {widthMm > 0 && heightMm > 0 && depthMm > 0 && selectedMaterialId && (
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-primary-900/10 border border-primary-700/30 rounded-lg">
+            <div className="text-text-800 text-sm font-semibold mb-3 border-b border-primary-700/30 pb-2">
+              PRICING BREAKDOWN
             </div>
-            {surfaceArea > 0 && (
-              <div className="text-text-600 text-xs mt-1">
-                Surface Area: {surfaceArea.toFixed(2)} sqft (for reference)
+
+            {/* Surface Area */}
+            <div className="flex justify-between text-xs sm:text-sm mb-2">
+              <span className="text-text-600">Cabinet SQFT:</span>
+              <span className="text-text-900 font-medium">{surfaceArea.toFixed(2)} sqft</span>
+            </div>
+
+            {/* Material Rate */}
+            <div className="flex justify-between text-xs sm:text-sm mb-2">
+              <span className="text-text-600">Material Rate ({selectedMaterial?.name}):</span>
+              <span className="text-text-900 font-medium">₹{materialRate.toLocaleString('en-IN')}/sqft</span>
+            </div>
+
+            {/* Cabinet Price */}
+            <div className="flex justify-between text-xs sm:text-sm mb-2">
+              <span className="text-text-600">Cabinet Price:</span>
+              <span className="text-text-900 font-medium">
+                {surfaceArea.toFixed(2)} × ₹{materialRate.toLocaleString('en-IN')} = ₹{cabinetPrice.toFixed(2)}
+              </span>
+            </div>
+
+            {/* Accessories */}
+            {includeAccessories && (
+              <div className="flex justify-between text-xs sm:text-sm mb-2">
+                <span className="text-text-600">Standard Accessories (BLUM):</span>
+                <span className="text-text-900 font-medium">₹{accessoriesCost.toLocaleString('en-IN')}</span>
               </div>
             )}
+
+            {/* Lighting */}
+            {includeLighting && (
+              <div className="flex justify-between text-xs sm:text-sm mb-2">
+                <span className="text-text-600">Lightings ({widthMm} × 2):</span>
+                <span className="text-text-900 font-medium">₹{lightingCost.toLocaleString('en-IN')}</span>
+              </div>
+            )}
+
+            {/* Per Unit Total */}
+            <div className="flex justify-between text-xs sm:text-sm mb-2 pt-2 border-t border-primary-700/30">
+              <span className="text-text-600">Per Unit Total:</span>
+              <span className="text-text-900 font-medium">₹{perUnitTotal.toFixed(2)}</span>
+            </div>
+
+            {/* Quantity multiplier */}
+            {quantity > 1 && (
+              <div className="flex justify-between text-xs sm:text-sm mb-2">
+                <span className="text-text-600">Quantity:</span>
+                <span className="text-text-900 font-medium">× {quantity}</span>
+              </div>
+            )}
+
+            {/* Subtotal */}
+            <div className="flex justify-between text-sm sm:text-base pt-2 border-t border-primary-700/30 mt-2">
+              <span className="text-text-800 font-semibold">SUBTOTAL (Cabinet):</span>
+              <span className="text-success font-bold">₹{totalCabinetPrice.toFixed(2)}</span>
+            </div>
           </div>
         )}
 
@@ -225,11 +352,11 @@ export function AddCabinetModal({
         )}
 
         {/* Total Preview */}
-        {quantity > 0 && (
+        {widthMm > 0 && heightMm > 0 && depthMm > 0 && selectedMaterialId && quantity > 0 && (
           <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-background-800 border-2 border-primary-700 rounded-lg">
             <div className="text-text-800 text-xs sm:text-sm">Estimated Total (before margin & tax):</div>
             <div className="text-text-900 font-bold text-lg sm:text-xl mt-1">
-              ₹{(cabinetPrice + doorPrice).toFixed(2)}
+              ₹{(totalCabinetPrice + doorPrice).toFixed(2)}
             </div>
           </div>
         )}
@@ -252,4 +379,3 @@ export function AddCabinetModal({
 }
 
 export default AddCabinetModal;
-

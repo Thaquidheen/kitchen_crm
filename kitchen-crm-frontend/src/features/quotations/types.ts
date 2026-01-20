@@ -51,6 +51,13 @@ export interface QuotationCabinet extends QuotationLineItem {
   cabinetFinish?: string;
   customDimensions?: boolean;
   kitchenId?: number; // Reference to quotation_kitchens
+  // Material selection for sqft-based pricing
+  materialId?: number;
+  materialRate?: number;
+  // Lighting cost (Width mm × 2)
+  lightingCost?: number;
+  // Accessories cost (BLUM standard accessories)
+  accessoriesCost?: number;
 }
 
 // Door line item

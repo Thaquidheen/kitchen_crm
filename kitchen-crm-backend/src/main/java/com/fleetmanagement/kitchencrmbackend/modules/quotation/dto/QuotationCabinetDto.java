@@ -29,6 +29,16 @@ public class QuotationCabinetDto {
     private String cabinetFinish;
     private String description;
     private Boolean customDimensions = false;
-    
+
     private Long kitchenId;           // Reference to quotation_kitchens (nullable for backward compatibility)
+
+    // Material selection for sqft-based pricing
+    private Long materialId;
+    private BigDecimal materialRate;
+
+    // Lighting cost = Width (mm) x 2
+    private BigDecimal lightingCost;
+
+    // Accessories cost (BLUM standard accessories)
+    private BigDecimal accessoriesCost;
 }

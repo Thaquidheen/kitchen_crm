@@ -134,6 +134,11 @@ export function QuotationBuilderPage() {
         totalPrice: Number(c.totalPrice || 0),
         cabinetTypeName: c.cabinetType?.name || c.description || 'Cabinet',
         description: c.description || `${c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.heightMm}×${c.depthMm}mm)`,
+        // Material, lighting, and accessories fields
+        materialId: c.materialId,
+        materialRate: c.materialRate,
+        lightingCost: c.lightingCost,
+        accessoriesCost: c.accessoriesCost,
       })),
       doors: (existingQuotation.doors || []).map((d: any) => ({
         doorTypeId: d.doorTypeId || d.id,
@@ -185,6 +190,11 @@ export function QuotationBuilderPage() {
           totalPrice: Number(c.totalPrice || 0),
           cabinetTypeName: c.cabinetType?.name || c.description || 'Cabinet',
           description: c.description || `${c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.heightMm}×${c.depthMm}mm)`,
+          // Material, lighting, and accessories fields
+          materialId: c.materialId,
+          materialRate: c.materialRate,
+          lightingCost: c.lightingCost,
+          accessoriesCost: c.accessoriesCost,
         })),
         doors: (k.doors || []).map((d: any) => ({
           doorTypeId: d.doorTypeId || d.id,
@@ -334,8 +344,13 @@ export function QuotationBuilderPage() {
         widthMm: item.widthMm,
         heightMm: item.heightMm,
         depthMm: item.depthMm,
-        calculatedSqft: item.calculatedSqft,
+        calculatedSqft: item.calculatedSqft || item.surfaceArea,
         customDimensions: item.customDimensions,
+        // Material, lighting, and accessories fields
+        materialId: item.materialId,
+        materialRate: item.materialRate,
+        lightingCost: item.lightingCost,
+        accessoriesCost: item.accessoriesCost,
       })) as QuotationCabinet[],
       doors: (formData.doors || []).map((item: any) => ({
         doorTypeId: item.doorTypeId || item.id,
@@ -389,8 +404,13 @@ export function QuotationBuilderPage() {
           widthMm: item.widthMm,
           heightMm: item.heightMm,
           depthMm: item.depthMm,
-          calculatedSqft: item.calculatedSqft,
+          calculatedSqft: item.calculatedSqft || item.surfaceArea,
           customDimensions: item.customDimensions,
+          // Material, lighting, and accessories fields
+          materialId: item.materialId,
+          materialRate: item.materialRate,
+          lightingCost: item.lightingCost,
+          accessoriesCost: item.accessoriesCost,
         })),
         doors: kitchen.doors.map((item: any) => ({
           doorTypeId: item.doorTypeId || item.id,

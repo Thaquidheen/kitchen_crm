@@ -198,24 +198,33 @@ public class PricingServiceImpl implements PricingService {
     }
     @Override
     public void calculateCabinetLineTotal(QuotationCabinet cabinet, BigDecimal marginPercentage, BigDecimal taxPercentage) {
-        // Calculate surface area from dimensions using Excel formula (for reference/display)
+        // Calculate surface area from dimensions using Excel formula
         BigDecimal surfaceArea = calculateCabinetSurfaceArea(
             cabinet.getWidthMm(),
             cabinet.getHeightMm(),
             cabinet.getDepthMm()
         );
 
-        // Store calculated square footage for reference
+        // Store calculated square footage
         cabinet.setCalculatedSqft(surfaceArea);
 
-        // Get fixed price from cabinet type (flat price per cabinet)
-        BigDecimal fixedPrice = BigDecimal.ZERO;
-        if (cabinet.getCabinetType() != null && cabinet.getCabinetType().getFixedPrice() != null) {
-            fixedPrice = cabinet.getCabinetType().getFixedPrice();
-        }
+        // Get material rate (sqft-based pricing)
+        BigDecimal materialRate = cabinet.getMaterialRate() != null ? cabinet.getMaterialRate() : BigDecimal.ZERO;
 
-        // Calculate base amount: fixedPrice × quantity (flat pricing, not sqft-based)
-        BigDecimal baseAmount = fixedPrice
+        // Calculate cabinet price: surfaceArea × materialRate
+        BigDecimal cabinetPrice = surfaceArea.multiply(materialRate);
+
+        // Get lighting cost (Width mm × 2)
+        BigDecimal lightingCost = cabinet.getLightingCost() != null ? cabinet.getLightingCost() : BigDecimal.ZERO;
+
+        // Get accessories cost (fixed BLUM accessories)
+        BigDecimal accessoriesCost = cabinet.getAccessoriesCost() != null ? cabinet.getAccessoriesCost() : BigDecimal.ZERO;
+
+        // Calculate per-unit total: cabinetPrice + lightingCost + accessoriesCost
+        BigDecimal perUnitTotal = cabinetPrice.add(lightingCost).add(accessoriesCost);
+
+        // Calculate base amount: perUnitTotal × quantity
+        BigDecimal baseAmount = perUnitTotal
             .multiply(BigDecimal.valueOf(cabinet.getQuantity() != null ? cabinet.getQuantity() : 1));
 
         // Calculate margin
@@ -230,8 +239,8 @@ public class PricingServiceImpl implements PricingService {
         // Calculate final total
         BigDecimal totalPrice = amountWithMargin.add(taxAmount);
 
-        // Set unit price and total price
-        cabinet.setUnitPrice(fixedPrice);
+        // Set unit price (per unit total before quantity) and total price
+        cabinet.setUnitPrice(perUnitTotal);
         cabinet.setTotalPrice(totalPrice);
     }
     @Override

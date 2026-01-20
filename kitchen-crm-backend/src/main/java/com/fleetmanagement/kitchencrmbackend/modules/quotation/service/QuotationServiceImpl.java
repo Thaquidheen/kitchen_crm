@@ -503,6 +503,12 @@ public class QuotationServiceImpl implements QuotationService {
                 cabinet.setCustomDimensions(cabinetDto.getCustomDimensions() != null && cabinetDto.getCustomDimensions()
                         ? "true" : "false");
 
+                // Set material, lighting, and accessories fields
+                cabinet.setMaterialId(cabinetDto.getMaterialId());
+                cabinet.setMaterialRate(cabinetDto.getMaterialRate());
+                cabinet.setLightingCost(cabinetDto.getLightingCost());
+                cabinet.setAccessoriesCost(cabinetDto.getAccessoriesCost());
+
                 // Set kitchen association if provided
                 if (cabinetDto.getKitchenId() != null) {
                     kitchenRepository.findById(cabinetDto.getKitchenId()).ifPresent(cabinet::setKitchen);
@@ -677,6 +683,12 @@ public class QuotationServiceImpl implements QuotationService {
                 cabinet.setCustomDimensions(cabinetDto.getCustomDimensions() != null && cabinetDto.getCustomDimensions()
                         ? "true" : "false");
 
+                // Set material, lighting, and accessories fields
+                cabinet.setMaterialId(cabinetDto.getMaterialId());
+                cabinet.setMaterialRate(cabinetDto.getMaterialRate());
+                cabinet.setLightingCost(cabinetDto.getLightingCost());
+                cabinet.setAccessoriesCost(cabinetDto.getAccessoriesCost());
+
                 // Populate cabinet type details for proper name display
                 if (cabinetDto.getCabinetTypeId() != null) {
                     populateCabinetItemDetails(cabinet, cabinetDto.getCabinetTypeId());
@@ -772,6 +784,11 @@ public class QuotationServiceImpl implements QuotationService {
             copy.setUnitPrice(original.getUnitPrice());
             copy.setTotalPrice(original.getTotalPrice());
             copy.setCustomDimensions(original.getCustomDimensions());
+            // Copy material, lighting, and accessories fields
+            copy.setMaterialId(original.getMaterialId());
+            copy.setMaterialRate(original.getMaterialRate());
+            copy.setLightingCost(original.getLightingCost());
+            copy.setAccessoriesCost(original.getAccessoriesCost());
             cabinetRepository.save(copy);
         }
 
@@ -1184,6 +1201,12 @@ public class QuotationServiceImpl implements QuotationService {
                 dto.setCabinetTypeName(cabinetType.getName()); // THIS IS KEY FOR PDF NAME DISPLAY
             }
 
+            // Set material, lighting, and accessories fields
+            dto.setMaterialId(cabinet.getMaterialId());
+            dto.setMaterialRate(cabinet.getMaterialRate());
+            dto.setLightingCost(cabinet.getLightingCost());
+            dto.setAccessoriesCost(cabinet.getAccessoriesCost());
+
             // Set kitchen ID if associated
             if (cabinet.getKitchen() != null) {
                 dto.setKitchenId(cabinet.getKitchen().getId());
@@ -1335,6 +1358,12 @@ public class QuotationServiceImpl implements QuotationService {
                 dto.setCabinetTypeId(cabinetType.getId());
                 dto.setCabinetTypeName(cabinetType.getName());
             }
+
+            // Set material, lighting, and accessories fields
+            dto.setMaterialId(cabinet.getMaterialId());
+            dto.setMaterialRate(cabinet.getMaterialRate());
+            dto.setLightingCost(cabinet.getLightingCost());
+            dto.setAccessoriesCost(cabinet.getAccessoriesCost());
 
             return dto;
         }).toList();

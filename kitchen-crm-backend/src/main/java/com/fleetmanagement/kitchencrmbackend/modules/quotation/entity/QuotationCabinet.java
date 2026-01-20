@@ -61,6 +61,21 @@ public class QuotationCabinet extends Auditable {
     @Column(name = "custom_dimensions")
     private String customDimensions;
 
+    // Material selection for sqft-based pricing
+    @Column(name = "material_id")
+    private Long materialId;
+
+    @Column(name = "material_rate", precision = 10, scale = 2)
+    private BigDecimal materialRate;
+
+    // Lighting cost = Width (mm) x 2
+    @Column(name = "lighting_cost", precision = 10, scale = 2)
+    private BigDecimal lightingCost;
+
+    // Accessories cost (BLUM standard accessories)
+    @Column(name = "accessories_cost", precision = 10, scale = 2)
+    private BigDecimal accessoriesCost;
+
     // Calculate base total price (without margin/tax)
     @PrePersist
     @PreUpdate
