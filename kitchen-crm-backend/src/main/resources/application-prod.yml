@@ -7,7 +7,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update  # Temporarily set to update to create missing columns
     show-sql: false
 
   flyway:
