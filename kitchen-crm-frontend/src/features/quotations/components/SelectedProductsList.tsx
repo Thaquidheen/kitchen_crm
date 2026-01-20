@@ -5,6 +5,7 @@
 
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Pencil } from 'lucide-react';
 
 export interface SelectedProductsListProps {
   accessories: Array<{ id?: number; name?: string; description?: string; totalPrice?: number; price?: number }>;
@@ -12,9 +13,10 @@ export interface SelectedProductsListProps {
   doors: Array<{ id?: number; name?: string; doorTypeName?: string; description?: string; widthMm?: number; heightMm?: number; totalPrice?: number; price?: number }>;
   lighting: Array<{ id?: number; name?: string; description?: string; totalPrice?: number; price?: number }>;
   onRemove?: (category: 'accessories' | 'cabinets' | 'doors' | 'lighting', index: number) => void;
+  onEditCabinet?: (index: number) => void;
 }
 
-export function SelectedProductsList({ accessories, cabinets, doors, lighting, onRemove }: SelectedProductsListProps) {
+export function SelectedProductsList({ accessories, cabinets, doors, lighting, onRemove, onEditCabinet }: SelectedProductsListProps) {
   const sections = [
     { label: 'Accessories', key: 'accessories', items: accessories },
     { label: 'Cabinets', key: 'cabinets', items: cabinets },
@@ -48,6 +50,11 @@ export function SelectedProductsList({ accessories, cabinets, doors, lighting, o
                   <div className="flex items-start justify-between gap-2">
                     <span className="flex-1 min-w-0 break-words">{displayName}</span>
                     <span className="ml-2 font-semibold whitespace-nowrap">₹{(i.totalPrice ?? i.price ?? 0).toLocaleString('en-IN')}</span>
+                    {s.key === 'cabinets' && onEditCabinet && (
+                      <Button size="xs" variant="ghost" onClick={() => onEditCabinet(idx)} className="flex-shrink-0" title="Edit">
+                        <Pencil className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </Button>
+                    )}
                     {onRemove && (
                       <Button size="xs" variant="ghost" onClick={() => onRemove(s.key as any, idx)} className="flex-shrink-0">
                         <span className="hidden sm:inline">Remove</span>

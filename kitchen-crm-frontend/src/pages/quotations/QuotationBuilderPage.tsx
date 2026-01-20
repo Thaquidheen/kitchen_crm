@@ -24,11 +24,13 @@ import { KitchenSelector } from '@/features/quotations/components/KitchenSelecto
 import { KitchenScopeForm } from '@/features/quotations/components/KitchenScopeForm';
 import { KitchenPlanImageSelector } from '@/features/quotations/components/KitchenPlanImageSelector';
 import { KitchenProductTabs } from '@/features/quotations/components/KitchenProductTabs';
+import { AddCabinetModal, type CabinetWithDimensions } from '@/features/quotations/components/AddCabinetModal';
 import type { QuotationFormData, CreateQuotationRequest, QuotationAccessory, QuotationCabinet, QuotationDoor, QuotationLighting, QuotationKitchenFormData } from '@/features/quotations/types';
 import toast from 'react-hot-toast';
 import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
 import { useCreateQuotationMutation, useUpdateQuotationMutation, useGetQuotationByIdQuery } from '@/app/baseApi';
 import { useGetMarginsQuery } from '@/services/settingsAPI';
+import { useGetCabinetsQuery, useGetDoorsQuery } from '@/features/products/productsAPI';
 import { useParams } from 'react-router-dom';
 
 type BuilderStep = 'customer' | 'kitchens' | 'products' | 'review';
@@ -44,6 +46,16 @@ export function QuotationBuilderPage() {
 
   // Fetch global margin settings
   const { data: marginsResponse, isLoading: isMarginsLoading } = useGetMarginsQuery();
+
+  // Fetch cabinet and door types for edit modal
+  const { data: cabinetTypes = [] } = useGetCabinetsQuery(undefined);
+  const { data: doorTypes = [] } = useGetDoorsQuery(undefined);
+
+  // Edit cabinet modal state
+  const [editCabinetModalOpen, setEditCabinetModalOpen] = useState(false);
+  const [editingCabinetData, setEditingCabinetData] = useState<CabinetWithDimensions | null>(null);
+  const [editingCabinetIndex, setEditingCabinetIndex] = useState<number | null>(null);
+  const [editingKitchenIndex, setEditingKitchenIndex] = useState<number | null>(null);
 
   const [currentStep, setCurrentStep] = useState<BuilderStep>('customer');
   const [customerKitchenTypes, setCustomerKitchenTypes] = useState<string[]>([]);
@@ -485,6 +497,56 @@ export function QuotationBuilderPage() {
       isValid: errors.length === 0,
       errors,
     };
+  };
+
+  // Handle edit cabinet from SelectedProductsList (kitchen-specific)
+  const handleEditCabinetInKitchen = (kitchenIndex: number, cabinetIndex: number) => {
+    const kitchen = formData.kitchens?.[kitchenIndex];
+    const cabinet = kitchen?.cabinets?.[cabinetIndex];
+    if (cabinet) {
+      setEditingCabinetData(cabinet as CabinetWithDimensions);
+      setEditingCabinetIndex(cabinetIndex);
+      setEditingKitchenIndex(kitchenIndex);
+      setEditCabinetModalOpen(true);
+    }
+  };
+
+  // Handle edit cabinet from SelectedProductsList (global)
+  const handleEditCabinetGlobal = (cabinetIndex: number) => {
+    const cabinet = formData.cabinets?.[cabinetIndex];
+    if (cabinet) {
+      setEditingCabinetData(cabinet as CabinetWithDimensions);
+      setEditingCabinetIndex(cabinetIndex);
+      setEditingKitchenIndex(null);
+      setEditCabinetModalOpen(true);
+    }
+  };
+
+  // Handle cabinet update from edit modal
+  const handleCabinetUpdate = (data: CabinetWithDimensions, editIndex?: number) => {
+    if (editIndex === undefined) return;
+
+    if (editingKitchenIndex !== null) {
+      // Update in kitchen-specific list
+      const updatedKitchens = [...(formData.kitchens || [])];
+      const kitchen = { ...updatedKitchens[editingKitchenIndex] };
+      const cabinets = [...(kitchen.cabinets || [])];
+      cabinets[editIndex] = data;
+      kitchen.cabinets = cabinets;
+      updatedKitchens[editingKitchenIndex] = kitchen;
+      setFormData({ ...formData, kitchens: updatedKitchens });
+    } else {
+      // Update in global list
+      const cabinets = [...(formData.cabinets || [])];
+      cabinets[editIndex] = data;
+      setFormData({ ...formData, cabinets });
+    }
+
+    // Reset edit state
+    setEditCabinetModalOpen(false);
+    setEditingCabinetData(null);
+    setEditingCabinetIndex(null);
+    setEditingKitchenIndex(null);
   };
 
   const handleCustomerSelect = (customerId: number) => {
@@ -1052,6 +1114,7 @@ export function QuotationBuilderPage() {
                         }
                         setFormData({ ...formData, kitchens: updatedKitchens });
                       }}
+                      onEditCabinet={(cabinetIndex) => handleEditCabinetInKitchen(kitchenIndex, cabinetIndex)}
                     />
                   </div>
                 ))}
@@ -1077,11 +1140,30 @@ export function QuotationBuilderPage() {
                   }
                   setFormData(next);
                 }}
+                onEditCabinet={handleEditCabinetGlobal}
               />
             )}
           </Card>
         </div>
       </div>
+
+      {/* Edit Cabinet Modal */}
+      {editCabinetModalOpen && editingCabinetData && editingCabinetIndex !== null && (
+        <AddCabinetModal
+          isOpen={editCabinetModalOpen}
+          onClose={() => {
+            setEditCabinetModalOpen(false);
+            setEditingCabinetData(null);
+            setEditingCabinetIndex(null);
+            setEditingKitchenIndex(null);
+          }}
+          cabinet={cabinetTypes.find((c: any) => c.id === editingCabinetData.cabinetTypeId) || { id: editingCabinetData.cabinetTypeId, name: editingCabinetData.cabinetTypeName || 'Cabinet' } as any}
+          availableDoors={doorTypes}
+          onAdd={handleCabinetUpdate}
+          editData={editingCabinetData}
+          editIndex={editingCabinetIndex}
+        />
+      )}
 
       {/* Unsaved Changes Dialog */}
       <UnsavedChangesDialog

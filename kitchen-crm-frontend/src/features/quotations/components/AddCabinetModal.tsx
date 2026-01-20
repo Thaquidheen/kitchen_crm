@@ -52,7 +52,9 @@ interface AddCabinetModalProps {
   onClose: () => void;
   cabinet: CabinetType;
   availableDoors: DoorType[];
-  onAdd: (data: CabinetWithDimensions) => void;
+  onAdd: (data: CabinetWithDimensions, editIndex?: number) => void;
+  editData?: CabinetWithDimensions;
+  editIndex?: number;
 }
 
 export function AddCabinetModal({
@@ -61,7 +63,10 @@ export function AddCabinetModal({
   cabinet,
   availableDoors,
   onAdd,
+  editData,
+  editIndex,
 }: AddCabinetModalProps) {
+  const isEditing = editIndex !== undefined;
   const [widthMm, setWidthMm] = useState<number>(0);
   const [heightMm, setHeightMm] = useState<number>(0);
   const [depthMm, setDepthMm] = useState<number>(0);
@@ -77,20 +82,40 @@ export function AddCabinetModal({
   // Fetch active materials
   const { data: materials = [], isLoading: materialsLoading } = useGetActiveMaterialsQuery();
 
-  // Reset form when modal opens
+  // Reset form when modal opens, or populate with edit data
   useEffect(() => {
     if (isOpen) {
-      setWidthMm(0);
-      setHeightMm(0);
-      setDepthMm(0);
-      setQuantity(1);
-      setAddDoor(false);
-      setSelectedDoorId('');
-      setSelectedMaterialId('');
-      setIncludeAccessories(true);
-      setIncludeLighting(true);
+      if (editData) {
+        // Populate form with existing cabinet data for editing
+        setWidthMm(editData.widthMm || 0);
+        setHeightMm(editData.heightMm || 0);
+        setDepthMm(editData.depthMm || 0);
+        setQuantity(editData.quantity || 1);
+        setSelectedMaterialId(editData.materialId || '');
+        setIncludeAccessories((editData.accessoriesCost ?? 0) > 0);
+        setIncludeLighting((editData.lightingCost ?? 0) > 0);
+        // Handle linked door
+        if (editData.linkedDoor) {
+          setAddDoor(true);
+          setSelectedDoorId(editData.linkedDoor.doorTypeId || '');
+        } else {
+          setAddDoor(false);
+          setSelectedDoorId('');
+        }
+      } else {
+        // Reset form for new cabinet
+        setWidthMm(0);
+        setHeightMm(0);
+        setDepthMm(0);
+        setQuantity(1);
+        setAddDoor(false);
+        setSelectedDoorId('');
+        setSelectedMaterialId('');
+        setIncludeAccessories(true);
+        setIncludeLighting(true);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, editData]);
 
   // Excel formula: Cabinet surface area = [((W/304)+(H/304))×2×(D/304)] + [(W/304)×(H/304)]
   const calculateCabinetSurfaceArea = () => {
@@ -168,12 +193,12 @@ export function AddCabinetModal({
         quantity,
         faceArea: doorArea,
       } : undefined,
-    });
+    }, editIndex);
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Cabinet to Quotation" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? "Edit Cabinet" : "Add Cabinet to Quotation"} size="lg">
       <ModalBody>
         {/* Cabinet Info */}
         <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-background-700 rounded-lg border border-background-600">
@@ -383,7 +408,7 @@ export function AddCabinetModal({
           onClick={handleAdd}
           disabled={!isValid || !isDoorValid}
         >
-          Add to Quotation
+          {isEditing ? "Update Cabinet" : "Add to Quotation"}
         </Button>
       </ModalFooter>
     </Modal>
