@@ -147,7 +147,7 @@ export const productsAPI = baseApi.injectEndpoints({
     }),
     deleteMaterial: builder.mutation<ApiResponse<string>, number>({
       query: (id) => ({
-        url: API_ENDPOINTS.MATERIALS.BASE,
+        url: API_ENDPOINTS.MATERIALS.BY_ID(id),
         method: 'DELETE',
       }),
       invalidatesTags: [{ type: 'Materials' }],
