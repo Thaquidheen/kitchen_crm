@@ -108,28 +108,31 @@ export function ProductSelector({ selectedProducts, onProductsChange }: ProductS
 
   const handleAdd = (category: 'accessories' | 'cabinets' | 'doors' | 'lighting', item: any) => {
     const next = { ...selectedProducts } as any;
-    
+
     // Handle cabinets with dimensions
     if (category === 'cabinets' && item.cabinetTypeId) {
       const pairId = Date.now() + Math.random();
-      // Calculate estimated price using Excel formula
-      const surfaceArea = item.surfaceArea || 0;
-      const basePrice = item.cabinetType?.basePrice || 0;
-      const estimatedPrice = surfaceArea * basePrice * item.quantity;
-      
+
       const cabinetItem: QuotationCabinet = {
         cabinetTypeId: item.cabinetTypeId,
-        cabinetTypeName: item.cabinetType?.name,
+        cabinetTypeName: item.cabinetTypeName || item.cabinetType?.name,
         brandName: item.cabinetType?.brandName,
-        materialName: item.cabinetType?.materialName,
+        materialName: item.materialName || item.cabinetType?.materialName,
         widthMm: item.widthMm,
         heightMm: item.heightMm,
         depthMm: item.depthMm,
         quantity: item.quantity,
-        unitPrice: item.cabinetType?.basePrice || 0,
-        totalPrice: estimatedPrice, // Use estimated price for display
+        calculatedSqft: item.calculatedSqft || item.surfaceArea,
+        // Use prices from AddCabinetModal (includes material, lighting, accessories)
+        unitPrice: item.unitPrice || 0,
+        totalPrice: item.totalPrice || 0,
         customDimensions: true,
-        description: `${item.cabinetType?.name} (${item.widthMm}×${item.heightMm}×${item.depthMm}mm)`,
+        description: item.description || `${item.cabinetTypeName || item.cabinetType?.name} (${item.widthMm}×${item.heightMm}×${item.depthMm}mm)`,
+        // Material, lighting, and accessories fields
+        materialId: item.materialId,
+        materialRate: item.materialRate,
+        lightingCost: item.lightingCost,
+        accessoriesCost: item.accessoriesCost,
         // @ts-ignore temporary pair id for removal linkage
         _tempPairId: pairId,
       };
