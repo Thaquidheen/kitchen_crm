@@ -13,5 +13,5 @@ ALTER TABLE cabinet_types DROP COLUMN mrp;
 ALTER TABLE cabinet_types DROP COLUMN discount_percentage;
 ALTER TABLE cabinet_types DROP COLUMN company_price;
 
--- Step 4: Make fixed_price NOT NULL after data migration
-ALTER TABLE cabinet_types ALTER COLUMN fixed_price SET NOT NULL;
+-- Step 4: Make fixed_price NOT NULL after data migration (MySQL syntax)
+ALTER TABLE cabinet_types MODIFY COLUMN fixed_price DECIMAL(10,2) NOT NULL DEFAULT 0;
