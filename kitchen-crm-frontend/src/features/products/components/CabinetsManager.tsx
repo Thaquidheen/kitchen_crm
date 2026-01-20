@@ -151,7 +151,7 @@ export const CabinetsManager = () => {
               <div className="bg-background-700 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
                 <div className="flex justify-between items-center">
                   <span className="text-xs sm:text-sm font-medium text-text-700">Fixed Price:</span>
-                  <span className="text-sm sm:text-base font-bold text-success">₹{cabinet.fixedPrice.toLocaleString()}</span>
+                  <span className="text-sm sm:text-base font-bold text-success">₹{(cabinet.fixedPrice ?? 0).toLocaleString()}</span>
                 </div>
               </div>
 
