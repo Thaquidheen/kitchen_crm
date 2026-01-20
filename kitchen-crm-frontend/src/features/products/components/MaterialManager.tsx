@@ -143,6 +143,11 @@ export const MaterialManager: React.FC = () => {
                   <p className="text-xs sm:text-sm text-text-600 line-clamp-2">
                     {material.description || 'No description'}
                   </p>
+                  {material.unitRatePerSqft !== undefined && (
+                    <p className="text-xs sm:text-sm text-primary-400 font-medium mt-1">
+                      Rs. {material.unitRatePerSqft.toFixed(2)}/sqft
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 ml-2 flex-shrink-0">
                   <button

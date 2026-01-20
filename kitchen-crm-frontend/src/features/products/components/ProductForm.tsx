@@ -4,18 +4,19 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import type { BaseEntity } from '../types';
+import type { BaseEntity, Material } from '../types';
 
 const productSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   description: z.string().optional(),
   active: z.boolean(),
+  unitRatePerSqft: z.number().min(0.01, 'Price must be greater than 0').optional(),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
 
 export interface ProductFormProps {
-  initialValues?: Partial<BaseEntity>;
+  initialValues?: Partial<BaseEntity & Material>;
   onSubmit: (values: any) => void;
   onCancel: () => void;
   isLoading?: boolean;
@@ -44,6 +45,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       name: initialValues?.name || '',
       description: initialValues?.description || '',
       active: initialValues?.active ?? true,
+      unitRatePerSqft: initialValues?.unitRatePerSqft || undefined,
     },
   });
 
@@ -96,6 +98,27 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             <p className="text-error text-xs sm:text-sm mt-1">{errors.name.message}</p>
           )}
         </div>
+
+        {/* Price per Sqft (Materials only) */}
+        {entityType === 'material' && (
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1">
+              Price per Sqft (Rs.) <span className="text-error">*</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              className="w-full rounded-md border border-background-600 bg-background-900 text-text-900 p-2 text-sm sm:text-base focus:border-primary-600 focus:outline-none"
+              placeholder="Enter price per square foot"
+              {...register('unitRatePerSqft', { valueAsNumber: true })}
+              disabled={isLoading}
+            />
+            {errors.unitRatePerSqft && (
+              <p className="text-error text-xs sm:text-sm mt-1">{errors.unitRatePerSqft.message}</p>
+            )}
+          </div>
+        )}
 
         {/* Description */}
         <div>

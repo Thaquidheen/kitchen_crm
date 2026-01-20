@@ -17,7 +17,9 @@ export interface BaseEntity {
 
 export interface Category extends BaseEntity {}
 export interface Brand extends BaseEntity {}
-export interface Material extends BaseEntity {}
+export interface Material extends BaseEntity {
+  unitRatePerSqft: number;
+}
 
 export interface CabinetType {
   id: number;
