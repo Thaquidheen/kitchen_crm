@@ -13,15 +13,14 @@ import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 
 export const CabinetsManager = () => {
-  const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingCabinet, setEditingCabinet] = useState<CabinetType | null>(null);
 
   const { data: cabinetsData, isLoading } = useGetCabinetsQuery({
     name: search || undefined,
-    page,
-    size: 20,
+    page: 0,
+    size: 100,
   });
 
   const { data: categoriesResponse } = useGetCategoriesQuery();
