@@ -146,8 +146,8 @@ export function QuotationBuilderPage() {
         unitPrice: Number(c.unitPrice || 0),
         // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
         totalPrice: Number(c.unitPrice || 0) * (c.quantity || 1),
-        cabinetTypeName: c.cabinetType?.name || c.description || 'Cabinet',
-        description: c.description || `${c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.heightMm}×${c.depthMm}mm)`,
+        cabinetTypeName: c.cabinetTypeName || c.cabinetType?.name || c.description || 'Cabinet',
+        description: c.description || `${c.cabinetTypeName || c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.heightMm}×${c.depthMm}mm)`,
         // Material, lighting, and accessories fields
         materialId: c.materialId,
         materialRate: c.materialRate,
@@ -205,8 +205,8 @@ export function QuotationBuilderPage() {
           unitPrice: Number(c.unitPrice || 0),
           // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
           totalPrice: Number(c.unitPrice || 0) * (c.quantity || 1),
-          cabinetTypeName: c.cabinetType?.name || c.description || 'Cabinet',
-          description: c.description || `${c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.heightMm}×${c.depthMm}mm)`,
+          cabinetTypeName: c.cabinetTypeName || c.cabinetType?.name || c.description || 'Cabinet',
+          description: c.description || `${c.cabinetTypeName || c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.heightMm}×${c.depthMm}mm)`,
           // Material, lighting, and accessories fields
           materialId: c.materialId,
           materialRate: c.materialRate,
