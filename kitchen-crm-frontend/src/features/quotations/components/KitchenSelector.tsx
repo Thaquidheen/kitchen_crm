@@ -110,6 +110,7 @@ export function KitchenSelector({ kitchens, onKitchensChange, suggestedKitchenTy
     const elevations = kitchen.elevations || [];
 
     const newElevation: QuotationElevation = {
+      id: Date.now(), // Temporary ID for local state
       name: getNextElevationName(elevations),
       displayOrder: elevations.length,
     };
