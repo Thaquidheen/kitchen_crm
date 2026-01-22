@@ -13,6 +13,7 @@ import type {
   QuotationCabinet,
   QuotationDoor,
   QuotationLighting,
+  QuotationElevation,
 } from '../types';
 
 export interface ProductSelectorProps {
@@ -23,9 +24,10 @@ export interface ProductSelectorProps {
     lighting: QuotationLighting[];
   };
   onProductsChange: (products: Partial<ProductSelectorProps['selectedProducts']>) => void;
+  availableElevations?: QuotationElevation[];
 }
 
-export function ProductSelector({ selectedProducts, onProductsChange }: ProductSelectorProps) {
+export function ProductSelector({ selectedProducts, onProductsChange, availableElevations = [] }: ProductSelectorProps) {
   const [search, setSearch] = useState('');
 
   const tabs = useMemo(
@@ -133,6 +135,9 @@ export function ProductSelector({ selectedProducts, onProductsChange }: ProductS
         materialRate: item.materialRate,
         lightingCost: item.lightingCost,
         accessoriesCost: item.accessoriesCost,
+        // Elevation fields
+        elevationId: item.elevationId,
+        elevationName: item.elevationName,
         // @ts-ignore temporary pair id for removal linkage
         _tempPairId: pairId,
       };
@@ -157,6 +162,9 @@ export function ProductSelector({ selectedProducts, onProductsChange }: ProductS
           totalPrice: estimatedPrice, // Use estimated price for display
           customDimensions: true,
           description: `${item.linkedDoor.doorType?.name} (${item.linkedDoor.widthMm}×${item.linkedDoor.heightMm}mm)`,
+          // Elevation fields (same as linked cabinet)
+          elevationId: item.elevationId,
+          elevationName: item.elevationName,
           // @ts-ignore link to cabinet for removal
           _tempPairId: pairId,
         };
@@ -271,6 +279,7 @@ export function ProductSelector({ selectedProducts, onProductsChange }: ProductS
                 selectedCabinets={selectedProducts.cabinets}
                 selectedDoors={selectedProducts.doors}
                 selectedLighting={selectedProducts.lighting}
+                availableElevations={availableElevations}
               />
             ),
           }))}

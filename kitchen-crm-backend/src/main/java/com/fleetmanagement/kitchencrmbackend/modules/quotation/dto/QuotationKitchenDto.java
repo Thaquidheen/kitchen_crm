@@ -51,6 +51,7 @@ public class QuotationKitchenDto {
     // Related data
     private List<QuotationKitchenPlanImageDto> planImages;
     private List<QuotationKitchenScopeDetailDto> scopeDetails;
+    private List<QuotationElevationDto> elevations;
     private List<QuotationAccessoryDto> accessories;
     private List<QuotationCabinetDto> cabinets;
     private List<QuotationDoorDto> doors;

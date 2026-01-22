@@ -76,6 +76,13 @@ public class QuotationCabinet extends Auditable {
     @Column(name = "accessories_cost", precision = 10, scale = 2)
     private BigDecimal accessoriesCost;
 
+    // Elevation reference
+    @Column(name = "elevation_id")
+    private Long elevationId;
+
+    @Column(name = "elevation_name", length = 100)
+    private String elevationName;
+
     // Calculate base total price (without margin/tax)
     @PrePersist
     @PreUpdate

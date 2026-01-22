@@ -64,6 +64,13 @@ public class QuotationDoor extends Auditable {
     @Column(name = "custom_dimensions")
     private String customDimensions;
 
+    // Elevation reference
+    @Column(name = "elevation_id")
+    private Long elevationId;
+
+    @Column(name = "elevation_name", length = 100)
+    private String elevationName;
+
     // Calculate base total price (without margin/tax)
     @PrePersist
     @PreUpdate

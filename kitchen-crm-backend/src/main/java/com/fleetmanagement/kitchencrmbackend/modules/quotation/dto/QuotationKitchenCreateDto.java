@@ -20,9 +20,12 @@ public class QuotationKitchenCreateDto {
     
     // Scope details
     private List<QuotationKitchenScopeDetailCreateDto> scopeDetails;
-    
+
     // Plan images (references to customer files)
     private List<QuotationKitchenPlanImageCreateDto> planImages;
+
+    // Elevations
+    private List<QuotationElevationCreateDto> elevations;
     
     // Products for this kitchen
     private List<QuotationAccessoryDto> accessories;

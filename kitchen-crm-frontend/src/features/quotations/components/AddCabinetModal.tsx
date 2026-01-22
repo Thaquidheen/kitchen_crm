@@ -10,6 +10,7 @@ import { Button } from '../../../components/ui/Button';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import { Select } from '../../../components/ui/Select';
 import type { CabinetType, DoorType, Material } from '../../products/types';
+import type { QuotationElevation } from '../types';
 import { useGetActiveMaterialsQuery } from '../../products/productsAPI';
 
 export interface CabinetWithDimensions {
@@ -34,6 +35,9 @@ export interface CabinetWithDimensions {
   unitPrice?: number;
   totalPrice?: number;
   description?: string;
+  // Elevation reference
+  elevationId?: number;
+  elevationName?: string;
   linkedDoor?: {
     doorTypeId: number;
     doorType?: DoorType;
@@ -49,6 +53,7 @@ interface AddCabinetModalProps {
   onClose: () => void;
   cabinet: CabinetType;
   availableDoors: DoorType[];
+  availableElevations?: QuotationElevation[];
   onAdd: (data: CabinetWithDimensions, editIndex?: number) => void;
   editData?: CabinetWithDimensions;
   editIndex?: number;
@@ -59,6 +64,7 @@ export function AddCabinetModal({
   onClose,
   cabinet,
   availableDoors,
+  availableElevations = [],
   onAdd,
   editData,
   editIndex,
@@ -71,10 +77,11 @@ export function AddCabinetModal({
   const [addDoor, setAddDoor] = useState<boolean>(false);
   const [selectedDoorId, setSelectedDoorId] = useState<number | string>('');
 
-  // New state for material, lighting, and accessories
+  // New state for material, lighting, accessories, and elevation
   const [selectedMaterialId, setSelectedMaterialId] = useState<number | string>('');
   const [includeAccessories, setIncludeAccessories] = useState<boolean>(true);
   const [includeLighting, setIncludeLighting] = useState<boolean>(true);
+  const [selectedElevationId, setSelectedElevationId] = useState<number | string>('');
 
   // Refs for Enter key navigation
   const widthRef = useRef<HTMLInputElement>(null);
@@ -105,6 +112,7 @@ export function AddCabinetModal({
         setSelectedMaterialId(editData.materialId || '');
         setIncludeAccessories((editData.accessoriesCost ?? 0) > 0);
         setIncludeLighting((editData.lightingCost ?? 0) > 0);
+        setSelectedElevationId(editData.elevationId || '');
         // Handle linked door
         if (editData.linkedDoor) {
           setAddDoor(true);
@@ -124,9 +132,10 @@ export function AddCabinetModal({
         setSelectedMaterialId('');
         setIncludeAccessories(true);
         setIncludeLighting(true);
+        setSelectedElevationId(availableElevations.length > 0 ? availableElevations[0].id || '' : '');
       }
     }
-  }, [isOpen, editData]);
+  }, [isOpen, editData, availableElevations]);
 
   // Excel formula: Cabinet surface area = [((W/304)+(H/304))×2×(D/304)] + [(W/304)×(H/304)]
   const calculateCabinetSurfaceArea = () => {
@@ -170,12 +179,16 @@ export function AddCabinetModal({
   const doorArea = calculateDoorFaceArea();
   const doorPrice = selectedDoor ? doorArea * (selectedDoor.companyPrice || 0) * quantity : 0;
 
-  // Validation
+  // Elevation selection
+  const selectedElevation = availableElevations.find(e => e.id === Number(selectedElevationId));
+
+  // Validation - elevation is required only if elevations are available
   const isValid = widthMm > 0 && heightMm > 0 && depthMm > 0 && quantity > 0 && selectedMaterialId;
   const isDoorValid = !addDoor || (addDoor && selectedDoorId);
+  const isElevationValid = availableElevations.length === 0 || selectedElevationId;
 
   const handleAdd = () => {
-    if (!isValid || !isDoorValid) return;
+    if (!isValid || !isDoorValid || !isElevationValid) return;
 
     onAdd({
       cabinetTypeId: cabinet.id,
@@ -196,6 +209,9 @@ export function AddCabinetModal({
       unitPrice: perUnitTotal,
       totalPrice: totalCabinetPrice,
       description: `${cabinet.name} (${widthMm}×${heightMm}×${depthMm}mm)`,
+      // Elevation
+      elevationId: selectedElevation?.id,
+      elevationName: selectedElevation?.name,
       linkedDoor: addDoor && selectedDoor ? {
         doorTypeId: selectedDoor.id,
         doorType: selectedDoor,
@@ -281,6 +297,24 @@ export function AddCabinetModal({
             ))}
           </Select>
         </div>
+
+        {/* Elevation Selection - Only show if elevations are available */}
+        {availableElevations.length > 0 && (
+          <div className="mb-4">
+            <Select
+              label="Elevation *"
+              value={selectedElevationId}
+              onChange={(e) => setSelectedElevationId(e.target.value)}
+              placeholder="Select Elevation"
+            >
+              {availableElevations.map((elevation) => (
+                <option key={elevation.id || elevation.name} value={elevation.id}>
+                  {elevation.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
 
         {/* Accessories and Lighting Options */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -424,7 +458,7 @@ export function AddCabinetModal({
         <Button
           variant="primary"
           onClick={handleAdd}
-          disabled={!isValid || !isDoorValid}
+          disabled={!isValid || !isDoorValid || !isElevationValid}
         >
           {isEditing ? "Update Cabinet" : "Add to Quotation"}
         </Button>

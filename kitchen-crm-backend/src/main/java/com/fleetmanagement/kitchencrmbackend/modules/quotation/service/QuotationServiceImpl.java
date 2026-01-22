@@ -89,6 +89,9 @@ public class QuotationServiceImpl implements QuotationService {
     private QuotationKitchenScopeDetailRepository kitchenScopeDetailRepository;
 
     @Autowired
+    private QuotationElevationRepository elevationRepository;
+
+    @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerPlanImageRepository customerPlanImageRepository;
 
     @Autowired
@@ -242,6 +245,15 @@ public class QuotationServiceImpl implements QuotationService {
                         pidto.setImageUrl(pi.getImageUrl());
                         pidto.setImageOrder(pi.getImageOrder());
                         return pidto;
+                    }).toList());
+                }
+                // Convert elevations
+                if (k.getElevations() != null) {
+                    kdto.setElevations(k.getElevations().stream().map(el -> {
+                        QuotationElevationCreateDto eldto = new QuotationElevationCreateDto();
+                        eldto.setName(el.getName());
+                        eldto.setDisplayOrder(el.getDisplayOrder());
+                        return eldto;
                     }).toList());
                 }
                 return kdto;
@@ -509,6 +521,10 @@ public class QuotationServiceImpl implements QuotationService {
                 cabinet.setLightingCost(cabinetDto.getLightingCost());
                 cabinet.setAccessoriesCost(cabinetDto.getAccessoriesCost());
 
+                // Set elevation fields
+                cabinet.setElevationId(cabinetDto.getElevationId());
+                cabinet.setElevationName(cabinetDto.getElevationName());
+
                 // Set kitchen association if provided
                 if (cabinetDto.getKitchenId() != null) {
                     kitchenRepository.findById(cabinetDto.getKitchenId()).ifPresent(cabinet::setKitchen);
@@ -537,6 +553,10 @@ public class QuotationServiceImpl implements QuotationService {
                 door.setDoorStyle(doorDto.getDoorStyle());
                 door.setDescription(doorDto.getDescription());
                 door.setCustomDimensions(doorDto.getCustomDimensions() != null ? doorDto.getCustomDimensions().toString() : null);
+
+                // Set elevation fields
+                door.setElevationId(doorDto.getElevationId());
+                door.setElevationName(doorDto.getElevationName());
 
                 // Set kitchen association if provided
                 if (doorDto.getKitchenId() != null) {
@@ -628,7 +648,7 @@ public class QuotationServiceImpl implements QuotationService {
                     planImage.setImageName(planImageDto.getImageName());
                     planImage.setImageUrl(planImageDto.getImageUrl());
                     planImage.setImageOrder(planImageDto.getImageOrder() != null ? planImageDto.getImageOrder() : 0);
-                    
+
                     // Set reference to customer plan image or design phase file
                     if (planImageDto.getCustomerPlanImageId() != null) {
                         customerPlanImageRepository.findById(planImageDto.getCustomerPlanImageId()).ifPresent(planImage::setCustomerPlanImage);
@@ -636,11 +656,22 @@ public class QuotationServiceImpl implements QuotationService {
                     if (planImageDto.getDesignPhaseFileId() != null) {
                         designPhaseFileRepository.findById(planImageDto.getDesignPhaseFileId()).ifPresent(planImage::setDesignPhaseFile);
                     }
-                    
+
                     kitchenPlanImageRepository.save(planImage);
                 }
             }
-            
+
+            // Save elevations
+            if (kitchenDto.getElevations() != null) {
+                for (QuotationElevationCreateDto elevationDto : kitchenDto.getElevations()) {
+                    QuotationElevation elevation = new QuotationElevation();
+                    elevation.setKitchen(savedKitchen);
+                    elevation.setName(elevationDto.getName());
+                    elevation.setDisplayOrder(elevationDto.getDisplayOrder() != null ? elevationDto.getDisplayOrder() : 0);
+                    elevationRepository.save(elevation);
+                }
+            }
+
             // Save products for this kitchen
             saveKitchenProducts(savedKitchen, quotation, kitchenDto);
         }
@@ -689,6 +720,10 @@ public class QuotationServiceImpl implements QuotationService {
                 cabinet.setLightingCost(cabinetDto.getLightingCost());
                 cabinet.setAccessoriesCost(cabinetDto.getAccessoriesCost());
 
+                // Set elevation fields
+                cabinet.setElevationId(cabinetDto.getElevationId());
+                cabinet.setElevationName(cabinetDto.getElevationName());
+
                 // Populate cabinet type details for proper name display
                 if (cabinetDto.getCabinetTypeId() != null) {
                     populateCabinetItemDetails(cabinet, cabinetDto.getCabinetTypeId());
@@ -713,6 +748,10 @@ public class QuotationServiceImpl implements QuotationService {
                 door.setDoorStyle(doorDto.getDoorStyle());
                 door.setDescription(doorDto.getDescription());
                 door.setCustomDimensions(doorDto.getCustomDimensions() != null ? doorDto.getCustomDimensions().toString() : null);
+
+                // Set elevation fields
+                door.setElevationId(doorDto.getElevationId());
+                door.setElevationName(doorDto.getElevationName());
 
                 // Populate door type details
                 if (doorDto.getDoorTypeId() != null) {
@@ -1088,6 +1127,17 @@ public class QuotationServiceImpl implements QuotationService {
                 return sddto;
             }).toList());
             
+            // Load elevations
+            List<QuotationElevation> elevations = elevationRepository.findByKitchenIdOrderByDisplayOrderAsc(kitchen.getId());
+            dto.setElevations(elevations.stream().map(el -> {
+                QuotationElevationDto eldto = new QuotationElevationDto();
+                eldto.setId(el.getId());
+                eldto.setName(el.getName());
+                eldto.setDisplayOrder(el.getDisplayOrder());
+                eldto.setKitchenId(el.getKitchen().getId());
+                return eldto;
+            }).toList());
+
             // Load plan images
             List<QuotationKitchenPlanImage> planImages = kitchenPlanImageRepository.findByKitchenIdOrderByImageOrderAsc(kitchen.getId());
             dto.setPlanImages(planImages.stream().map(pi -> {
@@ -1212,6 +1262,10 @@ public class QuotationServiceImpl implements QuotationService {
                 dto.setKitchenId(cabinet.getKitchen().getId());
             }
 
+            // Set elevation fields
+            dto.setElevationId(cabinet.getElevationId());
+            dto.setElevationName(cabinet.getElevationName());
+
             return dto;
         }).toList();
     }
@@ -1262,6 +1316,10 @@ public class QuotationServiceImpl implements QuotationService {
             if (door.getKitchen() != null) {
                 dto.setKitchenId(door.getKitchen().getId());
             }
+
+            // Set elevation fields
+            dto.setElevationId(door.getElevationId());
+            dto.setElevationName(door.getElevationName());
 
             return dto;
         }).toList();
@@ -1365,6 +1423,10 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setLightingCost(cabinet.getLightingCost());
             dto.setAccessoriesCost(cabinet.getAccessoriesCost());
 
+            // Set elevation fields
+            dto.setElevationId(cabinet.getElevationId());
+            dto.setElevationName(cabinet.getElevationName());
+
             return dto;
         }).toList();
     }
@@ -1396,6 +1458,10 @@ public class QuotationServiceImpl implements QuotationService {
                 dto.setDoorTypeId(doorType.getId());
                 dto.setDoorTypeName(doorType.getName());
             }
+
+            // Set elevation fields
+            dto.setElevationId(door.getElevationId());
+            dto.setElevationName(door.getElevationName());
 
             return dto;
         }).toList();

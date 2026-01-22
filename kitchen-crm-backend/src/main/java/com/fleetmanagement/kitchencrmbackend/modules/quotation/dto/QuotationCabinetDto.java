@@ -41,4 +41,8 @@ public class QuotationCabinetDto {
 
     // Accessories cost (BLUM standard accessories)
     private BigDecimal accessoriesCost;
+
+    // Elevation reference
+    private Long elevationId;
+    private String elevationName;
 }

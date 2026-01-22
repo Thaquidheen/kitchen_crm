@@ -7,8 +7,8 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Plus, Trash2, Edit2, Check, X, Sparkles } from 'lucide-react';
-import type { QuotationKitchenFormData } from '@/features/quotations/types';
+import { Plus, Trash2, Edit2, Check, X, Sparkles, Layers } from 'lucide-react';
+import type { QuotationKitchenFormData, QuotationElevation } from '@/features/quotations/types';
 
 export interface KitchenSelectorProps {
   kitchens: QuotationKitchenFormData[];
@@ -19,6 +19,7 @@ export interface KitchenSelectorProps {
 export function KitchenSelector({ kitchens, onKitchensChange, suggestedKitchenTypes = [] }: KitchenSelectorProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [newKitchenName, setNewKitchenName] = useState('');
+  const [expandedKitchenIndex, setExpandedKitchenIndex] = useState<number | null>(null);
 
   // Helper to add a kitchen with a specific name
   const addKitchenWithName = (name: string) => {
@@ -37,6 +38,7 @@ export function KitchenSelector({ kitchens, onKitchensChange, suggestedKitchenTy
       installationPrice: 0,
       scopeDetails: [],
       planImages: [],
+      elevations: [],
       accessories: [],
       cabinets: [],
       doors: [],
@@ -88,6 +90,59 @@ export function KitchenSelector({ kitchens, onKitchensChange, suggestedKitchenTy
   const handleCancelEdit = () => {
     setEditingIndex(null);
     setNewKitchenName('');
+  };
+
+  // Get next elevation letter (A, B, C, ...)
+  const getNextElevationName = (existingElevations: QuotationElevation[]) => {
+    const usedLetters = new Set(existingElevations.map(e => e.name.replace('Elevation ', '')));
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (const letter of alphabet) {
+      if (!usedLetters.has(letter)) {
+        return `Elevation ${letter}`;
+      }
+    }
+    return `Elevation ${existingElevations.length + 1}`;
+  };
+
+  const handleAddElevation = (kitchenIndex: number) => {
+    const updatedKitchens = [...kitchens];
+    const kitchen = updatedKitchens[kitchenIndex];
+    const elevations = kitchen.elevations || [];
+
+    const newElevation: QuotationElevation = {
+      name: getNextElevationName(elevations),
+      displayOrder: elevations.length,
+    };
+
+    updatedKitchens[kitchenIndex] = {
+      ...kitchen,
+      elevations: [...elevations, newElevation],
+    };
+
+    onKitchensChange(updatedKitchens);
+  };
+
+  const handleRemoveElevation = (kitchenIndex: number, elevationIndex: number) => {
+    const updatedKitchens = [...kitchens];
+    const kitchen = updatedKitchens[kitchenIndex];
+    const elevations = [...(kitchen.elevations || [])];
+
+    elevations.splice(elevationIndex, 1);
+    // Update display order for remaining elevations
+    elevations.forEach((el, idx) => {
+      el.displayOrder = idx;
+    });
+
+    updatedKitchens[kitchenIndex] = {
+      ...kitchen,
+      elevations,
+    };
+
+    onKitchensChange(updatedKitchens);
+  };
+
+  const toggleKitchenExpanded = (index: number) => {
+    setExpandedKitchenIndex(expandedKitchenIndex === index ? null : index);
   };
 
   return (
@@ -176,10 +231,10 @@ export function KitchenSelector({ kitchens, onKitchensChange, suggestedKitchenTy
                       autoFocus
                     />
                   ) : (
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 cursor-pointer" onClick={() => toggleKitchenExpanded(index)}>
                       <div className="font-semibold text-xs sm:text-sm text-text-900 truncate">{kitchen.kitchenName}</div>
                       <div className="text-xs sm:text-sm text-text-600">
-                        {kitchen.scopeDetails.length} scope items • {kitchen.planImages.length} plan images •{' '}
+                        {(kitchen.elevations || []).length} elevations • {kitchen.scopeDetails.length} scope items • {kitchen.planImages.length} plan images •{' '}
                         {kitchen.accessories.length + kitchen.cabinets.length + kitchen.doors.length + kitchen.lighting.length} products
                       </div>
                     </div>
@@ -188,6 +243,15 @@ export function KitchenSelector({ kitchens, onKitchensChange, suggestedKitchenTy
                 <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                   {editingIndex !== index && (
                     <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleKitchenExpanded(index)}
+                        className="p-1 sm:p-2"
+                        title="Manage Elevations"
+                      >
+                        <Layers className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -208,6 +272,51 @@ export function KitchenSelector({ kitchens, onKitchensChange, suggestedKitchenTy
                   )}
                 </div>
               </div>
+
+              {/* Elevations Section - Expanded View */}
+              {expandedKitchenIndex === index && (
+                <div className="mt-3 pt-3 border-t border-background-600">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-sm text-text-700">
+                      <Layers className="h-4 w-4" />
+                      <span className="font-medium">Elevations</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddElevation(index)}
+                      className="text-xs"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Elevation
+                    </Button>
+                  </div>
+
+                  {(kitchen.elevations || []).length === 0 ? (
+                    <p className="text-xs text-text-500 text-center py-2">
+                      No elevations added. Click "Add Elevation" to create Elevation A, B, C, etc.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {(kitchen.elevations || []).map((elevation, elIndex) => (
+                        <div
+                          key={elIndex}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-600/10 border border-primary-600/30 rounded-lg text-sm"
+                        >
+                          <span className="text-primary-400 font-medium">{elevation.name}</span>
+                          <button
+                            onClick={() => handleRemoveElevation(index, elIndex)}
+                            className="text-text-500 hover:text-error transition-colors"
+                            title="Remove elevation"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
           ))}
         </div>

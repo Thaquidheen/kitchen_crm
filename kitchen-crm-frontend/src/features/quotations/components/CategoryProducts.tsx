@@ -20,6 +20,7 @@ import {
 import { AddCabinetModal } from './AddCabinetModal';
 import { AddDoorModal } from './AddDoorModal';
 import type { CabinetType, DoorType } from '../../products/types';
+import type { QuotationElevation } from '../types';
 
 export interface CategoryProductsProps {
   category: 'accessories' | 'cabinets' | 'doors' | 'lighting';
@@ -33,9 +34,11 @@ export interface CategoryProductsProps {
   selectedCabinets?: any[];
   selectedDoors?: any[];
   selectedLighting?: any[];
+  // Available elevations for the current kitchen
+  availableElevations?: QuotationElevation[];
 }
 
-export function CategoryProducts({ category, search, onAdd, getQuantity, onIncrement, onDecrement, selectedAccessories = [], selectedCabinets = [], selectedDoors = [], selectedLighting = [] }: CategoryProductsProps) {
+export function CategoryProducts({ category, search, onAdd, getQuantity, onIncrement, onDecrement, selectedAccessories = [], selectedCabinets = [], selectedDoors = [], selectedLighting = [], availableElevations = [] }: CategoryProductsProps) {
   // Modal state
   const [cabinetModalOpen, setCabinetModalOpen] = useState(false);
   const [doorModalOpen, setDoorModalOpen] = useState(false);
@@ -197,6 +200,7 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
         onClose={() => setCabinetModalOpen(false)}
         cabinet={selectedCabinet}
         availableDoors={doors || []}
+        availableElevations={availableElevations}
         onAdd={(data) => {
           onAdd(data);
           setCabinetModalOpen(false);

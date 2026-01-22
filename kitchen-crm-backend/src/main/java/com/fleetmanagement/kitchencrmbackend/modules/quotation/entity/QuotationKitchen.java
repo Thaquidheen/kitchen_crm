@@ -111,6 +111,9 @@ public class QuotationKitchen extends Auditable {
     @OneToMany(mappedBy = "kitchen", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     private List<QuotationKitchenScopeDetail> scopeDetails = new ArrayList<>();
 
+    @OneToMany(mappedBy = "kitchen", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    private List<QuotationElevation> elevations = new ArrayList<>();
+
     @OneToMany(mappedBy = "kitchen", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<QuotationAccessory> accessories = new ArrayList<>();
 

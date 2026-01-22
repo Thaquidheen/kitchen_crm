@@ -58,6 +58,9 @@ export interface QuotationCabinet extends QuotationLineItem {
   lightingCost?: number;
   // Accessories cost (BLUM standard accessories)
   accessoriesCost?: number;
+  // Elevation reference
+  elevationId?: number;
+  elevationName?: string;
 }
 
 // Door line item
@@ -75,6 +78,9 @@ export interface QuotationDoor extends QuotationLineItem {
   doorStyle?: string;
   customDimensions?: boolean;
   kitchenId?: number; // Reference to quotation_kitchens
+  // Elevation reference
+  elevationId?: number;
+  elevationName?: string;
 }
 
 // Lighting line item
@@ -313,6 +319,14 @@ export interface QuotationKitchenScopeDetail {
   fieldOrder: number;
 }
 
+// Elevation interface
+export interface QuotationElevation {
+  id?: number;
+  name: string;
+  displayOrder: number;
+  kitchenId?: number;
+}
+
 export interface QuotationKitchen {
   id?: number;
   quotationId?: number;
@@ -344,6 +358,7 @@ export interface QuotationKitchen {
   // Related data
   planImages?: QuotationKitchenPlanImage[];
   scopeDetails?: QuotationKitchenScopeDetail[];
+  elevations?: QuotationElevation[];
   accessories?: QuotationAccessory[];
   cabinets?: QuotationCabinet[];
   doors?: QuotationDoor[];
@@ -357,6 +372,7 @@ export interface QuotationKitchenFormData {
   installationPrice: number;
   scopeDetails: QuotationKitchenScopeDetail[];
   planImages: QuotationKitchenPlanImage[];
+  elevations: QuotationElevation[];
   accessories: QuotationAccessory[];
   cabinets: QuotationCabinet[];
   doors: QuotationDoor[];

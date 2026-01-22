@@ -31,4 +31,8 @@ public class QuotationDoorDto {
     private Boolean customDimensions = false;
     
     private Long kitchenId;           // Reference to quotation_kitchens (nullable for backward compatibility)
+
+    // Elevation reference
+    private Long elevationId;
+    private String elevationName;
 }
