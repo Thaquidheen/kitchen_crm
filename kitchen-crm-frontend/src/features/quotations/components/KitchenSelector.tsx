@@ -94,50 +94,44 @@ export function KitchenSelector({ kitchens, onKitchensChange, suggestedKitchenTy
     <div className="space-y-3 sm:space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h3 className="text-base sm:text-lg font-semibold text-text-900">Kitchens</h3>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Input
-            type="text"
-            placeholder="Kitchen name (e.g., OPEN KITCHEN)"
-            value={newKitchenName}
-            onChange={(e) => setNewKitchenName(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter' && editingIndex === null) {
-                handleAddKitchen();
-              }
-            }}
-            className="w-full sm:w-64"
-          />
-          {editingIndex === null ? (
-            <Button variant="primary" size="sm" onClick={handleAddKitchen} className="w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Kitchen
+        {/* Editing controls for renaming */}
+        {editingIndex !== null && (
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input
+              type="text"
+              placeholder="Kitchen name"
+              value={newKitchenName}
+              onChange={(e) => setNewKitchenName(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleRenameKitchen(editingIndex, newKitchenName);
+                }
+              }}
+              className="w-full sm:w-64"
+            />
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => handleRenameKitchen(editingIndex, newKitchenName)}
+              className="w-full sm:w-auto"
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Save
             </Button>
-          ) : (
-            <>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => handleRenameKitchen(editingIndex, newKitchenName)}
-                className="w-full sm:w-auto"
-              >
-                <Check className="h-4 w-4 mr-2" />
-                Save
-              </Button>
-              <Button variant="secondary" size="sm" onClick={handleCancelEdit} className="w-full sm:w-auto">
-                <X className="h-4 w-4 mr-2" />
-                Cancel
-              </Button>
-            </>
-          )}
-        </div>
+            <Button variant="secondary" size="sm" onClick={handleCancelEdit} className="w-full sm:w-auto">
+              <X className="h-4 w-4 mr-2" />
+              Cancel
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Suggested Kitchen Types from Customer */}
+      {/* Kitchen Types from Customer - Click to add */}
       {availableSuggestions.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 p-3 bg-primary-600/10 border border-primary-600/30 rounded-lg">
           <div className="flex items-center gap-2 text-sm text-primary-500">
             <Sparkles className="h-4 w-4" />
-            <span className="font-medium">Customer's kitchen types:</span>
+            <span className="font-medium">Click to add kitchen:</span>
           </div>
           {availableSuggestions.map((type) => (
             <button
@@ -154,7 +148,7 @@ export function KitchenSelector({ kitchens, onKitchensChange, suggestedKitchenTy
 
       {kitchens.length === 0 ? (
         <Card className="p-4 sm:p-6 bg-background-800 border-background-600 text-center">
-          <p className="text-xs sm:text-sm text-text-600">No kitchens added yet. Add your first kitchen above.</p>
+          <p className="text-xs sm:text-sm text-text-600">No kitchens added yet. Click on a kitchen type above to add it.</p>
         </Card>
       ) : (
         <div className="space-y-2 sm:space-y-3">
