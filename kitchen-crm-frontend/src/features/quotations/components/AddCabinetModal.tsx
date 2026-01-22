@@ -12,9 +12,6 @@ import { Select } from '../../../components/ui/Select';
 import type { CabinetType, DoorType, Material } from '../../products/types';
 import { useGetActiveMaterialsQuery } from '../../products/productsAPI';
 
-// Fixed cost for BLUM standard accessories
-const BLUM_ACCESSORIES_COST = 3000;
-
 export interface CabinetWithDimensions {
   cabinetTypeId: number;
   cabinetType?: CabinetType;
@@ -159,8 +156,8 @@ export function AddCabinetModal({
   // Calculate lighting cost: Width (mm) × 2
   const lightingCost = includeLighting ? widthMm * 2 : 0;
 
-  // Accessories cost (fixed BLUM accessories)
-  const accessoriesCost = includeAccessories ? BLUM_ACCESSORIES_COST : 0;
+  // Accessories cost (cabinet's fixed price)
+  const accessoriesCost = includeAccessories ? (cabinet.fixedPrice || 0) : 0;
 
   // Per-unit total
   const perUnitTotal = cabinetPrice + lightingCost + accessoriesCost;
@@ -289,7 +286,7 @@ export function AddCabinetModal({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="flex items-center">
             <Checkbox
-              label={`Fixed Price - ₹${BLUM_ACCESSORIES_COST.toLocaleString('en-IN')}`}
+              label={`Fixed Price - ₹${(cabinet.fixedPrice || 0).toLocaleString('en-IN')}`}
               checked={includeAccessories}
               onChange={(e) => setIncludeAccessories(e.target.checked)}
             />
@@ -330,10 +327,10 @@ export function AddCabinetModal({
               </span>
             </div>
 
-            {/* Accessories */}
+            {/* Fixed Price */}
             {includeAccessories && (
               <div className="flex justify-between text-xs sm:text-sm mb-2">
-                <span className="text-text-600">Standard Accessories (BLUM):</span>
+                <span className="text-text-600">Fixed Price:</span>
                 <span className="text-text-900 font-medium">₹{accessoriesCost.toLocaleString('en-IN')}</span>
               </div>
             )}
