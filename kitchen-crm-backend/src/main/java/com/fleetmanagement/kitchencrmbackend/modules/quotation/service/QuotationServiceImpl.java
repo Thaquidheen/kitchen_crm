@@ -492,6 +492,10 @@ public class QuotationServiceImpl implements QuotationService {
                     kitchenRepository.findById(accessoryDto.getKitchenId()).ifPresent(accessory::setKitchen);
                 }
 
+                // Set elevation fields
+                accessory.setElevationId(accessoryDto.getElevationId());
+                accessory.setElevationName(accessoryDto.getElevationName());
+
                 // IMPORTANT: Populate item details for proper name display
                 if (accessoryDto.getAccessoryId() != null) {
                     populateAccessoryItemDetails(accessory, accessoryDto.getAccessoryId());
@@ -689,6 +693,10 @@ public class QuotationServiceImpl implements QuotationService {
                 accessory.setDescription(accessoryDto.getDescription());
                 accessory.setCustomItem(accessoryDto.getCustomItem());
                 accessory.setCustomItemName(accessoryDto.getCustomItemName());
+
+                // Set elevation fields
+                accessory.setElevationId(accessoryDto.getElevationId());
+                accessory.setElevationName(accessoryDto.getElevationName());
 
                 // Populate item details for proper name display
                 if (accessoryDto.getAccessoryId() != null) {
@@ -1073,6 +1081,10 @@ public class QuotationServiceImpl implements QuotationService {
                 dto.setKitchenId(quotationAccessory.getKitchen().getId());
             }
 
+            // Set elevation fields
+            dto.setElevationId(quotationAccessory.getElevationId());
+            dto.setElevationName(quotationAccessory.getElevationName());
+
             return dto;
         }).toList();
     }
@@ -1386,6 +1398,10 @@ public class QuotationServiceImpl implements QuotationService {
             } else if (quotationAccessory.getCustomItem() != null && quotationAccessory.getCustomItem()) {
                 dto.setAccessoryName(quotationAccessory.getCustomItemName());
             }
+
+            // Set elevation fields
+            dto.setElevationId(quotationAccessory.getElevationId());
+            dto.setElevationName(quotationAccessory.getElevationName());
 
             return dto;
         }).toList();

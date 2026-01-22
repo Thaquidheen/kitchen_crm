@@ -52,6 +52,13 @@ public class QuotationAccessory extends Auditable {
     @Column(name = "custom_item_name")
     private String customItemName;
 
+    // Elevation reference
+    @Column(name = "elevation_id")
+    private Long elevationId;
+
+    @Column(name = "elevation_name", length = 100)
+    private String elevationName;
+
     // Calculate base total price (without margin/tax)
     @PrePersist
     @PreUpdate

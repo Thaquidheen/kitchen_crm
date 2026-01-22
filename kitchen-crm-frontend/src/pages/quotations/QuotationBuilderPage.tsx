@@ -1104,6 +1104,7 @@ export function QuotationBuilderPage() {
                       cabinets={kitchen.cabinets || []}
                       doors={kitchen.doors || []}
                       lighting={kitchen.lighting || []}
+                      availableElevations={kitchen.elevations || []}
                       onRemove={(category, index) => {
                         const updatedKitchens = [...(formData.kitchens || [])];
                         const kitchen = updatedKitchens[kitchenIndex];
@@ -1134,6 +1135,7 @@ export function QuotationBuilderPage() {
                 cabinets={formData.cabinets || []}
                 doors={formData.doors || []}
                 lighting={formData.lighting || []}
+                availableElevations={[]}
                 onRemove={(category, index) => {
                   const next: any = { ...formData };
                   const list = (next[category] || []).slice();

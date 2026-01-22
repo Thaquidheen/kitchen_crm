@@ -106,6 +106,7 @@ export function KitchenProductTabs({
               lighting: kitchen.lighting || [],
             }}
             onProductsChange={(products) => handleKitchenProductsChange(index, products)}
+            availableElevations={kitchen.elevations || []}
           />
         </div>
 

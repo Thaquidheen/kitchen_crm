@@ -34,6 +34,9 @@ export interface QuotationAccessory extends QuotationLineItem {
   color?: string;
   materialCode?: string;
   kitchenId?: number; // Reference to quotation_kitchens
+  // Elevation reference
+  elevationId?: number;
+  elevationName?: string;
 }
 
 // Cabinet line item

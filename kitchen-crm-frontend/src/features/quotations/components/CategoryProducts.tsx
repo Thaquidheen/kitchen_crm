@@ -19,6 +19,7 @@ import {
 } from '@/features/products/lightingAPI';
 import { AddCabinetModal } from './AddCabinetModal';
 import { AddDoorModal } from './AddDoorModal';
+import { AddAccessoryModal } from './AddAccessoryModal';
 import type { CabinetType, DoorType } from '../../products/types';
 import type { QuotationElevation } from '../types';
 
@@ -42,8 +43,10 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
   // Modal state
   const [cabinetModalOpen, setCabinetModalOpen] = useState(false);
   const [doorModalOpen, setDoorModalOpen] = useState(false);
+  const [accessoryModalOpen, setAccessoryModalOpen] = useState(false);
   const [selectedCabinet, setSelectedCabinet] = useState<CabinetType | null>(null);
   const [selectedDoor, setSelectedDoor] = useState<DoorType | null>(null);
+  const [selectedAccessory, setSelectedAccessory] = useState<{ id: number; name: string; price: number; raw?: any } | null>(null);
 
   // Fetch real data per category
   const { data: accessories } = useGetAccessoriesArray(undefined);
@@ -128,8 +131,12 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
     } else if (category === 'doors') {
       setSelectedDoor(item.raw);
       setDoorModalOpen(true);
+    } else if (category === 'accessories') {
+      // Open modal for accessories with elevation selection
+      setSelectedAccessory(item);
+      setAccessoryModalOpen(true);
     } else {
-      // Direct add for accessories and lighting
+      // Direct add for lighting (no elevation)
       onAdd(item);
     }
   };
@@ -213,9 +220,23 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
         isOpen={doorModalOpen}
         onClose={() => setDoorModalOpen(false)}
         door={selectedDoor}
+        availableElevations={availableElevations}
         onAdd={(data) => {
           onAdd(data);
           setDoorModalOpen(false);
+        }}
+      />
+    )}
+
+    {accessoryModalOpen && selectedAccessory && (
+      <AddAccessoryModal
+        isOpen={accessoryModalOpen}
+        onClose={() => setAccessoryModalOpen(false)}
+        accessory={selectedAccessory}
+        availableElevations={availableElevations}
+        onAdd={(data) => {
+          onAdd(data);
+          setAccessoryModalOpen(false);
         }}
       />
     )}

@@ -34,4 +34,8 @@ public class QuotationAccessoryDto {
     private String materialCode;      // For product identification
     
     private Long kitchenId;           // Reference to quotation_kitchens (nullable for backward compatibility)
+
+    // Elevation reference
+    private Long elevationId;
+    private String elevationName;
 }

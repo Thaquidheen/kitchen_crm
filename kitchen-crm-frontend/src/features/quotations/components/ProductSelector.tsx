@@ -177,7 +177,7 @@ export function ProductSelector({ selectedProducts, onProductsChange, availableE
       const doorArea = item.faceArea || 0;
       const doorPrice = item.doorType?.companyPrice || 0;
       const estimatedPrice = doorArea * doorPrice * item.quantity;
-      
+
       const doorItem: QuotationDoor = {
         doorTypeId: item.doorTypeId,
         doorTypeName: item.doorType?.name,
@@ -190,10 +190,29 @@ export function ProductSelector({ selectedProducts, onProductsChange, availableE
         totalPrice: estimatedPrice, // Use estimated price for display
         customDimensions: true,
         description: `${item.doorType?.name} (${item.widthMm}×${item.heightMm}mm)`,
+        // Elevation fields
+        elevationId: item.elevationId,
+        elevationName: item.elevationName,
       };
       next[category] = [...(next[category] || []), doorItem];
     }
-    // Handle other categories (accessories, lighting) with quantity aggregation
+    // Handle accessories from modal (with elevation data)
+    else if (category === 'accessories' && item.accessoryId) {
+      const accessoryItem: QuotationAccessory = {
+        id: item.id,
+        accessoryId: item.accessoryId,
+        description: item.name || item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+        price: item.price || item.unitPrice,
+        // Elevation fields
+        elevationId: item.elevationId,
+        elevationName: item.elevationName,
+      };
+      next[category] = [...(next[category] || []), accessoryItem];
+    }
+    // Handle lighting with quantity aggregation (no elevation)
     else {
       const unitPrice = Number(item.price || item.unitPrice || item.totalPrice || 0);
       const currentList = next[category] || [];

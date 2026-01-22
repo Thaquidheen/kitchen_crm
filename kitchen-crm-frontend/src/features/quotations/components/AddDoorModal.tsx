@@ -7,7 +7,9 @@ import { useState, useEffect } from 'react';
 import { Modal, ModalBody, ModalFooter } from '../../../components/ui/Modal';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
+import { Select } from '../../../components/ui/Select';
 import type { DoorType } from '../../products/types';
+import type { QuotationElevation } from '../types';
 
 export interface DoorWithDimensions {
   doorTypeId: number;
@@ -16,12 +18,16 @@ export interface DoorWithDimensions {
   heightMm: number;
   quantity: number;
   faceArea?: number; // Add this for price calculation
+  // Elevation reference
+  elevationId?: number;
+  elevationName?: string;
 }
 
 interface AddDoorModalProps {
   isOpen: boolean;
   onClose: () => void;
   door: DoorType;
+  availableElevations?: QuotationElevation[];
   onAdd: (data: DoorWithDimensions) => void;
 }
 
@@ -29,11 +35,13 @@ export function AddDoorModal({
   isOpen,
   onClose,
   door,
+  availableElevations = [],
   onAdd,
 }: AddDoorModalProps) {
   const [widthMm, setWidthMm] = useState<number>(0);
   const [heightMm, setHeightMm] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
+  const [selectedElevationId, setSelectedElevationId] = useState<number | string>('');
 
   // Reset form when modal opens
   useEffect(() => {
@@ -41,8 +49,9 @@ export function AddDoorModal({
       setWidthMm(0);
       setHeightMm(0);
       setQuantity(1);
+      setSelectedElevationId(availableElevations.length > 0 ? availableElevations[0].id || '' : '');
     }
-  }, [isOpen]);
+  }, [isOpen, availableElevations]);
 
   // Excel formula: Door face area = (W/304) × (H/304)
   const calculateDoorFaceArea = () => {
@@ -53,10 +62,15 @@ export function AddDoorModal({
   const faceArea = calculateDoorFaceArea();
   const doorPrice = faceArea * (door.companyPrice || 0) * quantity;
 
+  // Get selected elevation
+  const selectedElevation = availableElevations.find(e => e.id === Number(selectedElevationId));
+
+  // Validation - elevation is required only if elevations are available
   const isValid = widthMm > 0 && heightMm > 0 && quantity > 0;
+  const isElevationValid = availableElevations.length === 0 || selectedElevationId;
 
   const handleAdd = () => {
-    if (!isValid) return;
+    if (!isValid || !isElevationValid) return;
 
     onAdd({
       doorTypeId: door.id,
@@ -65,6 +79,9 @@ export function AddDoorModal({
       heightMm,
       quantity,
       faceArea, // Pass calculated face area
+      // Elevation
+      elevationId: selectedElevation?.id,
+      elevationName: selectedElevation?.name,
     });
     onClose();
   };
@@ -108,7 +125,7 @@ export function AddDoorModal({
           />
         </div>
 
-        <div className="mb-6">
+        <div className="mb-4">
           <Input
             label="Quantity"
             type="number"
@@ -118,6 +135,24 @@ export function AddDoorModal({
             min={1}
           />
         </div>
+
+        {/* Elevation Selection - Only show if elevations are available */}
+        {availableElevations.length > 0 && (
+          <div className="mb-6">
+            <Select
+              label="Elevation *"
+              value={selectedElevationId}
+              onChange={(e) => setSelectedElevationId(e.target.value)}
+              placeholder="Select Elevation"
+            >
+              {availableElevations.map((elevation) => (
+                <option key={elevation.id || elevation.name} value={elevation.id}>
+                  {elevation.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
 
         {/* Calculated Door Price */}
         {faceArea > 0 && (
@@ -148,7 +183,7 @@ export function AddDoorModal({
         <Button
           variant="primary"
           onClick={handleAdd}
-          disabled={!isValid}
+          disabled={!isValid || !isElevationValid}
         >
           Add to Quotation
         </Button>
