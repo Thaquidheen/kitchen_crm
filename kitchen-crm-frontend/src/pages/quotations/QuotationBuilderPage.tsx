@@ -47,9 +47,9 @@ export function QuotationBuilderPage() {
   // Fetch global margin settings
   const { data: marginsResponse, isLoading: isMarginsLoading } = useGetMarginsQuery();
 
-  // Fetch cabinet and door types for edit modal
-  const { data: cabinetTypes = [] } = useGetCabinetsQuery(undefined);
-  const { data: doorTypes = [] } = useGetDoorsQuery(undefined);
+  // Fetch cabinet and door types for edit modal (with large page size to get all)
+  const { data: cabinetTypes = [] } = useGetCabinetsQuery({ page: 0, size: 100 });
+  const { data: doorTypes = [] } = useGetDoorsQuery({ page: 0, size: 100 });
 
   // Edit cabinet modal state
   const [editCabinetModalOpen, setEditCabinetModalOpen] = useState(false);

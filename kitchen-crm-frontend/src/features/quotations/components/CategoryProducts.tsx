@@ -48,10 +48,10 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
   const [selectedDoor, setSelectedDoor] = useState<DoorType | null>(null);
   const [selectedAccessory, setSelectedAccessory] = useState<{ id: number; name: string; price: number; raw?: any } | null>(null);
 
-  // Fetch real data per category
-  const { data: accessories } = useGetAccessoriesArray(undefined);
-  const { data: cabinets } = useGetCabinetsArray(undefined);
-  const { data: doors } = useGetDoorsArray(undefined);
+  // Fetch real data per category with large page size to get all items
+  const { data: accessories } = useGetAccessoriesArray({ page: 0, size: 100 });
+  const { data: cabinets } = useGetCabinetsArray({ page: 0, size: 100 });
+  const { data: doors } = useGetDoorsArray({ page: 0, size: 100 });
   const { data: profiles } = useGetLightProfilesQuery();
   const { data: drivers } = useGetDriversQuery();
   const { data: connectors } = useGetConnectorsQuery();
