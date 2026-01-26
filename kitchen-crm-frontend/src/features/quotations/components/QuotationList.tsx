@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/shared/Pagination';
@@ -14,7 +15,7 @@ import { Eye, Edit, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { QuotationFilters, QuotationSummary } from '../types';
 import { useGetQuotationsQuery, useDeleteQuotationMutation } from '@/app/baseApi';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import type { RootState } from '@/app/store';
 
 export interface QuotationListProps {
   filters: QuotationFilters;
@@ -28,8 +29,8 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
   const { data, isLoading, error } = useGetQuotationsQuery(filters);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleteQuotation, { isLoading: isDeleting }] = useDeleteQuotationMutation();
-  const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'ROLE_SUPER_ADMIN';
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+  const isSuperAdmin = currentUser?.role === 'ROLE_SUPER_ADMIN';
 
   const quotations: QuotationSummary[] = data?.content ?? [];
   const totalElements = data?.totalElements ?? 0;
