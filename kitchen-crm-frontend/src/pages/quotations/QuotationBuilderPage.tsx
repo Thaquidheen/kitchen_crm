@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Tabs } from '@/components/ui/Tabs';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
-import { FileText, ArrowLeft, Save, Send, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, ArrowLeft, Save, Send } from 'lucide-react';
 import { UnsavedChangesDialog } from '@/components/ui/UnsavedChangesDialog';
 import { CustomerSelector } from '@/features/quotations/components/CustomerSelector';
 import { ProductSelector } from '@/features/quotations/components/ProductSelector';
@@ -67,7 +67,6 @@ export function QuotationBuilderPage() {
   const [currentStep, setCurrentStep] = useState<BuilderStep>('customer');
   const [customerKitchenTypes, setCustomerKitchenTypes] = useState<string[]>([]);
   const [isDirty, setIsDirty] = useState(false);
-  const [expandedProductsKitchenIndex, setExpandedProductsKitchenIndex] = useState<number | null>(null);
   const initialFormDataRef = useRef<string | null>(null);
   const skipNavigationBlockRef = useRef(false);
   const [formData, setFormData] = useState<Partial<QuotationFormData>>({
@@ -907,54 +906,6 @@ export function QuotationBuilderPage() {
                                 setFormData({ ...formData, kitchens: updatedKitchens });
                               }}
                             />
-                          </div>
-
-                          {/* Add Products Section */}
-                          <div>
-                            <Button
-                              variant="outline"
-                              onClick={() => setExpandedProductsKitchenIndex(
-                                expandedProductsKitchenIndex === kitchenIndex ? null : kitchenIndex
-                              )}
-                              className="w-full flex items-center justify-center gap-2"
-                            >
-                              <ShoppingCart className="h-4 w-4" />
-                              {expandedProductsKitchenIndex === kitchenIndex ? 'Hide Products' : 'Add Products'}
-                              {expandedProductsKitchenIndex === kitchenIndex ? (
-                                <ChevronUp className="h-4 w-4" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )}
-                            </Button>
-
-                            {/* Expandable Products Section */}
-                            {expandedProductsKitchenIndex === kitchenIndex && (
-                              <div className="mt-4 p-4 bg-background-700 rounded-lg border border-background-600">
-                                <h4 className="text-sm font-semibold text-text-800 mb-4">
-                                  Select Products for {kitchen.kitchenName}
-                                </h4>
-                                <ProductSelector
-                                  selectedProducts={{
-                                    accessories: kitchen.accessories || [],
-                                    cabinets: kitchen.cabinets || [],
-                                    doors: kitchen.doors || [],
-                                    lighting: kitchen.lighting || [],
-                                  }}
-                                  onProductsChange={(products) => {
-                                    const updatedKitchens = [...(formData.kitchens || [])];
-                                    updatedKitchens[kitchenIndex] = {
-                                      ...updatedKitchens[kitchenIndex],
-                                      accessories: products.accessories ?? updatedKitchens[kitchenIndex].accessories,
-                                      cabinets: products.cabinets ?? updatedKitchens[kitchenIndex].cabinets,
-                                      doors: products.doors ?? updatedKitchens[kitchenIndex].doors,
-                                      lighting: products.lighting ?? updatedKitchens[kitchenIndex].lighting,
-                                    };
-                                    setFormData({ ...formData, kitchens: updatedKitchens });
-                                  }}
-                                  availableElevations={kitchen.elevations || []}
-                                />
-                              </div>
-                            )}
                           </div>
 
                           {/* Transportation and Installation are set at quotation level, not per kitchen */}
