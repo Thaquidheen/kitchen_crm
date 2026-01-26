@@ -278,6 +278,22 @@ export const productsAPI = baseApi.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Products', id: 'ACCESSORIES' }],
     }),
+    uploadAccessoryImage: builder.mutation<Accessory, { id: number; file: File }>({
+      query: ({ id, file }) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return {
+          url: `/accessories/${id}/image`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Products', id: `ACCESSORY-${id}` },
+        { type: 'Products', id: 'ACCESSORIES' },
+      ],
+      transformResponse: (response: ApiResponse<Accessory>) => response.data as Accessory,
+    }),
 
     // Lighting sub-entities (simple lists)
     getLightProfiles: builder.query<LightProfile[], void>({
@@ -343,6 +359,7 @@ export const {
   useCreateAccessoryMutation,
   useUpdateAccessoryMutation,
   useDeleteAccessoryMutation,
+  useUploadAccessoryImageMutation,
   // Lighting
   useGetLightProfilesQuery,
   useGetDriversQuery,
