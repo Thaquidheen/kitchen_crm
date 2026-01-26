@@ -135,7 +135,8 @@ export function AddCabinetModal({
         setSelectedElevationId(availableElevations.length > 0 ? availableElevations[0].id || '' : '');
       }
     }
-  }, [isOpen, editData, availableElevations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // Excel formula: Cabinet surface area = [((W/304)+(H/304))×2×(D/304)] + [(W/304)×(H/304)]
   const calculateCabinetSurfaceArea = () => {

@@ -65,7 +65,8 @@ export function AddDoorModal({
         setSelectedElevationId(availableElevations.length > 0 ? availableElevations[0].id || '' : '');
       }
     }
-  }, [isOpen, availableElevations, editData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // Excel formula: Door face area = (W/304) × (H/304)
   const calculateDoorFaceArea = () => {
