@@ -129,7 +129,7 @@ export function ProductSelector({ selectedProducts, onProductsChange, availableE
         unitPrice: item.unitPrice || 0,
         totalPrice: item.totalPrice || 0,
         customDimensions: true,
-        description: item.description || `${item.cabinetTypeName || item.cabinetType?.name} (${item.widthMm}×${item.heightMm}×${item.depthMm}mm)`,
+        description: item.description || `${item.cabinetTypeName || item.cabinetType?.name} (${item.widthMm}×${item.depthMm}×${item.heightMm}mm)`,
         // Material, lighting, and accessories fields
         materialId: item.materialId,
         materialRate: item.materialRate,

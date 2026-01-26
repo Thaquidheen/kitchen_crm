@@ -208,7 +208,7 @@ export function AddCabinetModal({
       // Set unit price (per unit) and total price for display
       unitPrice: perUnitTotal,
       totalPrice: totalCabinetPrice,
-      description: `${cabinet.name} (${widthMm}×${heightMm}×${depthMm}mm)`,
+      description: `${cabinet.name} (${widthMm}×${depthMm}×${heightMm}mm)`,
       // Elevation
       elevationId: selectedElevation?.id,
       elevationName: selectedElevation?.name,

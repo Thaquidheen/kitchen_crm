@@ -69,6 +69,7 @@ export interface SelectedProductsListProps {
   availableElevations?: QuotationElevation[];
   onRemove?: (category: 'accessories' | 'cabinets' | 'doors' | 'lighting', index: number) => void;
   onEditCabinet?: (index: number) => void;
+  onEditDoor?: (index: number) => void;
 }
 
 interface ElevationGroup {
@@ -88,7 +89,8 @@ export function SelectedProductsList({
   lighting,
   availableElevations = [],
   onRemove,
-  onEditCabinet
+  onEditCabinet,
+  onEditDoor
 }: SelectedProductsListProps) {
   const [expandedElevations, setExpandedElevations] = useState<Record<string, boolean>>({});
 
@@ -242,6 +244,18 @@ export function SelectedProductsList({
                 size="xs"
                 variant="ghost"
                 onClick={() => onEditCabinet(originalIndex)}
+                className="flex-shrink-0 text-xs px-2 py-1"
+                title="Edit"
+              >
+                <Pencil className="w-3 h-3 mr-1" />
+                <span>Edit</span>
+              </Button>
+            )}
+            {category === 'doors' && onEditDoor && (
+              <Button
+                size="xs"
+                variant="ghost"
+                onClick={() => onEditDoor(originalIndex)}
                 className="flex-shrink-0 text-xs px-2 py-1"
                 title="Edit"
               >

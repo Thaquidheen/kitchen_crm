@@ -29,6 +29,8 @@ interface AddDoorModalProps {
   door: DoorType;
   availableElevations?: QuotationElevation[];
   onAdd: (data: DoorWithDimensions) => void;
+  editData?: DoorWithDimensions;
+  editIndex?: number;
 }
 
 export function AddDoorModal({
@@ -37,21 +39,33 @@ export function AddDoorModal({
   door,
   availableElevations = [],
   onAdd,
+  editData,
+  editIndex,
 }: AddDoorModalProps) {
+  const isEditMode = editData !== undefined && editIndex !== undefined;
   const [widthMm, setWidthMm] = useState<number>(0);
   const [heightMm, setHeightMm] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
   const [selectedElevationId, setSelectedElevationId] = useState<number | string>('');
 
-  // Reset form when modal opens
+  // Reset form when modal opens or populate with edit data
   useEffect(() => {
     if (isOpen) {
-      setWidthMm(0);
-      setHeightMm(0);
-      setQuantity(1);
-      setSelectedElevationId(availableElevations.length > 0 ? availableElevations[0].id || '' : '');
+      if (editData) {
+        // Populate with edit data
+        setWidthMm(editData.widthMm || 0);
+        setHeightMm(editData.heightMm || 0);
+        setQuantity(editData.quantity || 1);
+        setSelectedElevationId(editData.elevationId || (availableElevations.length > 0 ? availableElevations[0].id || '' : ''));
+      } else {
+        // Reset for new door
+        setWidthMm(0);
+        setHeightMm(0);
+        setQuantity(1);
+        setSelectedElevationId(availableElevations.length > 0 ? availableElevations[0].id || '' : '');
+      }
     }
-  }, [isOpen, availableElevations]);
+  }, [isOpen, availableElevations, editData]);
 
   // Excel formula: Door face area = (W/304) × (H/304)
   const calculateDoorFaceArea = () => {
@@ -87,7 +101,7 @@ export function AddDoorModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Door to Quotation" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title={isEditMode ? "Edit Door" : "Add Door to Quotation"} size="md">
       <ModalBody>
         {/* Door Info */}
         <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-background-700 rounded-lg border border-background-600">
@@ -185,7 +199,7 @@ export function AddDoorModal({
           onClick={handleAdd}
           disabled={!isValid || !isElevationValid}
         >
-          Add to Quotation
+          {isEditMode ? "Save Changes" : "Add to Quotation"}
         </Button>
       </ModalFooter>
     </Modal>

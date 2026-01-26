@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Tabs } from '@/components/ui/Tabs';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
-import { FileText, ArrowLeft, Save, Send } from 'lucide-react';
+import { FileText, ArrowLeft, Save, Send, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react';
 import { UnsavedChangesDialog } from '@/components/ui/UnsavedChangesDialog';
 import { CustomerSelector } from '@/features/quotations/components/CustomerSelector';
 import { ProductSelector } from '@/features/quotations/components/ProductSelector';
@@ -25,6 +25,7 @@ import { KitchenScopeForm } from '@/features/quotations/components/KitchenScopeF
 import { KitchenPlanImageSelector } from '@/features/quotations/components/KitchenPlanImageSelector';
 import { KitchenProductTabs } from '@/features/quotations/components/KitchenProductTabs';
 import { AddCabinetModal, type CabinetWithDimensions } from '@/features/quotations/components/AddCabinetModal';
+import { AddDoorModal, type DoorWithDimensions } from '@/features/quotations/components/AddDoorModal';
 import type { QuotationFormData, CreateQuotationRequest, QuotationAccessory, QuotationCabinet, QuotationDoor, QuotationLighting, QuotationKitchenFormData } from '@/features/quotations/types';
 import toast from 'react-hot-toast';
 import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
@@ -57,10 +58,18 @@ export function QuotationBuilderPage() {
   const [editingCabinetIndex, setEditingCabinetIndex] = useState<number | null>(null);
   const [editingKitchenIndex, setEditingKitchenIndex] = useState<number | null>(null);
 
+  // Edit door modal state
+  const [editDoorModalOpen, setEditDoorModalOpen] = useState(false);
+  const [editingDoorData, setEditingDoorData] = useState<DoorWithDimensions | null>(null);
+  const [editingDoorIndex, setEditingDoorIndex] = useState<number | null>(null);
+  const [editingDoorKitchenIndex, setEditingDoorKitchenIndex] = useState<number | null>(null);
+
   const [currentStep, setCurrentStep] = useState<BuilderStep>('customer');
   const [customerKitchenTypes, setCustomerKitchenTypes] = useState<string[]>([]);
   const [isDirty, setIsDirty] = useState(false);
+  const [expandedProductsKitchenIndex, setExpandedProductsKitchenIndex] = useState<number | null>(null);
   const initialFormDataRef = useRef<string | null>(null);
+  const skipNavigationBlockRef = useRef(false);
   const [formData, setFormData] = useState<Partial<QuotationFormData>>({
     customerId: 0,
     projectName: '',
@@ -147,7 +156,7 @@ export function QuotationBuilderPage() {
         // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
         totalPrice: Number(c.unitPrice || 0) * (c.quantity || 1),
         cabinetTypeName: c.cabinetTypeName || c.cabinetType?.name || c.description || 'Cabinet',
-        description: c.description || `${c.cabinetTypeName || c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.heightMm}×${c.depthMm}mm)`,
+        description: c.description || `${c.cabinetTypeName || c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.depthMm}×${c.heightMm}mm)`,
         // Material, lighting, and accessories fields
         materialId: c.materialId,
         materialRate: c.materialRate,
@@ -206,7 +215,7 @@ export function QuotationBuilderPage() {
           // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
           totalPrice: Number(c.unitPrice || 0) * (c.quantity || 1),
           cabinetTypeName: c.cabinetTypeName || c.cabinetType?.name || c.description || 'Cabinet',
-          description: c.description || `${c.cabinetTypeName || c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.heightMm}×${c.depthMm}mm)`,
+          description: c.description || `${c.cabinetTypeName || c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.depthMm}×${c.heightMm}mm)`,
           // Material, lighting, and accessories fields
           materialId: c.materialId,
           materialRate: c.materialRate,
@@ -303,7 +312,7 @@ export function QuotationBuilderPage() {
   // React Router navigation blocker
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      isDirty && currentLocation.pathname !== nextLocation.pathname
+      !skipNavigationBlockRef.current && isDirty && currentLocation.pathname !== nextLocation.pathname
   );
 
   // API mutations
@@ -557,6 +566,56 @@ export function QuotationBuilderPage() {
     setEditingKitchenIndex(null);
   };
 
+  // Handle edit door from SelectedProductsList (kitchen-specific)
+  const handleEditDoorInKitchen = (kitchenIndex: number, doorIndex: number) => {
+    const kitchen = formData.kitchens?.[kitchenIndex];
+    const door = kitchen?.doors?.[doorIndex];
+    if (door) {
+      setEditingDoorData(door as DoorWithDimensions);
+      setEditingDoorIndex(doorIndex);
+      setEditingDoorKitchenIndex(kitchenIndex);
+      setEditDoorModalOpen(true);
+    }
+  };
+
+  // Handle edit door from SelectedProductsList (global)
+  const handleEditDoorGlobal = (doorIndex: number) => {
+    const door = formData.doors?.[doorIndex];
+    if (door) {
+      setEditingDoorData(door as DoorWithDimensions);
+      setEditingDoorIndex(doorIndex);
+      setEditingDoorKitchenIndex(null);
+      setEditDoorModalOpen(true);
+    }
+  };
+
+  // Handle door update from edit modal
+  const handleDoorUpdate = (data: DoorWithDimensions) => {
+    if (editingDoorIndex === null) return;
+
+    if (editingDoorKitchenIndex !== null) {
+      // Update in kitchen-specific list
+      const updatedKitchens = [...(formData.kitchens || [])];
+      const kitchen = { ...updatedKitchens[editingDoorKitchenIndex] };
+      const doors = [...(kitchen.doors || [])];
+      doors[editingDoorIndex] = data;
+      kitchen.doors = doors;
+      updatedKitchens[editingDoorKitchenIndex] = kitchen;
+      setFormData({ ...formData, kitchens: updatedKitchens });
+    } else {
+      // Update in global list
+      const doors = [...(formData.doors || [])];
+      doors[editingDoorIndex] = data;
+      setFormData({ ...formData, doors });
+    }
+
+    // Reset edit state
+    setEditDoorModalOpen(false);
+    setEditingDoorData(null);
+    setEditingDoorIndex(null);
+    setEditingDoorKitchenIndex(null);
+  };
+
   const handleCustomerSelect = (customerId: number) => {
     setFormData({ ...formData, customerId });
 
@@ -633,6 +692,7 @@ export function QuotationBuilderPage() {
       // Reset dirty state after successful save
       initialFormDataRef.current = JSON.stringify(formData);
       setIsDirty(false);
+      skipNavigationBlockRef.current = true;
       navigate('/quotations');
     } catch (error: any) {
       console.error('Error saving draft:', error);
@@ -662,6 +722,7 @@ export function QuotationBuilderPage() {
       // Reset dirty state after successful save
       initialFormDataRef.current = JSON.stringify(formData);
       setIsDirty(false);
+      skipNavigationBlockRef.current = true;
       navigate('/quotations');
     } catch (error: any) {
       console.error('Error submitting quotation:', error);
@@ -846,6 +907,54 @@ export function QuotationBuilderPage() {
                                 setFormData({ ...formData, kitchens: updatedKitchens });
                               }}
                             />
+                          </div>
+
+                          {/* Add Products Section */}
+                          <div>
+                            <Button
+                              variant="outline"
+                              onClick={() => setExpandedProductsKitchenIndex(
+                                expandedProductsKitchenIndex === kitchenIndex ? null : kitchenIndex
+                              )}
+                              className="w-full flex items-center justify-center gap-2"
+                            >
+                              <ShoppingCart className="h-4 w-4" />
+                              {expandedProductsKitchenIndex === kitchenIndex ? 'Hide Products' : 'Add Products'}
+                              {expandedProductsKitchenIndex === kitchenIndex ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </Button>
+
+                            {/* Expandable Products Section */}
+                            {expandedProductsKitchenIndex === kitchenIndex && (
+                              <div className="mt-4 p-4 bg-background-700 rounded-lg border border-background-600">
+                                <h4 className="text-sm font-semibold text-text-800 mb-4">
+                                  Select Products for {kitchen.kitchenName}
+                                </h4>
+                                <ProductSelector
+                                  selectedProducts={{
+                                    accessories: kitchen.accessories || [],
+                                    cabinets: kitchen.cabinets || [],
+                                    doors: kitchen.doors || [],
+                                    lighting: kitchen.lighting || [],
+                                  }}
+                                  onProductsChange={(products) => {
+                                    const updatedKitchens = [...(formData.kitchens || [])];
+                                    updatedKitchens[kitchenIndex] = {
+                                      ...updatedKitchens[kitchenIndex],
+                                      accessories: products.accessories ?? updatedKitchens[kitchenIndex].accessories,
+                                      cabinets: products.cabinets ?? updatedKitchens[kitchenIndex].cabinets,
+                                      doors: products.doors ?? updatedKitchens[kitchenIndex].doors,
+                                      lighting: products.lighting ?? updatedKitchens[kitchenIndex].lighting,
+                                    };
+                                    setFormData({ ...formData, kitchens: updatedKitchens });
+                                  }}
+                                  availableElevations={kitchen.elevations || []}
+                                />
+                              </div>
+                            )}
                           </div>
 
                           {/* Transportation and Installation are set at quotation level, not per kitchen */}
@@ -1124,6 +1233,7 @@ export function QuotationBuilderPage() {
                         setFormData({ ...formData, kitchens: updatedKitchens });
                       }}
                       onEditCabinet={(cabinetIndex) => handleEditCabinetInKitchen(kitchenIndex, cabinetIndex)}
+                      onEditDoor={(doorIndex) => handleEditDoorInKitchen(kitchenIndex, doorIndex)}
                     />
                   </div>
                 ))}
@@ -1151,6 +1261,7 @@ export function QuotationBuilderPage() {
                   setFormData(next);
                 }}
                 onEditCabinet={handleEditCabinetGlobal}
+                onEditDoor={handleEditDoorGlobal}
               />
             )}
           </Card>
@@ -1172,6 +1283,24 @@ export function QuotationBuilderPage() {
           onAdd={handleCabinetUpdate}
           editData={editingCabinetData}
           editIndex={editingCabinetIndex}
+        />
+      )}
+
+      {/* Edit Door Modal */}
+      {editDoorModalOpen && editingDoorData && editingDoorIndex !== null && (
+        <AddDoorModal
+          isOpen={editDoorModalOpen}
+          onClose={() => {
+            setEditDoorModalOpen(false);
+            setEditingDoorData(null);
+            setEditingDoorIndex(null);
+            setEditingDoorKitchenIndex(null);
+          }}
+          door={doorTypes.find((d: any) => d.id === editingDoorData.doorTypeId) || { id: editingDoorData.doorTypeId, name: editingDoorData.doorType?.name || 'Door' } as any}
+          availableElevations={editingDoorKitchenIndex !== null ? formData.kitchens?.[editingDoorKitchenIndex]?.elevations || [] : []}
+          onAdd={handleDoorUpdate}
+          editData={editingDoorData}
+          editIndex={editingDoorIndex}
         />
       )}
 
