@@ -117,6 +117,24 @@ export const accessoriesApi = baseApi.injectEndpoints({
       invalidatesTags: ['Accessories'],
       transformResponse: (response: any) => response.data,
     }),
+
+    // Upload accessory image
+    uploadAccessoryImage: builder.mutation<Accessory, { id: number; file: File }>({
+      query: ({ id, file }) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return {
+          url: `/accessories/${id}/image`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      invalidatesTags: (_result, _error, { id }) => [
+        'Accessories',
+        { type: 'Accessories', id },
+      ],
+      transformResponse: (response: any) => response.data,
+    }),
   }),
 });
 
@@ -127,4 +145,5 @@ export const {
   useCreateAccessoryMutation,
   useUpdateAccessoryMutation,
   useDeleteAccessoryMutation,
+  useUploadAccessoryImageMutation,
 } = accessoriesApi;

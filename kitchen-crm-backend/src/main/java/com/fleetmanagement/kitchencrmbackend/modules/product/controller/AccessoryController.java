@@ -9,9 +9,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -83,5 +85,22 @@ public class AccessoryController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteAccessory(@PathVariable Long id) {
         return ResponseEntity.ok(accessoryService.deleteAccessory(id));
+    }
+
+    @PostMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<AccessoryDto>> uploadAccessoryImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            ApiResponse<AccessoryDto> response = accessoryService.uploadImage(id, file);
+            return response.getSuccess() ?
+                    ResponseEntity.ok(response) :
+                    ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error("Upload failed: " + e.getMessage())
+            );
+        }
     }
 }

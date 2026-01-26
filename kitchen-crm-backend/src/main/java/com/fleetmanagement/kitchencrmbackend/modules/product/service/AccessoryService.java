@@ -4,6 +4,7 @@ import com.fleetmanagement.kitchencrmbackend.modules.product.dto.AccessoryDto;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -14,4 +15,5 @@ public interface AccessoryService {
     ApiResponse<AccessoryDto> createAccessory(AccessoryDto accessoryDto);
     ApiResponse<AccessoryDto> updateAccessory(Long id, AccessoryDto accessoryDto);
     ApiResponse<String> deleteAccessory(Long id);
+    ApiResponse<AccessoryDto> uploadImage(Long id, MultipartFile file);
 }

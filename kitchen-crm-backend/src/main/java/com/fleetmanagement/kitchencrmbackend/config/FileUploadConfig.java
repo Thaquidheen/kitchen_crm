@@ -21,6 +21,9 @@ public class FileUploadConfig implements WebMvcConfigurer {
     @Value("${app.design-upload-dir:uploads/design-files}")
     private String designFilesUploadDir;
 
+    @Value("${app.accessory-upload-dir:uploads/accessory-images}")
+    private String accessoryImagesUploadDir;
+
     @Value("${file.upload-dir:./uploads}")
     private String baseUploadDir;
 
@@ -46,6 +49,10 @@ public class FileUploadConfig implements WebMvcConfigurer {
         // Make design files accessible via URL
         registry.addResourceHandler("/uploads/design-files/**")
                 .addResourceLocations("file:" + Paths.get(designFilesUploadDir).toAbsolutePath().toString() + "/");
+
+        // Make accessory images accessible via URL
+        registry.addResourceHandler("/uploads/accessory-images/**")
+                .addResourceLocations("file:" + Paths.get(accessoryImagesUploadDir).toAbsolutePath().toString() + "/");
 
         // Make root uploads folder accessible via URL (for background images, etc.)
         registry.addResourceHandler("/uploads/**")

@@ -3,15 +3,16 @@
  * Manage special accessories with CRUD operations
  */
 
-import { useState } from 'react';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Search, Package, DollarSign } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, Search, Package, DollarSign, Upload, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useGetCategoriesQuery, useGetAccessoriesQuery, useCreateAccessoryMutation, useUpdateAccessoryMutation, useDeleteAccessoryMutation } from '../productsAPI';
+import { useGetCategoriesQuery, useGetAccessoriesQuery, useCreateAccessoryMutation, useUpdateAccessoryMutation, useDeleteAccessoryMutation, useUploadAccessoryImageMutation } from '../productsAPI';
 import type { Accessory } from '../types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
 import { Card } from '@/components/ui/Card';
+import { getImageUrl } from '@/utils/imageUtils';
 
 export const AccessoryManager = () => {
   const [page, setPage] = useState(0);
@@ -33,19 +34,33 @@ export const AccessoryManager = () => {
   const [createAccessory, { isLoading: isCreating }] = useCreateAccessoryMutation();
   const [updateAccessory, { isLoading: isUpdating }] = useUpdateAccessoryMutation();
   const [deleteAccessory, { isLoading: isDeleting }] = useDeleteAccessoryMutation();
+  const [uploadImage, { isLoading: isUploading }] = useUploadAccessoryImageMutation();
 
   const accessories = accessoriesData || [];
   const categories = categoriesResponse || [];
 
-  const handleSubmit = async (values: Partial<Accessory>) => {
+  const handleSubmit = async (values: Partial<Accessory>, imageFile?: File) => {
     try {
+      let savedAccessory: Accessory;
+
       if (editingAccessory) {
-        await updateAccessory({ ...editingAccessory, ...values } as Accessory).unwrap();
+        savedAccessory = await updateAccessory({ ...editingAccessory, ...values } as Accessory).unwrap();
         toast.success('Accessory updated successfully');
       } else {
-        await createAccessory(values as Omit<Accessory, 'id'>).unwrap();
+        savedAccessory = await createAccessory(values as Omit<Accessory, 'id'>).unwrap();
         toast.success('Accessory created successfully');
       }
+
+      // Upload image if provided
+      if (imageFile && savedAccessory?.id) {
+        try {
+          await uploadImage({ id: savedAccessory.id, file: imageFile }).unwrap();
+          toast.success('Image uploaded successfully');
+        } catch (imgError: any) {
+          toast.error(imgError?.data?.message || 'Failed to upload image');
+        }
+      }
+
       setShowForm(false);
       setEditingAccessory(null);
     } catch (e: any) {
@@ -85,7 +100,7 @@ export const AccessoryManager = () => {
           setShowForm(false);
           setEditingAccessory(null);
         }}
-        isLoading={isCreating || isUpdating}
+        isLoading={isCreating || isUpdating || isUploading}
       />
     );
   }
@@ -199,10 +214,24 @@ export const AccessoryManager = () => {
                 )}
               </div>
 
-              {/* Dimensions */}
-              {(accessory.widthMm || accessory.heightMm || accessory.depthMm) && (
+              {/* Width */}
+              {accessory.widthMm && (
                 <div className="text-xs text-text-500 mb-2 sm:mb-3">
-                  Dimensions: {accessory.widthMm || '?'} × {accessory.heightMm || '?'} × {accessory.depthMm || '?'} mm
+                  Width: {accessory.widthMm} mm
+                </div>
+              )}
+
+              {/* Image */}
+              {accessory.imageUrl && (
+                <div className="mb-2 sm:mb-3">
+                  <img
+                    src={getImageUrl(accessory.imageUrl)}
+                    alt={accessory.name}
+                    className="w-full h-24 object-cover rounded-md"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
                 </div>
               )}
 
@@ -243,12 +272,16 @@ export const AccessoryManager = () => {
 interface AccessoryFormProps {
   initialValues?: Accessory;
   categories: any[];
-  onSubmit: (values: Partial<Accessory>) => void;
+  onSubmit: (values: Partial<Accessory>, imageFile?: File) => void;
   onCancel: () => void;
   isLoading: boolean;
 }
 
 function AccessoryForm({ initialValues, categories, onSubmit, onCancel, isLoading }: AccessoryFormProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
   const [formData, setFormData] = useState<Partial<Accessory>>({
     name: initialValues?.name || '',
     materialCode: initialValues?.materialCode || '',
@@ -256,15 +289,40 @@ function AccessoryForm({ initialValues, categories, onSubmit, onCancel, isLoadin
     mrp: initialValues?.mrp || 0,
     discountPercentage: initialValues?.discountPercentage || 0,
     widthMm: initialValues?.widthMm,
-    heightMm: initialValues?.heightMm,
-    depthMm: initialValues?.depthMm,
     color: initialValues?.color || '',
     active: initialValues?.active ?? true,
+    imageUrl: initialValues?.imageUrl || '',
   });
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit(formData, imageFile || undefined);
   };
 
   const companyPrice = formData.mrp && formData.discountPercentage
@@ -371,36 +429,73 @@ function AccessoryForm({ initialValues, categories, onSubmit, onCancel, isLoadin
           </div>
         </div>
 
-        {/* Dimensions */}
+        {/* Width */}
         <div>
           <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-            Dimensions (mm)
+            Width (mm)
           </label>
-          <div className="grid grid-cols-3 gap-2 sm:gap-4">
-            <Input
-              type="number"
-              min="0"
-              value={formData.widthMm || ''}
-              onChange={(e) => setFormData({ ...formData, widthMm: e.target.value ? Number(e.target.value) : undefined })}
-              placeholder="Width"
-              className="text-sm sm:text-base"
-            />
-            <Input
-              type="number"
-              min="0"
-              value={formData.heightMm || ''}
-              onChange={(e) => setFormData({ ...formData, heightMm: e.target.value ? Number(e.target.value) : undefined })}
-              placeholder="Height"
-              className="text-sm sm:text-base"
-            />
-            <Input
-              type="number"
-              min="0"
-              value={formData.depthMm || ''}
-              onChange={(e) => setFormData({ ...formData, depthMm: e.target.value ? Number(e.target.value) : undefined })}
-              placeholder="Depth"
-              className="text-sm sm:text-base"
-            />
+          <Input
+            type="number"
+            min="0"
+            value={formData.widthMm || ''}
+            onChange={(e) => setFormData({ ...formData, widthMm: e.target.value ? Number(e.target.value) : undefined })}
+            placeholder="e.g., 300"
+            className="text-sm sm:text-base w-full sm:w-1/3"
+          />
+        </div>
+
+        {/* Image Upload */}
+        <div>
+          <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
+            Accessory Image
+          </label>
+          <div className="space-y-3">
+            {/* Image Preview */}
+            {(imagePreview || formData.imageUrl) && (
+              <div className="relative inline-block">
+                <img
+                  src={imagePreview || getImageUrl(formData.imageUrl)}
+                  alt="Preview"
+                  className="w-32 h-32 object-cover rounded-lg border border-background-600"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="128" height="128"%3E%3Crect fill="%23333" width="128" height="128"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-size="12"%3ENo Image%3C/text%3E%3C/svg%3E';
+                  }}
+                />
+                {(imagePreview || formData.imageUrl) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleRemoveImage();
+                      setFormData({ ...formData, imageUrl: '' });
+                    }}
+                    className="absolute -top-2 -right-2 bg-error text-white rounded-full p-1 hover:bg-error/80"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* File Input */}
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-sm"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {imagePreview || formData.imageUrl ? 'Change Image' : 'Upload Image'}
+              </Button>
+              <span className="text-xs text-text-500">Max 5MB, JPG/PNG</span>
+            </div>
           </div>
         </div>
 

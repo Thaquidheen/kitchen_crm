@@ -9,11 +9,22 @@ import com.fleetmanagement.kitchencrmbackend.modules.product.repository.BrandRep
 import com.fleetmanagement.kitchencrmbackend.modules.product.repository.CategoryRepository;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,6 +38,13 @@ public class AccessoryServiceImpl implements AccessoryService {
 
     @Autowired
     private BrandRepository brandRepository;
+
+    @Value("${app.accessory-upload-dir:uploads/accessory-images}")
+    private String uploadDir;
+
+    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png");
+    private static final List<String> ALLOWED_MIME_TYPES = Arrays.asList("image/jpeg", "image/jpg", "image/png");
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
     @Override
     public ApiResponse<Page<AccessoryDto>> getAllAccessories(String name, Long categoryId, Long brandId,
@@ -175,5 +193,96 @@ public class AccessoryServiceImpl implements AccessoryService {
         accessory.setMrp(dto.getMrp());
         accessory.setDiscountPercentage(dto.getDiscountPercentage());
         accessory.setActive(dto.getActive());
+    }
+
+    @Override
+    public ApiResponse<AccessoryDto> uploadImage(Long id, MultipartFile file) {
+        try {
+            // Find accessory
+            Accessory accessory = accessoryRepository.findById(id).orElse(null);
+            if (accessory == null) {
+                return ApiResponse.error("Accessory not found");
+            }
+
+            // Validate file
+            String validationError = validateFile(file);
+            if (validationError != null) {
+                return ApiResponse.error(validationError);
+            }
+
+            // Create upload directory if it doesn't exist
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            // Generate unique filename
+            String fileName = generateUniqueFileName(file.getOriginalFilename(), id);
+
+            // Save file to disk
+            Path filePath = Paths.get(uploadDir, fileName);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            // Delete old image if exists
+            if (accessory.getImageUrl() != null && !accessory.getImageUrl().isEmpty()) {
+                try {
+                    String oldFileName = accessory.getImageUrl().replace("/uploads/accessory-images/", "");
+                    Path oldFilePath = Paths.get(uploadDir, oldFileName);
+                    Files.deleteIfExists(oldFilePath);
+                } catch (IOException e) {
+                    // Log but don't fail
+                }
+            }
+
+            // Update accessory with new image URL
+            accessory.setImageUrl("/uploads/accessory-images/" + fileName);
+            Accessory savedAccessory = accessoryRepository.save(accessory);
+
+            return ApiResponse.success("Image uploaded successfully", convertToDto(savedAccessory));
+
+        } catch (IOException e) {
+            return ApiResponse.error("Failed to upload file: " + e.getMessage());
+        } catch (Exception e) {
+            return ApiResponse.error("Unexpected error: " + e.getMessage());
+        }
+    }
+
+    private String validateFile(MultipartFile file) {
+        if (file.isEmpty()) {
+            return "File is empty";
+        }
+
+        if (file.getSize() > MAX_FILE_SIZE) {
+            return "File size exceeds maximum allowed size of 5MB";
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null) {
+            return "Invalid filename";
+        }
+
+        String extension = getFileExtension(originalFilename).toLowerCase();
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            return "File type not allowed. Allowed types: " + String.join(", ", ALLOWED_EXTENSIONS);
+        }
+
+        String mimeType = file.getContentType();
+        if (mimeType == null || !ALLOWED_MIME_TYPES.contains(mimeType.toLowerCase())) {
+            return "Invalid file format";
+        }
+
+        return null;
+    }
+
+    private String generateUniqueFileName(String originalFilename, Long accessoryId) {
+        String extension = getFileExtension(originalFilename);
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String uuid = UUID.randomUUID().toString().substring(0, 8);
+        return String.format("accessory_%d_%s_%s.%s", accessoryId, timestamp, uuid, extension);
+    }
+
+    private String getFileExtension(String filename) {
+        int lastDotIndex = filename.lastIndexOf('.');
+        return lastDotIndex > 0 ? filename.substring(lastDotIndex + 1) : "";
     }
 }
