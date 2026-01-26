@@ -11,7 +11,7 @@ import { Pagination } from '@/components/shared/Pagination';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import SignatureStatusBadge from '@/components/quotations/SignatureStatusBadge';
 import { Eye, Edit, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import type { QuotationFilters, QuotationSummary } from '../types';
 import { useGetQuotationsQuery, useDeleteQuotationMutation } from '@/app/baseApi';
 import { useAuth } from '@/features/auth/hooks/useAuth';
