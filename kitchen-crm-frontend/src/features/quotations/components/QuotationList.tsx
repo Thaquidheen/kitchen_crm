@@ -3,15 +3,18 @@
  * Displays quotations in a data table with actions
  */
 
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/shared/Pagination';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import SignatureStatusBadge from '@/components/quotations/SignatureStatusBadge';
-import { Eye, Edit } from 'lucide-react';
+import { Eye, Edit, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import type { QuotationFilters, QuotationSummary } from '../types';
-import { useGetQuotationsQuery } from '@/app/baseApi';
+import { useGetQuotationsQuery, useDeleteQuotationMutation } from '@/app/baseApi';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 export interface QuotationListProps {
   filters: QuotationFilters;
@@ -23,11 +26,26 @@ export interface QuotationListProps {
 export function QuotationList({ filters, onFiltersChange }: QuotationListProps) {
   const navigate = useNavigate();
   const { data, isLoading, error } = useGetQuotationsQuery(filters);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteQuotation, { isLoading: isDeleting }] = useDeleteQuotationMutation();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'ROLE_SUPER_ADMIN';
 
   const quotations: QuotationSummary[] = data?.content ?? [];
   const totalElements = data?.totalElements ?? 0;
   const totalPages = data?.totalPages ?? 0;
   const currentPage = filters.page ?? 0;
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await deleteQuotation(deleteId).unwrap();
+      toast.success('Quotation deleted successfully');
+      setDeleteId(null);
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to delete quotation');
+    }
+  };
 
   const handleSort = (field: string) => {
     const isCurrentField = filters.sortBy === field;
@@ -125,16 +143,27 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
                         <Button variant="ghost" size="sm" onClick={() => navigate(`/quotations/${q.id}`)} title="View" className="p-1 sm:p-2">
                           <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => navigate(`/quotations/${q.id}/edit`)} 
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/quotations/${q.id}/edit`)}
                           title="Edit"
                           disabled={!(q.status === 'DRAFT' || q.status === 'PENDING')}
                           className="p-1 sm:p-2"
                         >
                           <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
+                        {isSuperAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteId(q.id)}
+                            title="Delete"
+                            className="p-1 sm:p-2 text-error hover:text-error"
+                          >
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -152,6 +181,31 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
             totalPages={totalPages}
             onPageChange={(p) => handlePageChange(p - 1)}
           />
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background-800 p-6 rounded-lg max-w-md mx-4 border border-background-600">
+            <h3 className="text-lg font-semibold text-text-900 mb-4">Delete Quotation</h3>
+            <p className="text-text-600 mb-6">
+              Are you sure you want to delete this quotation? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button variant="secondary" onClick={() => setDeleteId(null)} disabled={isDeleting}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                className="bg-error hover:bg-error/90"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </Card>
