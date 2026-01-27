@@ -322,6 +322,22 @@ export interface QuotationKitchenScopeDetail {
   fieldOrder: number;
 }
 
+// Predefined scope field names for quotations
+export const SCOPE_FIELD_NAMES = [
+  'Kitchen Shape',
+  'Material & Finish Details',
+  'Carcass Material',
+  'Shutter Material',
+  'Handles',
+  'Hardware',
+  'Countertop',
+  'Appliances',
+  'Accessories',
+  'Lights',
+] as const;
+
+export type ScopeFieldName = (typeof SCOPE_FIELD_NAMES)[number];
+
 // Elevation interface
 export interface QuotationElevation {
   id?: number;

@@ -52,10 +52,10 @@ public class Customer extends Auditable {
     private String manualLeadContact;
 
     public enum CustomerStatus {
-        LEAD, POTENTIAL, PLANNING, CONFIRMED
+        LEAD, POTENTIAL, DESIGN_STAGE, QUOTE_GIVEN, FOLLOW_UP, NEGOTIATIONS, CONFIRMED, LOST
     }
 
     public enum LeadSourceType {
-        NONE, ARCHITECT, MANUAL
+        NONE, ARCHITECT, MANUAL, ONLINE
     }
 }

@@ -22,8 +22,12 @@ export interface User {
 export const CustomerStatus = {
   LEAD: 'LEAD',
   POTENTIAL: 'POTENTIAL',
-  PLANNING: 'PLANNING',
+  DESIGN_STAGE: 'DESIGN_STAGE',
+  QUOTE_GIVEN: 'QUOTE_GIVEN',
+  FOLLOW_UP: 'FOLLOW_UP',
+  NEGOTIATIONS: 'NEGOTIATIONS',
   CONFIRMED: 'CONFIRMED',
+  LOST: 'LOST',
 } as const;
 
 export type CustomerStatus = typeof CustomerStatus[keyof typeof CustomerStatus];

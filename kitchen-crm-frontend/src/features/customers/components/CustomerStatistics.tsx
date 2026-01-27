@@ -5,7 +5,7 @@
 
 import { useGetCustomerStatisticsQuery } from '../customersAPI';
 import { Card } from '@/components/ui/Card';
-import { Users, TrendingUp, UserCheck, UserX, Clock } from 'lucide-react';
+import { Users, TrendingUp, UserCheck, UserX, Clock, Palette, FileText, Phone, MessageSquare } from 'lucide-react';
 import type { CustomerStatus } from '../types';
 
 interface StatCardProps {
@@ -67,12 +67,16 @@ export function CustomerStatistics() {
   const statusInfo: Record<CustomerStatus, { label: string; icon: React.ElementType; variant: StatCardProps['variant'] }> = {
     LEAD: { label: 'Leads', icon: Clock, variant: 'warning' },
     POTENTIAL: { label: 'Potential', icon: TrendingUp, variant: 'primary' },
-    PLANNING: { label: 'Planning', icon: Users, variant: 'default' },
+    DESIGN_STAGE: { label: 'Design Stage', icon: Palette, variant: 'primary' },
+    QUOTE_GIVEN: { label: 'Quote Given', icon: FileText, variant: 'warning' },
+    FOLLOW_UP: { label: 'Follow Up', icon: Phone, variant: 'primary' },
+    NEGOTIATIONS: { label: 'Negotiations', icon: MessageSquare, variant: 'warning' },
     CONFIRMED: { label: 'Confirmed', icon: UserCheck, variant: 'success' },
+    LOST: { label: 'Lost', icon: UserX, variant: 'inactive' },
   };
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-3 sm:gap-4">
       {/* Total Customers */}
       <StatCard
         label="Total Customers"
@@ -83,7 +87,7 @@ export function CustomerStatistics() {
       />
 
       {/* Status breakdown */}
-      {(['LEAD', 'POTENTIAL', 'PLANNING', 'CONFIRMED'] as CustomerStatus[]).map((status) => {
+      {(['LEAD', 'POTENTIAL', 'DESIGN_STAGE', 'QUOTE_GIVEN', 'FOLLOW_UP', 'NEGOTIATIONS', 'CONFIRMED', 'LOST'] as CustomerStatus[]).map((status) => {
         const info = statusInfo[status];
         return (
           <StatCard

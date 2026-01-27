@@ -27,6 +27,7 @@ import { KitchenProductTabs } from '@/features/quotations/components/KitchenProd
 import { AddCabinetModal, type CabinetWithDimensions } from '@/features/quotations/components/AddCabinetModal';
 import { AddDoorModal, type DoorWithDimensions } from '@/features/quotations/components/AddDoorModal';
 import type { QuotationFormData, CreateQuotationRequest, QuotationAccessory, QuotationCabinet, QuotationDoor, QuotationLighting, QuotationKitchenFormData } from '@/features/quotations/types';
+import { SCOPE_FIELD_NAMES } from '@/features/quotations/types';
 import toast from 'react-hot-toast';
 import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
 import { useCreateQuotationMutation, useUpdateQuotationMutation, useGetQuotationByIdQuery } from '@/app/baseApi';
@@ -180,11 +181,15 @@ export function QuotationBuilderPage() {
         kitchenOrder: k.kitchenOrder || 0,
         transportationPrice: Number(k.transportationPrice || 0),
         installationPrice: Number(k.installationPrice || 0),
-        scopeDetails: (k.scopeDetails || []).map((sd: any) => ({
-          fieldName: sd.fieldName || '',
-          fieldValue: sd.fieldValue || '',
-          fieldOrder: sd.fieldOrder || 0,
-        })),
+        scopeDetails: SCOPE_FIELD_NAMES.map((fieldName, index) => {
+          // Find existing value for this field if it exists
+          const existing = (k.scopeDetails || []).find((sd: any) => sd.fieldName === fieldName);
+          return {
+            fieldName,
+            fieldValue: existing?.fieldValue || '',
+            fieldOrder: index,
+          };
+        }),
         planImages: (k.planImages || []).map((pi: any) => ({
           imageName: pi.imageName || '',
           imageUrl: pi.imageUrl || '',
@@ -646,10 +651,18 @@ export function QuotationBuilderPage() {
       } else {
         // Validate kitchens have required data
         const hasInvalidKitchen = formData.kitchens?.some(
-          (k) => !k.kitchenName || k.scopeDetails.length === 0 || k.planImages.length === 0
+          (k) => !k.kitchenName || k.planImages.length === 0
         );
         if (hasInvalidKitchen) {
-          toast.error('Please complete all kitchen details (name, scope, and at least one plan image)');
+          toast.error('Please complete all kitchen details (name and at least one plan image)');
+          return;
+        }
+        // Validate all scope fields are filled
+        const hasIncompleteScope = formData.kitchens?.some(
+          (k) => k.scopeDetails.some((sd) => !sd.fieldValue.trim())
+        );
+        if (hasIncompleteScope) {
+          toast.error('Please fill in all scope of work fields for each kitchen');
           return;
         }
         setCurrentStep('products');

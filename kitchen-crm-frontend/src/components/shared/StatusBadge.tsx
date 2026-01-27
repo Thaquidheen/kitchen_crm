@@ -20,7 +20,12 @@ export type Status =
   // Customer Statuses
   | 'LEAD'
   | 'POTENTIAL'
+  | 'DESIGN_STAGE'
+  | 'QUOTE_GIVEN'
+  | 'FOLLOW_UP'
+  | 'NEGOTIATIONS'
   | 'CONFIRMED'
+  | 'LOST'
   // Design Phase Statuses
   | 'PLANNING'
   | 'IN_PROGRESS'
@@ -64,7 +69,12 @@ const statusConfig: Record<
   // Customer Statuses
   LEAD: { variant: 'info', label: 'Lead', dot: true },
   POTENTIAL: { variant: 'warning', label: 'Potential', dot: true },
+  DESIGN_STAGE: { variant: 'info', label: 'Design Stage', dot: true },
+  QUOTE_GIVEN: { variant: 'warning', label: 'Quote Given', dot: true },
+  FOLLOW_UP: { variant: 'primary', label: 'Follow Up', dot: true },
+  NEGOTIATIONS: { variant: 'warning', label: 'Negotiations', dot: true },
   CONFIRMED: { variant: 'success', label: 'Confirmed', dot: true },
+  LOST: { variant: 'danger', label: 'Lost', dot: true },
   // Design Phase Statuses
   PLANNING: { variant: 'default', label: 'Planning', dot: true },
   IN_PROGRESS: { variant: 'info', label: 'In Progress', dot: true },

@@ -124,8 +124,12 @@ export function CustomerList({
     const map: Record<CustomerStatus, 'default' | 'info' | 'warning' | 'success' | 'danger'> = {
       LEAD: 'info',
       POTENTIAL: 'warning',
-      PLANNING: 'default',
+      DESIGN_STAGE: 'info',
+      QUOTE_GIVEN: 'warning',
+      FOLLOW_UP: 'info',
+      NEGOTIATIONS: 'warning',
       CONFIRMED: 'success',
+      LOST: 'danger',
     };
     return map[status] || 'default';
   };

@@ -8,10 +8,14 @@ import type { PaginatedResponse } from '../../types/common.types';
 export type CustomerStatus =
   | 'LEAD'
   | 'POTENTIAL'
-  | 'PLANNING'
-  | 'CONFIRMED';
+  | 'DESIGN_STAGE'
+  | 'QUOTE_GIVEN'
+  | 'FOLLOW_UP'
+  | 'NEGOTIATIONS'
+  | 'CONFIRMED'
+  | 'LOST';
 
-export type LeadSourceType = 'NONE' | 'ARCHITECT' | 'MANUAL';
+export type LeadSourceType = 'NONE' | 'ARCHITECT' | 'MANUAL' | 'ONLINE';
 
 export interface Customer {
   id: number;
@@ -59,8 +63,12 @@ export interface CustomerStatistics {
   total: number;
   lead?: number;
   potential?: number;
-  planning?: number;
+  design_stage?: number;
+  quote_given?: number;
+  follow_up?: number;
+  negotiations?: number;
   confirmed?: number;
+  lost?: number;
   [key: string]: number | undefined;
 }
 

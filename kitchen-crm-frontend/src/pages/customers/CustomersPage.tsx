@@ -173,16 +173,25 @@ export function CustomersPage() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <span className="text-xs sm:text-sm text-text-700 font-medium sm:mr-2 whitespace-nowrap">Change Status:</span>
                   <div className="flex flex-wrap gap-2">
-                    {(['LEAD', 'POTENTIAL', 'PLANNING', 'CONFIRMED'] as CustomerStatus[]).map(
+                    {([
+                      { value: 'LEAD', label: 'Lead' },
+                      { value: 'POTENTIAL', label: 'Potential' },
+                      { value: 'DESIGN_STAGE', label: 'Design Stage' },
+                      { value: 'QUOTE_GIVEN', label: 'Quote Given' },
+                      { value: 'FOLLOW_UP', label: 'Follow Up' },
+                      { value: 'NEGOTIATIONS', label: 'Negotiations' },
+                      { value: 'CONFIRMED', label: 'Confirmed' },
+                      { value: 'LOST', label: 'Lost' },
+                    ] as Array<{ value: CustomerStatus; label: string }>).map(
                       (status) => (
                         <Button
-                          key={status}
+                          key={status.value}
                           variant="ghost"
                           size="sm"
-                          onClick={() => setBulkStatusChange(status)}
+                          onClick={() => setBulkStatusChange(status.value)}
                           className="text-xs px-3 py-1.5 border border-background-600 hover:border-primary-500 hover:bg-primary-500/10 transition-all"
                         >
-                          {status}
+                          {status.label}
                         </Button>
                       )
                     )}

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Plus, Trash2, Edit2, Check, X, Sparkles, Layers } from 'lucide-react';
 import type { QuotationKitchenFormData, QuotationElevation } from '@/features/quotations/types';
+import { SCOPE_FIELD_NAMES } from '@/features/quotations/types';
 
 export interface KitchenSelectorProps {
   kitchens: QuotationKitchenFormData[];
@@ -36,7 +37,11 @@ export function KitchenSelector({ kitchens, onKitchensChange, suggestedKitchenTy
       kitchenOrder: kitchens.length,
       transportationPrice: 0,
       installationPrice: 0,
-      scopeDetails: [],
+      scopeDetails: SCOPE_FIELD_NAMES.map((fieldName, index) => ({
+        fieldName,
+        fieldValue: '',
+        fieldOrder: index,
+      })),
       planImages: [],
       elevations: [],
       accessories: [],
@@ -235,7 +240,7 @@ export function KitchenSelector({ kitchens, onKitchensChange, suggestedKitchenTy
                     <div className="min-w-0 flex-1 cursor-pointer" onClick={() => toggleKitchenExpanded(index)}>
                       <div className="font-semibold text-xs sm:text-sm text-text-900 truncate">{kitchen.kitchenName}</div>
                       <div className="text-xs sm:text-sm text-text-600">
-                        {(kitchen.elevations || []).length} elevations • {kitchen.scopeDetails.length} scope items • {kitchen.planImages.length} plan images •{' '}
+                        {(kitchen.elevations || []).length} elevations • {kitchen.scopeDetails.filter(sd => sd.fieldValue.trim()).length}/{kitchen.scopeDetails.length} scope fields • {kitchen.planImages.length} plan images •{' '}
                         {kitchen.accessories.length + kitchen.cabinets.length + kitchen.doors.length + kitchen.lighting.length} products
                       </div>
                     </div>

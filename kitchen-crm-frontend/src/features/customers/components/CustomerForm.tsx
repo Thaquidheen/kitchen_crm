@@ -18,9 +18,9 @@ const customerSchema = z.object({
   contact: z.string().optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),
   kitchenTypes: z.string().optional().or(z.literal('')),
-  status: z.enum(['LEAD', 'POTENTIAL', 'PLANNING', 'CONFIRMED']).optional(),
+  status: z.enum(['LEAD', 'POTENTIAL', 'DESIGN_STAGE', 'QUOTE_GIVEN', 'FOLLOW_UP', 'NEGOTIATIONS', 'CONFIRMED', 'LOST']).optional(),
   // Lead tracking fields
-  leadSourceType: z.enum(['NONE', 'ARCHITECT', 'MANUAL']).optional(),
+  leadSourceType: z.enum(['NONE', 'ARCHITECT', 'MANUAL', 'ONLINE']).optional(),
   architectId: z.number().optional(),
   manualLeadName: z.string().optional().or(z.literal('')),
   manualLeadContact: z.string().optional().or(z.literal('')),
@@ -105,7 +105,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
       setValue('manualLeadContact', '');
     } else if (leadSourceType === 'MANUAL') {
       setValue('architectId', undefined);
-    } else if (leadSourceType === 'NONE') {
+    } else if (leadSourceType === 'NONE' || leadSourceType === 'ONLINE') {
       setValue('architectId', undefined);
       setValue('manualLeadName', '');
       setValue('manualLeadContact', '');
@@ -285,6 +285,16 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
             />
             <span>Enter Lead Manually</span>
           </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              value="ONLINE"
+              {...register('leadSourceType')}
+              disabled={disabled}
+              className="cursor-pointer"
+            />
+            <span>Online Lead</span>
+          </label>
         </div>
 
         {/* Architect Selection */}
@@ -357,9 +367,18 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
             {...register('status')}
             disabled={disabled}
           >
-            {(['LEAD', 'POTENTIAL', 'PLANNING', 'CONFIRMED'] as CustomerStatus[]).map((s) => (
-              <option value={s} key={s}>
-                {s}
+            {([
+              { value: 'LEAD', label: 'Lead' },
+              { value: 'POTENTIAL', label: 'Potential' },
+              { value: 'DESIGN_STAGE', label: 'Design Stage' },
+              { value: 'QUOTE_GIVEN', label: 'Quote Given' },
+              { value: 'FOLLOW_UP', label: 'Follow Up' },
+              { value: 'NEGOTIATIONS', label: 'Negotiations' },
+              { value: 'CONFIRMED', label: 'Confirmed' },
+              { value: 'LOST', label: 'Lost' },
+            ] as Array<{ value: CustomerStatus; label: string }>).map((s) => (
+              <option value={s.value} key={s.value}>
+                {s.label}
               </option>
             ))}
           </select>
