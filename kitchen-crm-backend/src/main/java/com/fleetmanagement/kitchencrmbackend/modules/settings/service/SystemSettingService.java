@@ -2,6 +2,8 @@ package com.fleetmanagement.kitchencrmbackend.modules.settings.service;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import org.springframework.web.multipart.MultipartFile;
+import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 
 public interface SystemSettingService {
     
@@ -62,6 +64,30 @@ public interface SystemSettingService {
      * @param settings Map of dashboard setting keys to values
      */
     void updateDashboardSettings(Map<String, String> settings);
+
+    /**
+     * Upload company logo for PDF generation
+     * @param file Logo image file (PNG/JPG, max 2MB)
+     * @return ApiResponse with logo URL on success
+     */
+    ApiResponse<String> uploadCompanyLogo(MultipartFile file);
+
+    /**
+     * Get company logo information
+     * @return Map containing logoUrl and hasLogo status
+     */
+    Map<String, String> getCompanyLogo();
+
+    /**
+     * Delete company logo
+     */
+    void deleteCompanyLogo();
+
+    /**
+     * Get company logo as base64 encoded string for PDF embedding
+     * @return Base64 encoded logo string, or empty string if no logo
+     */
+    String getCompanyLogoBase64();
 }
 
 

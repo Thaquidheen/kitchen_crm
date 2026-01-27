@@ -47,10 +47,15 @@ export interface DashboardSettings {
   'dashboard.gridColsDesktop': string;
 }
 
+export interface CompanyLogoData {
+  logoUrl: string;
+  hasLogo: string;
+}
+
 export const settingsApi = createApi({
   reducerPath: 'settingsApi',
   baseQuery,
-  tagTypes: ['Margins', 'CompanySettings', 'DashboardSettings'],
+  tagTypes: ['Margins', 'CompanySettings', 'DashboardSettings', 'CompanyLogo'],
   endpoints: (builder) => ({
     getMargins: builder.query<ApiResponse<MarginsData>, void>({
       query: () => '/margins',
@@ -88,16 +93,39 @@ export const settingsApi = createApi({
       }),
       invalidatesTags: ['DashboardSettings'],
     }),
+    // Company Logo endpoints
+    getCompanyLogo: builder.query<ApiResponse<CompanyLogoData>, void>({
+      query: () => '/company/logo',
+      providesTags: ['CompanyLogo'],
+    }),
+    uploadCompanyLogo: builder.mutation<ApiResponse<string>, FormData>({
+      query: (formData) => ({
+        url: '/company/logo',
+        method: 'POST',
+        body: formData,
+      }),
+      invalidatesTags: ['CompanyLogo'],
+    }),
+    deleteCompanyLogo: builder.mutation<ApiResponse<string>, void>({
+      query: () => ({
+        url: '/company/logo',
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['CompanyLogo'],
+    }),
   }),
 });
 
-export const { 
-  useGetMarginsQuery, 
+export const {
+  useGetMarginsQuery,
   useUpdateMarginsMutation,
   useGetCompanySettingsQuery,
   useUpdateCompanySettingsMutation,
   useGetDashboardSettingsQuery,
   useUpdateDashboardSettingsMutation,
+  useGetCompanyLogoQuery,
+  useUploadCompanyLogoMutation,
+  useDeleteCompanyLogoMutation,
 } = settingsApi;
 
 // Re-export types for convenience

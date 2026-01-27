@@ -1,23 +1,44 @@
 package com.fleetmanagement.kitchencrmbackend.modules.settings.service;
 
+import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.settings.entity.SystemSetting;
 import com.fleetmanagement.kitchencrmbackend.modules.settings.repository.SystemSettingRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class SystemSettingServiceImpl implements SystemSettingService {
 
+    private static final Logger logger = LoggerFactory.getLogger(SystemSettingServiceImpl.class);
+
     @Autowired
     private SystemSettingRepository systemSettingRepository;
 
+    @Value("${app.logo-upload-dir:uploads/company}")
+    private String logoUploadDir;
+
     private static final String MARGIN_KEY_PREFIX = "_margin_percentage";
     private static final BigDecimal DEFAULT_MARGIN = BigDecimal.valueOf(20.00);
+    private static final List<String> ALLOWED_LOGO_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png");
+    private static final long MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2MB
 
     @Override
     public BigDecimal getMarginPercentage(String category) {
@@ -140,6 +161,130 @@ public class SystemSettingServiceImpl implements SystemSettingService {
             setting.setSettingValue(value != null ? value : "");
             systemSettingRepository.save(setting);
         });
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<String> uploadCompanyLogo(MultipartFile file) {
+        try {
+            // Validate file
+            if (file == null || file.isEmpty()) {
+                return ApiResponse.error("File is empty");
+            }
+
+            if (file.getSize() > MAX_LOGO_SIZE) {
+                return ApiResponse.error("Logo file must be less than 2MB");
+            }
+
+            String originalFilename = file.getOriginalFilename();
+            String extension = getFileExtension(originalFilename).toLowerCase();
+            if (!ALLOWED_LOGO_EXTENSIONS.contains(extension)) {
+                return ApiResponse.error("Only JPG and PNG files are allowed");
+            }
+
+            // Create upload directory if not exists
+            Path uploadPath = Paths.get(logoUploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            // Delete old logo if exists
+            String oldLogoUrl = getSettingValue("company.logo_url", "");
+            if (oldLogoUrl != null && !oldLogoUrl.isEmpty()) {
+                try {
+                    String oldFileName = oldLogoUrl.replace("/uploads/company/", "");
+                    Path oldFilePath = Paths.get(logoUploadDir, oldFileName);
+                    Files.deleteIfExists(oldFilePath);
+                    logger.info("Deleted old logo: {}", oldFilePath);
+                } catch (IOException e) {
+                    logger.warn("Failed to delete old logo: {}", e.getMessage());
+                }
+            }
+
+            // Generate unique filename
+            String fileName = "company_logo_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + "." + extension;
+            Path filePath = Paths.get(logoUploadDir, fileName);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            // Generate base64 for PDF embedding
+            byte[] fileBytes = Files.readAllBytes(filePath);
+            String base64Data = Base64.getEncoder().encodeToString(fileBytes);
+
+            // Determine MIME type for base64 prefix
+            String mimeType = extension.equals("png") ? "image/png" : "image/jpeg";
+            String base64WithPrefix = "data:" + mimeType + ";base64," + base64Data;
+
+            // Save to settings
+            String logoUrl = "/uploads/company/" + fileName;
+            saveLogoSettings(logoUrl, base64WithPrefix);
+
+            logger.info("Company logo uploaded successfully: {}", logoUrl);
+            return ApiResponse.success("Logo uploaded successfully", logoUrl);
+
+        } catch (Exception e) {
+            logger.error("Failed to upload logo: {}", e.getMessage(), e);
+            return ApiResponse.error("Failed to upload logo: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public Map<String, String> getCompanyLogo() {
+        Map<String, String> logoData = new HashMap<>();
+        String logoUrl = getSettingValue("company.logo_url", "");
+        logoData.put("logoUrl", logoUrl);
+        logoData.put("hasLogo", String.valueOf(logoUrl != null && !logoUrl.isEmpty()));
+        return logoData;
+    }
+
+    @Override
+    @Transactional
+    public void deleteCompanyLogo() {
+        String logoUrl = getSettingValue("company.logo_url", "");
+        if (logoUrl != null && !logoUrl.isEmpty()) {
+            try {
+                String fileName = logoUrl.replace("/uploads/company/", "");
+                Path filePath = Paths.get(logoUploadDir, fileName);
+                Files.deleteIfExists(filePath);
+                logger.info("Company logo deleted: {}", filePath);
+            } catch (IOException e) {
+                logger.warn("Failed to delete logo file: {}", e.getMessage());
+            }
+        }
+        saveLogoSettings("", "");
+    }
+
+    @Override
+    public String getCompanyLogoBase64() {
+        return getSettingValue("company.logo_base64", "");
+    }
+
+    private void saveLogoSettings(String logoUrl, String base64Data) {
+        // Save logo URL
+        SystemSetting urlSetting = systemSettingRepository.findBySettingKey("company.logo_url")
+                .orElseGet(() -> {
+                    SystemSetting newSetting = new SystemSetting();
+                    newSetting.setSettingKey("company.logo_url");
+                    return newSetting;
+                });
+        urlSetting.setSettingValue(logoUrl != null ? logoUrl : "");
+        systemSettingRepository.save(urlSetting);
+
+        // Save base64 data
+        SystemSetting base64Setting = systemSettingRepository.findBySettingKey("company.logo_base64")
+                .orElseGet(() -> {
+                    SystemSetting newSetting = new SystemSetting();
+                    newSetting.setSettingKey("company.logo_base64");
+                    return newSetting;
+                });
+        base64Setting.setSettingValue(base64Data != null ? base64Data : "");
+        systemSettingRepository.save(base64Setting);
+    }
+
+    private String getFileExtension(String filename) {
+        if (filename == null || filename.lastIndexOf(".") == -1) {
+            return "";
+        }
+        return filename.substring(filename.lastIndexOf(".") + 1);
     }
 }
 

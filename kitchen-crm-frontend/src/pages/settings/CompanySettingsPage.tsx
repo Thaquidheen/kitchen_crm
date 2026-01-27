@@ -1,5 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useGetCompanySettingsQuery, useUpdateCompanySettingsMutation } from '../../services/settingsAPI';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  useGetCompanySettingsQuery,
+  useUpdateCompanySettingsMutation,
+  useGetCompanyLogoQuery,
+  useUploadCompanyLogoMutation,
+  useDeleteCompanyLogoMutation,
+} from '../../services/settingsAPI';
 import type { CompanySettings } from '../../services/settingsAPI';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -16,12 +22,22 @@ import {
   CheckCircle2,
   Info,
   FileText,
+  Upload,
+  Trash2,
+  ImageIcon,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getImageUrl } from '../../utils/imageUrl';
 
 export const CompanySettingsPage: React.FC = () => {
   const { data: companySettingsResponse, isLoading, error } = useGetCompanySettingsQuery();
   const [updateCompanySettings, { isLoading: isUpdating }] = useUpdateCompanySettingsMutation();
+
+  // Logo hooks
+  const { data: logoData, refetch: refetchLogo } = useGetCompanyLogoQuery();
+  const [uploadLogo, { isLoading: isUploadingLogo }] = useUploadCompanyLogoMutation();
+  const [deleteLogo, { isLoading: isDeletingLogo }] = useDeleteCompanyLogoMutation();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<CompanySettings>({
     'company.name': '',
@@ -74,6 +90,63 @@ export const CompanySettingsPage: React.FC = () => {
     }
   };
 
+  // Logo handlers
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Only PNG and JPG files are allowed');
+      return;
+    }
+
+    // Validate file size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo file must be less than 2MB');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const result = await uploadLogo(formData).unwrap();
+      if (result.success) {
+        toast.success('Logo uploaded successfully');
+        refetchLogo();
+      } else {
+        toast.error(result.message || 'Failed to upload logo');
+      }
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to upload logo');
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleLogoDelete = async () => {
+    if (!confirm('Are you sure you want to delete the company logo?')) return;
+
+    try {
+      const result = await deleteLogo().unwrap();
+      if (result.success) {
+        toast.success('Logo deleted successfully');
+        refetchLogo();
+      } else {
+        toast.error(result.message || 'Failed to delete logo');
+      }
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to delete logo');
+    }
+  };
+
+  const hasLogo = logoData?.data?.hasLogo === 'true';
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -119,6 +192,71 @@ export const CompanySettingsPage: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Company Logo Section */}
+      <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-gray-700">
+        <CardHeader className="border-b border-gray-700">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <ImageIcon className="w-5 h-5" />
+            Company Logo
+          </h2>
+        </CardHeader>
+        <CardBody className="p-6">
+          <p className="text-sm text-gray-400 mb-4">
+            Upload your company logo to display on quotation PDFs. The logo will appear in the header and footer of every page.
+          </p>
+          <div className="flex items-center gap-6">
+            {/* Logo Preview */}
+            {hasLogo ? (
+              <div className="relative group">
+                <div className="w-48 h-20 bg-white rounded-lg flex items-center justify-center p-2 border border-gray-600">
+                  <img
+                    src={getImageUrl(logoData?.data?.logoUrl || '')}
+                    alt="Company Logo"
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
+                <button
+                  onClick={handleLogoDelete}
+                  disabled={isDeletingLogo}
+                  className="absolute -top-2 -right-2 p-1.5 bg-red-600 rounded-full hover:bg-red-700 transition-colors opacity-0 group-hover:opacity-100"
+                  title="Delete logo"
+                >
+                  <Trash2 className="w-4 h-4 text-white" />
+                </button>
+              </div>
+            ) : (
+              <div className="w-48 h-20 border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center">
+                <span className="text-gray-500 text-sm">No logo uploaded</span>
+              </div>
+            )}
+
+            {/* Upload Button */}
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg"
+                onChange={handleLogoUpload}
+                className="hidden"
+                id="logo-upload"
+              />
+              <label
+                htmlFor="logo-upload"
+                className={`inline-flex items-center justify-center px-4 py-2 font-medium rounded-lg transition-all duration-200 cursor-pointer bg-gray-700 hover:bg-gray-600 text-white border border-gray-600 ${
+                  isUploadingLogo ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {isUploadingLogo ? 'Uploading...' : hasLogo ? 'Change Logo' : 'Upload Logo'}
+              </label>
+              <p className="text-xs text-gray-500 mt-2">
+                PNG or JPG, max 2MB. Recommended: 200x80px
+              </p>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
 
       {/* Form */}
       <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-gray-700">

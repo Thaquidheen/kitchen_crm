@@ -187,7 +187,12 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
 
     private String replacePlaceholders(String htmlContent, QuotationDto quotation, String userRole) {
         // Replace company settings placeholders
-        htmlContent = htmlContent.replace("{{COMPANY_NAME}}", getSettingValue("company.name", "THE HOCH"));
+        String companyName = getSettingValue("company.name", "THE HOCH");
+        htmlContent = htmlContent.replace("{{COMPANY_NAME}}", companyName);
+        // Short name for footer (first word or first 10 chars)
+        String companyNameShort = companyName.contains(" ") ? companyName.split(" ")[0] :
+                                  (companyName.length() > 10 ? companyName.substring(0, 10) : companyName);
+        htmlContent = htmlContent.replace("{{COMPANY_NAME_SHORT}}", companyNameShort);
         htmlContent = htmlContent.replace("{{COMPANY_TAGLINE}}", getSettingValue("company.tagline", "Modular Interiors & Design Solutions"));
         String addressLine1 = getSettingValue("company.address_line1", "");
         String addressLine2 = getSettingValue("company.address_line2", "");
@@ -198,6 +203,22 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         htmlContent = htmlContent.replace("{{COMPANY_PHONE}}", getSettingValue("company.phone", ""));
         htmlContent = htmlContent.replace("{{COMPANY_EMAIL}}", getSettingValue("company.email", ""));
         htmlContent = htmlContent.replace("{{COMPANY_WEBSITE}}", getSettingValue("company.website", ""));
+
+        // Replace logo placeholders
+        String logoBase64 = getSettingValue("company.logo_base64", "");
+        boolean hasLogo = logoBase64 != null && !logoBase64.isEmpty();
+        htmlContent = htmlContent.replace("{{COMPANY_LOGO_BASE64}}", hasLogo ? logoBase64 : "");
+        htmlContent = htmlContent.replace("{{HAS_LOGO}}", String.valueOf(hasLogo));
+        // Handle conditional logo display (simple find/replace for {{#if HAS_LOGO}} blocks)
+        if (hasLogo) {
+            htmlContent = htmlContent.replace("{{#if HAS_LOGO}}", "");
+            htmlContent = htmlContent.replace("{{else}}", "<!--");
+            htmlContent = htmlContent.replace("{{/if}}", "-->");
+        } else {
+            htmlContent = htmlContent.replace("{{#if HAS_LOGO}}", "<!--");
+            htmlContent = htmlContent.replace("{{else}}", "-->");
+            htmlContent = htmlContent.replace("{{/if}}", "");
+        }
 
         // Replace quotation placeholders
         htmlContent = htmlContent.replace("{{QUOTATION_NUMBER}}", quotation.getQuotationNumber() != null ? quotation.getQuotationNumber() : "");
@@ -233,46 +254,51 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     private String generateQuotationHeader() {
         StringBuilder header = new StringBuilder();
         header.append("<div class='quotation-header'>");
-        header.append("<div class='quotation-header-content'>");
-        
-        // Left side: Company name, tagline, address
-        header.append("<div class='quotation-header-left'>");
-        header.append("<div class='quotation-header-logo'>").append(escapeHtml(getSettingValue("company.name", "THE HOCH"))).append("</div>");
-        header.append("<div class='quotation-header-tagline'>").append(escapeHtml(getSettingValue("company.tagline", "Modular Interiors & Design Solutions"))).append("</div>");
-        header.append("<div class='quotation-header-info'>");
-        
+        header.append("<div class='header-content'>");
+
+        // Left side: Logo or Company name, tagline
+        header.append("<div class='header-left'>");
+
+        // Check if logo exists
+        String logoBase64 = getSettingValue("company.logo_base64", "");
+        if (logoBase64 != null && !logoBase64.isEmpty()) {
+            header.append("<img src='").append(logoBase64).append("' alt='Logo' class='header-logo-img' />");
+        } else {
+            header.append("<div class='header-company-text'>").append(escapeHtml(getSettingValue("company.name", "THE HOCH"))).append("</div>");
+        }
+        header.append("<div class='header-tagline'>").append(escapeHtml(getSettingValue("company.tagline", "Modular Interiors & Design Solutions"))).append("</div>");
+        header.append("</div>"); // End header-left
+
+        // Right side: Address, Phone, Email
+        header.append("<div class='header-right'>");
         String addressLine1 = getSettingValue("company.address_line1", "");
         String addressLine2 = getSettingValue("company.address_line2", "");
         if (!addressLine1.isEmpty()) {
-            header.append("<div>").append(escapeHtml(addressLine1));
+            header.append(escapeHtml(addressLine1));
             if (!addressLine2.isEmpty()) {
-                header.append(", ").append(escapeHtml(addressLine2));
+                header.append("<br/>").append(escapeHtml(addressLine2));
             }
-            header.append("</div>");
+            header.append("<br/>");
         }
-        
-        header.append("</div>"); // End quotation-header-info
-        header.append("</div>"); // End quotation-header-left
-        
-        // Right side: Phone, Email, Website
-        header.append("<div class='quotation-header-right'>");
         String phone = getSettingValue("company.phone", "");
-        if (!phone.isEmpty()) {
-            header.append("<div>Phone: ").append(escapeHtml(phone)).append("</div>");
-        }
         String email = getSettingValue("company.email", "");
-        if (!email.isEmpty()) {
-            header.append("<div>Email: ").append(escapeHtml(email)).append("</div>");
+        if (!phone.isEmpty() || !email.isEmpty()) {
+            if (!phone.isEmpty()) {
+                header.append(escapeHtml(phone));
+            }
+            if (!phone.isEmpty() && !email.isEmpty()) {
+                header.append(" | ");
+            }
+            if (!email.isEmpty()) {
+                header.append(escapeHtml(email));
+            }
         }
-        String website = getSettingValue("company.website", "");
-        if (!website.isEmpty()) {
-            header.append("<div>Website: ").append(escapeHtml(website)).append("</div>");
-        }
-        header.append("</div>"); // End quotation-header-right
-        
-        header.append("</div>"); // End quotation-header-content
+        header.append("</div>"); // End header-right
+
+        header.append("</div>"); // End header-content
         header.append("</div>"); // End quotation-header
-        
+        header.append("<div class='header-accent-line'></div>"); // Red accent line
+
         return header.toString();
     }
 
