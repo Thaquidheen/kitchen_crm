@@ -3,11 +3,14 @@
  * Product cards grid for a specific category
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Package } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { 
-  useGetAccessoriesQuery as useGetAccessoriesArray,
+import { Pagination } from '@/components/shared/Pagination';
+import { getImageUrl } from '@/utils/imageUtils';
+import {
+  useGetAccessoriesPaginatedQuery,
   useGetCabinetsQuery as useGetCabinetsArray,
   useGetDoorsQuery as useGetDoorsArray,
 } from '@/features/products/productsAPI';
@@ -48,14 +51,27 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
   const [selectedDoor, setSelectedDoor] = useState<DoorType | null>(null);
   const [selectedAccessory, setSelectedAccessory] = useState<{ id: number; name: string; price: number; raw?: any } | null>(null);
 
-  // Fetch real data per category with large page size to get all items
-  const { data: accessories } = useGetAccessoriesArray({ page: 0, size: 100 });
+  // Pagination state for accessories
+  const [accessoriesPage, setAccessoriesPage] = useState(0);
+  const ACCESSORIES_PAGE_SIZE = 12; // Divisible by 1, 2, 3 for responsive grid
+
+  // Fetch accessories with pagination
+  const { data: accessoriesPaginated } = useGetAccessoriesPaginatedQuery(
+    { page: accessoriesPage, size: ACCESSORIES_PAGE_SIZE, name: search || undefined }
+  );
+  const accessories = accessoriesPaginated?.content || [];
+  const accessoriesTotalPages = accessoriesPaginated?.totalPages || 0;
   const { data: cabinets } = useGetCabinetsArray({ page: 0, size: 100 });
   const { data: doors } = useGetDoorsArray({ page: 0, size: 100 });
   const { data: profiles } = useGetLightProfilesQuery();
   const { data: drivers } = useGetDriversQuery();
   const { data: connectors } = useGetConnectorsQuery();
   const { data: sensors } = useGetSensorsQuery();
+
+  // Reset pagination when search changes
+  useEffect(() => {
+    setAccessoriesPage(0);
+  }, [search]);
 
   // Map into generic items with id, name, price
   let base: Array<{ id: number; name: string; price: number; raw?: any }> = [];
@@ -109,9 +125,11 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
     ];
   }
 
-  const items = base.filter((i) =>
-    !search ? true : i.name?.toLowerCase().includes(search.toLowerCase())
-  );
+  // For accessories, use server-side filtering (already done via API param)
+  // For other categories, filter client-side
+  const items = category === 'accessories'
+    ? base
+    : base.filter((i) => !search ? true : i.name?.toLowerCase().includes(search.toLowerCase()));
 
   const isTypeSelected = (item: any) => {
     if (category === 'cabinets') {
@@ -148,49 +166,86 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
         // Generate unique key: for lighting items, combine itemType with id to avoid collisions
         const uniqueKey = item.raw?.itemType ? `${item.raw.itemType}-${item.id}` : `${category}-${item.id}`;
         return (
-        <Card key={uniqueKey} className="p-3 sm:p-4 bg-background-800 border-background-600">
-          <div className="text-xs sm:text-sm text-text-900 font-semibold flex items-center gap-2">
-            {isTypeSelected(item) && (
-              <span className="inline-flex items-center text-xs px-1.5 sm:px-2 py-0.5 rounded bg-success text-text-900">✓ Added</span>
-            )}
-            <span className="truncate">{item.name}</span>
-          </div>
-          <div className="text-xs sm:text-sm text-text-700 mt-1">
-            {item.price === -1 ? (
-              <span className="text-primary-400">Select to configure</span>
-            ) : (
-              <>₹{item.price.toLocaleString('en-IN')}</>
-            )}
-          </div>
-          <div className="mt-2 sm:mt-3">
-            {category === 'accessories' || category === 'lighting' ? (
-              (() => {
+        <Card key={uniqueKey} className={`${category === 'accessories' ? 'p-0 overflow-hidden' : 'p-3 sm:p-4'} bg-background-800 border-background-600`}>
+          {/* Image section - only for accessories */}
+          {category === 'accessories' && (
+            <div className="relative h-28 sm:h-32 bg-background-700">
+              {item.raw?.imageUrl ? (
+                <img
+                  src={getImageUrl(item.raw.imageUrl)}
+                  alt={item.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    const fallback = (e.target as HTMLImageElement).nextElementSibling;
+                    if (fallback) fallback.classList.remove('hidden');
+                  }}
+                />
+              ) : null}
+              <div className={`absolute inset-0 flex items-center justify-center bg-background-700 ${item.raw?.imageUrl ? 'hidden' : ''}`}>
+                <Package className="w-10 h-10 sm:w-12 sm:h-12 text-text-500" />
+              </div>
+              {(() => {
                 const qty = (getQuantity ? getQuantity(item.id, item.raw?.itemType) : 0) || 0;
-                if (!qty) {
+                return qty > 0 ? (
+                  <span className="absolute top-2 right-2 inline-flex items-center text-xs px-1.5 py-0.5 rounded bg-success text-text-900">
+                    ✓ Added ({qty})
+                  </span>
+                ) : null;
+              })()}
+            </div>
+          )}
+
+          {/* Content section */}
+          <div className={category === 'accessories' ? 'p-3 sm:p-4' : ''}>
+            {/* Name - show badge inline for non-accessories */}
+            <div className="text-xs sm:text-sm text-text-900 font-semibold flex items-center gap-2">
+              {category !== 'accessories' && isTypeSelected(item) && (
+                <span className="inline-flex items-center text-xs px-1.5 sm:px-2 py-0.5 rounded bg-success text-text-900">✓ Added</span>
+              )}
+              <span className="truncate" title={item.name}>{item.name}</span>
+            </div>
+
+            {/* Price */}
+            <div className="text-xs sm:text-sm text-text-700 mt-1">
+              {item.price === -1 ? (
+                <span className="text-primary-400">Select to configure</span>
+              ) : (
+                <>₹{item.price.toLocaleString('en-IN')}</>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div className="mt-2 sm:mt-3">
+              {category === 'accessories' || category === 'lighting' ? (
+                (() => {
+                  const qty = (getQuantity ? getQuantity(item.id, item.raw?.itemType) : 0) || 0;
+                  if (!qty) {
+                    return (
+                      <Button size="sm" variant="primary" onClick={() => handleAddClick(item)} className="w-full sm:w-auto">
+                        Add
+                      </Button>
+                    );
+                  }
+                  const unitPrice = Number(item.price || 0);
                   return (
-                    <Button size="sm" variant="primary" onClick={() => handleAddClick(item)} className="w-full sm:w-auto">
-                      Add
-                    </Button>
+                    <div className="inline-flex items-center gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => onDecrement && onDecrement(item.id, unitPrice, item.raw?.itemType)}>
+                        −
+                      </Button>
+                      <span className="text-text-900 font-semibold w-6 text-center text-xs sm:text-sm">{qty}</span>
+                      <Button size="sm" variant="secondary" onClick={() => onIncrement && onIncrement(item.id, unitPrice, item)}>
+                        +
+                      </Button>
+                    </div>
                   );
-                }
-                const unitPrice = Number(item.price || 0);
-                return (
-                  <div className="inline-flex items-center gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => onDecrement && onDecrement(item.id, unitPrice, item.raw?.itemType)}>
-                      −
-                    </Button>
-                    <span className="text-text-900 font-semibold w-6 text-center text-xs sm:text-sm">{qty}</span>
-                    <Button size="sm" variant="secondary" onClick={() => onIncrement && onIncrement(item.id, unitPrice, item)}>
-                      +
-                    </Button>
-                  </div>
-                );
-              })()
-            ) : (
-              <Button size="sm" variant="primary" onClick={() => handleAddClick(item)} className="w-full sm:w-auto">
-                Add
-              </Button>
-            )}
+                })()
+              ) : (
+                <Button size="sm" variant="primary" onClick={() => handleAddClick(item)} className="w-full sm:w-auto">
+                  Add
+                </Button>
+              )}
+            </div>
           </div>
         </Card>
         );
@@ -199,6 +254,17 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
         <div className="col-span-full text-center text-text-600 py-6 sm:py-8 text-xs sm:text-sm">No products found</div>
       )}
     </div>
+
+    {/* Pagination for Accessories */}
+    {category === 'accessories' && accessoriesTotalPages > 1 && (
+      <div className="border-t border-background-600 px-4 py-3">
+        <Pagination
+          currentPage={accessoriesPage + 1}
+          totalPages={accessoriesTotalPages}
+          onPageChange={(page) => setAccessoriesPage(page - 1)}
+        />
+      </div>
+    )}
 
     {/* Modals */}
     {cabinetModalOpen && selectedCabinet && (
