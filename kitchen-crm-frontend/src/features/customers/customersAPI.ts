@@ -64,7 +64,8 @@ export const customersAPI = baseApi.injectEndpoints({
       transformResponse: (response: ApiResponse<Customer>) => response.data as Customer,
       invalidatesTags: [
         { type: 'Customers', id: 'LIST' },
-        { type: 'Customers', id: 'PAGE' }
+        { type: 'Customers', id: 'PAGE' },
+        { type: 'Customers', id: 'STATS' },
       ],
     }),
 
@@ -126,7 +127,11 @@ export const customersAPI = baseApi.injectEndpoints({
           patchPage.undo();
         }
       },
-      invalidatesTags: [{ type: 'Customers', id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'Customers', id: 'LIST' },
+        { type: 'Customers', id: 'PAGE' },
+        { type: 'Customers', id: 'STATS' },
+      ],
     }),
 
     // Update status
@@ -154,6 +159,7 @@ export const customersAPI = baseApi.injectEndpoints({
           { type: 'Customers', id },
           { type: 'Customers', id: 'LIST' },
           { type: 'Customers', id: 'PAGE' },
+          { type: 'Customers', id: 'STATS' },
         ],
       }
     ),
