@@ -5,12 +5,12 @@
 
 -- Add missing columns to signed_documents table
 ALTER TABLE signed_documents
-ADD COLUMN IF NOT EXISTS last_reminder_at TIMESTAMP NULL,
-ADD COLUMN IF NOT EXISTS reminder_count INT NOT NULL DEFAULT 0,
-ADD COLUMN IF NOT EXISTS signed_from_ip VARCHAR(50) NULL,
-ADD COLUMN IF NOT EXISTS signed_user_agent TEXT NULL;
+ADD COLUMN last_reminder_at TIMESTAMP NULL,
+ADD COLUMN reminder_count INT NOT NULL DEFAULT 0,
+ADD COLUMN signed_from_ip VARCHAR(50) NULL,
+ADD COLUMN signed_user_agent TEXT NULL;
 
--- Create workflow_history table if not exists
+-- Create workflow_history table
 CREATE TABLE IF NOT EXISTS workflow_history (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     customer_id BIGINT NOT NULL,
