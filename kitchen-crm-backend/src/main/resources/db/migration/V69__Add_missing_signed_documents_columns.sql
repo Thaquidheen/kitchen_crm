@@ -10,18 +10,9 @@ ADD COLUMN reminder_count INT NOT NULL DEFAULT 0,
 ADD COLUMN signed_from_ip VARCHAR(50) NULL,
 ADD COLUMN signed_user_agent TEXT NULL;
 
--- Create workflow_history table
-CREATE TABLE IF NOT EXISTS workflow_history (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    customer_id BIGINT NOT NULL,
-    previous_state VARCHAR(100),
-    new_state VARCHAR(100) NOT NULL,
-    changed_by VARCHAR(100) NOT NULL,
-    change_reason TEXT,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_workflow_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
-    INDEX idx_workflow_customer (customer_id),
-    INDEX idx_workflow_timestamp (timestamp)
-);
+-- Add created_at and updated_at to workflow_history if they don't exist
+-- (workflow_history table should already exist from V1)
+ALTER TABLE workflow_history
+ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ADD COLUMN change_reason TEXT;
