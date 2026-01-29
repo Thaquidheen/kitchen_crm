@@ -243,6 +243,22 @@ export const productsAPI = baseApi.injectEndpoints({
       transformResponse: (response: PaginatedApiResponse<Accessory>) => response.data?.content ?? [],
       providesTags: [{ type: 'Products', id: 'ACCESSORIES' }],
     }),
+    // Accessories with pagination metadata
+    getAccessoriesPaginated: builder.query<{
+      content: Accessory[];
+      totalPages: number;
+      totalElements: number;
+      number: number;
+    }, ListParams | void>({
+      query: (params) => ({ url: API_ENDPOINTS.ACCESSORIES.BASE, params: params || {} }),
+      transformResponse: (response: PaginatedApiResponse<Accessory>) => ({
+        content: response.data?.content ?? [],
+        totalPages: response.data?.totalPages ?? 0,
+        totalElements: response.data?.totalElements ?? 0,
+        number: response.data?.number ?? 0,
+      }),
+      providesTags: [{ type: 'Products', id: 'ACCESSORIES' }],
+    }),
     getAccessoryById: builder.query<Accessory, number>({
       query: (id) => API_ENDPOINTS.ACCESSORIES.BY_ID(id),
       transformResponse: (response: ApiResponse<Accessory>) => response.data as Accessory,
@@ -355,6 +371,7 @@ export const {
   useDeleteDoorMutation,
   // Accessories
   useGetAccessoriesQuery,
+  useGetAccessoriesPaginatedQuery,
   useGetAccessoryByIdQuery,
   useCreateAccessoryMutation,
   useUpdateAccessoryMutation,

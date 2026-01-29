@@ -325,7 +325,7 @@ export interface QuotationKitchenScopeDetail {
 // Predefined scope field names for quotations
 export const SCOPE_FIELD_NAMES = [
   'Kitchen Shape',
-  'Material & Finish Details',
+  'Color and finish detail',
   'Carcass Material',
   'Shutter Material',
   'Handles',

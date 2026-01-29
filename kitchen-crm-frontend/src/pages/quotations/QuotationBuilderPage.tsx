@@ -181,15 +181,25 @@ export function QuotationBuilderPage() {
         kitchenOrder: k.kitchenOrder || 0,
         transportationPrice: Number(k.transportationPrice || 0),
         installationPrice: Number(k.installationPrice || 0),
-        scopeDetails: SCOPE_FIELD_NAMES.map((fieldName, index) => {
-          // Find existing value for this field if it exists
-          const existing = (k.scopeDetails || []).find((sd: any) => sd.fieldName === fieldName);
-          return {
-            fieldName,
-            fieldValue: existing?.fieldValue || '',
-            fieldOrder: index,
-          };
-        }),
+        scopeDetails: [
+          // Include predefined fields
+          ...SCOPE_FIELD_NAMES.map((fieldName, index) => {
+            const existing = (k.scopeDetails || []).find((sd: any) => sd.fieldName === fieldName);
+            return {
+              fieldName,
+              fieldValue: existing?.fieldValue || '',
+              fieldOrder: index,
+            };
+          }),
+          // Include custom fields (fields not in SCOPE_FIELD_NAMES)
+          ...(k.scopeDetails || [])
+            .filter((sd: any) => !SCOPE_FIELD_NAMES.includes(sd.fieldName))
+            .map((sd: any, index: number) => ({
+              fieldName: sd.fieldName,
+              fieldValue: sd.fieldValue || '',
+              fieldOrder: SCOPE_FIELD_NAMES.length + index,
+            })),
+        ],
         planImages: (k.planImages || []).map((pi: any) => ({
           imageName: pi.imageName || '',
           imageUrl: pi.imageUrl || '',
