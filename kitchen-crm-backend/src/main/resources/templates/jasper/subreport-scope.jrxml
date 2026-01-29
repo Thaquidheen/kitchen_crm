@@ -10,7 +10,7 @@
               rightMargin="0"
               topMargin="0"
               bottomMargin="0"
-              uuid="scope-subreport-uuid">
+              uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567890">
 
     <!-- Fields from QuotationKitchenScopeDetailDto -->
     <field name="fieldName" class="java.lang.String"/>
@@ -24,18 +24,18 @@
     <columnHeader>
         <band height="25">
             <rectangle>
-                <reportElement x="0" y="0" width="515" height="25" backcolor="#1E3A5F" uuid="scope-header-bg"/>
+                <reportElement x="0" y="0" width="515" height="25" backcolor="#1E3A5F" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="10" y="0" width="200" height="25" forecolor="#FFFFFF" uuid="field-header"/>
+                <reportElement x="10" y="0" width="200" height="25" forecolor="#FFFFFF" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567002"/>
                 <textElement verticalAlignment="Middle">
                     <font size="9" isBold="true"/>
                 </textElement>
                 <text><![CDATA[Specification]]></text>
             </staticText>
             <staticText>
-                <reportElement x="220" y="0" width="285" height="25" forecolor="#FFFFFF" uuid="value-header"/>
+                <reportElement x="220" y="0" width="285" height="25" forecolor="#FFFFFF" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567003"/>
                 <textElement verticalAlignment="Middle">
                     <font size="9" isBold="true"/>
                 </textElement>
@@ -48,14 +48,14 @@
         <band height="22" splitType="Stretch">
             <!-- Alternating row background -->
             <rectangle>
-                <reportElement x="0" y="0" width="515" height="22" backcolor="#F9FAFB" uuid="alt-row-bg">
+                <reportElement x="0" y="0" width="515" height="22" backcolor="#F9FAFB" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567004">
                     <printWhenExpression><![CDATA[$V{ROW_NUMBER} % 2 == 0]]></printWhenExpression>
                 </reportElement>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
             <textField textAdjust="StretchHeight">
-                <reportElement x="10" y="2" width="200" height="18" forecolor="#666666" uuid="field-name"/>
+                <reportElement x="10" y="2" width="200" height="18" forecolor="#666666" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567005"/>
                 <textElement verticalAlignment="Middle">
                     <font size="9"/>
                 </textElement>
@@ -63,7 +63,7 @@
             </textField>
 
             <textField textAdjust="StretchHeight">
-                <reportElement x="220" y="2" width="285" height="18" forecolor="#333333" uuid="field-value"/>
+                <reportElement x="220" y="2" width="285" height="18" forecolor="#333333" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567006"/>
                 <textElement verticalAlignment="Middle">
                     <font size="9" isBold="true"/>
                 </textElement>
@@ -71,7 +71,7 @@
             </textField>
 
             <line>
-                <reportElement x="0" y="21" width="515" height="1" forecolor="#EEEEEE" uuid="row-divider"/>
+                <reportElement x="0" y="21" width="515" height="1" forecolor="#EEEEEE" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567007"/>
             </line>
         </band>
     </detail>

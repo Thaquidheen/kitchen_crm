@@ -12,7 +12,7 @@
               rightMargin="0"
               topMargin="0"
               bottomMargin="0"
-              uuid="images-subreport-uuid">
+              uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567890">
 
     <!-- Fields from QuotationKitchenPlanImageDto -->
     <field name="imageName" class="java.lang.String"/>
@@ -23,19 +23,19 @@
         <band height="180" splitType="Prevent">
             <!-- Image Container -->
             <rectangle radius="5">
-                <reportElement x="0" y="0" width="250" height="175" backcolor="#FFFFFF" uuid="image-container"/>
+                <reportElement x="0" y="0" width="250" height="175" backcolor="#FFFFFF" uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="1" lineColor="#DDDDDD"/></graphicElement>
             </rectangle>
 
             <!-- Image -->
             <image scaleImage="RetainShape" hAlign="Center" vAlign="Middle" onErrorType="Blank">
-                <reportElement x="5" y="5" width="240" height="145" uuid="plan-image"/>
+                <reportElement x="5" y="5" width="240" height="145" uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567002"/>
                 <imageExpression><![CDATA[$F{imageBase64} != null ? new java.io.ByteArrayInputStream(java.util.Base64.getDecoder().decode($F{imageBase64})) : null]]></imageExpression>
             </image>
 
             <!-- Image Name -->
             <textField textAdjust="StretchHeight">
-                <reportElement x="5" y="155" width="240" height="15" forecolor="#666666" uuid="image-name"/>
+                <reportElement x="5" y="155" width="240" height="15" forecolor="#666666" uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567003"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
@@ -47,7 +47,7 @@
     <noData>
         <band height="40">
             <staticText>
-                <reportElement x="0" y="10" width="515" height="20" forecolor="#999999" uuid="no-images"/>
+                <reportElement x="0" y="10" width="515" height="20" forecolor="#999999" uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567004"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="10" isItalic="true"/>
                 </textElement>

@@ -10,7 +10,7 @@
               rightMargin="0"
               topMargin="0"
               bottomMargin="0"
-              uuid="accessories-subreport-uuid">
+              uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567890">
 
     <!-- Fields from QuotationAccessoryDto -->
     <field name="accessoryName" class="java.lang.String"/>
@@ -27,32 +27,32 @@
     <columnHeader>
         <band height="25">
             <rectangle>
-                <reportElement x="0" y="0" width="515" height="25" backcolor="#1E3A5F" uuid="acc-header-bg"/>
+                <reportElement x="0" y="0" width="515" height="25" backcolor="#1E3A5F" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="5" y="0" width="180" height="25" forecolor="#FFFFFF" uuid="item-header"/>
+                <reportElement x="5" y="0" width="180" height="25" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567002"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8" isBold="true"/>
                 </textElement>
                 <text><![CDATA[Item / Description]]></text>
             </staticText>
             <staticText>
-                <reportElement x="190" y="0" width="40" height="25" forecolor="#FFFFFF" uuid="qty-header"/>
+                <reportElement x="190" y="0" width="40" height="25" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567003"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8" isBold="true"/>
                 </textElement>
                 <text><![CDATA[Qty]]></text>
             </staticText>
             <staticText>
-                <reportElement x="235" y="0" width="180" height="25" forecolor="#FFFFFF" uuid="details-header"/>
+                <reportElement x="235" y="0" width="180" height="25" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567004"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8" isBold="true"/>
                 </textElement>
                 <text><![CDATA[Details]]></text>
             </staticText>
             <staticText>
-                <reportElement x="420" y="0" width="90" height="25" forecolor="#FFFFFF" uuid="brand-header"/>
+                <reportElement x="420" y="0" width="90" height="25" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567005"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8" isBold="true"/>
                 </textElement>
@@ -65,35 +65,35 @@
         <band height="22" splitType="Stretch">
             <!-- Alternating row background -->
             <rectangle>
-                <reportElement x="0" y="0" width="515" height="22" backcolor="#F9FAFB" uuid="alt-row-bg">
+                <reportElement x="0" y="0" width="515" height="22" backcolor="#F9FAFB" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567006">
                     <printWhenExpression><![CDATA[$V{ROW_NUMBER} % 2 == 0]]></printWhenExpression>
                 </reportElement>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
-                <reportElement x="5" y="2" width="180" height="18" forecolor="#333333" uuid="acc-name"/>
+                <reportElement x="5" y="2" width="180" height="18" forecolor="#333333" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567007"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{customItem} != null && $F{customItem} ? $F{customItemName} : $F{accessoryName}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
-                <reportElement x="190" y="2" width="40" height="18" forecolor="#333333" uuid="acc-qty"/>
+                <reportElement x="190" y="2" width="40" height="18" forecolor="#333333" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567008"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{quantity}]]></textFieldExpression>
             </textField>
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
-                <reportElement x="235" y="2" width="180" height="18" forecolor="#666666" uuid="acc-desc"/>
+                <reportElement x="235" y="2" width="180" height="18" forecolor="#666666" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567009"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{description}]]></textFieldExpression>
             </textField>
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
-                <reportElement x="420" y="2" width="90" height="18" forecolor="#333333" uuid="acc-brand"/>
+                <reportElement x="420" y="2" width="90" height="18" forecolor="#333333" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567010"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
@@ -101,7 +101,7 @@
             </textField>
 
             <line>
-                <reportElement x="0" y="21" width="515" height="1" forecolor="#EEEEEE" uuid="row-divider"/>
+                <reportElement x="0" y="21" width="515" height="1" forecolor="#EEEEEE" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567011"/>
             </line>
         </band>
     </detail>
@@ -109,7 +109,7 @@
     <noData>
         <band height="30">
             <staticText>
-                <reportElement x="0" y="5" width="515" height="20" forecolor="#999999" uuid="no-accessories"/>
+                <reportElement x="0" y="5" width="515" height="20" forecolor="#999999" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567012"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="9" isItalic="true"/>
                 </textElement>

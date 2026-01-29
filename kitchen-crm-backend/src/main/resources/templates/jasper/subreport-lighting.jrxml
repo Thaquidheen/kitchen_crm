@@ -10,7 +10,7 @@
               rightMargin="0"
               topMargin="0"
               bottomMargin="0"
-              uuid="lighting-subreport-uuid">
+              uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567890">
 
     <!-- Fields from QuotationLightingDto -->
     <field name="itemName" class="java.lang.String"/>
@@ -26,39 +26,39 @@
     <columnHeader>
         <band height="25">
             <rectangle>
-                <reportElement x="0" y="0" width="515" height="25" backcolor="#1E3A5F" uuid="light-header-bg"/>
+                <reportElement x="0" y="0" width="515" height="25" backcolor="#1E3A5F" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="5" y="0" width="180" height="25" forecolor="#FFFFFF" uuid="item-header"/>
+                <reportElement x="5" y="0" width="180" height="25" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567002"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8" isBold="true"/>
                 </textElement>
                 <text><![CDATA[Item Name]]></text>
             </staticText>
             <staticText>
-                <reportElement x="190" y="0" width="50" height="25" forecolor="#FFFFFF" uuid="qty-header"/>
+                <reportElement x="190" y="0" width="50" height="25" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567003"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8" isBold="true"/>
                 </textElement>
                 <text><![CDATA[Qty]]></text>
             </staticText>
             <staticText>
-                <reportElement x="245" y="0" width="60" height="25" forecolor="#FFFFFF" uuid="unit-header"/>
+                <reportElement x="245" y="0" width="60" height="25" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567004"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8" isBold="true"/>
                 </textElement>
                 <text><![CDATA[Unit]]></text>
             </staticText>
             <staticText>
-                <reportElement x="310" y="0" width="120" height="25" forecolor="#FFFFFF" uuid="specs-header"/>
+                <reportElement x="310" y="0" width="120" height="25" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567005"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8" isBold="true"/>
                 </textElement>
                 <text><![CDATA[Specifications]]></text>
             </staticText>
             <staticText>
-                <reportElement x="435" y="0" width="75" height="25" forecolor="#FFFFFF" uuid="type-header"/>
+                <reportElement x="435" y="0" width="75" height="25" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567006"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8" isBold="true"/>
                 </textElement>
@@ -71,42 +71,42 @@
         <band height="22" splitType="Stretch">
             <!-- Alternating row background -->
             <rectangle>
-                <reportElement x="0" y="0" width="515" height="22" backcolor="#F9FAFB" uuid="alt-row-bg">
+                <reportElement x="0" y="0" width="515" height="22" backcolor="#F9FAFB" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567007">
                     <printWhenExpression><![CDATA[$V{ROW_NUMBER} % 2 == 0]]></printWhenExpression>
                 </reportElement>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
-                <reportElement x="5" y="2" width="180" height="18" forecolor="#333333" uuid="light-name"/>
+                <reportElement x="5" y="2" width="180" height="18" forecolor="#333333" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567008"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{itemName}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true" pattern="#,##0.##">
-                <reportElement x="190" y="2" width="50" height="18" forecolor="#333333" uuid="light-qty"/>
+                <reportElement x="190" y="2" width="50" height="18" forecolor="#333333" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567009"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{quantity}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
-                <reportElement x="245" y="2" width="60" height="18" forecolor="#333333" uuid="light-unit"/>
+                <reportElement x="245" y="2" width="60" height="18" forecolor="#333333" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567010"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{unit} != null ? $F{unit} : "Pieces"]]></textFieldExpression>
             </textField>
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
-                <reportElement x="310" y="2" width="120" height="18" forecolor="#666666" uuid="light-specs"/>
+                <reportElement x="310" y="2" width="120" height="18" forecolor="#666666" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567011"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{specifications}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
-                <reportElement x="435" y="2" width="75" height="18" forecolor="#333333" uuid="light-type"/>
+                <reportElement x="435" y="2" width="75" height="18" forecolor="#333333" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567012"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
@@ -114,7 +114,7 @@
             </textField>
 
             <line>
-                <reportElement x="0" y="21" width="515" height="1" forecolor="#EEEEEE" uuid="row-divider"/>
+                <reportElement x="0" y="21" width="515" height="1" forecolor="#EEEEEE" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567013"/>
             </line>
         </band>
     </detail>
@@ -122,7 +122,7 @@
     <noData>
         <band height="30">
             <staticText>
-                <reportElement x="0" y="5" width="515" height="20" forecolor="#999999" uuid="no-lighting"/>
+                <reportElement x="0" y="5" width="515" height="20" forecolor="#999999" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567014"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="9" isItalic="true"/>
                 </textElement>

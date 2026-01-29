@@ -10,7 +10,7 @@
               rightMargin="40"
               topMargin="40"
               bottomMargin="40"
-              uuid="main-report-uuid">
+              uuid="a1b2c3d4-e5f6-7890-abcd-ef1234567890">
 
     <!-- Parameters -->
     <parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
@@ -55,13 +55,13 @@
         <band height="762" splitType="Stretch">
             <!-- Navy Header Bar -->
             <rectangle>
-                <reportElement x="0" y="0" width="515" height="80" backcolor="#1E3A5F" uuid="header-bg"/>
+                <reportElement x="0" y="0" width="515" height="80" backcolor="#1E3A5F" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
             <!-- Company Logo (if available) -->
             <image scaleImage="RetainShape" hAlign="Center" vAlign="Middle" isUsingCache="true" onErrorType="Blank">
-                <reportElement x="20" y="10" width="60" height="60" uuid="logo">
+                <reportElement x="20" y="10" width="60" height="60" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567002">
                     <printWhenExpression><![CDATA[$P{HAS_LOGO} != null && $P{HAS_LOGO}]]></printWhenExpression>
                 </reportElement>
                 <imageExpression><![CDATA[$P{COMPANY_LOGO}]]></imageExpression>
@@ -69,7 +69,7 @@
 
             <!-- Company Name -->
             <textField>
-                <reportElement style="Title" x="90" y="15" width="405" height="30" forecolor="#FFFFFF" uuid="company-name"/>
+                <reportElement style="Title" x="90" y="15" width="405" height="30" forecolor="#FFFFFF" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567003"/>
                 <textElement verticalAlignment="Middle">
                     <font size="22" isBold="true"/>
                 </textElement>
@@ -78,7 +78,7 @@
 
             <!-- Company Tagline -->
             <textField>
-                <reportElement x="90" y="45" width="405" height="25" forecolor="#C9A227" uuid="company-tagline"/>
+                <reportElement x="90" y="45" width="405" height="25" forecolor="#C9A227" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567004"/>
                 <textElement verticalAlignment="Middle">
                     <font size="11" isItalic="true"/>
                 </textElement>
@@ -87,18 +87,18 @@
 
             <!-- Gold Accent Line -->
             <line>
-                <reportElement x="0" y="80" width="515" height="1" forecolor="#C9A227" uuid="gold-line"/>
+                <reportElement x="0" y="80" width="515" height="1" forecolor="#C9A227" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567005"/>
                 <graphicElement><pen lineWidth="3"/></graphicElement>
             </line>
 
             <!-- QUOTATION Title Box -->
             <rectangle radius="5">
-                <reportElement x="130" y="120" width="255" height="80" backcolor="#F5F5F5" uuid="quote-box"/>
+                <reportElement x="130" y="120" width="255" height="80" backcolor="#F5F5F5" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567006"/>
                 <graphicElement><pen lineWidth="2" lineColor="#1E3A5F"/></graphicElement>
             </rectangle>
 
             <staticText>
-                <reportElement x="130" y="130" width="255" height="35" forecolor="#1E3A5F" uuid="quote-title"/>
+                <reportElement x="130" y="130" width="255" height="35" forecolor="#1E3A5F" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567007"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="24" isBold="true" pdfFontName="Helvetica-Bold"/>
                 </textElement>
@@ -106,7 +106,7 @@
             </staticText>
 
             <textField>
-                <reportElement x="130" y="165" width="255" height="25" forecolor="#333333" uuid="quote-number"/>
+                <reportElement x="130" y="165" width="255" height="25" forecolor="#333333" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567008"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="14"/>
                 </textElement>
@@ -115,14 +115,14 @@
 
             <!-- Date Info -->
             <staticText>
-                <reportElement x="0" y="220" width="257" height="20" forecolor="#666666" uuid="date-label"/>
+                <reportElement x="0" y="220" width="257" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567009"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font size="10"/>
                 </textElement>
                 <text><![CDATA[Date:]]></text>
             </staticText>
             <textField>
-                <reportElement x="265" y="220" width="250" height="20" forecolor="#333333" uuid="date-value"/>
+                <reportElement x="265" y="220" width="250" height="20" forecolor="#333333" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567010"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
@@ -130,14 +130,14 @@
             </textField>
 
             <staticText>
-                <reportElement x="0" y="240" width="257" height="20" forecolor="#666666" uuid="valid-label"/>
+                <reportElement x="0" y="240" width="257" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567011"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font size="10"/>
                 </textElement>
                 <text><![CDATA[Valid Until:]]></text>
             </staticText>
             <textField>
-                <reportElement x="265" y="240" width="250" height="20" forecolor="#333333" uuid="valid-value"/>
+                <reportElement x="265" y="240" width="250" height="20" forecolor="#333333" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567012"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
@@ -146,12 +146,12 @@
 
             <!-- Prepared For Section -->
             <rectangle radius="5">
-                <reportElement x="0" y="290" width="515" height="120" backcolor="#FFFFFF" uuid="customer-box"/>
+                <reportElement x="0" y="290" width="515" height="120" backcolor="#FFFFFF" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567013"/>
                 <graphicElement><pen lineWidth="1" lineColor="#DDDDDD"/></graphicElement>
             </rectangle>
 
             <staticText>
-                <reportElement x="20" y="300" width="150" height="25" forecolor="#C9A227" uuid="prepared-label"/>
+                <reportElement x="20" y="300" width="150" height="25" forecolor="#C9A227" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567014"/>
                 <textElement verticalAlignment="Middle">
                     <font size="12" isBold="true"/>
                 </textElement>
@@ -159,18 +159,18 @@
             </staticText>
 
             <line>
-                <reportElement x="20" y="325" width="475" height="1" forecolor="#EEEEEE" uuid="divider-1"/>
+                <reportElement x="20" y="325" width="475" height="1" forecolor="#EEEEEE" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567015"/>
             </line>
 
             <staticText>
-                <reportElement x="20" y="335" width="100" height="20" forecolor="#666666" uuid="customer-label"/>
+                <reportElement x="20" y="335" width="100" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567016"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10"/>
                 </textElement>
                 <text><![CDATA[Customer:]]></text>
             </staticText>
             <textField>
-                <reportElement x="120" y="335" width="375" height="20" forecolor="#333333" uuid="customer-value"/>
+                <reportElement x="120" y="335" width="375" height="20" forecolor="#333333" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567017"/>
                 <textElement verticalAlignment="Middle">
                     <font size="12" isBold="true"/>
                 </textElement>
@@ -178,14 +178,14 @@
             </textField>
 
             <staticText>
-                <reportElement x="20" y="360" width="100" height="20" forecolor="#666666" uuid="project-label"/>
+                <reportElement x="20" y="360" width="100" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567018"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10"/>
                 </textElement>
                 <text><![CDATA[Project:]]></text>
             </staticText>
             <textField>
-                <reportElement x="120" y="360" width="375" height="20" forecolor="#333333" uuid="project-value"/>
+                <reportElement x="120" y="360" width="375" height="20" forecolor="#333333" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567019"/>
                 <textElement verticalAlignment="Middle">
                     <font size="12" isBold="true"/>
                 </textElement>
@@ -193,14 +193,14 @@
             </textField>
 
             <staticText>
-                <reportElement x="20" y="385" width="100" height="20" forecolor="#666666" uuid="kitchens-label"/>
+                <reportElement x="20" y="385" width="100" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567020"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10"/>
                 </textElement>
                 <text><![CDATA[Total Kitchens:]]></text>
             </staticText>
             <textField>
-                <reportElement x="120" y="385" width="375" height="20" forecolor="#333333" uuid="kitchens-value"/>
+                <reportElement x="120" y="385" width="375" height="20" forecolor="#333333" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567021"/>
                 <textElement verticalAlignment="Middle">
                     <font size="12" isBold="true"/>
                 </textElement>
@@ -209,7 +209,7 @@
 
             <!-- Kitchen Names Section -->
             <staticText>
-                <reportElement x="0" y="430" width="515" height="25" forecolor="#1E3A5F" uuid="scope-label"/>
+                <reportElement x="0" y="430" width="515" height="25" forecolor="#1E3A5F" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567022"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="14" isBold="true"/>
                 </textElement>
@@ -217,7 +217,7 @@
             </staticText>
 
             <textField>
-                <reportElement x="20" y="460" width="475" height="60" forecolor="#333333" uuid="kitchen-names"/>
+                <reportElement x="20" y="460" width="475" height="60" forecolor="#333333" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567023"/>
                 <textElement textAlignment="Center" verticalAlignment="Top">
                     <font size="11"/>
                 </textElement>
@@ -226,12 +226,12 @@
 
             <!-- Grand Total Box -->
             <rectangle radius="5">
-                <reportElement x="130" y="540" width="255" height="70" backcolor="#1E3A5F" uuid="total-box"/>
+                <reportElement x="130" y="540" width="255" height="70" backcolor="#1E3A5F" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567024"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
             <staticText>
-                <reportElement x="130" y="550" width="255" height="20" forecolor="#C9A227" uuid="total-label"/>
+                <reportElement x="130" y="550" width="255" height="20" forecolor="#C9A227" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567025"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
@@ -239,7 +239,7 @@
             </staticText>
 
             <textField pattern="#,##0.00">
-                <reportElement x="130" y="570" width="255" height="35" forecolor="#FFFFFF" uuid="total-value"/>
+                <reportElement x="130" y="570" width="255" height="35" forecolor="#FFFFFF" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567026"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="20" isBold="true"/>
                 </textElement>
@@ -248,11 +248,11 @@
 
             <!-- Footer with company contact -->
             <line>
-                <reportElement x="0" y="700" width="515" height="1" forecolor="#DDDDDD" uuid="footer-line"/>
+                <reportElement x="0" y="700" width="515" height="1" forecolor="#DDDDDD" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567027"/>
             </line>
 
             <textField>
-                <reportElement x="0" y="710" width="515" height="20" forecolor="#666666" uuid="footer-address"/>
+                <reportElement x="0" y="710" width="515" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567028"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="9"/>
                 </textElement>
@@ -260,7 +260,7 @@
             </textField>
 
             <textField>
-                <reportElement x="0" y="730" width="515" height="20" forecolor="#666666" uuid="footer-contact"/>
+                <reportElement x="0" y="730" width="515" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567029"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="9"/>
                 </textElement>
@@ -275,12 +275,12 @@
             <printWhenExpression><![CDATA[$V{PAGE_NUMBER} > 1]]></printWhenExpression>
 
             <rectangle>
-                <reportElement x="0" y="0" width="515" height="40" backcolor="#1E3A5F" uuid="page-header-bg"/>
+                <reportElement x="0" y="0" width="515" height="40" backcolor="#1E3A5F" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567030"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
             <textField>
-                <reportElement x="10" y="5" width="300" height="30" forecolor="#FFFFFF" uuid="page-header-company"/>
+                <reportElement x="10" y="5" width="300" height="30" forecolor="#FFFFFF" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567031"/>
                 <textElement verticalAlignment="Middle">
                     <font size="14" isBold="true"/>
                 </textElement>
@@ -288,7 +288,7 @@
             </textField>
 
             <textField>
-                <reportElement x="320" y="5" width="185" height="30" forecolor="#C9A227" uuid="page-header-quote"/>
+                <reportElement x="320" y="5" width="185" height="30" forecolor="#C9A227" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567032"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font size="10"/>
                 </textElement>
@@ -296,7 +296,7 @@
             </textField>
 
             <line>
-                <reportElement x="0" y="40" width="515" height="1" forecolor="#C9A227" uuid="page-header-line"/>
+                <reportElement x="0" y="40" width="515" height="1" forecolor="#C9A227" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567033"/>
                 <graphicElement><pen lineWidth="2"/></graphicElement>
             </line>
         </band>
@@ -306,7 +306,7 @@
     <detail>
         <band height="700" splitType="Stretch">
             <subreport>
-                <reportElement x="0" y="0" width="515" height="700" uuid="kitchen-subreport"/>
+                <reportElement x="0" y="0" width="515" height="700" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567034"/>
                 <subreportParameter name="SUBREPORT_DIR">
                     <subreportParameterExpression><![CDATA[$P{SUBREPORT_DIR}]]></subreportParameterExpression>
                 </subreportParameter>
@@ -320,17 +320,17 @@
     <summary>
         <band height="762" splitType="Stretch">
             <break>
-                <reportElement x="0" y="0" width="515" height="1" uuid="page-break-before-terms"/>
+                <reportElement x="0" y="0" width="515" height="1" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567035"/>
             </break>
 
             <!-- Terms Header -->
             <rectangle>
-                <reportElement x="0" y="10" width="515" height="40" backcolor="#1E3A5F" uuid="terms-header-bg"/>
+                <reportElement x="0" y="10" width="515" height="40" backcolor="#1E3A5F" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567036"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
             <staticText>
-                <reportElement x="0" y="10" width="515" height="40" forecolor="#FFFFFF" uuid="terms-title"/>
+                <reportElement x="0" y="10" width="515" height="40" forecolor="#FFFFFF" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567037"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="16" isBold="true"/>
                 </textElement>
@@ -338,13 +338,13 @@
             </staticText>
 
             <line>
-                <reportElement x="0" y="50" width="515" height="1" forecolor="#C9A227" uuid="terms-gold-line"/>
+                <reportElement x="0" y="50" width="515" height="1" forecolor="#C9A227" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567038"/>
                 <graphicElement><pen lineWidth="2"/></graphicElement>
             </line>
 
             <!-- General Terms Section -->
             <staticText>
-                <reportElement x="0" y="70" width="515" height="25" forecolor="#1E3A5F" uuid="general-terms-label"/>
+                <reportElement x="0" y="70" width="515" height="25" forecolor="#1E3A5F" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567039"/>
                 <textElement verticalAlignment="Middle">
                     <font size="12" isBold="true"/>
                 </textElement>
@@ -352,7 +352,7 @@
             </staticText>
 
             <textField textAdjust="StretchHeight">
-                <reportElement x="0" y="95" width="515" height="200" forecolor="#333333" uuid="general-terms-content"/>
+                <reportElement x="0" y="95" width="515" height="200" forecolor="#333333" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567040"/>
                 <textElement verticalAlignment="Top" markup="html">
                     <font size="9"/>
                 </textElement>
@@ -361,7 +361,7 @@
 
             <!-- Warranty Section -->
             <staticText>
-                <reportElement x="0" y="310" width="515" height="25" forecolor="#1E3A5F" uuid="warranty-label"/>
+                <reportElement x="0" y="310" width="515" height="25" forecolor="#1E3A5F" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567041"/>
                 <textElement verticalAlignment="Middle">
                     <font size="12" isBold="true"/>
                 </textElement>
@@ -369,7 +369,7 @@
             </staticText>
 
             <textField textAdjust="StretchHeight">
-                <reportElement x="0" y="335" width="515" height="200" forecolor="#333333" uuid="warranty-content"/>
+                <reportElement x="0" y="335" width="515" height="200" forecolor="#333333" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567042"/>
                 <textElement verticalAlignment="Top" markup="html">
                     <font size="9"/>
                 </textElement>
@@ -378,7 +378,7 @@
 
             <!-- Signature Section -->
             <staticText>
-                <reportElement x="0" y="560" width="515" height="25" forecolor="#1E3A5F" uuid="signature-title"/>
+                <reportElement x="0" y="560" width="515" height="25" forecolor="#1E3A5F" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567043"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="12" isBold="true"/>
                 </textElement>
@@ -387,12 +387,12 @@
 
             <!-- Client Signature Box -->
             <rectangle radius="3">
-                <reportElement x="0" y="595" width="240" height="120" backcolor="#FFFFFF" uuid="client-sig-box"/>
+                <reportElement x="0" y="595" width="240" height="120" backcolor="#FFFFFF" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567044"/>
                 <graphicElement><pen lineWidth="1" lineColor="#DDDDDD"/></graphicElement>
             </rectangle>
 
             <staticText>
-                <reportElement x="10" y="600" width="220" height="20" forecolor="#C9A227" uuid="client-sig-label"/>
+                <reportElement x="10" y="600" width="220" height="20" forecolor="#C9A227" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567045"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
@@ -400,11 +400,11 @@
             </staticText>
 
             <line>
-                <reportElement x="20" y="670" width="200" height="1" forecolor="#333333" uuid="client-sig-line"/>
+                <reportElement x="20" y="670" width="200" height="1" forecolor="#333333" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567046"/>
             </line>
 
             <textField>
-                <reportElement x="20" y="675" width="200" height="20" forecolor="#333333" uuid="client-name"/>
+                <reportElement x="20" y="675" width="200" height="20" forecolor="#333333" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567047"/>
                 <textElement verticalAlignment="Middle">
                     <font size="9"/>
                 </textElement>
@@ -412,7 +412,7 @@
             </textField>
 
             <staticText>
-                <reportElement x="20" y="695" width="200" height="15" forecolor="#666666" uuid="client-date-label"/>
+                <reportElement x="20" y="695" width="200" height="15" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567048"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
@@ -421,12 +421,12 @@
 
             <!-- Company Signature Box -->
             <rectangle radius="3">
-                <reportElement x="275" y="595" width="240" height="120" backcolor="#FFFFFF" uuid="company-sig-box"/>
+                <reportElement x="275" y="595" width="240" height="120" backcolor="#FFFFFF" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567049"/>
                 <graphicElement><pen lineWidth="1" lineColor="#DDDDDD"/></graphicElement>
             </rectangle>
 
             <staticText>
-                <reportElement x="285" y="600" width="220" height="20" forecolor="#C9A227" uuid="company-sig-label"/>
+                <reportElement x="285" y="600" width="220" height="20" forecolor="#C9A227" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567050"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
@@ -434,11 +434,11 @@
             </staticText>
 
             <line>
-                <reportElement x="295" y="670" width="200" height="1" forecolor="#333333" uuid="company-sig-line"/>
+                <reportElement x="295" y="670" width="200" height="1" forecolor="#333333" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567051"/>
             </line>
 
             <textField>
-                <reportElement x="295" y="675" width="200" height="20" forecolor="#333333" uuid="company-sig-name"/>
+                <reportElement x="295" y="675" width="200" height="20" forecolor="#333333" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567052"/>
                 <textElement verticalAlignment="Middle">
                     <font size="9"/>
                 </textElement>
@@ -446,7 +446,7 @@
             </textField>
 
             <staticText>
-                <reportElement x="295" y="695" width="200" height="15" forecolor="#666666" uuid="company-date-label"/>
+                <reportElement x="295" y="695" width="200" height="15" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567053"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
@@ -455,11 +455,11 @@
 
             <!-- Footer -->
             <line>
-                <reportElement x="0" y="730" width="515" height="1" forecolor="#DDDDDD" uuid="summary-footer-line"/>
+                <reportElement x="0" y="730" width="515" height="1" forecolor="#DDDDDD" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567054"/>
             </line>
 
             <textField>
-                <reportElement x="0" y="740" width="515" height="20" forecolor="#666666" uuid="summary-footer"/>
+                <reportElement x="0" y="740" width="515" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567055"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
@@ -472,11 +472,11 @@
     <pageFooter>
         <band height="30">
             <line>
-                <reportElement x="0" y="0" width="515" height="1" forecolor="#DDDDDD" uuid="page-footer-line"/>
+                <reportElement x="0" y="0" width="515" height="1" forecolor="#DDDDDD" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567056"/>
             </line>
 
             <textField>
-                <reportElement x="0" y="5" width="200" height="20" forecolor="#666666" uuid="page-footer-quote"/>
+                <reportElement x="0" y="5" width="200" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567057"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
@@ -484,7 +484,7 @@
             </textField>
 
             <textField>
-                <reportElement x="200" y="5" width="115" height="20" forecolor="#666666" uuid="page-footer-date"/>
+                <reportElement x="200" y="5" width="115" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567058"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
@@ -492,7 +492,7 @@
             </textField>
 
             <textField>
-                <reportElement x="315" y="5" width="200" height="20" forecolor="#666666" uuid="page-footer-pages"/>
+                <reportElement x="315" y="5" width="200" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567059"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
