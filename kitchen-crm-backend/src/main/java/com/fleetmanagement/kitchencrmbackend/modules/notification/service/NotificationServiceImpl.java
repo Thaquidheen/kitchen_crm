@@ -13,7 +13,7 @@ import com.fleetmanagement.kitchencrmbackend.modules.notification.entity.Referen
 import com.fleetmanagement.kitchencrmbackend.modules.notification.repository.NotificationLogRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.notification.repository.NotificationTemplateRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
-import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.PdfGenerationService;
+import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.JasperPdfGenerationService;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import org.springframework.core.io.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +48,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final SignedDocumentRepository signedDocumentRepository;
     private final DesignPhaseRepository designPhaseRepository;
     private final ObjectMapper objectMapper;
-    private PdfGenerationService pdfGenerationService;
+    private JasperPdfGenerationService pdfGenerationService;
 
     public NotificationServiceImpl(
             EmailService emailService,
@@ -72,7 +72,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Autowired(required = false)
-    public void setPdfGenerationService(PdfGenerationService pdfGenerationService) {
+    public void setPdfGenerationService(JasperPdfGenerationService pdfGenerationService) {
         this.pdfGenerationService = pdfGenerationService;
     }
 

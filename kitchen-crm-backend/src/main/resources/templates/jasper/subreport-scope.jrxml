@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="subreport-scope"
+              pageWidth="515"
+              pageHeight="400"
+              columnWidth="515"
+              leftMargin="0"
+              rightMargin="0"
+              topMargin="0"
+              bottomMargin="0"
+              uuid="scope-subreport-uuid">
+
+    <!-- Fields from QuotationKitchenScopeDetailDto -->
+    <field name="fieldName" class="java.lang.String"/>
+    <field name="fieldValue" class="java.lang.String"/>
+    <field name="fieldOrder" class="java.lang.Integer"/>
+
+    <variable name="ROW_NUMBER" class="java.lang.Integer" calculation="Count">
+        <variableExpression><![CDATA[Boolean.TRUE]]></variableExpression>
+    </variable>
+
+    <columnHeader>
+        <band height="25">
+            <rectangle>
+                <reportElement x="0" y="0" width="515" height="25" backcolor="#1E3A5F" uuid="scope-header-bg"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="10" y="0" width="200" height="25" forecolor="#FFFFFF" uuid="field-header"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Specification]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="220" y="0" width="285" height="25" forecolor="#FFFFFF" uuid="value-header"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Details]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="22" splitType="Stretch">
+            <!-- Alternating row background -->
+            <rectangle>
+                <reportElement x="0" y="0" width="515" height="22" backcolor="#F9FAFB" uuid="alt-row-bg">
+                    <printWhenExpression><![CDATA[$V{ROW_NUMBER} % 2 == 0]]></printWhenExpression>
+                </reportElement>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+
+            <textField textAdjust="StretchHeight">
+                <reportElement x="10" y="2" width="200" height="18" forecolor="#666666" uuid="field-name"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="9"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{fieldName}]]></textFieldExpression>
+            </textField>
+
+            <textField textAdjust="StretchHeight">
+                <reportElement x="220" y="2" width="285" height="18" forecolor="#333333" uuid="field-value"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{fieldValue}]]></textFieldExpression>
+            </textField>
+
+            <line>
+                <reportElement x="0" y="21" width="515" height="1" forecolor="#EEEEEE" uuid="row-divider"/>
+            </line>
+        </band>
+    </detail>
+
+</jasperReport>

@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="subreport-products"
+              pageWidth="515"
+              pageHeight="400"
+              columnWidth="515"
+              leftMargin="0"
+              rightMargin="0"
+              topMargin="0"
+              bottomMargin="0"
+              uuid="products-subreport-uuid">
+
+    <!-- Fields from QuotationCabinetDto -->
+    <field name="cabinetTypeName" class="java.lang.String"/>
+    <field name="quantity" class="java.lang.Integer"/>
+    <field name="widthMm" class="java.lang.Integer"/>
+    <field name="depthMm" class="java.lang.Integer"/>
+    <field name="heightMm" class="java.lang.Integer"/>
+    <field name="brandName" class="java.lang.String"/>
+    <field name="materialName" class="java.lang.String"/>
+
+    <variable name="ROW_NUMBER" class="java.lang.Integer" calculation="Count">
+        <variableExpression><![CDATA[Boolean.TRUE]]></variableExpression>
+    </variable>
+
+    <title>
+        <band height="20">
+            <staticText>
+                <reportElement x="0" y="0" width="515" height="20" forecolor="#666666" uuid="cabinets-title"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="11" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Cabinets]]></text>
+            </staticText>
+        </band>
+    </title>
+
+    <columnHeader>
+        <band height="25">
+            <rectangle>
+                <reportElement x="0" y="0" width="515" height="25" backcolor="#1E3A5F" uuid="products-header-bg"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="5" y="0" width="150" height="25" forecolor="#FFFFFF" uuid="type-header"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="8" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Cabinet Type]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="160" y="0" width="35" height="25" forecolor="#FFFFFF" uuid="qty-header"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="8" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Qty]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="200" y="0" width="50" height="25" forecolor="#FFFFFF" uuid="width-header"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="8" isBold="true"/>
+                </textElement>
+                <text><![CDATA[W(mm)]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="255" y="0" width="50" height="25" forecolor="#FFFFFF" uuid="depth-header"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="8" isBold="true"/>
+                </textElement>
+                <text><![CDATA[D(mm)]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="310" y="0" width="50" height="25" forecolor="#FFFFFF" uuid="height-header"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="8" isBold="true"/>
+                </textElement>
+                <text><![CDATA[H(mm)]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="365" y="0" width="70" height="25" forecolor="#FFFFFF" uuid="brand-header"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="8" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Brand]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="440" y="0" width="70" height="25" forecolor="#FFFFFF" uuid="material-header"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="8" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Material]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="20" splitType="Stretch">
+            <!-- Alternating row background -->
+            <rectangle>
+                <reportElement x="0" y="0" width="515" height="20" backcolor="#F9FAFB" uuid="alt-row-bg">
+                    <printWhenExpression><![CDATA[$V{ROW_NUMBER} % 2 == 0]]></printWhenExpression>
+                </reportElement>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+
+            <textField textAdjust="StretchHeight" isBlankWhenNull="true">
+                <reportElement x="5" y="2" width="150" height="16" forecolor="#333333" uuid="cabinet-type"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{cabinetTypeName}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="160" y="2" width="35" height="16" forecolor="#333333" uuid="cabinet-qty"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{quantity}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="200" y="2" width="50" height="16" forecolor="#333333" uuid="cabinet-width"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{widthMm}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="255" y="2" width="50" height="16" forecolor="#333333" uuid="cabinet-depth"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{depthMm}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="310" y="2" width="50" height="16" forecolor="#333333" uuid="cabinet-height"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{heightMm}]]></textFieldExpression>
+            </textField>
+            <textField textAdjust="StretchHeight" isBlankWhenNull="true">
+                <reportElement x="365" y="2" width="70" height="16" forecolor="#333333" uuid="cabinet-brand"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{brandName}]]></textFieldExpression>
+            </textField>
+            <textField textAdjust="StretchHeight" isBlankWhenNull="true">
+                <reportElement x="440" y="2" width="70" height="16" forecolor="#333333" uuid="cabinet-material"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{materialName}]]></textFieldExpression>
+            </textField>
+
+            <line>
+                <reportElement x="0" y="19" width="515" height="1" forecolor="#EEEEEE" uuid="row-divider"/>
+            </line>
+        </band>
+    </detail>
+
+    <noData>
+        <band height="30">
+            <staticText>
+                <reportElement x="0" y="5" width="515" height="20" forecolor="#999999" uuid="no-cabinets"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="9" isItalic="true"/>
+                </textElement>
+                <text><![CDATA[No cabinets in this kitchen]]></text>
+            </staticText>
+        </band>
+    </noData>
+
+</jasperReport>

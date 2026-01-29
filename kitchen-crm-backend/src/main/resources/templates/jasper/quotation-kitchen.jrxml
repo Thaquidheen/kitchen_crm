@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="quotation-kitchen"
+              pageWidth="515"
+              pageHeight="762"
+              columnWidth="515"
+              leftMargin="0"
+              rightMargin="0"
+              topMargin="0"
+              bottomMargin="0"
+              uuid="kitchen-report-uuid">
+
+    <!-- Parameters -->
+    <parameter name="SUBREPORT_DIR" class="java.lang.String"/>
+
+    <!-- Fields from QuotationKitchenDto -->
+    <field name="kitchenName" class="java.lang.String"/>
+    <field name="scopeDetails" class="java.util.List"/>
+    <field name="planImages" class="java.util.List"/>
+    <field name="cabinets" class="java.util.List"/>
+    <field name="doors" class="java.util.List"/>
+    <field name="accessories" class="java.util.List"/>
+    <field name="lighting" class="java.util.List"/>
+    <field name="cabinetsFinalTotal" class="java.math.BigDecimal"/>
+    <field name="doorsFinalTotal" class="java.math.BigDecimal"/>
+    <field name="accessoriesFinalTotal" class="java.math.BigDecimal"/>
+    <field name="lightingFinalTotal" class="java.math.BigDecimal"/>
+    <field name="subtotal" class="java.math.BigDecimal"/>
+    <field name="marginAmount" class="java.math.BigDecimal"/>
+    <field name="taxAmount" class="java.math.BigDecimal"/>
+    <field name="totalAmount" class="java.math.BigDecimal"/>
+
+    <!-- Styles -->
+    <style name="KitchenTitle" fontName="Helvetica" fontSize="18" isBold="true" forecolor="#1E3A5F"/>
+    <style name="SectionTitle" fontName="Helvetica" fontSize="14" isBold="true" forecolor="#1E3A5F"/>
+    <style name="TableHeader" fontName="Helvetica" fontSize="9" isBold="true" forecolor="#FFFFFF" backcolor="#1E3A5F"/>
+    <style name="TableRow" fontName="Helvetica" fontSize="9" forecolor="#333333"/>
+    <style name="TableRowAlt" fontName="Helvetica" fontSize="9" forecolor="#333333" backcolor="#F9FAFB"/>
+    <style name="TotalLabel" fontName="Helvetica" fontSize="10" isBold="true" forecolor="#333333"/>
+    <style name="TotalValue" fontName="Helvetica" fontSize="10" isBold="true" forecolor="#1E3A5F"/>
+
+    <detail>
+        <band height="700" splitType="Immediate">
+            <!-- Kitchen Header -->
+            <rectangle>
+                <reportElement x="0" y="0" width="515" height="50" backcolor="#F5F5F5" uuid="kitchen-header-bg"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+
+            <rectangle>
+                <reportElement x="0" y="0" width="8" height="50" backcolor="#C9A227" uuid="kitchen-accent"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+
+            <textField>
+                <reportElement style="KitchenTitle" x="20" y="10" width="475" height="30" uuid="kitchen-name"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="18" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{kitchenName}]]></textFieldExpression>
+            </textField>
+
+            <!-- ==================== SCOPE OF WORK SECTION ==================== -->
+            <staticText>
+                <reportElement style="SectionTitle" x="0" y="65" width="515" height="25" uuid="scope-title"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="14" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Scope of Work]]></text>
+            </staticText>
+
+            <line>
+                <reportElement x="0" y="90" width="515" height="1" forecolor="#DDDDDD" uuid="scope-line"/>
+            </line>
+
+            <!-- Scope Details Subreport -->
+            <subreport>
+                <reportElement x="0" y="95" width="515" height="100" uuid="scope-subreport"/>
+                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{scopeDetails})]]></dataSourceExpression>
+                <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-scope.jasper"]]></subreportExpression>
+            </subreport>
+
+            <!-- ==================== PLAN IMAGES SECTION ==================== -->
+            <staticText>
+                <reportElement style="SectionTitle" x="0" y="210" width="515" height="25" uuid="images-title"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="14" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Plan Images]]></text>
+            </staticText>
+
+            <line>
+                <reportElement x="0" y="235" width="515" height="1" forecolor="#DDDDDD" uuid="images-line"/>
+            </line>
+
+            <!-- Plan Images Subreport -->
+            <subreport>
+                <reportElement x="0" y="240" width="515" height="150" uuid="images-subreport"/>
+                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{planImages})]]></dataSourceExpression>
+                <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-images.jasper"]]></subreportExpression>
+            </subreport>
+
+            <!-- Page Break Before Products -->
+            <break>
+                <reportElement x="0" y="400" width="515" height="1" uuid="page-break-products"/>
+            </break>
+
+            <!-- ==================== PRODUCTS SECTION ==================== -->
+            <staticText>
+                <reportElement style="SectionTitle" x="0" y="410" width="515" height="25" uuid="products-title"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="14" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Products]]></text>
+            </staticText>
+
+            <line>
+                <reportElement x="0" y="435" width="515" height="1" forecolor="#DDDDDD" uuid="products-line"/>
+            </line>
+
+            <!-- Cabinets & Doors Subreport -->
+            <subreport>
+                <reportElement x="0" y="440" width="515" height="80" uuid="cabinets-subreport"/>
+                <subreportParameter name="CABINETS_DATA">
+                    <subreportParameterExpression><![CDATA[$F{cabinets}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="DOORS_DATA">
+                    <subreportParameterExpression><![CDATA[$F{doors}]]></subreportParameterExpression>
+                </subreportParameter>
+                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{cabinets})]]></dataSourceExpression>
+                <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-products.jasper"]]></subreportExpression>
+            </subreport>
+
+            <!-- Accessories Subreport -->
+            <staticText>
+                <reportElement style="SectionTitle" x="0" y="530" width="515" height="20" forecolor="#666666" uuid="accessories-subtitle"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="11" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Accessories]]></text>
+            </staticText>
+
+            <subreport>
+                <reportElement x="0" y="550" width="515" height="60" uuid="accessories-subreport"/>
+                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{accessories})]]></dataSourceExpression>
+                <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-accessories.jasper"]]></subreportExpression>
+            </subreport>
+
+            <!-- Lighting Subreport -->
+            <staticText>
+                <reportElement style="SectionTitle" x="0" y="620" width="515" height="20" forecolor="#666666" uuid="lighting-subtitle"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="11" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Lighting]]></text>
+            </staticText>
+
+            <subreport>
+                <reportElement x="0" y="640" width="515" height="60" uuid="lighting-subreport"/>
+                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{lighting})]]></dataSourceExpression>
+                <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-lighting.jasper"]]></subreportExpression>
+            </subreport>
+        </band>
+
+        <!-- ==================== KITCHEN TOTALS PAGE ==================== -->
+        <band height="400" splitType="Immediate">
+            <break>
+                <reportElement x="0" y="0" width="515" height="1" uuid="page-break-totals"/>
+            </break>
+
+            <!-- Kitchen Header (repeated) -->
+            <rectangle>
+                <reportElement x="0" y="10" width="515" height="40" backcolor="#F5F5F5" uuid="totals-header-bg"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+
+            <rectangle>
+                <reportElement x="0" y="10" width="8" height="40" backcolor="#C9A227" uuid="totals-accent"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+
+            <textField>
+                <reportElement x="20" y="15" width="300" height="30" forecolor="#1E3A5F" uuid="totals-kitchen-name"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="16" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{kitchenName}]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="350" y="15" width="155" height="30" forecolor="#666666" uuid="totals-label"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="12"/>
+                </textElement>
+                <text><![CDATA[Kitchen Summary]]></text>
+            </staticText>
+
+            <!-- Totals Table -->
+            <rectangle radius="5">
+                <reportElement x="100" y="70" width="315" height="280" backcolor="#FFFFFF" uuid="totals-box"/>
+                <graphicElement><pen lineWidth="1" lineColor="#DDDDDD"/></graphicElement>
+            </rectangle>
+
+            <!-- Table Header -->
+            <rectangle>
+                <reportElement x="100" y="70" width="315" height="30" backcolor="#1E3A5F" uuid="totals-table-header"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+
+            <staticText>
+                <reportElement x="110" y="75" width="200" height="20" forecolor="#FFFFFF" uuid="desc-header"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="10" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Description]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="310" y="75" width="95" height="20" forecolor="#FFFFFF" uuid="amount-header"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="10" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Amount (Rs.)]]></text>
+            </staticText>
+
+            <!-- Cabinets Total -->
+            <staticText>
+                <reportElement x="110" y="110" width="200" height="25" forecolor="#333333" uuid="cabinets-label"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <text><![CDATA[Cabinets Total]]></text>
+            </staticText>
+            <textField pattern="#,##0.00">
+                <reportElement x="310" y="110" width="95" height="25" forecolor="#333333" uuid="cabinets-total"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{cabinetsFinalTotal}]]></textFieldExpression>
+            </textField>
+
+            <!-- Doors Total -->
+            <rectangle>
+                <reportElement x="100" y="135" width="315" height="25" backcolor="#F9FAFB" uuid="doors-row-bg"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="110" y="135" width="200" height="25" forecolor="#333333" uuid="doors-label"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <text><![CDATA[Doors Total]]></text>
+            </staticText>
+            <textField pattern="#,##0.00">
+                <reportElement x="310" y="135" width="95" height="25" forecolor="#333333" uuid="doors-total"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{doorsFinalTotal}]]></textFieldExpression>
+            </textField>
+
+            <!-- Accessories Total -->
+            <staticText>
+                <reportElement x="110" y="160" width="200" height="25" forecolor="#333333" uuid="acc-label"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <text><![CDATA[Accessories Total]]></text>
+            </staticText>
+            <textField pattern="#,##0.00">
+                <reportElement x="310" y="160" width="95" height="25" forecolor="#333333" uuid="acc-total"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{accessoriesFinalTotal}]]></textFieldExpression>
+            </textField>
+
+            <!-- Lights Total -->
+            <rectangle>
+                <reportElement x="100" y="185" width="315" height="25" backcolor="#F9FAFB" uuid="lights-row-bg"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="110" y="185" width="200" height="25" forecolor="#333333" uuid="lights-label"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <text><![CDATA[Lights Total]]></text>
+            </staticText>
+            <textField pattern="#,##0.00">
+                <reportElement x="310" y="185" width="95" height="25" forecolor="#333333" uuid="lights-total"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{lightingFinalTotal}]]></textFieldExpression>
+            </textField>
+
+            <!-- Divider -->
+            <line>
+                <reportElement x="110" y="220" width="295" height="1" forecolor="#CCCCCC" uuid="totals-divider"/>
+            </line>
+
+            <!-- Subtotal -->
+            <staticText>
+                <reportElement x="110" y="230" width="200" height="25" forecolor="#333333" uuid="subtotal-label"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="10" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Subtotal]]></text>
+            </staticText>
+            <textField pattern="#,##0.00">
+                <reportElement x="310" y="230" width="95" height="25" forecolor="#333333" uuid="subtotal-value"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="10" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{subtotal}]]></textFieldExpression>
+            </textField>
+
+            <!-- Margin -->
+            <rectangle>
+                <reportElement x="100" y="255" width="315" height="25" backcolor="#F9FAFB" uuid="margin-row-bg"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="110" y="255" width="200" height="25" forecolor="#333333" uuid="margin-label"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <text><![CDATA[Margin]]></text>
+            </staticText>
+            <textField pattern="#,##0.00">
+                <reportElement x="310" y="255" width="95" height="25" forecolor="#333333" uuid="margin-value"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{marginAmount}]]></textFieldExpression>
+            </textField>
+
+            <!-- Tax -->
+            <staticText>
+                <reportElement x="110" y="280" width="200" height="25" forecolor="#333333" uuid="tax-label"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <text><![CDATA[Tax]]></text>
+            </staticText>
+            <textField pattern="#,##0.00">
+                <reportElement x="310" y="280" width="95" height="25" forecolor="#333333" uuid="tax-value"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{taxAmount}]]></textFieldExpression>
+            </textField>
+
+            <!-- Kitchen Total -->
+            <rectangle>
+                <reportElement x="100" y="315" width="315" height="35" backcolor="#1E3A5F" uuid="kitchen-total-bg"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="110" y="320" width="200" height="25" forecolor="#FFFFFF" uuid="kitchen-total-label"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="12" isBold="true"/>
+                </textElement>
+                <text><![CDATA[KITCHEN TOTAL]]></text>
+            </staticText>
+            <textField pattern="#,##0.00">
+                <reportElement x="290" y="320" width="115" height="25" forecolor="#C9A227" uuid="kitchen-total-value"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="14" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{totalAmount}]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+
+</jasperReport>

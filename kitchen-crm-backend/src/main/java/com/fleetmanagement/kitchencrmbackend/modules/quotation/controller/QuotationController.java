@@ -3,7 +3,7 @@ package com.fleetmanagement.kitchencrmbackend.modules.quotation.controller;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationService;
-import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.PdfGenerationService;
+import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.JasperPdfGenerationService;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
 import jakarta.validation.Valid;
@@ -36,7 +36,7 @@ public class QuotationController {
 
 
     @Autowired
-    private PdfGenerationService pdfGenerationService;
+    private JasperPdfGenerationService pdfGenerationService;
 
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerPlanImageRepository customerPlanImageRepository;

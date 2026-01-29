@@ -82,7 +82,20 @@
             <version>8.7.0</version>
         </dependency>
 
-        <!-- PDF Generation (iText 7.x aligned) -->
+        <!-- PDF Generation - JasperReports -->
+        <dependency>
+            <groupId>net.sf.jasperreports</groupId>
+            <artifactId>jasperreports</artifactId>
+            <version>6.21.0</version>
+            <exclusions>
+                <!-- Exclude old iText to avoid conflicts -->
+                <exclusion>
+                    <groupId>com.lowagie</groupId>
+                    <artifactId>itext</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- iText 7.x for PDF generation -->
         <dependency>
             <groupId>com.itextpdf</groupId>
             <artifactId>kernel</artifactId>
@@ -95,13 +108,14 @@
         </dependency>
         <dependency>
             <groupId>com.itextpdf</groupId>
-            <artifactId>html2pdf</artifactId>
-            <version>4.0.5</version>
-        </dependency>
-        <dependency>
-            <groupId>com.itextpdf</groupId>
             <artifactId>io</artifactId>
             <version>7.2.5</version>
+        </dependency>
+        <!-- iText html2pdf for WarrantyCardPdfService -->
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>html2pdf</artifactId>
+            <version>4.0.5</version>
         </dependency>
 
         <!-- DevTools -->
