@@ -158,11 +158,11 @@ export function CustomerList({
     <>
       <Card className="bg-background-800 border-background-600 overflow-hidden">
         {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <div className="overflow-x-auto scrollbar-thin">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-background-700 text-primary-600">
               <tr>
-                <th className="px-4 py-3 text-left w-12">
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left w-10 sm:w-12">
                   <button
                     onClick={toggleSelectAll}
                     className="text-text-700 hover:text-text-900"
@@ -174,43 +174,43 @@ export function CustomerList({
                     )}
                   </button>
                 </th>
-                <th className="px-4 py-3 text-left text-text-900 font-semibold">
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-text-900 font-semibold text-sm">
                   <button
                     onClick={() => handleSort('name')}
                     className="flex items-center gap-1 hover:text-primary-500 transition-colors"
                   >
                     Name
                     {filters.sortBy === 'name' && (
-                      <span>{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
+                      <span className="text-xs">{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </button>
                 </th>
-                <th className="px-4 py-3 text-left text-text-900 font-semibold">Email</th>
-                <th className="px-4 py-3 text-left text-text-900 font-semibold">Contact</th>
-                <th className="px-4 py-3 text-left text-text-900 font-semibold">
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-text-900 font-semibold text-sm">Email</th>
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-text-900 font-semibold text-sm">Contact</th>
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-text-900 font-semibold text-sm">
                   <button
                     onClick={() => handleSort('status')}
                     className="flex items-center gap-1 hover:text-primary-500 transition-colors"
                   >
                     Status
                     {filters.sortBy === 'status' && (
-                      <span>{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
+                      <span className="text-xs">{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </button>
                 </th>
-                <th className="px-4 py-3 text-left text-text-900 font-semibold">Kitchen Types</th>
-                <th className="px-4 py-3 text-left text-text-900 font-semibold">
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-text-900 font-semibold text-sm">Kitchen Types</th>
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-text-900 font-semibold text-sm">
                   <button
                     onClick={() => handleSort('createdAt')}
                     className="flex items-center gap-1 hover:text-primary-500 transition-colors"
                   >
                     Created
                     {filters.sortBy === 'createdAt' && (
-                      <span>{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
+                      <span className="text-xs">{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </button>
                 </th>
-                <th className="px-4 py-3 text-right w-32 text-text-900 font-semibold">Actions</th>
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-right w-24 sm:w-32 text-text-900 font-semibold text-sm">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-background-600 bg-background-800">
@@ -218,19 +218,19 @@ export function CustomerList({
                 // Loading skeleton
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="px-4 py-4"><div className="h-4 bg-background-600 rounded w-4" /></td>
-                    <td className="px-4 py-4"><div className="h-4 bg-background-600 rounded w-32" /></td>
-                    <td className="px-4 py-4"><div className="h-4 bg-background-600 rounded w-40" /></td>
-                    <td className="px-4 py-4"><div className="h-4 bg-background-600 rounded w-24" /></td>
-                    <td className="px-4 py-4"><div className="h-6 bg-background-600 rounded w-20" /></td>
-                    <td className="px-4 py-4"><div className="h-4 bg-background-600 rounded w-28" /></td>
-                    <td className="px-4 py-4"><div className="h-4 bg-background-600 rounded w-20" /></td>
-                    <td className="px-4 py-4"><div className="h-4 bg-background-600 rounded w-16" /></td>
+                    <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-4" /></td>
+                    <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-24 sm:w-32" /></td>
+                    <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-32 sm:w-40" /></td>
+                    <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-20 sm:w-24" /></td>
+                    <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-6 bg-background-600 rounded w-16 sm:w-20" /></td>
+                    <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-24 sm:w-28" /></td>
+                    <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-16 sm:w-20" /></td>
+                    <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-12 sm:w-16" /></td>
                   </tr>
                 ))
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-text-600">
+                  <td colSpan={8} className="px-4 py-8 sm:py-12 text-center text-text-600 text-sm">
                     No customers found
                   </td>
                 </tr>
@@ -242,39 +242,39 @@ export function CustomerList({
                       isSelected(customer.id) ? 'bg-primary-900/10' : ''
                     }`}
                   >
-                    <td className="px-4 py-4">
+                    <td className="px-2 sm:px-4 py-3 sm:py-4">
                       <button
                         onClick={() => toggleSelect(customer.id)}
                         className="text-text-700 hover:text-text-900"
                       >
                         {isSelected(customer.id) ? (
-                          <CheckSquare className="h-5 w-5 text-primary-600" />
+                          <CheckSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary-600" />
                         ) : (
-                          <Square className="h-5 w-5" />
+                          <Square className="h-4 w-4 sm:h-5 sm:w-5" />
                         )}
                       </button>
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="font-medium text-text-900">{customer.name}</div>
+                    <td className="px-2 sm:px-4 py-3 sm:py-4">
+                      <div className="font-medium text-text-900 text-sm sm:text-base">{customer.name}</div>
                     </td>
-                    <td className="px-4 py-4 text-text-800">{customer.email || '-'}</td>
-                    <td className="px-4 py-4 text-text-800">{customer.contact || '-'}</td>
-                    <td className="px-4 py-4">
+                    <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-800 text-xs sm:text-sm">{customer.email || '-'}</td>
+                    <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-800 text-xs sm:text-sm">{customer.contact || '-'}</td>
+                    <td className="px-2 sm:px-4 py-3 sm:py-4">
                       <StatusBadge status={customer.status} variant={getStatusVariant(customer.status)} />
                     </td>
-                    <td className="px-4 py-4 text-text-800">
+                    <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-800">
                       {customer.kitchenTypes ? (
                         <div className="flex flex-wrap gap-1">
                           {customer.kitchenTypes.split(',').slice(0, 2).map((type, i) => (
                             <span
                               key={i}
-                              className="px-2 py-1 bg-background-600 text-text-900 rounded text-xs font-medium"
+                              className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-background-600 text-text-900 rounded text-[10px] sm:text-xs font-medium"
                             >
                               {type.trim()}
                             </span>
                           ))}
                           {customer.kitchenTypes.split(',').length > 2 && (
-                            <span className="px-2 py-1 text-text-600 text-xs">
+                            <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-text-600 text-[10px] sm:text-xs">
                               +{customer.kitchenTypes.split(',').length - 2}
                             </span>
                           )}
@@ -283,35 +283,37 @@ export function CustomerList({
                         '-'
                       )}
                     </td>
-                    <td className="px-4 py-4 text-text-700 text-sm">
+                    <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-700 text-xs sm:text-sm">
                       {formatDate(customer.createdAt)}
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-2 sm:px-4 py-3 sm:py-4">
+                      <div className="flex items-center justify-end gap-1 sm:gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => navigate(`/customers/${customer.id}`)}
                           title="View"
+                          className="p-1 sm:p-2"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setEditCustomerId(customer.id)}
                           title="Edit"
+                          className="p-1 sm:p-2"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setDeleteId(customer.id)}
                           title="Delete"
-                          className="text-error hover:text-error/80"
+                          className="text-error hover:text-error/80 p-1 sm:p-2"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     </td>
@@ -324,7 +326,7 @@ export function CustomerList({
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="border-t border-background-600 px-4 py-3">
+          <div className="border-t border-background-600 px-2 sm:px-4 py-2 sm:py-3">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

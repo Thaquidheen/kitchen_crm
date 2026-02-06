@@ -57,9 +57,9 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
   ];
 
   return (
-    <header className="h-16 bg-background-800 border-b-2 border-background-700 flex items-center justify-between px-6">
+    <header className="h-14 sm:h-16 bg-background-800 border-b-2 border-background-700 flex items-center justify-between px-3 sm:px-4 md:px-6">
       {/* Left Section */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         {showMenuButton && (
           <button
             onClick={onMenuClick}
@@ -82,10 +82,10 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
       </div>
 
       {/* Right Section */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         {/* Notifications */}
-        <button className="relative p-2 hover:bg-background-700 rounded-lg transition-colors text-text-700 hover:text-text-900">
-          <Bell size={20} />
+        <button className="relative p-1.5 sm:p-2 hover:bg-background-700 rounded-lg transition-colors text-text-700 hover:text-text-900">
+          <Bell size={18} className="sm:w-5 sm:h-5" />
           {notificationCount > 0 && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary-700 text-text-900 text-xs font-semibold rounded-full flex items-center justify-center">
               {notificationCount}

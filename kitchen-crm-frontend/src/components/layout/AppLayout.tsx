@@ -80,7 +80,7 @@ export const AppLayout = ({ children, showFooter = false }: AppLayoutProps) => {
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto">
-          <div className="p-6">{children}</div>
+          <div className="p-3 sm:p-4 md:p-6">{children}</div>
         </main>
 
         {/* Footer (optional) */}

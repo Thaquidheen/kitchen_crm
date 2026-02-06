@@ -94,8 +94,8 @@ export function CustomersPage() {
   const hasSelection = selectedCustomers.length > 0;
 
   return (
-    <div className="min-h-screen bg-background-900 p-2 sm:p-3 lg:p-4">
-      <div className="w-full space-y-3 sm:space-y-4 lg:space-y-5">
+    <div className="w-full">
+      <div className="space-y-3 sm:space-y-4 lg:space-y-5">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 pb-3 sm:pb-4 border-b border-background-700">
           <div className="flex items-center gap-3 sm:gap-4">
