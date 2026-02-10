@@ -24,7 +24,7 @@
             <!-- Image Container -->
             <rectangle radius="5">
                 <reportElement x="0" y="0" width="280" height="175" backcolor="#FFFFFF" uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567001"/>
-                <graphicElement><pen lineWidth="1" lineColor="#D4CFC5"/></graphicElement>
+                <graphicElement><pen lineWidth="1" lineColor="#E8E0D5"/></graphicElement>
             </rectangle>
 
             <!-- Image -->

@@ -24,7 +24,7 @@
     <columnHeader>
         <band height="25">
             <rectangle>
-                <reportElement x="0" y="0" width="575" height="25" backcolor="#374151" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567001"/>
+                <reportElement x="0" y="0" width="575" height="25" backcolor="#3B2820" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -53,14 +53,14 @@
             </rectangle>
             <!-- Alternating row highlight -->
             <rectangle>
-                <reportElement x="0" y="0" width="575" height="22" backcolor="#F0F4F8" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567004">
+                <reportElement x="0" y="0" width="575" height="22" backcolor="#FAF6F1" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567004">
                     <printWhenExpression><![CDATA[$V{ROW_NUMBER} % 2 == 0]]></printWhenExpression>
                 </reportElement>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
             <textField textAdjust="StretchHeight">
-                <reportElement x="10" y="2" width="200" height="18" forecolor="#6B7280" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567005"/>
+                <reportElement x="10" y="2" width="200" height="18" forecolor="#8B7355" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567005"/>
                 <textElement verticalAlignment="Middle">
                     <font size="9"/>
                 </textElement>
@@ -68,7 +68,7 @@
             </textField>
 
             <textField textAdjust="StretchHeight">
-                <reportElement x="220" y="2" width="345" height="18" forecolor="#1F2937" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567006"/>
+                <reportElement x="220" y="2" width="345" height="18" forecolor="#2C1810" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567006"/>
                 <textElement verticalAlignment="Middle">
                     <font size="9" isBold="true"/>
                 </textElement>
@@ -76,7 +76,7 @@
             </textField>
 
             <line>
-                <reportElement x="0" y="21" width="575" height="1" forecolor="#E5E7EB" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567007"/>
+                <reportElement x="0" y="21" width="575" height="1" forecolor="#E8E0D5" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567007"/>
             </line>
         </band>
     </detail>

@@ -27,7 +27,7 @@
     <columnHeader>
         <band height="25">
             <rectangle>
-                <reportElement x="0" y="0" width="575" height="25" backcolor="#374151" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567001"/>
+                <reportElement x="0" y="0" width="575" height="25" backcolor="#3B2820" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -70,35 +70,35 @@
             </rectangle>
             <!-- Alternating row highlight -->
             <rectangle>
-                <reportElement x="0" y="0" width="575" height="22" backcolor="#F0F4F8" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567006">
+                <reportElement x="0" y="0" width="575" height="22" backcolor="#FAF6F1" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567006">
                     <printWhenExpression><![CDATA[$V{ROW_NUMBER} % 2 == 0]]></printWhenExpression>
                 </reportElement>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
-                <reportElement x="5" y="2" width="180" height="18" forecolor="#1F2937" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567007"/>
+                <reportElement x="5" y="2" width="180" height="18" forecolor="#2C1810" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567007"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{customItem} != null && $F{customItem} ? $F{customItemName} : $F{accessoryName}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
-                <reportElement x="190" y="2" width="40" height="18" forecolor="#1F2937" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567008"/>
+                <reportElement x="190" y="2" width="40" height="18" forecolor="#2C1810" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567008"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{quantity}]]></textFieldExpression>
             </textField>
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
-                <reportElement x="235" y="2" width="180" height="18" forecolor="#6B7280" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567009"/>
+                <reportElement x="235" y="2" width="180" height="18" forecolor="#8B7355" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567009"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{description}]]></textFieldExpression>
             </textField>
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
-                <reportElement x="420" y="2" width="90" height="18" forecolor="#1F2937" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567010"/>
+                <reportElement x="420" y="2" width="90" height="18" forecolor="#2C1810" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567010"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
@@ -106,7 +106,7 @@
             </textField>
 
             <line>
-                <reportElement x="0" y="21" width="575" height="1" forecolor="#E5E7EB" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567011"/>
+                <reportElement x="0" y="21" width="575" height="1" forecolor="#E8E0D5" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567011"/>
             </line>
         </band>
     </detail>
@@ -114,11 +114,11 @@
     <noData>
         <band height="30">
             <rectangle>
-                <reportElement x="0" y="5" width="3" height="20" backcolor="#D4CFC5" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567a01"/>
+                <reportElement x="0" y="5" width="3" height="20" backcolor="#E8E0D5" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567a01"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="10" y="5" width="505" height="20" forecolor="#6B7280" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567012"/>
+                <reportElement x="10" y="5" width="505" height="20" forecolor="#8B7355" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567012"/>
                 <textElement verticalAlignment="Middle">
                     <font size="9" isItalic="true"/>
                 </textElement>
