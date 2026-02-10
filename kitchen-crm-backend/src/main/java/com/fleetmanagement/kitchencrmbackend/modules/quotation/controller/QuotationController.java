@@ -160,7 +160,9 @@ public class QuotationController {
 
             // Check if service is available
             if (pdfGenerationService == null) {
-                return ResponseEntity.ok(ApiResponse.error("PDF generation service is not available"));
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(ApiResponse.error("PDF generation service is not available"));
             }
 
             ApiResponse<Resource> response = pdfGenerationService.generateQuotationPdf(id, userRole);
@@ -172,10 +174,14 @@ public class QuotationController {
                         .contentType(MediaType.APPLICATION_PDF)
                         .body(resource);
             } else {
-                return ResponseEntity.ok(response);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(response);
             }
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Failed to generate PDF: " + e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(ApiResponse.error("Failed to generate PDF: " + e.getMessage()));
         }
     }
 

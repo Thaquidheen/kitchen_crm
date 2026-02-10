@@ -13,11 +13,11 @@
               uuid="a1b2c3d4-e5f6-7890-abcd-ef1234567890">
 
     <!-- Styles (must come before parameters per JRXML schema) -->
-    <style name="Title" fontName="Helvetica" fontSize="24" isBold="true" forecolor="#1E3A5F"/>
-    <style name="SubTitle" fontName="Helvetica" fontSize="14" forecolor="#333333"/>
-    <style name="Heading" fontName="Helvetica" fontSize="16" isBold="true" forecolor="#1E3A5F"/>
-    <style name="Body" fontName="Helvetica" fontSize="10" forecolor="#333333"/>
-    <style name="Accent" fontName="Helvetica" fontSize="12" isBold="true" forecolor="#C9A227"/>
+    <style name="Title" fontName="SansSerif" fontSize="24" isBold="true" forecolor="#1E3A5F"/>
+    <style name="SubTitle" fontName="SansSerif" fontSize="14" forecolor="#333333"/>
+    <style name="Heading" fontName="SansSerif" fontSize="16" isBold="true" forecolor="#1E3A5F"/>
+    <style name="Body" fontName="SansSerif" fontSize="10" forecolor="#333333"/>
+    <style name="Accent" fontName="SansSerif" fontSize="12" isBold="true" forecolor="#C9A227"/>
 
     <!-- Parameters -->
     <parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">

@@ -12,6 +12,15 @@
               bottomMargin="0"
               uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567890">
 
+    <!-- Styles (must come before parameters/fields per JRXML schema) -->
+    <style name="KitchenTitle" fontName="SansSerif" fontSize="18" isBold="true" forecolor="#1E3A5F"/>
+    <style name="SectionTitle" fontName="SansSerif" fontSize="14" isBold="true" forecolor="#1E3A5F"/>
+    <style name="TableHeader" fontName="SansSerif" fontSize="9" isBold="true" forecolor="#FFFFFF" backcolor="#1E3A5F"/>
+    <style name="TableRow" fontName="SansSerif" fontSize="9" forecolor="#333333"/>
+    <style name="TableRowAlt" fontName="SansSerif" fontSize="9" forecolor="#333333" backcolor="#F9FAFB"/>
+    <style name="TotalLabel" fontName="SansSerif" fontSize="10" isBold="true" forecolor="#333333"/>
+    <style name="TotalValue" fontName="SansSerif" fontSize="10" isBold="true" forecolor="#1E3A5F"/>
+
     <!-- Parameters -->
     <parameter name="SUBREPORT_DIR" class="java.lang.String"/>
 
@@ -31,15 +40,6 @@
     <field name="marginAmount" class="java.math.BigDecimal"/>
     <field name="taxAmount" class="java.math.BigDecimal"/>
     <field name="totalAmount" class="java.math.BigDecimal"/>
-
-    <!-- Styles -->
-    <style name="KitchenTitle" fontName="Helvetica" fontSize="18" isBold="true" forecolor="#1E3A5F"/>
-    <style name="SectionTitle" fontName="Helvetica" fontSize="14" isBold="true" forecolor="#1E3A5F"/>
-    <style name="TableHeader" fontName="Helvetica" fontSize="9" isBold="true" forecolor="#FFFFFF" backcolor="#1E3A5F"/>
-    <style name="TableRow" fontName="Helvetica" fontSize="9" forecolor="#333333"/>
-    <style name="TableRowAlt" fontName="Helvetica" fontSize="9" forecolor="#333333" backcolor="#F9FAFB"/>
-    <style name="TotalLabel" fontName="Helvetica" fontSize="10" isBold="true" forecolor="#333333"/>
-    <style name="TotalValue" fontName="Helvetica" fontSize="10" isBold="true" forecolor="#1E3A5F"/>
 
     <detail>
         <band height="700" splitType="Immediate">
