@@ -237,7 +237,7 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
 
         // Page background image — byte[] so it can render on every page
         try {
-            Resource bgResource = resourceLoader.getResource("classpath:bg.png");
+            Resource bgResource = resourceLoader.getResource("classpath:bg.jpg");
             if (bgResource.exists()) {
                 params.put("PAGE_BG", bgResource.getInputStream().readAllBytes());
             } else {
