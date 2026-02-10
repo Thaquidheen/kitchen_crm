@@ -17,7 +17,7 @@
     <style name="SectionTitle" fontName="SansSerif" fontSize="14" isBold="true" forecolor="#1B2A4A"/>
     <style name="TableHeader" fontName="SansSerif" fontSize="9" isBold="true" forecolor="#FFFFFF" backcolor="#1B2A4A"/>
     <style name="TableRow" fontName="SansSerif" fontSize="9" forecolor="#2D2D2D"/>
-    <style name="TableRowAlt" fontName="SansSerif" fontSize="9" forecolor="#2D2D2D" backcolor="#F0EDE6"/>
+    <style name="TableRowAlt" fontName="SansSerif" fontSize="9" forecolor="#2D2D2D" backcolor="#F0F4F8"/>
     <style name="TotalLabel" fontName="SansSerif" fontSize="10" isBold="true" forecolor="#2D2D2D"/>
     <style name="TotalValue" fontName="SansSerif" fontSize="10" isBold="true" forecolor="#1B2A4A"/>
 
@@ -225,7 +225,7 @@
 
             <!-- Table Header -->
             <rectangle>
-                <reportElement x="100" y="70" width="315" height="30" backcolor="#1B2A4A" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567024"/>
+                <reportElement x="100" y="70" width="315" height="30" backcolor="#374151" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567024"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
@@ -263,7 +263,7 @@
 
             <!-- Doors Total -->
             <rectangle>
-                <reportElement x="100" y="135" width="315" height="25" backcolor="#F0EDE6" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567029"/>
+                <reportElement x="100" y="135" width="315" height="25" backcolor="#F0F4F8" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567029"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -299,7 +299,7 @@
 
             <!-- Lights Total -->
             <rectangle>
-                <reportElement x="100" y="185" width="315" height="25" backcolor="#F0EDE6" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567034"/>
+                <reportElement x="100" y="185" width="315" height="25" backcolor="#F0F4F8" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567034"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -340,7 +340,7 @@
 
             <!-- Margin -->
             <rectangle>
-                <reportElement x="100" y="255" width="315" height="25" backcolor="#F0EDE6" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567040"/>
+                <reportElement x="100" y="255" width="315" height="25" backcolor="#F0F4F8" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567040"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -382,7 +382,7 @@
 
             <!-- Kitchen Total -->
             <rectangle>
-                <reportElement x="100" y="315" width="315" height="35" backcolor="#1B2A4A" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567045"/>
+                <reportElement x="100" y="315" width="315" height="35" backcolor="#374151" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567045"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>

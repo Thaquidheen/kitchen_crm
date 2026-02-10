@@ -26,7 +26,7 @@
     <columnHeader>
         <band height="25">
             <rectangle>
-                <reportElement x="0" y="0" width="575" height="25" backcolor="#1B2A4A" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567001"/>
+                <reportElement x="0" y="0" width="575" height="25" backcolor="#374151" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -69,30 +69,35 @@
 
     <detail>
         <band height="22" splitType="Stretch">
-            <!-- Alternating row background -->
+            <!-- White base background for ALL rows -->
             <rectangle>
-                <reportElement x="0" y="0" width="575" height="22" backcolor="#F0EDE6" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567007">
+                <reportElement x="0" y="0" width="575" height="22" backcolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef12345670b1"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <!-- Alternating row highlight -->
+            <rectangle>
+                <reportElement x="0" y="0" width="575" height="22" backcolor="#F0F4F8" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567007">
                     <printWhenExpression><![CDATA[$V{ROW_NUMBER} % 2 == 0]]></printWhenExpression>
                 </reportElement>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
-                <reportElement x="5" y="2" width="180" height="18" forecolor="#2D2D2D" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567008"/>
+                <reportElement x="5" y="2" width="180" height="18" forecolor="#1F2937" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567008"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{itemName}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true" pattern="#,##0.##">
-                <reportElement x="190" y="2" width="50" height="18" forecolor="#2D2D2D" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567009"/>
+                <reportElement x="190" y="2" width="50" height="18" forecolor="#1F2937" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567009"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{quantity}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
-                <reportElement x="245" y="2" width="60" height="18" forecolor="#2D2D2D" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567010"/>
+                <reportElement x="245" y="2" width="60" height="18" forecolor="#1F2937" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567010"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
@@ -106,7 +111,7 @@
                 <textFieldExpression><![CDATA[$F{specifications}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
-                <reportElement x="435" y="2" width="75" height="18" forecolor="#2D2D2D" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567012"/>
+                <reportElement x="435" y="2" width="75" height="18" forecolor="#1F2937" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567012"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
@@ -114,7 +119,7 @@
             </textField>
 
             <line>
-                <reportElement x="0" y="21" width="575" height="1" forecolor="#D4CFC5" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567013"/>
+                <reportElement x="0" y="21" width="575" height="1" forecolor="#E5E7EB" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567013"/>
             </line>
         </band>
     </detail>
