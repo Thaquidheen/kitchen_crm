@@ -235,6 +235,18 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
             params.put("HOCH_LOGO", null);
         }
 
+        // Cover page background image from classpath
+        try {
+            Resource coverBgResource = resourceLoader.getResource("classpath:Gemini_Generated_Image_5l0sfp5l0sfp5l0s.png");
+            if (coverBgResource.exists()) {
+                params.put("COVER_BG", coverBgResource.getInputStream());
+            } else {
+                params.put("COVER_BG", null);
+            }
+        } catch (Exception e) {
+            params.put("COVER_BG", null);
+        }
+
         // Quotation details
         params.put("QUOTATION_NUMBER", quotation.getQuotationNumber() != null ? quotation.getQuotationNumber() : "");
         params.put("CREATED_DATE", quotation.getCreatedAt() != null ? formatDate(quotation.getCreatedAt().toLocalDate()) : "");
