@@ -83,258 +83,371 @@
         </band>
     </background>
 
-    <!-- Title Band - Cover Page -->
+    <!-- Title Band - Cover Page (Modern Invoice Style) -->
     <title>
         <band height="680" splitType="Stretch">
-            <!-- Full-width navy header -->
-            <rectangle>
-                <reportElement x="0" y="0" width="515" height="130" backcolor="#1B2A4A" uuid="10000001-0000-0000-0000-000000000001"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <!-- Decorative gold accent shape in header top-right corner -->
-            <rectangle>
-                <reportElement x="460" y="0" width="55" height="6" backcolor="#C8A45D" uuid="10000001-0000-0000-0000-000000000002"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <rectangle>
-                <reportElement x="509" y="0" width="6" height="55" backcolor="#C8A45D" uuid="10000001-0000-0000-0000-000000000003"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
 
+            <!-- ====== SECTION 1: Dark Header Bar (y=0 → y=113) ====== -->
+            <rectangle>
+                <reportElement x="0" y="0" width="515" height="110" backcolor="#1B2A4A" uuid="c1a00001-0000-0000-0000-000000000001"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <!-- Diagonal gold accent line 1 (thick) -->
+            <line>
+                <reportElement x="0" y="0" width="70" height="110" forecolor="#C8A45D" uuid="c1a00001-0000-0000-0000-000000000002"/>
+                <graphicElement><pen lineWidth="8"/></graphicElement>
+            </line>
+            <!-- Diagonal gold accent line 2 (thinner) -->
+            <line>
+                <reportElement x="25" y="0" width="70" height="110" forecolor="#C8A45D" uuid="c1a00001-0000-0000-0000-000000000003"/>
+                <graphicElement><pen lineWidth="5"/></graphicElement>
+            </line>
+            <!-- Solid gold left edge strip -->
+            <rectangle>
+                <reportElement x="0" y="0" width="8" height="110" backcolor="#C8A45D" uuid="c1a00001-0000-0000-0000-000000000004"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
             <!-- Company Logo -->
             <image scaleImage="RetainShape" hAlign="Center" vAlign="Middle" isUsingCache="true" onErrorType="Blank">
-                <reportElement x="20" y="15" width="80" height="80" uuid="10000001-0000-0000-0000-000000000004">
+                <reportElement x="90" y="12" width="75" height="75" uuid="c1a00001-0000-0000-0000-000000000005">
                     <printWhenExpression><![CDATA[$P{HAS_LOGO} != null && $P{HAS_LOGO}]]></printWhenExpression>
                 </reportElement>
                 <imageExpression><![CDATA[$P{COMPANY_LOGO}]]></imageExpression>
             </image>
-
             <!-- Company Name -->
             <textField>
-                <reportElement x="115" y="20" width="380" height="35" forecolor="#FFFFFF" uuid="10000001-0000-0000-0000-000000000005"/>
+                <reportElement x="175" y="15" width="330" height="32" forecolor="#FFFFFF" uuid="c1a00001-0000-0000-0000-000000000006"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="26" isBold="true"/>
+                    <font size="22" isBold="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{COMPANY_NAME}]]></textFieldExpression>
             </textField>
-
             <!-- Company Tagline -->
             <textField>
-                <reportElement x="115" y="55" width="380" height="25" forecolor="#C8A45D" uuid="10000001-0000-0000-0000-000000000006"/>
+                <reportElement x="175" y="47" width="330" height="20" forecolor="#C8A45D" uuid="c1a00001-0000-0000-0000-000000000007"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="11" isItalic="true"/>
+                    <font size="10" isItalic="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{COMPANY_TAGLINE}]]></textFieldExpression>
             </textField>
-
-            <!-- Company contact in header -->
+            <!-- Contact: phone | email -->
             <textField>
-                <reportElement x="115" y="85" width="380" height="18" forecolor="#8899B0" uuid="10000001-0000-0000-0000-000000000007"/>
+                <reportElement x="175" y="72" width="330" height="16" forecolor="#8899B0" uuid="c1a00001-0000-0000-0000-000000000008"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{COMPANY_PHONE} + "  |  " + $P{COMPANY_EMAIL}]]></textFieldExpression>
             </textField>
+            <!-- Address -->
             <textField>
-                <reportElement x="115" y="103" width="380" height="18" forecolor="#8899B0" uuid="10000001-0000-0000-0000-000000000008"/>
+                <reportElement x="175" y="88" width="330" height="16" forecolor="#8899B0" uuid="c1a00001-0000-0000-0000-000000000009"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{COMPANY_ADDRESS}]]></textFieldExpression>
             </textField>
+            <!-- Gold accent bar below header -->
+            <rectangle>
+                <reportElement x="0" y="110" width="515" height="3" backcolor="#C8A45D" uuid="c1a00001-0000-0000-0000-000000000010"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
 
-            <!-- Gold accent line below header -->
-            <line>
-                <reportElement x="0" y="130" width="515" height="1" forecolor="#C8A45D" uuid="10000001-0000-0000-0000-000000000009"/>
-                <graphicElement><pen lineWidth="4"/></graphicElement>
-            </line>
-
-            <!-- QUOTATION Title -->
+            <!-- ====== SECTION 2: QUOTATION Title + Details (y=118 → y=185) ====== -->
             <staticText>
-                <reportElement x="20" y="155" width="300" height="40" forecolor="#1B2A4A" uuid="10000001-0000-0000-0000-000000000010"/>
+                <reportElement x="0" y="120" width="300" height="45" forecolor="#C8A45D" uuid="c1a00002-0000-0000-0000-000000000001"/>
                 <textElement verticalAlignment="Middle">
                     <font size="28" isBold="true"/>
                 </textElement>
                 <text><![CDATA[QUOTATION]]></text>
             </staticText>
-
-            <!-- Quotation number with gold accent bar -->
-            <rectangle>
-                <reportElement x="20" y="195" width="4" height="22" backcolor="#C8A45D" uuid="10000001-0000-0000-0000-000000000011"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <textField>
-                <reportElement x="32" y="195" width="300" height="22" forecolor="#6B7280" uuid="10000001-0000-0000-0000-000000000012"/>
-                <textElement verticalAlignment="Middle">
-                    <font size="13"/>
-                </textElement>
-                <textFieldExpression><![CDATA["No: " + $P{QUOTATION_NUMBER}]]></textFieldExpression>
-            </textField>
-
-            <!-- Date info — right side, compact -->
+            <!-- Right-side details box -->
             <rectangle radius="5">
-                <reportElement x="340" y="155" width="175" height="65" backcolor="#FAF8F5" uuid="10000001-0000-0000-0000-000000000013"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
+                <reportElement x="320" y="120" width="195" height="62" backcolor="#FAF8F5" uuid="c1a00002-0000-0000-0000-000000000002"/>
+                <graphicElement><pen lineWidth="1" lineColor="#D4CFC5"/></graphicElement>
             </rectangle>
+            <!-- No: label + value -->
             <staticText>
-                <reportElement x="350" y="160" width="60" height="18" forecolor="#6B7280" uuid="10000001-0000-0000-0000-000000000014"/>
+                <reportElement x="328" y="124" width="35" height="16" forecolor="#6B7280" uuid="c1a00002-0000-0000-0000-000000000003"/>
+                <textElement verticalAlignment="Middle"><font size="8"/></textElement>
+                <text><![CDATA[No:]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="363" y="124" width="145" height="16" forecolor="#2D2D2D" uuid="c1a00002-0000-0000-0000-000000000004"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{QUOTATION_NUMBER}]]></textFieldExpression>
+            </textField>
+            <line>
+                <reportElement x="328" y="142" width="180" height="1" forecolor="#D4CFC5" uuid="c1a00002-0000-0000-0000-000000000005"/>
+            </line>
+            <!-- Date: label + value -->
+            <staticText>
+                <reportElement x="328" y="145" width="35" height="16" forecolor="#6B7280" uuid="c1a00002-0000-0000-0000-000000000006"/>
                 <textElement verticalAlignment="Middle"><font size="8"/></textElement>
                 <text><![CDATA[Date:]]></text>
             </staticText>
             <textField>
-                <reportElement x="410" y="160" width="100" height="18" forecolor="#2D2D2D" uuid="10000001-0000-0000-0000-000000000015"/>
+                <reportElement x="363" y="145" width="145" height="16" forecolor="#2D2D2D" uuid="c1a00002-0000-0000-0000-000000000007"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font size="9" isBold="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{CREATED_DATE}]]></textFieldExpression>
             </textField>
             <line>
-                <reportElement x="350" y="182" width="160" height="1" forecolor="#D4CFC5" uuid="10000001-0000-0000-0000-000000000016"/>
+                <reportElement x="328" y="163" width="180" height="1" forecolor="#D4CFC5" uuid="c1a00002-0000-0000-0000-000000000008"/>
             </line>
+            <!-- Valid Until: label + value -->
             <staticText>
-                <reportElement x="350" y="188" width="60" height="18" forecolor="#6B7280" uuid="10000001-0000-0000-0000-000000000017"/>
+                <reportElement x="328" y="166" width="60" height="16" forecolor="#6B7280" uuid="c1a00002-0000-0000-0000-000000000009"/>
                 <textElement verticalAlignment="Middle"><font size="8"/></textElement>
                 <text><![CDATA[Valid Until:]]></text>
             </staticText>
             <textField>
-                <reportElement x="410" y="188" width="100" height="18" forecolor="#2D2D2D" uuid="10000001-0000-0000-0000-000000000018"/>
+                <reportElement x="388" y="166" width="120" height="16" forecolor="#2D2D2D" uuid="c1a00002-0000-0000-0000-000000000010"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font size="9" isBold="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{VALID_UNTIL}]]></textFieldExpression>
             </textField>
 
-            <!-- Divider line -->
-            <line>
-                <reportElement x="20" y="240" width="475" height="1" forecolor="#D4CFC5" uuid="10000001-0000-0000-0000-000000000019"/>
-            </line>
-
-            <!-- PREPARED FOR Section — with navy left accent -->
-            <rectangle>
-                <reportElement x="20" y="260" width="4" height="25" backcolor="#1B2A4A" uuid="10000001-0000-0000-0000-000000000020"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
+            <!-- ====== SECTION 3: Two-Column Info (y=195 → y=340) ====== -->
+            <!-- Left column: QUOTATION TO -->
             <staticText>
-                <reportElement x="32" y="260" width="200" height="25" forecolor="#1B2A4A" uuid="10000001-0000-0000-0000-000000000021"/>
+                <reportElement x="0" y="200" width="245" height="20" forecolor="#1B2A4A" uuid="c1a00003-0000-0000-0000-000000000001"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="11" isBold="true"/>
+                    <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[PREPARED FOR]]></text>
+                <text><![CDATA[QUOTATION TO:]]></text>
             </staticText>
-
-            <!-- Customer details with subtle background -->
-            <rectangle radius="5">
-                <reportElement x="20" y="295" width="475" height="95" backcolor="#FAF8F5" uuid="10000001-0000-0000-0000-000000000022"/>
-                <graphicElement><pen lineWidth="1" lineColor="#D4CFC5"/></graphicElement>
-            </rectangle>
-            <!-- Gold left accent on details box -->
             <rectangle>
-                <reportElement x="20" y="295" width="3" height="95" backcolor="#C8A45D" uuid="10000001-0000-0000-0000-000000000023"/>
+                <reportElement x="0" y="222" width="100" height="2" backcolor="#C8A45D" uuid="c1a00003-0000-0000-0000-000000000002"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
-
-            <staticText>
-                <reportElement x="35" y="305" width="80" height="20" forecolor="#6B7280" uuid="10000001-0000-0000-0000-000000000024"/>
-                <textElement verticalAlignment="Middle"><font size="9"/></textElement>
-                <text><![CDATA[Customer]]></text>
-            </staticText>
+            <!-- Customer Name -->
             <textField>
-                <reportElement x="120" y="305" width="365" height="20" forecolor="#2D2D2D" uuid="10000001-0000-0000-0000-000000000025"/>
+                <reportElement x="0" y="232" width="245" height="28" forecolor="#2D2D2D" uuid="c1a00003-0000-0000-0000-000000000003"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="11" isBold="true"/>
+                    <font size="14" isBold="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{CUSTOMER_NAME}]]></textFieldExpression>
             </textField>
-
-            <staticText>
-                <reportElement x="35" y="330" width="80" height="20" forecolor="#6B7280" uuid="10000001-0000-0000-0000-000000000026"/>
-                <textElement verticalAlignment="Middle"><font size="9"/></textElement>
-                <text><![CDATA[Project]]></text>
-            </staticText>
+            <!-- Project Name -->
             <textField>
-                <reportElement x="120" y="330" width="365" height="20" forecolor="#2D2D2D" uuid="10000001-0000-0000-0000-000000000027"/>
+                <reportElement x="0" y="262" width="245" height="20" forecolor="#6B7280" uuid="c1a00003-0000-0000-0000-000000000004"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="11" isBold="true"/>
+                    <font size="10"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{PROJECT_NAME}]]></textFieldExpression>
             </textField>
 
+            <!-- Right column: PROJECT DETAILS -->
             <staticText>
-                <reportElement x="35" y="355" width="80" height="20" forecolor="#6B7280" uuid="10000001-0000-0000-0000-000000000028"/>
-                <textElement verticalAlignment="Middle"><font size="9"/></textElement>
-                <text><![CDATA[Kitchens]]></text>
+                <reportElement x="265" y="200" width="250" height="20" forecolor="#1B2A4A" uuid="c1a00003-0000-0000-0000-000000000005"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="10" isBold="true"/>
+                </textElement>
+                <text><![CDATA[PROJECT DETAILS]]></text>
+            </staticText>
+            <rectangle>
+                <reportElement x="265" y="222" width="100" height="2" backcolor="#C8A45D" uuid="c1a00003-0000-0000-0000-000000000006"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <!-- Total Kitchens -->
+            <staticText>
+                <reportElement x="265" y="232" width="100" height="22" forecolor="#6B7280" uuid="c1a00003-0000-0000-0000-000000000007"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="9"/>
+                </textElement>
+                <text><![CDATA[Total Kitchens:]]></text>
             </staticText>
             <textField>
-                <reportElement x="120" y="355" width="365" height="20" forecolor="#2D2D2D" uuid="10000001-0000-0000-0000-000000000029"/>
+                <reportElement x="370" y="232" width="145" height="22" forecolor="#2D2D2D" uuid="c1a00003-0000-0000-0000-000000000008"/>
                 <textElement verticalAlignment="Middle">
                     <font size="11" isBold="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{TOTAL_KITCHENS}]]></textFieldExpression>
             </textField>
-
-            <!-- PROJECT SCOPE section -->
-            <rectangle>
-                <reportElement x="20" y="415" width="4" height="25" backcolor="#1B2A4A" uuid="10000001-0000-0000-0000-000000000030"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
+            <!-- Kitchen Names -->
             <staticText>
-                <reportElement x="32" y="415" width="200" height="25" forecolor="#1B2A4A" uuid="10000001-0000-0000-0000-000000000031"/>
-                <textElement verticalAlignment="Middle">
-                    <font size="11" isBold="true"/>
-                </textElement>
-                <text><![CDATA[PROJECT SCOPE]]></text>
-            </staticText>
-
-            <textField>
-                <reportElement x="35" y="450" width="460" height="50" forecolor="#6B7280" uuid="10000001-0000-0000-0000-000000000032"/>
+                <reportElement x="265" y="258" width="100" height="20" forecolor="#6B7280" uuid="c1a00003-0000-0000-0000-000000000009"/>
                 <textElement verticalAlignment="Top">
-                    <font size="10"/>
+                    <font size="9"/>
+                </textElement>
+                <text><![CDATA[Kitchens:]]></text>
+            </staticText>
+            <textField textAdjust="StretchHeight">
+                <reportElement x="265" y="278" width="250" height="40" forecolor="#6B7280" uuid="c1a00003-0000-0000-0000-000000000010"/>
+                <textElement verticalAlignment="Top">
+                    <font size="9"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{KITCHEN_NAMES}]]></textFieldExpression>
             </textField>
 
-            <!-- Grand Total — full-width prominent box -->
-            <line>
-                <reportElement x="20" y="515" width="475" height="1" forecolor="#C8A45D" uuid="10000001-0000-0000-0000-000000000033"/>
-                <graphicElement><pen lineWidth="2"/></graphicElement>
-            </line>
-
-            <rectangle radius="8">
-                <reportElement x="100" y="530" width="315" height="90" backcolor="#1B2A4A" uuid="10000001-0000-0000-0000-000000000034"/>
+            <!-- ====== SECTION 4: Summary Table (y=350 → y=495) ====== -->
+            <!-- Gold header row -->
+            <rectangle>
+                <reportElement x="0" y="350" width="515" height="28" backcolor="#C8A45D" uuid="c1a00004-0000-0000-0000-000000000001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
-            <!-- Inner gold border accent -->
-            <rectangle radius="6">
-                <reportElement x="104" y="534" width="307" height="82" mode="Transparent" uuid="10000001-0000-0000-0000-000000000035"/>
-                <graphicElement><pen lineWidth="1" lineColor="#C8A45D"/></graphicElement>
-            </rectangle>
-
             <staticText>
-                <reportElement x="100" y="542" width="315" height="20" forecolor="#C8A45D" uuid="10000001-0000-0000-0000-000000000036"/>
+                <reportElement x="0" y="350" width="515" height="28" forecolor="#FFFFFF" uuid="c1a00004-0000-0000-0000-000000000002"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="10" isBold="true"/>
+                </textElement>
+                <text><![CDATA[QUOTATION SUMMARY]]></text>
+            </staticText>
+            <!-- Row 1: Customer -->
+            <staticText>
+                <reportElement x="15" y="382" width="120" height="22" forecolor="#6B7280" uuid="c1a00004-0000-0000-0000-000000000003"/>
+                <textElement verticalAlignment="Middle"><font size="9"/></textElement>
+                <text><![CDATA[Customer]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="140" y="382" width="360" height="22" forecolor="#2D2D2D" uuid="c1a00004-0000-0000-0000-000000000004"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font size="9" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{CUSTOMER_NAME}]]></textFieldExpression>
+            </textField>
+            <line>
+                <reportElement x="0" y="404" width="515" height="1" forecolor="#D4CFC5" uuid="c1a00004-0000-0000-0000-000000000005"/>
+            </line>
+            <!-- Row 2: Project (alt background) -->
+            <rectangle>
+                <reportElement x="0" y="405" width="515" height="22" backcolor="#F0EDE6" uuid="c1a00004-0000-0000-0000-000000000006"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="15" y="405" width="120" height="22" forecolor="#6B7280" uuid="c1a00004-0000-0000-0000-000000000007"/>
+                <textElement verticalAlignment="Middle"><font size="9"/></textElement>
+                <text><![CDATA[Project]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="140" y="405" width="360" height="22" forecolor="#2D2D2D" uuid="c1a00004-0000-0000-0000-000000000008"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{PROJECT_NAME}]]></textFieldExpression>
+            </textField>
+            <line>
+                <reportElement x="0" y="427" width="515" height="1" forecolor="#D4CFC5" uuid="c1a00004-0000-0000-0000-000000000009"/>
+            </line>
+            <!-- Row 3: Total Kitchens -->
+            <staticText>
+                <reportElement x="15" y="428" width="120" height="22" forecolor="#6B7280" uuid="c1a00004-0000-0000-0000-000000000010"/>
+                <textElement verticalAlignment="Middle"><font size="9"/></textElement>
+                <text><![CDATA[Total Kitchens]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="140" y="428" width="360" height="22" forecolor="#2D2D2D" uuid="c1a00004-0000-0000-0000-000000000011"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{TOTAL_KITCHENS}]]></textFieldExpression>
+            </textField>
+            <!-- Grand Total row (navy background) -->
+            <rectangle>
+                <reportElement x="0" y="455" width="515" height="40" backcolor="#1B2A4A" uuid="c1a00004-0000-0000-0000-000000000012"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="15" y="455" width="200" height="40" forecolor="#C8A45D" uuid="c1a00004-0000-0000-0000-000000000013"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="12" isBold="true"/>
                 </textElement>
                 <text><![CDATA[ESTIMATED TOTAL]]></text>
             </staticText>
-
             <textField pattern="#,##0.00">
-                <reportElement x="100" y="565" width="315" height="45" forecolor="#FFFFFF" uuid="10000001-0000-0000-0000-000000000037"/>
-                <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="24" isBold="true"/>
+                <reportElement x="220" y="455" width="280" height="40" forecolor="#FFFFFF" uuid="c1a00004-0000-0000-0000-000000000014"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="18" isBold="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Rs. " + $P{GRAND_TOTAL}]]></textFieldExpression>
             </textField>
 
-            <!-- Footer contact info -->
+            <!-- ====== SECTION 5: Thank You + Signatures (y=510 → y=645) ====== -->
+            <staticText>
+                <reportElement x="0" y="510" width="515" height="30" forecolor="#1B2A4A" uuid="c1a00005-0000-0000-0000-000000000001"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="14" isBold="true"/>
+                </textElement>
+                <text><![CDATA[THANK YOU FOR YOUR BUSINESS]]></text>
+            </staticText>
+            <!-- Gold accent line below -->
+            <rectangle>
+                <reportElement x="200" y="542" width="115" height="2" backcolor="#C8A45D" uuid="c1a00005-0000-0000-0000-000000000002"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <!-- Client Signature Box -->
+            <rectangle radius="5">
+                <reportElement x="15" y="555" width="235" height="90" backcolor="#FAF8F5" uuid="c1a00005-0000-0000-0000-000000000003"/>
+                <graphicElement><pen lineWidth="1" lineColor="#D4CFC5"/></graphicElement>
+            </rectangle>
+            <rectangle>
+                <reportElement x="15" y="555" width="3" height="90" backcolor="#C8A45D" uuid="c1a00005-0000-0000-0000-000000000004"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="28" y="560" width="210" height="18" forecolor="#1B2A4A" uuid="c1a00005-0000-0000-0000-000000000005"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Client Signature]]></text>
+            </staticText>
+            <line>
+                <reportElement x="28" y="610" width="200" height="1" forecolor="#D4CFC5" uuid="c1a00005-0000-0000-0000-000000000006"/>
+            </line>
             <textField>
-                <reportElement x="0" y="640" width="515" height="18" forecolor="#6B7280" uuid="10000001-0000-0000-0000-000000000038"/>
+                <reportElement x="28" y="615" width="200" height="16" forecolor="#2D2D2D" uuid="c1a00005-0000-0000-0000-000000000007"/>
+                <textElement verticalAlignment="Middle"><font size="8"/></textElement>
+                <textFieldExpression><![CDATA[$P{CUSTOMER_NAME}]]></textFieldExpression>
+            </textField>
+            <staticText>
+                <reportElement x="28" y="631" width="200" height="12" forecolor="#6B7280" uuid="c1a00005-0000-0000-0000-000000000008"/>
+                <textElement verticalAlignment="Middle"><font size="7"/></textElement>
+                <text><![CDATA[Date: _________________]]></text>
+            </staticText>
+            <!-- Authorized Signature Box -->
+            <rectangle radius="5">
+                <reportElement x="265" y="555" width="235" height="90" backcolor="#FAF8F5" uuid="c1a00005-0000-0000-0000-000000000009"/>
+                <graphicElement><pen lineWidth="1" lineColor="#D4CFC5"/></graphicElement>
+            </rectangle>
+            <rectangle>
+                <reportElement x="265" y="555" width="3" height="90" backcolor="#1B2A4A" uuid="c1a00005-0000-0000-0000-000000000010"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="278" y="560" width="210" height="18" forecolor="#1B2A4A" uuid="c1a00005-0000-0000-0000-000000000011"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Authorized Signature]]></text>
+            </staticText>
+            <line>
+                <reportElement x="278" y="610" width="200" height="1" forecolor="#D4CFC5" uuid="c1a00005-0000-0000-0000-000000000012"/>
+            </line>
+            <textField>
+                <reportElement x="278" y="615" width="200" height="16" forecolor="#2D2D2D" uuid="c1a00005-0000-0000-0000-000000000013"/>
+                <textElement verticalAlignment="Middle"><font size="8"/></textElement>
+                <textFieldExpression><![CDATA[$P{COMPANY_NAME}]]></textFieldExpression>
+            </textField>
+            <staticText>
+                <reportElement x="278" y="631" width="200" height="12" forecolor="#6B7280" uuid="c1a00005-0000-0000-0000-000000000014"/>
+                <textElement verticalAlignment="Middle"><font size="7"/></textElement>
+                <text><![CDATA[Date: _________________]]></text>
+            </staticText>
+
+            <!-- ====== SECTION 6: Footer Contact (y=652 → y=680) ====== -->
+            <textField>
+                <reportElement x="0" y="652" width="515" height="14" forecolor="#6B7280" uuid="c1a00006-0000-0000-0000-000000000001"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{COMPANY_ADDRESS}]]></textFieldExpression>
             </textField>
             <textField>
-                <reportElement x="0" y="658" width="515" height="18" forecolor="#6B7280" uuid="10000001-0000-0000-0000-000000000039"/>
+                <reportElement x="0" y="666" width="515" height="14" forecolor="#6B7280" uuid="c1a00006-0000-0000-0000-000000000002"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
