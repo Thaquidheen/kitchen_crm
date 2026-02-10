@@ -35,9 +35,9 @@
     <parameter name="TERMS_WARRANTY" class="java.lang.String"/>
     <parameter name="KITCHENS_DATA_SOURCE" class="net.sf.jasperreports.engine.JRDataSource"/>
     <parameter name="KITCHEN_NAMES" class="java.lang.String"/>
-    <parameter name="HOCH_LOGO" class="[B"/>
+    <parameter name="HOCH_LOGO" class="java.lang.Object"/>
     <parameter name="COVER_BG" class="java.io.InputStream"/>
-    <parameter name="PAGE_BG" class="[B"/>
+    <parameter name="PAGE_BG" class="java.lang.Object"/>
 
     <!-- Background — dark on page 1 (behind kitchen image), white on pages 2+ -->
     <background>
@@ -54,7 +54,7 @@
                 <reportElement x="0" y="0" width="575" height="822" uuid="aa000001-0000-0000-0000-000000000003">
                     <printWhenExpression><![CDATA[$V{PAGE_NUMBER} > 1]]></printWhenExpression>
                 </reportElement>
-                <imageExpression><![CDATA[$P{PAGE_BG} != null ? new java.io.ByteArrayInputStream($P{PAGE_BG}) : null]]></imageExpression>
+                <imageExpression><![CDATA[$P{PAGE_BG} != null ? new java.io.ByteArrayInputStream((byte[])$P{PAGE_BG}) : null]]></imageExpression>
             </image>
             <!-- Pages 2+: gold bottom accent -->
             <rectangle>
@@ -248,7 +248,7 @@
             </textField>
             <image scaleImage="RetainShape" hAlign="Center" vAlign="Middle" onErrorType="Blank">
                 <reportElement x="215" y="5" width="145" height="20" uuid="ee000001-0000-0000-0000-000000000004"/>
-                <imageExpression><![CDATA[$P{HOCH_LOGO} != null ? new java.io.ByteArrayInputStream($P{HOCH_LOGO}) : null]]></imageExpression>
+                <imageExpression><![CDATA[$P{HOCH_LOGO} != null ? new java.io.ByteArrayInputStream((byte[])$P{HOCH_LOGO}) : null]]></imageExpression>
             </image>
             <textField>
                 <reportElement x="385" y="4" width="180" height="20" forecolor="#FFFFFF" uuid="ee000001-0000-0000-0000-000000000005"/>
