@@ -12,6 +12,13 @@
               bottomMargin="40"
               uuid="a1b2c3d4-e5f6-7890-abcd-ef1234567890">
 
+    <!-- Styles (must come before parameters per JRXML schema) -->
+    <style name="Title" fontName="Helvetica" fontSize="24" isBold="true" forecolor="#1E3A5F"/>
+    <style name="SubTitle" fontName="Helvetica" fontSize="14" forecolor="#333333"/>
+    <style name="Heading" fontName="Helvetica" fontSize="16" isBold="true" forecolor="#1E3A5F"/>
+    <style name="Body" fontName="Helvetica" fontSize="10" forecolor="#333333"/>
+    <style name="Accent" fontName="Helvetica" fontSize="12" isBold="true" forecolor="#C9A227"/>
+
     <!-- Parameters -->
     <parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
         <defaultValueExpression><![CDATA[""]]></defaultValueExpression>
@@ -42,13 +49,6 @@
     <!-- Kitchen Data Source -->
     <parameter name="KITCHENS_DATA_SOURCE" class="net.sf.jasperreports.engine.JRDataSource"/>
     <parameter name="KITCHEN_NAMES" class="java.lang.String"/>
-
-    <!-- Styles -->
-    <style name="Title" fontName="Helvetica" fontSize="24" isBold="true" forecolor="#1E3A5F"/>
-    <style name="SubTitle" fontName="Helvetica" fontSize="14" forecolor="#333333"/>
-    <style name="Heading" fontName="Helvetica" fontSize="16" isBold="true" forecolor="#1E3A5F"/>
-    <style name="Body" fontName="Helvetica" fontSize="10" forecolor="#333333"/>
-    <style name="Accent" fontName="Helvetica" fontSize="12" isBold="true" forecolor="#C9A227"/>
 
     <!-- Title Band - Cover Page -->
     <title>
@@ -316,6 +316,39 @@
         </band>
     </detail>
 
+    <!-- Page Footer -->
+    <pageFooter>
+        <band height="30">
+            <line>
+                <reportElement x="0" y="0" width="515" height="1" forecolor="#DDDDDD" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567056"/>
+            </line>
+
+            <textField>
+                <reportElement x="0" y="5" width="200" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567057"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{QUOTATION_NUMBER}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="200" y="5" width="115" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567058"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{CREATED_DATE}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="315" y="5" width="200" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567059"/>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Page " + $V{PAGE_NUMBER}]]></textFieldExpression>
+            </textField>
+        </band>
+    </pageFooter>
+
     <!-- Summary Band - Terms & Conditions (Last Page) -->
     <summary>
         <band height="762" splitType="Stretch">
@@ -467,38 +500,5 @@
             </textField>
         </band>
     </summary>
-
-    <!-- Page Footer -->
-    <pageFooter>
-        <band height="30">
-            <line>
-                <reportElement x="0" y="0" width="515" height="1" forecolor="#DDDDDD" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567056"/>
-            </line>
-
-            <textField>
-                <reportElement x="0" y="5" width="200" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567057"/>
-                <textElement verticalAlignment="Middle">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression><![CDATA[$P{QUOTATION_NUMBER}]]></textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="200" y="5" width="115" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567058"/>
-                <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression><![CDATA[$P{CREATED_DATE}]]></textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="315" y="5" width="200" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567059"/>
-                <textElement textAlignment="Right" verticalAlignment="Middle">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression><![CDATA["Page " + $V{PAGE_NUMBER}]]></textFieldExpression>
-            </textField>
-        </band>
-    </pageFooter>
 
 </jasperReport>

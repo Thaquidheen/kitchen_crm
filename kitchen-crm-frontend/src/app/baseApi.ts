@@ -394,7 +394,7 @@ export const baseApi = createApi({
       query: (id) => ({
         url: `/quotations/${id}/pdf`,
         method: 'GET',
-        headers: { accept: 'application/pdf' },
+        headers: { accept: 'application/pdf, application/json' },
         // Force blob parsing to avoid JSON parser errors
         responseHandler: (response) => response.blob(),
       }),
@@ -405,7 +405,7 @@ export const baseApi = createApi({
       query: (id) => ({
         url: `/quotations/${id}/bill/pdf`,
         method: 'GET',
-        headers: { accept: 'application/pdf' },
+        headers: { accept: 'application/pdf, application/json' },
         responseHandler: (response) => response.blob(),
       }),
     }),

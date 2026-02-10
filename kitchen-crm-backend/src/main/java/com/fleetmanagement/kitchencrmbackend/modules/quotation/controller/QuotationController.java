@@ -150,7 +150,7 @@ public class QuotationController {
         }
     }
 
-    @GetMapping("/{id}/pdf")
+    @GetMapping(value = "/{id}/pdf", produces = {MediaType.APPLICATION_PDF_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<?> downloadQuotationPdf(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal currentUser) {
@@ -179,7 +179,7 @@ public class QuotationController {
         }
     }
 
-    @GetMapping("/{id}/bill/pdf")
+    @GetMapping(value = "/{id}/bill/pdf", produces = {MediaType.APPLICATION_PDF_VALUE, MediaType.APPLICATION_JSON_VALUE})
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> downloadBillPdf(
             @PathVariable Long id,
