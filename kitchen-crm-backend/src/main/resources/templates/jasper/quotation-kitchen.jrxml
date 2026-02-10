@@ -3,9 +3,9 @@
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
               name="quotation-kitchen"
-              pageWidth="515"
-              pageHeight="762"
-              columnWidth="515"
+              pageWidth="575"
+              pageHeight="822"
+              columnWidth="575"
               leftMargin="0"
               rightMargin="0"
               topMargin="0"
@@ -45,7 +45,7 @@
         <band height="700" splitType="Immediate">
             <!-- Kitchen Header — navy background -->
             <rectangle>
-                <reportElement x="0" y="0" width="515" height="50" backcolor="#1B2A4A" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567001"/>
+                <reportElement x="0" y="0" width="575" height="50" backcolor="#1B2A4A" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <!-- Gold accent bar on left -->
@@ -55,7 +55,7 @@
             </rectangle>
             <!-- Gold underline -->
             <rectangle>
-                <reportElement x="0" y="50" width="515" height="3" backcolor="#C8A45D" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa1"/>
+                <reportElement x="0" y="50" width="575" height="3" backcolor="#C8A45D" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa1"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
@@ -81,12 +81,12 @@
             </staticText>
 
             <line>
-                <reportElement positionType="Float" x="0" y="90" width="515" height="1" forecolor="#D4CFC5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567005"/>
+                <reportElement positionType="Float" x="0" y="90" width="575" height="1" forecolor="#D4CFC5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567005"/>
             </line>
 
             <!-- Scope Details Subreport -->
             <subreport>
-                <reportElement positionType="Float" x="0" y="95" width="515" height="100" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567006"/>
+                <reportElement positionType="Float" x="0" y="95" width="575" height="100" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567006"/>
                 <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{scopeDetails})]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-scope.jasper"]]></subreportExpression>
             </subreport>
@@ -105,19 +105,19 @@
             </staticText>
 
             <line>
-                <reportElement positionType="Float" x="0" y="235" width="515" height="1" forecolor="#D4CFC5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567008"/>
+                <reportElement positionType="Float" x="0" y="235" width="575" height="1" forecolor="#D4CFC5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567008"/>
             </line>
 
             <!-- Plan Images Subreport -->
             <subreport>
-                <reportElement positionType="Float" x="0" y="240" width="515" height="150" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567009"/>
+                <reportElement positionType="Float" x="0" y="240" width="575" height="150" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567009"/>
                 <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{planImages})]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-images.jasper"]]></subreportExpression>
             </subreport>
 
             <!-- Page Break Before Products -->
             <break>
-                <reportElement positionType="Float" x="0" y="400" width="515" height="1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567010"/>
+                <reportElement positionType="Float" x="0" y="400" width="575" height="1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567010"/>
             </break>
 
             <!-- ==================== PRODUCTS SECTION ==================== -->
@@ -134,12 +134,12 @@
             </staticText>
 
             <line>
-                <reportElement positionType="Float" x="0" y="435" width="515" height="1" forecolor="#D4CFC5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567012"/>
+                <reportElement positionType="Float" x="0" y="435" width="575" height="1" forecolor="#D4CFC5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567012"/>
             </line>
 
             <!-- Cabinets & Doors Subreport -->
             <subreport>
-                <reportElement positionType="Float" x="0" y="440" width="515" height="80" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567013"/>
+                <reportElement positionType="Float" x="0" y="440" width="575" height="80" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567013"/>
                 <subreportParameter name="CABINETS_DATA">
                     <subreportParameterExpression><![CDATA[$F{cabinets}]]></subreportParameterExpression>
                 </subreportParameter>
@@ -152,7 +152,7 @@
 
             <!-- Accessories Subreport -->
             <staticText>
-                <reportElement positionType="Float" style="SectionTitle" x="0" y="530" width="515" height="20" forecolor="#6B7280" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567014"/>
+                <reportElement positionType="Float" style="SectionTitle" x="0" y="530" width="575" height="20" forecolor="#6B7280" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567014"/>
                 <textElement verticalAlignment="Middle">
                     <font size="11" isBold="true"/>
                 </textElement>
@@ -160,14 +160,14 @@
             </staticText>
 
             <subreport>
-                <reportElement positionType="Float" x="0" y="550" width="515" height="60" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567015"/>
+                <reportElement positionType="Float" x="0" y="550" width="575" height="60" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567015"/>
                 <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{accessories})]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-accessories.jasper"]]></subreportExpression>
             </subreport>
 
             <!-- Lighting Subreport -->
             <staticText>
-                <reportElement positionType="Float" style="SectionTitle" x="0" y="620" width="515" height="20" forecolor="#6B7280" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567016"/>
+                <reportElement positionType="Float" style="SectionTitle" x="0" y="620" width="575" height="20" forecolor="#6B7280" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567016"/>
                 <textElement verticalAlignment="Middle">
                     <font size="11" isBold="true"/>
                 </textElement>
@@ -175,7 +175,7 @@
             </staticText>
 
             <subreport>
-                <reportElement positionType="Float" x="0" y="640" width="515" height="60" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567017"/>
+                <reportElement positionType="Float" x="0" y="640" width="575" height="60" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567017"/>
                 <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{lighting})]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-lighting.jasper"]]></subreportExpression>
             </subreport>
@@ -184,12 +184,12 @@
         <!-- ==================== KITCHEN TOTALS PAGE ==================== -->
         <band height="400" splitType="Immediate">
             <break>
-                <reportElement x="0" y="0" width="515" height="1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567018"/>
+                <reportElement x="0" y="0" width="575" height="1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567018"/>
             </break>
 
             <!-- Kitchen Header (repeated) — navy background -->
             <rectangle>
-                <reportElement x="0" y="10" width="515" height="40" backcolor="#1B2A4A" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567019"/>
+                <reportElement x="0" y="10" width="575" height="40" backcolor="#1B2A4A" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567019"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <rectangle>
@@ -197,7 +197,7 @@
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <rectangle>
-                <reportElement x="0" y="50" width="515" height="3" backcolor="#C8A45D" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa5"/>
+                <reportElement x="0" y="50" width="575" height="3" backcolor="#C8A45D" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa5"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 

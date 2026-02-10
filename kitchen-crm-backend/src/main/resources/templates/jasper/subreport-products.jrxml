@@ -3,9 +3,9 @@
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
               name="subreport-products"
-              pageWidth="515"
+              pageWidth="575"
               pageHeight="400"
-              columnWidth="515"
+              columnWidth="575"
               leftMargin="0"
               rightMargin="0"
               topMargin="0"
@@ -44,7 +44,7 @@
     <columnHeader>
         <band height="25">
             <rectangle>
-                <reportElement x="0" y="0" width="515" height="25" backcolor="#1B2A4A" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567002"/>
+                <reportElement x="0" y="0" width="575" height="25" backcolor="#1B2A4A" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567002"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -103,7 +103,7 @@
         <band height="20" splitType="Stretch">
             <!-- Alternating row background -->
             <rectangle>
-                <reportElement x="0" y="0" width="515" height="20" backcolor="#F0EDE6" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567010">
+                <reportElement x="0" y="0" width="575" height="20" backcolor="#F0EDE6" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567010">
                     <printWhenExpression><![CDATA[$V{ROW_NUMBER} % 2 == 0]]></printWhenExpression>
                 </reportElement>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
@@ -160,7 +160,7 @@
             </textField>
 
             <line>
-                <reportElement x="0" y="19" width="515" height="1" forecolor="#D4CFC5" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567018"/>
+                <reportElement x="0" y="19" width="575" height="1" forecolor="#D4CFC5" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567018"/>
             </line>
         </band>
     </detail>

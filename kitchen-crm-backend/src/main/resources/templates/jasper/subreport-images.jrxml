@@ -3,9 +3,9 @@
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
               name="subreport-images"
-              pageWidth="515"
+              pageWidth="575"
               pageHeight="400"
-              columnWidth="250"
+              columnWidth="280"
               columnCount="2"
               columnSpacing="15"
               leftMargin="0"
@@ -23,19 +23,19 @@
         <band height="180" splitType="Prevent">
             <!-- Image Container -->
             <rectangle radius="5">
-                <reportElement x="0" y="0" width="250" height="175" backcolor="#FFFFFF" uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567001"/>
+                <reportElement x="0" y="0" width="280" height="175" backcolor="#FFFFFF" uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="1" lineColor="#D4CFC5"/></graphicElement>
             </rectangle>
 
             <!-- Image -->
             <image scaleImage="RetainShape" hAlign="Center" vAlign="Middle" onErrorType="Blank">
-                <reportElement x="5" y="5" width="240" height="145" uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567002"/>
+                <reportElement x="5" y="5" width="270" height="145" uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567002"/>
                 <imageExpression><![CDATA[$F{imageBase64} != null ? new java.io.ByteArrayInputStream(java.util.Base64.getDecoder().decode($F{imageBase64})) : null]]></imageExpression>
             </image>
 
             <!-- Image Name -->
             <textField textAdjust="StretchHeight">
-                <reportElement x="5" y="155" width="240" height="15" forecolor="#6B7280" uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567003"/>
+                <reportElement x="5" y="155" width="270" height="15" forecolor="#6B7280" uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567003"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
@@ -47,7 +47,7 @@
     <noData>
         <band height="40">
             <staticText>
-                <reportElement x="0" y="10" width="515" height="20" forecolor="#6B7280" uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567004"/>
+                <reportElement x="0" y="10" width="575" height="20" forecolor="#6B7280" uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567004"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="10" isItalic="true"/>
                 </textElement>
