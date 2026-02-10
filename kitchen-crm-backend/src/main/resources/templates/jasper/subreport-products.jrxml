@@ -26,11 +26,15 @@
     </variable>
 
     <title>
-        <band height="20">
+        <band height="22">
+            <rectangle>
+                <reportElement x="0" y="0" width="4" height="18" backcolor="#C9A227" uuid="f1f2f3f4-e5f6-7890-abcd-ef12345670z1"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
             <staticText>
-                <reportElement x="0" y="0" width="515" height="20" forecolor="#666666" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567001"/>
+                <reportElement x="12" y="0" width="503" height="20" forecolor="#1E3A5F" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567001"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="11" isBold="true"/>
+                    <font size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[Cabinets]]></text>
             </staticText>
@@ -163,9 +167,13 @@
 
     <noData>
         <band height="30">
+            <rectangle>
+                <reportElement x="0" y="5" width="3" height="20" backcolor="#E0E0E0" uuid="f1f2f3f4-e5f6-7890-abcd-ef12345670z2"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
             <staticText>
-                <reportElement x="0" y="5" width="515" height="20" forecolor="#999999" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567019"/>
-                <textElement textAlignment="Center" verticalAlignment="Middle">
+                <reportElement x="10" y="5" width="505" height="20" forecolor="#999999" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567019"/>
+                <textElement verticalAlignment="Middle">
                     <font size="9" isItalic="true"/>
                 </textElement>
                 <text><![CDATA[No cabinets in this kitchen]]></text>

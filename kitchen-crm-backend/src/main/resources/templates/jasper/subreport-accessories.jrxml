@@ -108,9 +108,13 @@
 
     <noData>
         <band height="30">
+            <rectangle>
+                <reportElement x="0" y="5" width="3" height="20" backcolor="#E0E0E0" uuid="a1a2a3a4-b5b6-7890-abcd-ef12345670z1"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
             <staticText>
-                <reportElement x="0" y="5" width="515" height="20" forecolor="#999999" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567012"/>
-                <textElement textAlignment="Center" verticalAlignment="Middle">
+                <reportElement x="10" y="5" width="505" height="20" forecolor="#999999" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567012"/>
+                <textElement verticalAlignment="Middle">
                     <font size="9" isItalic="true"/>
                 </textElement>
                 <text><![CDATA[No accessories in this kitchen]]></text>

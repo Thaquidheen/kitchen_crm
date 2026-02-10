@@ -121,9 +121,13 @@
 
     <noData>
         <band height="30">
+            <rectangle>
+                <reportElement x="0" y="5" width="3" height="20" backcolor="#E0E0E0" uuid="b1b2b3b4-c5c6-7890-abcd-ef12345670z1"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
             <staticText>
-                <reportElement x="0" y="5" width="515" height="20" forecolor="#999999" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567014"/>
-                <textElement textAlignment="Center" verticalAlignment="Middle">
+                <reportElement x="10" y="5" width="505" height="20" forecolor="#999999" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567014"/>
+                <textElement verticalAlignment="Middle">
                     <font size="9" isItalic="true"/>
                 </textElement>
                 <text><![CDATA[No lighting items in this kitchen]]></text>

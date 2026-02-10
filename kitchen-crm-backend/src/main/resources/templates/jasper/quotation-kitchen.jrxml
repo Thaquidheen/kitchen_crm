@@ -43,19 +43,24 @@
 
     <detail>
         <band height="700" splitType="Immediate">
-            <!-- Kitchen Header -->
+            <!-- Kitchen Header — navy background -->
             <rectangle>
-                <reportElement x="0" y="0" width="515" height="50" backcolor="#F5F5F5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567001"/>
+                <reportElement x="0" y="0" width="515" height="50" backcolor="#1E3A5F" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
-
+            <!-- Gold accent bar on left -->
             <rectangle>
-                <reportElement x="0" y="0" width="8" height="50" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567002"/>
+                <reportElement x="0" y="0" width="5" height="50" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567002"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <!-- Gold underline -->
+            <rectangle>
+                <reportElement x="0" y="50" width="515" height="3" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670za"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
             <textField>
-                <reportElement style="KitchenTitle" x="20" y="10" width="475" height="30" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567003"/>
+                <reportElement x="20" y="10" width="475" height="30" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567003"/>
                 <textElement verticalAlignment="Middle">
                     <font size="18" isBold="true"/>
                 </textElement>
@@ -63,8 +68,12 @@
             </textField>
 
             <!-- ==================== SCOPE OF WORK SECTION ==================== -->
+            <rectangle>
+                <reportElement x="0" y="65" width="4" height="20" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670zb"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
             <staticText>
-                <reportElement style="SectionTitle" x="0" y="65" width="515" height="25" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567004"/>
+                <reportElement style="SectionTitle" x="12" y="65" width="503" height="25" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567004"/>
                 <textElement verticalAlignment="Middle">
                     <font size="14" isBold="true"/>
                 </textElement>
@@ -72,7 +81,7 @@
             </staticText>
 
             <line>
-                <reportElement x="0" y="90" width="515" height="1" forecolor="#DDDDDD" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567005"/>
+                <reportElement x="0" y="90" width="515" height="1" forecolor="#E0E0E0" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567005"/>
             </line>
 
             <!-- Scope Details Subreport -->
@@ -83,8 +92,12 @@
             </subreport>
 
             <!-- ==================== PLAN IMAGES SECTION ==================== -->
+            <rectangle>
+                <reportElement x="0" y="210" width="4" height="20" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670zc"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
             <staticText>
-                <reportElement style="SectionTitle" x="0" y="210" width="515" height="25" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567007"/>
+                <reportElement style="SectionTitle" x="12" y="210" width="503" height="25" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567007"/>
                 <textElement verticalAlignment="Middle">
                     <font size="14" isBold="true"/>
                 </textElement>
@@ -92,7 +105,7 @@
             </staticText>
 
             <line>
-                <reportElement x="0" y="235" width="515" height="1" forecolor="#DDDDDD" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567008"/>
+                <reportElement x="0" y="235" width="515" height="1" forecolor="#E0E0E0" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567008"/>
             </line>
 
             <!-- Plan Images Subreport -->
@@ -108,8 +121,12 @@
             </break>
 
             <!-- ==================== PRODUCTS SECTION ==================== -->
+            <rectangle>
+                <reportElement x="0" y="410" width="4" height="20" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670zd"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
             <staticText>
-                <reportElement style="SectionTitle" x="0" y="410" width="515" height="25" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567011"/>
+                <reportElement style="SectionTitle" x="12" y="410" width="503" height="25" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567011"/>
                 <textElement verticalAlignment="Middle">
                     <font size="14" isBold="true"/>
                 </textElement>
@@ -117,7 +134,7 @@
             </staticText>
 
             <line>
-                <reportElement x="0" y="435" width="515" height="1" forecolor="#DDDDDD" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567012"/>
+                <reportElement x="0" y="435" width="515" height="1" forecolor="#E0E0E0" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567012"/>
             </line>
 
             <!-- Cabinets & Doors Subreport -->
@@ -170,19 +187,22 @@
                 <reportElement x="0" y="0" width="515" height="1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567018"/>
             </break>
 
-            <!-- Kitchen Header (repeated) -->
+            <!-- Kitchen Header (repeated) — navy background -->
             <rectangle>
-                <reportElement x="0" y="10" width="515" height="40" backcolor="#F5F5F5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567019"/>
+                <reportElement x="0" y="10" width="515" height="40" backcolor="#1E3A5F" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567019"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
-
             <rectangle>
-                <reportElement x="0" y="10" width="8" height="40" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567020"/>
+                <reportElement x="0" y="10" width="5" height="40" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567020"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <rectangle>
+                <reportElement x="0" y="50" width="515" height="3" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670ze"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
             <textField>
-                <reportElement x="20" y="15" width="300" height="30" forecolor="#1E3A5F" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567021"/>
+                <reportElement x="20" y="15" width="300" height="30" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567021"/>
                 <textElement verticalAlignment="Middle">
                     <font size="16" isBold="true"/>
                 </textElement>
@@ -190,9 +210,9 @@
             </textField>
 
             <staticText>
-                <reportElement x="350" y="15" width="155" height="30" forecolor="#666666" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567022"/>
+                <reportElement x="350" y="15" width="155" height="30" forecolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567022"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
-                    <font size="12"/>
+                    <font size="11" isItalic="true"/>
                 </textElement>
                 <text><![CDATA[Kitchen Summary]]></text>
             </staticText>
@@ -353,6 +373,12 @@
                 </textElement>
                 <textFieldExpression><![CDATA[$F{taxAmount}]]></textFieldExpression>
             </textField>
+
+            <!-- Gold accent line above total -->
+            <line>
+                <reportElement x="100" y="312" width="315" height="1" forecolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670zf"/>
+                <graphicElement><pen lineWidth="2"/></graphicElement>
+            </line>
 
             <!-- Kitchen Total -->
             <rectangle>
