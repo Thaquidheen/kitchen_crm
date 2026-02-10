@@ -223,16 +223,28 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
             params.put("COMPANY_LOGO", null);
         }
 
-        // HOCH brand logo from classpath
+        // HOCH brand logo from classpath — byte[] so it can render in every footer
         try {
             Resource hochLogoResource = resourceLoader.getResource("classpath:hoch.png");
             if (hochLogoResource.exists()) {
-                params.put("HOCH_LOGO", hochLogoResource.getInputStream());
+                params.put("HOCH_LOGO", hochLogoResource.getInputStream().readAllBytes());
             } else {
                 params.put("HOCH_LOGO", null);
             }
         } catch (Exception e) {
             params.put("HOCH_LOGO", null);
+        }
+
+        // Page background image — byte[] so it can render on every page
+        try {
+            Resource bgResource = resourceLoader.getResource("classpath:bg.png");
+            if (bgResource.exists()) {
+                params.put("PAGE_BG", bgResource.getInputStream().readAllBytes());
+            } else {
+                params.put("PAGE_BG", null);
+            }
+        } catch (Exception e) {
+            params.put("PAGE_BG", null);
         }
 
         // Cover page background image from classpath

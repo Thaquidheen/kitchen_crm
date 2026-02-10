@@ -35,8 +35,9 @@
     <parameter name="TERMS_WARRANTY" class="java.lang.String"/>
     <parameter name="KITCHENS_DATA_SOURCE" class="net.sf.jasperreports.engine.JRDataSource"/>
     <parameter name="KITCHEN_NAMES" class="java.lang.String"/>
-    <parameter name="HOCH_LOGO" class="java.io.InputStream"/>
+    <parameter name="HOCH_LOGO" class="[B"/>
     <parameter name="COVER_BG" class="java.io.InputStream"/>
+    <parameter name="PAGE_BG" class="[B"/>
 
     <!-- Background — dark on page 1 (behind kitchen image), white on pages 2+ -->
     <background>
@@ -48,13 +49,13 @@
                 </reportElement>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
-            <!-- Pages 2+: white background -->
-            <rectangle>
-                <reportElement x="0" y="0" width="575" height="822" backcolor="#FFFFFF" uuid="aa000001-0000-0000-0000-000000000003">
+            <!-- Pages 2+: warm cream vignette background -->
+            <image scaleImage="FillFrame" onErrorType="Blank">
+                <reportElement x="0" y="0" width="575" height="822" uuid="aa000001-0000-0000-0000-000000000003">
                     <printWhenExpression><![CDATA[$V{PAGE_NUMBER} > 1]]></printWhenExpression>
                 </reportElement>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
+                <imageExpression><![CDATA[$P{PAGE_BG} != null ? new java.io.ByteArrayInputStream($P{PAGE_BG}) : null]]></imageExpression>
+            </image>
             <!-- Pages 2+: gold bottom accent -->
             <rectangle>
                 <reportElement x="0" y="820" width="575" height="2" backcolor="#C8A45D" uuid="aa000001-0000-0000-0000-000000000002">
@@ -245,13 +246,10 @@
                 </textElement>
                 <textFieldExpression><![CDATA[$P{QUOTATION_NUMBER}]]></textFieldExpression>
             </textField>
-            <textField>
-                <reportElement x="190" y="4" width="135" height="20" forecolor="#C8A45D" uuid="ee000001-0000-0000-0000-000000000004"/>
-                <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="7"/>
-                </textElement>
-                <textFieldExpression><![CDATA[$P{CREATED_DATE}]]></textFieldExpression>
-            </textField>
+            <image scaleImage="RetainShape" hAlign="Center" vAlign="Middle" onErrorType="Blank">
+                <reportElement x="215" y="5" width="145" height="20" uuid="ee000001-0000-0000-0000-000000000004"/>
+                <imageExpression><![CDATA[$P{HOCH_LOGO} != null ? new java.io.ByteArrayInputStream($P{HOCH_LOGO}) : null]]></imageExpression>
+            </image>
             <textField>
                 <reportElement x="385" y="4" width="180" height="20" forecolor="#FFFFFF" uuid="ee000001-0000-0000-0000-000000000005"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
