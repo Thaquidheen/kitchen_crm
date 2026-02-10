@@ -223,6 +223,18 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
             params.put("COMPANY_LOGO", null);
         }
 
+        // HOCH brand logo from classpath
+        try {
+            Resource hochLogoResource = resourceLoader.getResource("classpath:hoch.png");
+            if (hochLogoResource.exists()) {
+                params.put("HOCH_LOGO", hochLogoResource.getInputStream());
+            } else {
+                params.put("HOCH_LOGO", null);
+            }
+        } catch (Exception e) {
+            params.put("HOCH_LOGO", null);
+        }
+
         // Quotation details
         params.put("QUOTATION_NUMBER", quotation.getQuotationNumber() != null ? quotation.getQuotationNumber() : "");
         params.put("CREATED_DATE", quotation.getCreatedAt() != null ? formatDate(quotation.getCreatedAt().toLocalDate()) : "");
