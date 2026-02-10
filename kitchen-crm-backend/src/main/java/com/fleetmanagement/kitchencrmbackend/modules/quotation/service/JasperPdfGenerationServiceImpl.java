@@ -8,6 +8,7 @@ import com.fleetmanagement.kitchencrmbackend.modules.settings.repository.SystemS
 import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import net.sf.jasperreports.engine.export.JRPdfExporter;
+import net.sf.jasperreports.engine.util.JRSaver;
 import net.sf.jasperreports.export.SimpleExporterInput;
 import net.sf.jasperreports.export.SimpleOutputStreamExporterOutput;
 import net.sf.jasperreports.export.SimplePdfExporterConfiguration;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -114,8 +116,12 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
             // Load and compile the main report
             JasperReport mainReport = compileReport(MAIN_REPORT);
 
+            // Compile all subreports to a temp directory
+            Path subreportDir = compileAllSubreports();
+
             // Build parameters
             Map<String, Object> parameters = buildParameters(quotation);
+            parameters.put("SUBREPORT_DIR", subreportDir.toString() + File.separator);
 
             // Build data source for kitchens
             JRDataSource kitchensDataSource = buildKitchensDataSource(quotation);
@@ -161,11 +167,29 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         }
     }
 
+    private Path compileAllSubreports() throws Exception {
+        Path tempDir = Files.createTempDirectory("jasper-subreports");
+        String[] subreports = {
+            "quotation-kitchen.jrxml",
+            "subreport-scope.jrxml",
+            "subreport-images.jrxml",
+            "subreport-products.jrxml",
+            "subreport-accessories.jrxml",
+            "subreport-lighting.jrxml"
+        };
+        for (String name : subreports) {
+            Resource res = resourceLoader.getResource(JASPER_TEMPLATE_DIR + name);
+            try (InputStream is = res.getInputStream()) {
+                JasperReport report = JasperCompileManager.compileReport(is);
+                String jasperName = name.replace(".jrxml", ".jasper");
+                JRSaver.saveObject(report, tempDir.resolve(jasperName).toFile());
+            }
+        }
+        return tempDir;
+    }
+
     private Map<String, Object> buildParameters(QuotationDto quotation) {
         Map<String, Object> params = new HashMap<>();
-
-        // Subreport directory - templates will be compiled at runtime
-        params.put("SUBREPORT_DIR", JASPER_TEMPLATE_DIR);
 
         // Company settings
         params.put("COMPANY_NAME", getSettingValue("company.name", "THE HOCH"));
