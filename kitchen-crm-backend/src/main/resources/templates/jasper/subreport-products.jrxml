@@ -28,11 +28,11 @@
     <title>
         <band height="22">
             <rectangle>
-                <reportElement x="0" y="0" width="4" height="18" backcolor="#C9A227" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567a01"/>
+                <reportElement x="0" y="0" width="4" height="18" backcolor="#C8A45D" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567a01"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="12" y="0" width="503" height="20" forecolor="#1E3A5F" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567001"/>
+                <reportElement x="12" y="0" width="503" height="20" forecolor="#1B2A4A" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567001"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
@@ -44,7 +44,7 @@
     <columnHeader>
         <band height="25">
             <rectangle>
-                <reportElement x="0" y="0" width="515" height="25" backcolor="#1E3A5F" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567002"/>
+                <reportElement x="0" y="0" width="515" height="25" backcolor="#1B2A4A" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567002"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -103,56 +103,56 @@
         <band height="20" splitType="Stretch">
             <!-- Alternating row background -->
             <rectangle>
-                <reportElement x="0" y="0" width="515" height="20" backcolor="#F9FAFB" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567010">
+                <reportElement x="0" y="0" width="515" height="20" backcolor="#F0EDE6" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567010">
                     <printWhenExpression><![CDATA[$V{ROW_NUMBER} % 2 == 0]]></printWhenExpression>
                 </reportElement>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
-                <reportElement x="5" y="2" width="150" height="16" forecolor="#333333" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567011"/>
+                <reportElement x="5" y="2" width="150" height="16" forecolor="#2D2D2D" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567011"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{cabinetTypeName}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
-                <reportElement x="160" y="2" width="35" height="16" forecolor="#333333" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567012"/>
+                <reportElement x="160" y="2" width="35" height="16" forecolor="#2D2D2D" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567012"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{quantity}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
-                <reportElement x="200" y="2" width="50" height="16" forecolor="#333333" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567013"/>
+                <reportElement x="200" y="2" width="50" height="16" forecolor="#2D2D2D" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567013"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{widthMm}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
-                <reportElement x="255" y="2" width="50" height="16" forecolor="#333333" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567014"/>
+                <reportElement x="255" y="2" width="50" height="16" forecolor="#2D2D2D" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567014"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{depthMm}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
-                <reportElement x="310" y="2" width="50" height="16" forecolor="#333333" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567015"/>
+                <reportElement x="310" y="2" width="50" height="16" forecolor="#2D2D2D" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567015"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{heightMm}]]></textFieldExpression>
             </textField>
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
-                <reportElement x="365" y="2" width="70" height="16" forecolor="#333333" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567016"/>
+                <reportElement x="365" y="2" width="70" height="16" forecolor="#2D2D2D" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567016"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{brandName}]]></textFieldExpression>
             </textField>
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
-                <reportElement x="440" y="2" width="70" height="16" forecolor="#333333" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567017"/>
+                <reportElement x="440" y="2" width="70" height="16" forecolor="#2D2D2D" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567017"/>
                 <textElement verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
@@ -160,7 +160,7 @@
             </textField>
 
             <line>
-                <reportElement x="0" y="19" width="515" height="1" forecolor="#EEEEEE" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567018"/>
+                <reportElement x="0" y="19" width="515" height="1" forecolor="#D4CFC5" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567018"/>
             </line>
         </band>
     </detail>
@@ -168,11 +168,11 @@
     <noData>
         <band height="30">
             <rectangle>
-                <reportElement x="0" y="5" width="3" height="20" backcolor="#E0E0E0" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567a02"/>
+                <reportElement x="0" y="5" width="3" height="20" backcolor="#D4CFC5" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567a02"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="10" y="5" width="505" height="20" forecolor="#999999" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567019"/>
+                <reportElement x="10" y="5" width="505" height="20" forecolor="#6B7280" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567019"/>
                 <textElement verticalAlignment="Middle">
                     <font size="9" isItalic="true"/>
                 </textElement>
