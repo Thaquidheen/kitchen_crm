@@ -109,7 +109,7 @@
     <noData>
         <band height="30">
             <rectangle>
-                <reportElement x="0" y="5" width="3" height="20" backcolor="#E0E0E0" uuid="a1a2a3a4-b5b6-7890-abcd-ef12345670z1"/>
+                <reportElement x="0" y="5" width="3" height="20" backcolor="#E0E0E0" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567a01"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>

@@ -55,7 +55,7 @@
             </rectangle>
             <!-- Gold underline -->
             <rectangle>
-                <reportElement x="0" y="50" width="515" height="3" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670za"/>
+                <reportElement x="0" y="50" width="515" height="3" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa1"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
@@ -69,7 +69,7 @@
 
             <!-- ==================== SCOPE OF WORK SECTION ==================== -->
             <rectangle>
-                <reportElement x="0" y="65" width="4" height="20" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670zb"/>
+                <reportElement x="0" y="65" width="4" height="20" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa2"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -93,7 +93,7 @@
 
             <!-- ==================== PLAN IMAGES SECTION ==================== -->
             <rectangle>
-                <reportElement x="0" y="210" width="4" height="20" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670zc"/>
+                <reportElement x="0" y="210" width="4" height="20" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa3"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -122,7 +122,7 @@
 
             <!-- ==================== PRODUCTS SECTION ==================== -->
             <rectangle>
-                <reportElement x="0" y="410" width="4" height="20" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670zd"/>
+                <reportElement x="0" y="410" width="4" height="20" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa4"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -197,7 +197,7 @@
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <rectangle>
-                <reportElement x="0" y="50" width="515" height="3" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670ze"/>
+                <reportElement x="0" y="50" width="515" height="3" backcolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa5"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
@@ -376,7 +376,7 @@
 
             <!-- Gold accent line above total -->
             <line>
-                <reportElement x="100" y="312" width="315" height="1" forecolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670zf"/>
+                <reportElement x="100" y="312" width="315" height="1" forecolor="#C9A227" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa6"/>
                 <graphicElement><pen lineWidth="2"/></graphicElement>
             </line>
 
