@@ -52,7 +52,7 @@
 
     <!-- Title Band - Cover Page -->
     <title>
-        <band height="762" splitType="Stretch">
+        <band height="680" splitType="Stretch">
             <!-- Navy Header Bar -->
             <rectangle>
                 <reportElement x="0" y="0" width="515" height="80" backcolor="#1E3A5F" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567001"/>
@@ -248,11 +248,11 @@
 
             <!-- Footer with company contact -->
             <line>
-                <reportElement x="0" y="700" width="515" height="1" forecolor="#DDDDDD" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567027"/>
+                <reportElement x="0" y="625" width="515" height="1" forecolor="#DDDDDD" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567027"/>
             </line>
 
             <textField>
-                <reportElement x="0" y="710" width="515" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567028"/>
+                <reportElement x="0" y="635" width="515" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567028"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="9"/>
                 </textElement>
@@ -260,7 +260,7 @@
             </textField>
 
             <textField>
-                <reportElement x="0" y="730" width="515" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567029"/>
+                <reportElement x="0" y="655" width="515" height="20" forecolor="#666666" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567029"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="9"/>
                 </textElement>
@@ -304,9 +304,9 @@
 
     <!-- Detail Band - Kitchen Pages (via subreport) -->
     <detail>
-        <band height="700" splitType="Stretch">
+        <band height="680" splitType="Stretch">
             <subreport>
-                <reportElement x="0" y="0" width="515" height="700" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567034"/>
+                <reportElement x="0" y="0" width="515" height="680" uuid="b1b2c3d4-e5f6-7890-abcd-ef1234567034"/>
                 <subreportParameter name="SUBREPORT_DIR">
                     <subreportParameterExpression><![CDATA[$P{SUBREPORT_DIR}]]></subreportParameterExpression>
                 </subreportParameter>
