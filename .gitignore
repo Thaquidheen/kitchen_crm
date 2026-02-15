@@ -18,6 +18,7 @@ PRN
 *.txt
 *.doc
 *.docx
+!**/templates/frist.docx
 *.pdf
 
 # Documentation folders
