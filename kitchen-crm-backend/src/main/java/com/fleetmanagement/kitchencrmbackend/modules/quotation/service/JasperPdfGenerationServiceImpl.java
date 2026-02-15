@@ -1,10 +1,18 @@
 package com.fleetmanagement.kitchencrmbackend.modules.quotation.service;
 
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import com.fleetmanagement.kitchencrmbackend.modules.settings.entity.SystemSetting;
 import com.fleetmanagement.kitchencrmbackend.modules.settings.repository.SystemSettingRepository;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfReader;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.utils.PdfMerger;
+import fr.opensagres.poi.xwpf.converter.pdf.PdfConverter;
+import fr.opensagres.poi.xwpf.converter.pdf.PdfOptions;
 import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import net.sf.jasperreports.engine.export.JRPdfExporter;
@@ -12,6 +20,12 @@ import net.sf.jasperreports.engine.util.JRSaver;
 import net.sf.jasperreports.export.SimpleExporterInput;
 import net.sf.jasperreports.export.SimpleOutputStreamExporterOutput;
 import net.sf.jasperreports.export.SimplePdfExporterConfiguration;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
+import org.apache.poi.xwpf.usermodel.XWPFTableCell;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -52,6 +66,9 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
 
     @Autowired
     private SystemSettingRepository systemSettingRepository;
+
+    @Autowired
+    private CustomerRepository customerRepository;
 
     // Cache compiled reports for performance
     private Map<String, JasperReport> compiledReports = new HashMap<>();
@@ -135,12 +152,132 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
             );
 
             // Export to PDF
-            return exportToPdf(jasperPrint);
+            byte[] jasperPdfBytes = exportToPdf(jasperPrint);
+
+            // Generate cover page from Word template and merge
+            try {
+                byte[] coverPdfBytes = generateCoverPagePdf(quotation);
+                if (coverPdfBytes != null) {
+                    return mergePdfs(coverPdfBytes, jasperPdfBytes);
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to generate cover page, returning quotation without cover: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            return jasperPdfBytes;
 
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("Failed to create quotation PDF: " + e.getMessage(), e);
         }
+    }
+
+    private byte[] generateCoverPagePdf(QuotationDto quotation) throws Exception {
+        Resource templateResource = resourceLoader.getResource("classpath:templates/frist.docx");
+        if (!templateResource.exists()) {
+            System.err.println("Cover page template not found: templates/frist.docx");
+            return null;
+        }
+
+        // Fetch customer address for project location
+        String projectLocation = "";
+        if (quotation.getCustomerId() != null) {
+            Optional<Customer> customer = customerRepository.findById(quotation.getCustomerId());
+            if (customer.isPresent() && customer.get().getAddress() != null) {
+                projectLocation = customer.get().getAddress();
+            }
+        }
+
+        String clientName = quotation.getCustomerName() != null ? quotation.getCustomerName() : "";
+        String date = quotation.getCreatedAt() != null ? formatDate(quotation.getCreatedAt().toLocalDate()) : "";
+
+        // Load and modify the Word template
+        try (InputStream is = templateResource.getInputStream();
+             XWPFDocument document = new XWPFDocument(is)) {
+
+            // Replace text in body paragraphs
+            replaceTextInParagraphs(document.getParagraphs(), clientName, projectLocation, date);
+
+            // Also replace text in tables (Word templates often use tables for layout)
+            for (XWPFTable table : document.getTables()) {
+                for (XWPFTableRow row : table.getRows()) {
+                    for (XWPFTableCell cell : row.getTableCells()) {
+                        replaceTextInParagraphs(cell.getParagraphs(), clientName, projectLocation, date);
+                    }
+                }
+            }
+
+            // Convert Word document to PDF
+            ByteArrayOutputStream pdfOutput = new ByteArrayOutputStream();
+            PdfOptions options = PdfOptions.create();
+            PdfConverter.getInstance().convert(document, pdfOutput, options);
+            return pdfOutput.toByteArray();
+        }
+    }
+
+    private void replaceTextInParagraphs(List<XWPFParagraph> paragraphs, String clientName, String projectLocation, String date) {
+        for (XWPFParagraph paragraph : paragraphs) {
+            String fullText = paragraph.getText();
+            if (fullText == null) continue;
+
+            if (fullText.contains("Client Name")) {
+                replaceInParagraph(paragraph, "Client Name", clientName);
+            }
+            if (fullText.contains("Project Location")) {
+                replaceInParagraph(paragraph, "Project Location", projectLocation);
+            }
+            if (fullText.contains("Date")) {
+                replaceInParagraph(paragraph, "Date", date);
+            }
+        }
+    }
+
+    private void replaceInParagraph(XWPFParagraph paragraph, String fieldLabel, String value) {
+        // Reconstruct full text from all runs
+        List<XWPFRun> runs = paragraph.getRuns();
+        if (runs == null || runs.isEmpty()) return;
+
+        StringBuilder fullText = new StringBuilder();
+        for (XWPFRun run : runs) {
+            String text = run.getText(0);
+            if (text != null) fullText.append(text);
+        }
+
+        String original = fullText.toString();
+        // Replace "Client Name :" with "Client Name : Value" etc.
+        // Handle both "Label :" and "Label:" patterns
+        String replaced = original;
+        if (original.contains(fieldLabel + " :")) {
+            replaced = original.replace(fieldLabel + " :", fieldLabel + " : " + value);
+        } else if (original.contains(fieldLabel + ":")) {
+            replaced = original.replace(fieldLabel + ":", fieldLabel + ": " + value);
+        }
+
+        if (!replaced.equals(original)) {
+            // Clear all runs and set the replaced text in the first run
+            for (int i = runs.size() - 1; i > 0; i--) {
+                paragraph.removeRun(i);
+            }
+            if (!runs.isEmpty()) {
+                runs.get(0).setText(replaced, 0);
+            }
+        }
+    }
+
+    private byte[] mergePdfs(byte[] coverPdf, byte[] mainPdf) throws Exception {
+        ByteArrayOutputStream mergedOutput = new ByteArrayOutputStream();
+
+        try (PdfDocument cover = new PdfDocument(new PdfReader(new ByteArrayInputStream(coverPdf)));
+             PdfDocument main = new PdfDocument(new PdfReader(new ByteArrayInputStream(mainPdf)));
+             PdfDocument merged = new PdfDocument(new PdfWriter(mergedOutput))) {
+
+            PdfMerger merger = new PdfMerger(merged);
+            merger.merge(cover, 1, cover.getNumberOfPages());
+            merger.merge(main, 1, main.getNumberOfPages());
+        }
+
+        return mergedOutput.toByteArray();
     }
 
     @Override
