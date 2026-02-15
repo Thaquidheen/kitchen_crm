@@ -160,7 +160,7 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
                 if (coverPdfBytes != null) {
                     return mergePdfs(coverPdfBytes, jasperPdfBytes);
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 System.err.println("Failed to generate cover page, returning quotation without cover: " + e.getMessage());
                 e.printStackTrace();
             }

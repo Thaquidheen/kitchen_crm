@@ -193,6 +193,13 @@
             <version>5.2.5</version>
         </dependency>
 
+        <!-- Required by POI 5.2.5 - override older transitive version -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.15.1</version>
+        </dependency>
+
         <!-- Word to PDF converter -->
         <dependency>
             <groupId>fr.opensagres.xdocreport</groupId>
