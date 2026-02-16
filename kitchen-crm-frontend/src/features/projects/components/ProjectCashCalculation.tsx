@@ -9,7 +9,7 @@ import { selectCurrentTheme } from '@/features/theme/themeSlice';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { useGetProjectCashCalculationQuery, useUpdateProjectCashCalculationMutation, useGetProjectByIdQuery } from '../projectsAPI';
+import { useGetProjectCashCalculationQuery, useUpdateProjectCashCalculationMutation, useGetProjectByIdQuery, useUpdateProjectMutation } from '../projectsAPI';
 import { type ProjectCashCalculation, type KitchenCashCalculation, type KitchenTaxPercentages } from '../types';
 import { Calculator, Save, AlertCircle, Wrench, Package, DoorClosed, Lightbulb, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -23,10 +23,15 @@ export function ProjectCashCalculation({ projectId }: ProjectCashCalculationProp
   const { data: cashData, isLoading, error, refetch } = useGetProjectCashCalculationQuery(projectId, {
     skip: !projectId,
   });
-  const { refetch: refetchProject } = useGetProjectByIdQuery(projectId, {
+  const { data: projectData, refetch: refetchProject } = useGetProjectByIdQuery(projectId, {
     skip: !projectId,
   });
   const [updateCashCalculation, { isLoading: isUpdating }] = useUpdateProjectCashCalculationMutation();
+  const [updateProject, { isLoading: isUpdatingManual }] = useUpdateProjectMutation();
+
+  // Manual entry state for projects without quotation
+  const [manualCashInHand, setManualCashInHand] = useState<number>(0);
+  const [manualCashInAccount, setManualCashInAccount] = useState<number>(0);
 
   const [editedTax, setEditedTax] = useState({
     accessories: 0,
@@ -71,6 +76,31 @@ export function ProjectCashCalculation({ projectId }: ProjectCashCalculationProp
       }
     }
   }, [cashData]);
+
+  // Initialize manual entry values from existing project data
+  useEffect(() => {
+    if (projectData) {
+      setManualCashInHand(projectData.committedInHand || 0);
+      setManualCashInAccount(projectData.committedInAccount || 0);
+    }
+  }, [projectData]);
+
+  const handleManualSave = async () => {
+    try {
+      const totalAmount = manualCashInHand + manualCashInAccount;
+      await updateProject({
+        id: projectId,
+        committedInHand: manualCashInHand,
+        committedInAccount: manualCashInAccount,
+        totalAmount: totalAmount,
+      }).unwrap();
+      toast.success('Cash amounts saved successfully');
+      refetchProject();
+    } catch (err: any) {
+      console.error('Error saving manual cash amounts:', err);
+      toast.error(err?.data?.message || 'Failed to save cash amounts');
+    }
+  };
 
   // Helper function to calculate category cash
   const calculateCategoryCash = (
@@ -285,6 +315,7 @@ export function ProjectCashCalculation({ projectId }: ProjectCashCalculationProp
   const isNoQuotationError = error && typeof errorMessage === 'string' && errorMessage.toLowerCase().includes('quotation');
 
   if (error && isNoQuotationError) {
+    const manualTotal = manualCashInHand + manualCashInAccount;
     return (
       <Card
         className="p-4 sm:p-6"
@@ -293,44 +324,95 @@ export function ProjectCashCalculation({ projectId }: ProjectCashCalculationProp
           borderColor: currentTheme?.colors?.background?.[600] || '#374151'
         }}
       >
-        <div className="flex flex-col items-center justify-center gap-4 py-8">
-          <div
-            className="p-4 rounded-full"
-            style={{ backgroundColor: `${currentTheme?.colors?.warning || '#f59e0b'}20` }}
+        <div className="flex items-center gap-2 mb-4 sm:mb-6">
+          <Calculator
+            className="h-4 w-4 sm:h-5 sm:w-5"
+            style={{ color: currentTheme?.colors?.primary?.[400] || '#818cf8' }}
+          />
+          <h3
+            className="text-base sm:text-lg font-bold"
+            style={{ color: currentTheme?.colors?.text?.[900] || '#ffffff' }}
           >
-            <FileText
-              className="h-12 w-12"
-              style={{ color: currentTheme?.colors?.warning || '#f59e0b' }}
+            Cash Calculation
+          </h3>
+        </div>
+
+        <div
+          className="mb-4 p-3 rounded border"
+          style={{
+            backgroundColor: `${currentTheme?.colors?.warning || '#f59e0b'}10`,
+            borderColor: `${currentTheme?.colors?.warning || '#f59e0b'}40`
+          }}
+        >
+          <p className="text-xs" style={{ color: currentTheme?.colors?.text?.[600] || '#9ca3af' }}>
+            No quotation is associated with this project. You can manually enter the committed cash amounts below.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label
+              className="block text-xs sm:text-sm mb-1"
+              style={{ color: currentTheme?.colors?.text?.[600] || '#9ca3af' }}
+            >
+              Cash In Hand (Committed)
+            </label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={manualCashInHand || ''}
+              onChange={(e) => setManualCashInHand(parseFloat(e.target.value) || 0)}
+              placeholder="0.00"
             />
           </div>
-          <div className="text-center space-y-2 max-w-lg">
-            <h3
-              className="text-base sm:text-lg font-semibold"
+          <div>
+            <label
+              className="block text-xs sm:text-sm mb-1"
+              style={{ color: currentTheme?.colors?.text?.[600] || '#9ca3af' }}
+            >
+              Cash In Account (Committed)
+            </label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={manualCashInAccount || ''}
+              onChange={(e) => setManualCashInAccount(parseFloat(e.target.value) || 0)}
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+
+        <div
+          className="mb-4 p-3 rounded"
+          style={{ backgroundColor: currentTheme?.colors?.background?.[700] || '#374151' }}
+        >
+          <div className="flex justify-between items-center">
+            <span
+              className="text-sm font-medium"
+              style={{ color: currentTheme?.colors?.text?.[700] || '#d1d5db' }}
+            >
+              Total Amount
+            </span>
+            <span
+              className="text-lg font-bold"
               style={{ color: currentTheme?.colors?.text?.[900] || '#ffffff' }}
             >
-              No Quotation Associated
-            </h3>
-            <p
-              className="text-sm max-w-md mx-auto"
-              style={{ color: currentTheme?.colors?.text?.[600] || '#9ca3af' }}
-            >
-              This project does not have an associated quotation yet. To use the Cash Calculation feature:
-            </p>
-            <ol
-              className="text-sm text-left max-w-md mx-auto mt-4 space-y-2 list-decimal list-inside"
-              style={{ color: currentTheme?.colors?.text?.[600] || '#9ca3af' }}
-            >
-              <li>Create a quotation for this project's customer</li>
-              <li>Convert the quotation to a project, or</li>
-              <li>Associate an existing quotation with this project</li>
-            </ol>
-            <p
-              className="text-xs mt-4 max-w-md mx-auto"
-              style={{ color: currentTheme?.colors?.text?.[500] || '#6b7280' }}
-            >
-              Once a quotation is associated, you can calculate cash in hand and cash in account amounts here.
-            </p>
+              {manualTotal.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 })}
+            </span>
           </div>
+        </div>
+
+        <div className="flex justify-end">
+          <Button
+            onClick={handleManualSave}
+            disabled={isUpdatingManual}
+            className="w-full sm:w-auto"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {isUpdatingManual ? 'Saving...' : 'Save Cash Amounts'}
+          </Button>
         </div>
       </Card>
     );
