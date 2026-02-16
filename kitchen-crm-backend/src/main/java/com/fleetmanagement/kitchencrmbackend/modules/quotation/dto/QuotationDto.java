@@ -2,7 +2,7 @@ package com.fleetmanagement.kitchencrmbackend.modules.quotation.dto;
 
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -27,10 +27,10 @@ public class QuotationDto {
     private String quotationNumber;
     private String projectName;
 
-    @Positive(message = "Transportation price must be positive")
+    @PositiveOrZero(message = "Transportation price must be zero or positive")
     private BigDecimal transportationPrice = BigDecimal.ZERO;
 
-    @Positive(message = "Installation price must be positive")
+    @PositiveOrZero(message = "Installation price must be zero or positive")
     private BigDecimal installationPrice = BigDecimal.ZERO;
 
     private BigDecimal marginPercentage = BigDecimal.ZERO;
