@@ -169,6 +169,19 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         return baos.toByteArray();
     }
 
+    private byte[] generateGlassOverlay(int width, int height, int cornerRadius) throws Exception {
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = image.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        // Semi-transparent dark fill (~70% opacity)
+        g2d.setColor(new Color(0x33, 0x33, 0x33, 0xB3));
+        g2d.fillRoundRect(0, 0, width, height, cornerRadius, cornerRadius);
+        g2d.dispose();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", baos);
+        return baos.toByteArray();
+    }
+
     @Override
     public byte[] addApprovalStampToPdf(byte[] originalPdfBytes, PdfApprovalStampDto approvalData) {
         // Simple implementation - return original PDF
@@ -259,6 +272,25 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
             }
         } catch (Exception e) {
             params.put("HOCH_LOGO", null);
+        }
+
+        // Main logo from classpath — byte[] so it can render on cover + every footer
+        try {
+            Resource mainLogoResource = resourceLoader.getResource("classpath:logo.png");
+            if (mainLogoResource.exists()) {
+                params.put("MAIN_LOGO", mainLogoResource.getInputStream().readAllBytes());
+            } else {
+                params.put("MAIN_LOGO", null);
+            }
+        } catch (Exception e) {
+            params.put("MAIN_LOGO", null);
+        }
+
+        // Glassmorphism overlay for cover box (semi-transparent dark with rounded corners)
+        try {
+            params.put("COVER_BOX_BG", generateGlassOverlay(495, 220, 12));
+        } catch (Exception e) {
+            params.put("COVER_BOX_BG", null);
         }
 
         // Page background — programmatic gradient (warm cream top → off-white bottom)

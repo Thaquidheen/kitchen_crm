@@ -36,6 +36,8 @@
     <parameter name="KITCHENS_DATA_SOURCE" class="net.sf.jasperreports.engine.JRDataSource"/>
     <parameter name="KITCHEN_NAMES" class="java.lang.String"/>
     <parameter name="HOCH_LOGO" class="java.lang.Object"/>
+    <parameter name="MAIN_LOGO" class="java.lang.Object"/>
+    <parameter name="COVER_BOX_BG" class="java.lang.Object"/>
     <parameter name="COVER_BG" class="java.io.InputStream"/>
     <parameter name="PAGE_BG" class="java.lang.Object"/>
 
@@ -80,21 +82,11 @@
 
             <!-- LAYER 2: Text overlays on image -->
 
-            <!-- A. TOP HEADER — over dark ceiling area -->
-            <staticText>
-                <reportElement x="0" y="20" width="575" height="24" forecolor="#FFFFFF" uuid="bb000001-0000-0000-0000-000000000002"/>
-                <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="16" isBold="true"/>
-                </textElement>
-                <text><![CDATA[THE HOCH]]></text>
-            </staticText>
-            <staticText>
-                <reportElement x="0" y="44" width="575" height="14" forecolor="#D4D0C8" uuid="bb000001-0000-0000-0000-000000000003"/>
-                <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="8"/>
-                </textElement>
-                <text><![CDATA[KITCHENS AND WARDROBES]]></text>
-            </staticText>
+            <!-- A. TOP HEADER — logo over dark ceiling area -->
+            <image scaleImage="RetainShape" hAlign="Center" vAlign="Middle" onErrorType="Blank">
+                <reportElement x="162" y="10" width="250" height="60" uuid="bb000001-0000-0000-0000-000000000002"/>
+                <imageExpression><![CDATA[$P{MAIN_LOGO} != null ? new java.io.ByteArrayInputStream((byte[])$P{MAIN_LOGO}) : null]]></imageExpression>
+            </image>
             <!-- B. MIDDLE TITLE — over dark cabinet area -->
             <staticText>
                 <reportElement x="0" y="230" width="575" height="40" forecolor="#FFFFFF" uuid="bb000002-0000-0000-0000-000000000001"/>
@@ -108,11 +100,11 @@
                 <graphicElement><pen lineWidth="2"/></graphicElement>
             </line>
 
-            <!-- C. CUSTOMER INFO CARD — grey overlay -->
-            <rectangle radius="6">
-                <reportElement x="40" y="310" width="495" height="195" backcolor="#333333" uuid="bb000003-0000-0000-0000-000000000001"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
+            <!-- C. CUSTOMER INFO CARD — glassmorphism overlay -->
+            <image scaleImage="FillFrame" onErrorType="Blank">
+                <reportElement x="40" y="310" width="495" height="220" uuid="bb000003-0000-0000-0000-000000000001"/>
+                <imageExpression><![CDATA[$P{COVER_BOX_BG} != null ? new java.io.ByteArrayInputStream((byte[])$P{COVER_BOX_BG}) : null]]></imageExpression>
+            </image>
             <staticText>
                 <reportElement x="40" y="320" width="495" height="16" forecolor="#C8A45D" uuid="bb000003-0000-0000-0000-000000000002"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
@@ -153,13 +145,13 @@
                 <reportElement x="80" y="468" width="415" height="1" forecolor="#C8A45D" uuid="bb000003-0000-0000-0000-000000000007"/>
                 <graphicElement><pen lineWidth="0.5"/></graphicElement>
             </line>
-            <!-- Quotation number + date -->
+            <!-- Quotation number + date + validity -->
             <textField>
                 <reportElement x="40" y="475" width="495" height="20" forecolor="#A09A90" uuid="bb000001-0000-0000-0000-000000000004"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="8"/>
                 </textElement>
-                <textFieldExpression><![CDATA["No: " + $P{QUOTATION_NUMBER} + "   |   " + $P{CREATED_DATE}]]></textFieldExpression>
+                <textFieldExpression><![CDATA["No: " + $P{QUOTATION_NUMBER} + "   |   " + $P{CREATED_DATE} + "   |   Valid: " + $P{VALID_UNTIL}]]></textFieldExpression>
             </textField>
         </band>
     </title>
@@ -200,19 +192,23 @@
     <!-- PAGE FOOTER                                                  -->
     <!-- ============================================================ -->
     <pageFooter>
-        <band height="28">
+        <band height="30">
             <rectangle>
                 <reportElement x="0" y="0" width="575" height="2" backcolor="#8B0000" uuid="ee000001-0000-0000-0000-000000000001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <rectangle>
-                <reportElement x="0" y="2" width="575" height="24" backcolor="#1A1A1A" uuid="ee000001-0000-0000-0000-000000000002"/>
+                <reportElement x="0" y="2" width="575" height="28" backcolor="#1A1A1A" uuid="ee000001-0000-0000-0000-000000000002"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <image scaleImage="RetainShape" hAlign="Center" vAlign="Middle" onErrorType="Blank">
-                <reportElement x="215" y="5" width="145" height="20" uuid="ee000001-0000-0000-0000-000000000004"/>
-                <imageExpression><![CDATA[$P{HOCH_LOGO} != null ? new java.io.ByteArrayInputStream((byte[])$P{HOCH_LOGO}) : null]]></imageExpression>
+                <reportElement x="215" y="4" width="145" height="18" uuid="ee000001-0000-0000-0000-000000000004"/>
+                <imageExpression><![CDATA[$P{MAIN_LOGO} != null ? new java.io.ByteArrayInputStream((byte[])$P{MAIN_LOGO}) : null]]></imageExpression>
             </image>
+            <line>
+                <reportElement x="215" y="23" width="145" height="1" forecolor="#8B0000" uuid="ee000001-0000-0000-0000-000000000006"/>
+                <graphicElement><pen lineWidth="0.5"/></graphicElement>
+            </line>
             <textField>
                 <reportElement x="385" y="4" width="180" height="20" forecolor="#FFFFFF" uuid="ee000001-0000-0000-0000-000000000005"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
