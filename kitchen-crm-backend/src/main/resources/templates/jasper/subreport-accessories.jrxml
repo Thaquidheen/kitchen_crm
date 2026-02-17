@@ -35,28 +35,28 @@
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Item / Description]]></text>
+                <text><![CDATA[ITEM / DESCRIPTION]]></text>
             </staticText>
             <staticText>
                 <reportElement x="205" y="0" width="40" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567003"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Qty]]></text>
+                <text><![CDATA[QTY]]></text>
             </staticText>
             <staticText>
                 <reportElement x="250" y="0" width="180" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567004"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Details]]></text>
+                <text><![CDATA[DETAILS]]></text>
             </staticText>
             <staticText>
                 <reportElement x="435" y="0" width="90" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567005"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Brand]]></text>
+                <text><![CDATA[BRAND]]></text>
             </staticText>
         </band>
     </columnHeader>

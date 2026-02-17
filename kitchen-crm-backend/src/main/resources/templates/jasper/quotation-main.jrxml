@@ -56,9 +56,9 @@
                 </reportElement>
                 <imageExpression><![CDATA[$P{PAGE_BG} != null ? new java.io.ByteArrayInputStream((byte[])$P{PAGE_BG}) : null]]></imageExpression>
             </image>
-            <!-- Pages 2+: gold bottom accent -->
+            <!-- Pages 2+: red bottom accent -->
             <rectangle>
-                <reportElement x="0" y="820" width="575" height="2" backcolor="#C8A45D" uuid="aa000001-0000-0000-0000-000000000002">
+                <reportElement x="0" y="820" width="575" height="2" backcolor="#8B0000" uuid="aa000001-0000-0000-0000-000000000002">
                     <printWhenExpression><![CDATA[$V{PAGE_NUMBER} > 1]]></printWhenExpression>
                 </reportElement>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
@@ -95,14 +95,6 @@
                 </textElement>
                 <text><![CDATA[KITCHENS AND WARDROBES]]></text>
             </staticText>
-            <textField>
-                <reportElement x="0" y="75" width="575" height="14" forecolor="#A09A90" uuid="bb000001-0000-0000-0000-000000000004"/>
-                <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="8"/>
-                </textElement>
-                <textFieldExpression><![CDATA["No: " + $P{QUOTATION_NUMBER} + "   |   " + $P{CREATED_DATE}]]></textFieldExpression>
-            </textField>
-
             <!-- B. MIDDLE TITLE — over dark cabinet area -->
             <staticText>
                 <reportElement x="0" y="230" width="575" height="40" forecolor="#FFFFFF" uuid="bb000002-0000-0000-0000-000000000001"/>
@@ -116,9 +108,9 @@
                 <graphicElement><pen lineWidth="2"/></graphicElement>
             </line>
 
-            <!-- C. CUSTOMER INFO CARD — opaque dark overlay for contrast -->
+            <!-- C. CUSTOMER INFO CARD — grey overlay -->
             <rectangle radius="6">
-                <reportElement x="40" y="310" width="495" height="160" backcolor="#1B2A4A" uuid="bb000003-0000-0000-0000-000000000001"/>
+                <reportElement x="40" y="310" width="495" height="195" backcolor="#333333" uuid="bb000003-0000-0000-0000-000000000001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -156,21 +148,18 @@
                 </textElement>
                 <textFieldExpression><![CDATA[$P{KITCHEN_NAMES}]]></textFieldExpression>
             </textField>
-
-            <!-- D. FOOTER CONTACT — over dark bottom area -->
+            <!-- Separator line -->
+            <line>
+                <reportElement x="80" y="468" width="415" height="1" forecolor="#C8A45D" uuid="bb000003-0000-0000-0000-000000000007"/>
+                <graphicElement><pen lineWidth="0.5"/></graphicElement>
+            </line>
+            <!-- Quotation number + date -->
             <textField>
-                <reportElement x="0" y="640" width="575" height="14" forecolor="#A09A90" uuid="bb000006-0000-0000-0000-000000000001"/>
+                <reportElement x="40" y="475" width="495" height="20" forecolor="#A09A90" uuid="bb000001-0000-0000-0000-000000000004"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="7"/>
+                    <font size="8"/>
                 </textElement>
-                <textFieldExpression><![CDATA[$P{COMPANY_ADDRESS}]]></textFieldExpression>
-            </textField>
-            <textField>
-                <reportElement x="0" y="656" width="575" height="14" forecolor="#A09A90" uuid="bb000006-0000-0000-0000-000000000002"/>
-                <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="7"/>
-                </textElement>
-                <textFieldExpression><![CDATA[$P{COMPANY_PHONE} + "  |  " + $P{COMPANY_EMAIL}]]></textFieldExpression>
+                <textFieldExpression><![CDATA["No: " + $P{QUOTATION_NUMBER} + "   |   " + $P{CREATED_DATE}]]></textFieldExpression>
             </textField>
         </band>
     </title>
@@ -179,35 +168,7 @@
     <!-- PAGE HEADER (pages 2+)                                       -->
     <!-- ============================================================ -->
     <pageHeader>
-        <band height="45">
-            <printWhenExpression><![CDATA[$V{PAGE_NUMBER} > 1]]></printWhenExpression>
-            <rectangle>
-                <reportElement x="0" y="0" width="575" height="38" backcolor="#1B2A4A" uuid="cc000001-0000-0000-0000-000000000001"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <rectangle>
-                <reportElement x="0" y="0" width="35" height="3" backcolor="#C8A45D" uuid="cc000001-0000-0000-0000-000000000002"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <textField>
-                <reportElement x="12" y="5" width="280" height="28" forecolor="#FFFFFF" uuid="cc000001-0000-0000-0000-000000000003"/>
-                <textElement verticalAlignment="Middle">
-                    <font size="13" isBold="true"/>
-                </textElement>
-                <textFieldExpression><![CDATA[$P{COMPANY_NAME}]]></textFieldExpression>
-            </textField>
-            <textField>
-                <reportElement x="300" y="5" width="265" height="28" forecolor="#C8A45D" uuid="cc000001-0000-0000-0000-000000000004"/>
-                <textElement textAlignment="Right" verticalAlignment="Middle">
-                    <font size="9"/>
-                </textElement>
-                <textFieldExpression><![CDATA["Quotation: " + $P{QUOTATION_NUMBER}]]></textFieldExpression>
-            </textField>
-            <rectangle>
-                <reportElement x="0" y="38" width="575" height="2" backcolor="#C8A45D" uuid="cc000001-0000-0000-0000-000000000005"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-        </band>
+        <band height="0"/>
     </pageHeader>
 
     <!-- ============================================================ -->
@@ -219,6 +180,15 @@
                 <reportElement x="0" y="0" width="575" height="680" uuid="dd000001-0000-0000-0000-000000000001"/>
                 <subreportParameter name="SUBREPORT_DIR">
                     <subreportParameterExpression><![CDATA[$P{SUBREPORT_DIR}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="QUOTATION_NUMBER">
+                    <subreportParameterExpression><![CDATA[$P{QUOTATION_NUMBER}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="CREATED_DATE">
+                    <subreportParameterExpression><![CDATA[$P{CREATED_DATE}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="VALID_UNTIL">
+                    <subreportParameterExpression><![CDATA[$P{VALID_UNTIL}]]></subreportParameterExpression>
                 </subreportParameter>
                 <dataSourceExpression><![CDATA[$P{KITCHENS_DATA_SOURCE}]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "quotation-kitchen.jasper"]]></subreportExpression>
@@ -232,20 +202,13 @@
     <pageFooter>
         <band height="28">
             <rectangle>
-                <reportElement x="0" y="0" width="575" height="2" backcolor="#C8A45D" uuid="ee000001-0000-0000-0000-000000000001"/>
+                <reportElement x="0" y="0" width="575" height="2" backcolor="#8B0000" uuid="ee000001-0000-0000-0000-000000000001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <rectangle>
-                <reportElement x="0" y="2" width="575" height="24" backcolor="#1B2A4A" uuid="ee000001-0000-0000-0000-000000000002"/>
+                <reportElement x="0" y="2" width="575" height="24" backcolor="#1A1A1A" uuid="ee000001-0000-0000-0000-000000000002"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
-            <textField>
-                <reportElement x="10" y="4" width="180" height="20" forecolor="#FFFFFF" uuid="ee000001-0000-0000-0000-000000000003"/>
-                <textElement verticalAlignment="Middle">
-                    <font size="7"/>
-                </textElement>
-                <textFieldExpression><![CDATA[$P{QUOTATION_NUMBER}]]></textFieldExpression>
-            </textField>
             <image scaleImage="RetainShape" hAlign="Center" vAlign="Middle" onErrorType="Blank">
                 <reportElement x="215" y="5" width="145" height="20" uuid="ee000001-0000-0000-0000-000000000004"/>
                 <imageExpression><![CDATA[$P{HOCH_LOGO} != null ? new java.io.ByteArrayInputStream((byte[])$P{HOCH_LOGO}) : null]]></imageExpression>

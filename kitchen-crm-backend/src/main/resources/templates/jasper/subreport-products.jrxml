@@ -36,7 +36,7 @@
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Cabinets]]></text>
+                <text><![CDATA[CABINETS]]></text>
             </staticText>
         </band>
     </title>
@@ -52,49 +52,49 @@
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Cabinet Type]]></text>
+                <text><![CDATA[CABINET TYPE]]></text>
             </staticText>
             <staticText>
                 <reportElement x="175" y="0" width="35" height="32" forecolor="#FFFFFF" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567004"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Qty]]></text>
+                <text><![CDATA[QTY]]></text>
             </staticText>
             <staticText>
                 <reportElement x="215" y="0" width="50" height="32" forecolor="#FFFFFF" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567005"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[W(mm)]]></text>
+                <text><![CDATA[W(MM)]]></text>
             </staticText>
             <staticText>
                 <reportElement x="270" y="0" width="50" height="32" forecolor="#FFFFFF" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567006"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[D(mm)]]></text>
+                <text><![CDATA[D(MM)]]></text>
             </staticText>
             <staticText>
                 <reportElement x="325" y="0" width="50" height="32" forecolor="#FFFFFF" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567007"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[H(mm)]]></text>
+                <text><![CDATA[H(MM)]]></text>
             </staticText>
             <staticText>
                 <reportElement x="380" y="0" width="70" height="32" forecolor="#FFFFFF" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567008"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Brand]]></text>
+                <text><![CDATA[BRAND]]></text>
             </staticText>
             <staticText>
                 <reportElement x="455" y="0" width="70" height="32" forecolor="#FFFFFF" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567009"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Material]]></text>
+                <text><![CDATA[MATERIAL]]></text>
             </staticText>
         </band>
     </columnHeader>

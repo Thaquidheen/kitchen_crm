@@ -23,6 +23,9 @@
 
     <!-- Parameters -->
     <parameter name="SUBREPORT_DIR" class="java.lang.String"/>
+    <parameter name="QUOTATION_NUMBER" class="java.lang.String"/>
+    <parameter name="CREATED_DATE" class="java.lang.String"/>
+    <parameter name="VALID_UNTIL" class="java.lang.String"/>
 
     <!-- Fields from QuotationKitchenDto -->
     <field name="kitchenName" class="java.lang.String"/>
@@ -58,7 +61,7 @@
                 <textElement verticalAlignment="Middle">
                     <font size="18" isBold="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA[$F{kitchenName}]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$F{kitchenName}.toUpperCase()]]></textFieldExpression>
             </textField>
 
             <!-- ==================== SCOPE OF WORK SECTION ==================== -->
@@ -71,7 +74,7 @@
                 <textElement verticalAlignment="Middle">
                     <font size="14" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Scope of Work]]></text>
+                <text><![CDATA[SCOPE OF WORK]]></text>
             </staticText>
 
             <line>
@@ -95,7 +98,7 @@
                 <textElement verticalAlignment="Middle">
                     <font size="14" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Plan Images]]></text>
+                <text><![CDATA[PLAN IMAGES]]></text>
             </staticText>
 
             <line>
@@ -124,7 +127,7 @@
                 <textElement verticalAlignment="Middle">
                     <font size="14" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Products]]></text>
+                <text><![CDATA[PRODUCTS]]></text>
             </staticText>
 
             <line>
@@ -150,7 +153,7 @@
                 <textElement verticalAlignment="Middle">
                     <font size="11" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Accessories]]></text>
+                <text><![CDATA[ACCESSORIES]]></text>
             </staticText>
 
             <subreport>
@@ -165,7 +168,7 @@
                 <textElement verticalAlignment="Middle">
                     <font size="11" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Lighting]]></text>
+                <text><![CDATA[LIGHTING]]></text>
             </staticText>
 
             <subreport>
@@ -176,7 +179,7 @@
         </band>
 
         <!-- ==================== KITCHEN TOTALS PAGE ==================== -->
-        <band height="400" splitType="Immediate">
+        <band height="450" splitType="Immediate">
             <break>
                 <reportElement x="0" y="0" width="575" height="1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567018"/>
             </break>
@@ -195,7 +198,7 @@
                 <textElement verticalAlignment="Middle">
                     <font size="16" isBold="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA[$F{kitchenName}]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$F{kitchenName}.toUpperCase()]]></textFieldExpression>
             </textField>
 
             <staticText>
@@ -203,12 +206,12 @@
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font size="11" isItalic="true"/>
                 </textElement>
-                <text><![CDATA[Kitchen Summary]]></text>
+                <text><![CDATA[QUOTE]]></text>
             </staticText>
 
             <!-- Totals Table -->
             <rectangle radius="5">
-                <reportElement x="100" y="70" width="315" height="280" backcolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567023"/>
+                <reportElement x="100" y="70" width="315" height="255" backcolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567023"/>
                 <graphicElement><pen lineWidth="1" lineColor="#E8E0D5"/></graphicElement>
             </rectangle>
 
@@ -223,7 +226,7 @@
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Description]]></text>
+                <text><![CDATA[DESCRIPTION]]></text>
             </staticText>
 
             <staticText>
@@ -231,7 +234,7 @@
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Amount (Rs.)]]></text>
+                <text><![CDATA[AMOUNT (RS.)]]></text>
             </staticText>
 
             <!-- Cabinets Total -->
@@ -240,7 +243,7 @@
                 <textElement verticalAlignment="Middle">
                     <font size="10"/>
                 </textElement>
-                <text><![CDATA[Cabinets Total]]></text>
+                <text><![CDATA[CABINETS TOTAL]]></text>
             </staticText>
             <textField pattern="#,##0.00">
                 <reportElement x="310" y="110" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567028"/>
@@ -260,7 +263,7 @@
                 <textElement verticalAlignment="Middle">
                     <font size="10"/>
                 </textElement>
-                <text><![CDATA[Doors Total]]></text>
+                <text><![CDATA[DOORS TOTAL]]></text>
             </staticText>
             <textField pattern="#,##0.00">
                 <reportElement x="310" y="135" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567031"/>
@@ -276,7 +279,7 @@
                 <textElement verticalAlignment="Middle">
                     <font size="10"/>
                 </textElement>
-                <text><![CDATA[Accessories Total]]></text>
+                <text><![CDATA[ACCESSORIES TOTAL]]></text>
             </staticText>
             <textField pattern="#,##0.00">
                 <reportElement x="310" y="160" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567033"/>
@@ -296,7 +299,7 @@
                 <textElement verticalAlignment="Middle">
                     <font size="10"/>
                 </textElement>
-                <text><![CDATA[Lights Total]]></text>
+                <text><![CDATA[LIGHTS TOTAL]]></text>
             </staticText>
             <textField pattern="#,##0.00">
                 <reportElement x="310" y="185" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567036"/>
@@ -317,7 +320,7 @@
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Subtotal]]></text>
+                <text><![CDATA[SUBTOTAL]]></text>
             </staticText>
             <textField pattern="#,##0.00">
                 <reportElement x="310" y="230" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567039"/>
@@ -327,66 +330,77 @@
                 <textFieldExpression><![CDATA[$F{subtotal}]]></textFieldExpression>
             </textField>
 
-            <!-- Margin -->
+            <!-- GST -->
             <rectangle>
                 <reportElement x="100" y="255" width="315" height="25" backcolor="#FAF6F1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567040"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="110" y="255" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567041"/>
+                <reportElement x="110" y="255" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567043"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10"/>
                 </textElement>
-                <text><![CDATA[Margin]]></text>
+                <text><![CDATA[GST]]></text>
             </staticText>
             <textField pattern="#,##0.00">
-                <reportElement x="310" y="255" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567042"/>
-                <textElement textAlignment="Right" verticalAlignment="Middle">
-                    <font size="10"/>
-                </textElement>
-                <textFieldExpression><![CDATA[$F{marginAmount}]]></textFieldExpression>
-            </textField>
-
-            <!-- Tax -->
-            <staticText>
-                <reportElement x="110" y="280" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567043"/>
-                <textElement verticalAlignment="Middle">
-                    <font size="10"/>
-                </textElement>
-                <text><![CDATA[Tax]]></text>
-            </staticText>
-            <textField pattern="#,##0.00">
-                <reportElement x="310" y="280" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567044"/>
+                <reportElement x="310" y="255" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567044"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font size="10"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{taxAmount}]]></textFieldExpression>
             </textField>
 
-            <!-- Gold accent line above total -->
+            <!-- Accent line above total -->
             <line>
-                <reportElement x="100" y="312" width="315" height="1" forecolor="#C8A45D" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa6"/>
+                <reportElement x="100" y="287" width="315" height="1" forecolor="#C8A45D" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa6"/>
                 <graphicElement><pen lineWidth="2"/></graphicElement>
             </line>
 
             <!-- Kitchen Total -->
             <rectangle>
-                <reportElement x="100" y="315" width="315" height="35" backcolor="#3B2820" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567045"/>
+                <reportElement x="100" y="290" width="315" height="35" backcolor="#3B2820" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567045"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="110" y="320" width="200" height="25" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567046"/>
+                <reportElement x="110" y="295" width="200" height="25" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567046"/>
                 <textElement verticalAlignment="Middle">
                     <font size="12" isBold="true"/>
                 </textElement>
                 <text><![CDATA[KITCHEN TOTAL]]></text>
             </staticText>
             <textField pattern="#,##0.00">
-                <reportElement x="290" y="320" width="115" height="25" forecolor="#C8A45D" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567047"/>
+                <reportElement x="290" y="295" width="115" height="25" forecolor="#C8A45D" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567047"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font size="14" isBold="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{totalAmount}]]></textFieldExpression>
+            </textField>
+
+            <!-- Quotation Info Box -->
+            <rectangle radius="6">
+                <reportElement x="100" y="345" width="315" height="70" backcolor="#333333" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670a1"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <textField>
+                <reportElement x="110" y="350" width="295" height="18" forecolor="#C8A45D" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670a2"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="8" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["QUOTATION NO: " + $P{QUOTATION_NUMBER}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="110" y="370" width="295" height="18" forecolor="#A09A90" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670a3"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA["DATE: " + $P{CREATED_DATE}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="110" y="390" width="295" height="18" forecolor="#A09A90" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670a4"/>
+                <textElement verticalAlignment="Middle">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA["VALID UNTIL: " + $P{VALID_UNTIL}]]></textFieldExpression>
             </textField>
         </band>
     </detail>

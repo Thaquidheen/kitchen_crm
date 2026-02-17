@@ -34,35 +34,35 @@
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Item Name]]></text>
+                <text><![CDATA[ITEM NAME]]></text>
             </staticText>
             <staticText>
                 <reportElement x="205" y="0" width="50" height="32" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567003"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Qty]]></text>
+                <text><![CDATA[QTY]]></text>
             </staticText>
             <staticText>
                 <reportElement x="260" y="0" width="60" height="32" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567004"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Unit]]></text>
+                <text><![CDATA[UNIT]]></text>
             </staticText>
             <staticText>
                 <reportElement x="325" y="0" width="120" height="32" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567005"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Specifications]]></text>
+                <text><![CDATA[SPECIFICATIONS]]></text>
             </staticText>
             <staticText>
                 <reportElement x="450" y="0" width="75" height="32" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567006"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Type]]></text>
+                <text><![CDATA[TYPE]]></text>
             </staticText>
         </band>
     </columnHeader>
