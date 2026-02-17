@@ -30,16 +30,16 @@
             <staticText>
                 <reportElement x="25" y="0" width="190" height="25" forecolor="#FFFFFF" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567002"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="9" isBold="true"/>
+                    <font fontName="Serif" size="9" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Specification]]></text>
+                <text><![CDATA[SPECIFICATION]]></text>
             </staticText>
             <staticText>
                 <reportElement x="235" y="0" width="320" height="25" forecolor="#FFFFFF" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567003"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="9" isBold="true"/>
+                    <font fontName="Serif" size="9" isBold="true"/>
                 </textElement>
-                <text><![CDATA[Details]]></text>
+                <text><![CDATA[DETAILS]]></text>
             </staticText>
         </band>
     </columnHeader>
@@ -62,7 +62,7 @@
             <textField textAdjust="StretchHeight">
                 <reportElement x="25" y="2" width="190" height="18" forecolor="#8B7355" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567005"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="9"/>
+                    <font fontName="Serif" size="9"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{fieldName}]]></textFieldExpression>
             </textField>
@@ -70,7 +70,7 @@
             <textField textAdjust="StretchHeight">
                 <reportElement x="235" y="2" width="320" height="18" forecolor="#2C1810" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567006"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="9" isBold="true"/>
+                    <font fontName="Serif" size="9" isBold="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{fieldValue}]]></textFieldExpression>
             </textField>

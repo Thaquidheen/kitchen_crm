@@ -34,7 +34,7 @@
             <staticText>
                 <reportElement x="27" y="0" width="490" height="20" forecolor="#2C1810" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567001"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="10" isBold="true"/>
+                    <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[CABINETS]]></text>
             </staticText>
@@ -50,49 +50,49 @@
             <staticText>
                 <reportElement x="20" y="0" width="150" height="32" forecolor="#FFFFFF" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567003"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="10" isBold="true"/>
+                    <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[CABINET TYPE]]></text>
             </staticText>
             <staticText>
                 <reportElement x="175" y="0" width="35" height="32" forecolor="#FFFFFF" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567004"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="10" isBold="true"/>
+                    <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[QTY]]></text>
             </staticText>
             <staticText>
                 <reportElement x="215" y="0" width="50" height="32" forecolor="#FFFFFF" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567005"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="10" isBold="true"/>
+                    <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[W(MM)]]></text>
             </staticText>
             <staticText>
                 <reportElement x="270" y="0" width="50" height="32" forecolor="#FFFFFF" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567006"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="10" isBold="true"/>
+                    <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[D(MM)]]></text>
             </staticText>
             <staticText>
                 <reportElement x="325" y="0" width="50" height="32" forecolor="#FFFFFF" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567007"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="10" isBold="true"/>
+                    <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[H(MM)]]></text>
             </staticText>
             <staticText>
                 <reportElement x="380" y="0" width="70" height="32" forecolor="#FFFFFF" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567008"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="10" isBold="true"/>
+                    <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[BRAND]]></text>
             </staticText>
             <staticText>
                 <reportElement x="455" y="0" width="70" height="32" forecolor="#FFFFFF" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567009"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="10" isBold="true"/>
+                    <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[MATERIAL]]></text>
             </staticText>
@@ -117,49 +117,49 @@
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
                 <reportElement x="20" y="5" width="150" height="20" forecolor="#2C1810" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567011"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="8"/>
+                    <font fontName="Serif" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{cabinetTypeName}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
                 <reportElement x="175" y="5" width="35" height="20" forecolor="#2C1810" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567012"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="8"/>
+                    <font fontName="Serif" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{quantity}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
                 <reportElement x="215" y="5" width="50" height="20" forecolor="#2C1810" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567013"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="8"/>
+                    <font fontName="Serif" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{widthMm}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
                 <reportElement x="270" y="5" width="50" height="20" forecolor="#2C1810" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567014"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="8"/>
+                    <font fontName="Serif" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{depthMm}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
                 <reportElement x="325" y="5" width="50" height="20" forecolor="#2C1810" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567015"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="8"/>
+                    <font fontName="Serif" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{heightMm}]]></textFieldExpression>
             </textField>
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
                 <reportElement x="380" y="5" width="70" height="20" forecolor="#2C1810" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567016"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="8"/>
+                    <font fontName="Serif" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{brandName}]]></textFieldExpression>
             </textField>
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
                 <reportElement x="455" y="5" width="70" height="20" forecolor="#2C1810" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567017"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="8"/>
+                    <font fontName="Serif" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{materialName}]]></textFieldExpression>
             </textField>
@@ -179,7 +179,7 @@
             <staticText>
                 <reportElement x="25" y="5" width="505" height="20" forecolor="#8B7355" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567019"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="9" isItalic="true"/>
+                    <font fontName="Serif" size="9" isItalic="true"/>
                 </textElement>
                 <text><![CDATA[No cabinets in this kitchen]]></text>
             </staticText>

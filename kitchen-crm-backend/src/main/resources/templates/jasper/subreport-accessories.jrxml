@@ -33,28 +33,28 @@
             <staticText>
                 <reportElement x="20" y="0" width="180" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567002"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="10" isBold="true"/>
+                    <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[ITEM / DESCRIPTION]]></text>
             </staticText>
             <staticText>
                 <reportElement x="205" y="0" width="40" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567003"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="10" isBold="true"/>
+                    <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[QTY]]></text>
             </staticText>
             <staticText>
                 <reportElement x="250" y="0" width="180" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567004"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="10" isBold="true"/>
+                    <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[DETAILS]]></text>
             </staticText>
             <staticText>
                 <reportElement x="435" y="0" width="90" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567005"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="10" isBold="true"/>
+                    <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[BRAND]]></text>
             </staticText>
@@ -79,28 +79,28 @@
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
                 <reportElement x="20" y="5" width="180" height="20" forecolor="#2C1810" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567007"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="8"/>
+                    <font fontName="Serif" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{customItem} != null && $F{customItem} ? $F{customItemName} : $F{accessoryName}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
                 <reportElement x="205" y="5" width="40" height="20" forecolor="#2C1810" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567008"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="8"/>
+                    <font fontName="Serif" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{quantity}]]></textFieldExpression>
             </textField>
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
                 <reportElement x="250" y="5" width="180" height="20" forecolor="#8B7355" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567009"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="8"/>
+                    <font fontName="Serif" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{description}]]></textFieldExpression>
             </textField>
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
                 <reportElement x="435" y="5" width="90" height="20" forecolor="#2C1810" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567010"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="8"/>
+                    <font fontName="Serif" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{brandName}]]></textFieldExpression>
             </textField>
@@ -120,7 +120,7 @@
             <staticText>
                 <reportElement x="25" y="5" width="505" height="20" forecolor="#8B7355" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567012"/>
                 <textElement verticalAlignment="Middle">
-                    <font size="9" isItalic="true"/>
+                    <font fontName="Serif" size="9" isItalic="true"/>
                 </textElement>
                 <text><![CDATA[No accessories in this kitchen]]></text>
             </staticText>

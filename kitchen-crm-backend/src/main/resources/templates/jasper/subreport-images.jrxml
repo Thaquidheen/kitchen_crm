@@ -37,7 +37,7 @@
             <textField textAdjust="StretchHeight">
                 <reportElement x="5" y="155" width="270" height="15" forecolor="#6B7280" uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567003"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="8"/>
+                    <font fontName="Serif" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{imageName} != null ? $F{imageName} : "Plan Image " + $F{imageOrder}]]></textFieldExpression>
             </textField>
@@ -49,7 +49,7 @@
             <staticText>
                 <reportElement x="0" y="10" width="575" height="20" forecolor="#6B7280" uuid="e1e2e3e4-e5f6-7890-abcd-ef1234567004"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="10" isItalic="true"/>
+                    <font fontName="Serif" size="10" isItalic="true"/>
                 </textElement>
                 <text><![CDATA[No plan images available for this kitchen]]></text>
             </staticText>
