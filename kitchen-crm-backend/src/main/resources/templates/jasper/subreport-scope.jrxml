@@ -24,7 +24,7 @@
     <columnHeader>
         <band height="25">
             <rectangle radius="8">
-                <reportElement x="15" y="0" width="545" height="25" backcolor="#3B2820" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567001"/>
+                <reportElement x="15" y="0" width="545" height="25" backcolor="#000000" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>

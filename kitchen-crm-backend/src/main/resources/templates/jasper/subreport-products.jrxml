@@ -28,7 +28,7 @@
     <title>
         <band height="22">
             <rectangle>
-                <reportElement x="15" y="0" width="4" height="18" backcolor="#C8A45D" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567a01"/>
+                <reportElement x="15" y="0" width="4" height="18" backcolor="#8B0000" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567a01"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -44,7 +44,7 @@
     <columnHeader>
         <band height="32">
             <rectangle radius="8">
-                <reportElement x="15" y="0" width="545" height="32" backcolor="#3B2820" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567002"/>
+                <reportElement x="15" y="0" width="545" height="32" backcolor="#000000" uuid="f1f2f3f4-e5f6-7890-abcd-ef1234567002"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>

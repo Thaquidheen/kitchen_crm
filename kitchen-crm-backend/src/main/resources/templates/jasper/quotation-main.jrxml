@@ -84,7 +84,7 @@
 
             <!-- A. TOP HEADER — logo over dark ceiling area -->
             <image scaleImage="RetainShape" hAlign="Center" vAlign="Middle" onErrorType="Blank">
-                <reportElement x="162" y="10" width="250" height="60" uuid="bb000001-0000-0000-0000-000000000002"/>
+                <reportElement x="112" y="5" width="350" height="85" uuid="bb000001-0000-0000-0000-000000000002"/>
                 <imageExpression><![CDATA[$P{MAIN_LOGO} != null ? new java.io.ByteArrayInputStream((byte[])$P{MAIN_LOGO}) : null]]></imageExpression>
             </image>
             <!-- B. MIDDLE TITLE — over dark cabinet area -->
@@ -96,7 +96,7 @@
                 <text><![CDATA[QUOTATION]]></text>
             </staticText>
             <line>
-                <reportElement x="187" y="275" width="200" height="1" forecolor="#C8A45D" uuid="bb000002-0000-0000-0000-000000000002"/>
+                <reportElement x="187" y="275" width="200" height="1" forecolor="#8B0000" uuid="bb000002-0000-0000-0000-000000000002"/>
                 <graphicElement><pen lineWidth="2"/></graphicElement>
             </line>
 
@@ -106,7 +106,7 @@
                 <imageExpression><![CDATA[$P{COVER_BOX_BG} != null ? new java.io.ByteArrayInputStream((byte[])$P{COVER_BOX_BG}) : null]]></imageExpression>
             </image>
             <staticText>
-                <reportElement x="40" y="320" width="495" height="16" forecolor="#C8A45D" uuid="bb000003-0000-0000-0000-000000000002"/>
+                <reportElement x="40" y="320" width="495" height="16" forecolor="#8B0000" uuid="bb000003-0000-0000-0000-000000000002"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="9" isBold="true"/>
                 </textElement>
@@ -142,7 +142,7 @@
             </textField>
             <!-- Separator line -->
             <line>
-                <reportElement x="80" y="468" width="415" height="1" forecolor="#C8A45D" uuid="bb000003-0000-0000-0000-000000000007"/>
+                <reportElement x="80" y="468" width="415" height="1" forecolor="#8B0000" uuid="bb000003-0000-0000-0000-000000000007"/>
                 <graphicElement><pen lineWidth="0.5"/></graphicElement>
             </line>
             <!-- Quotation number + date + validity -->
@@ -234,7 +234,7 @@
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <rectangle>
-                <reportElement x="0" y="52" width="575" height="3" backcolor="#C8A45D" uuid="ff000001-0000-0000-0000-000000000003"/>
+                <reportElement x="0" y="52" width="575" height="3" backcolor="#8B0000" uuid="ff000001-0000-0000-0000-000000000003"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -247,7 +247,7 @@
 
             <!-- General Terms -->
             <rectangle>
-                <reportElement x="15" y="75" width="4" height="18" backcolor="#C8A45D" uuid="ff000001-0000-0000-0000-000000000005"/>
+                <reportElement x="15" y="75" width="4" height="18" backcolor="#8B0000" uuid="ff000001-0000-0000-0000-000000000005"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -267,7 +267,7 @@
 
             <!-- Warranty -->
             <rectangle>
-                <reportElement x="15" y="315" width="4" height="18" backcolor="#C8A45D" uuid="ff000001-0000-0000-0000-000000000008"/>
+                <reportElement x="15" y="315" width="4" height="18" backcolor="#8B0000" uuid="ff000001-0000-0000-0000-000000000008"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -307,7 +307,7 @@
                 <graphicElement><pen lineWidth="1" lineColor="#DDDDDD"/></graphicElement>
             </rectangle>
             <rectangle>
-                <reportElement x="15" y="590" width="3" height="110" backcolor="#C8A45D" uuid="ff000001-0000-0000-0000-000000000015"/>
+                <reportElement x="15" y="590" width="3" height="110" backcolor="#8B0000" uuid="ff000001-0000-0000-0000-000000000015"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
