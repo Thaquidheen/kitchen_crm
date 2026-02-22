@@ -45,7 +45,7 @@
     <field name="totalAmount" class="java.math.BigDecimal"/>
 
     <detail>
-        <band height="700" splitType="Immediate">
+        <band height="720" splitType="Immediate">
             <!-- Kitchen Header — navy background -->
             <rectangle>
                 <reportElement x="0" y="0" width="595" height="50" backcolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567001"/>
