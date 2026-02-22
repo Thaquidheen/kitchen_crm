@@ -3,9 +3,9 @@
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
               name="subreport-accessories"
-              pageWidth="575"
+              pageWidth="595"
               pageHeight="300"
-              columnWidth="575"
+              columnWidth="595"
               leftMargin="0"
               rightMargin="0"
               topMargin="0"
@@ -27,32 +27,32 @@
     <columnHeader>
         <band height="32">
             <rectangle radius="8">
-                <reportElement x="15" y="0" width="545" height="32" backcolor="#000000" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567001"/>
+                <reportElement x="15" y="0" width="565" height="32" backcolor="#000000" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="20" y="0" width="180" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567002"/>
+                <reportElement x="20" y="0" width="190" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567002"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[ITEM / DESCRIPTION]]></text>
             </staticText>
             <staticText>
-                <reportElement x="205" y="0" width="40" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567003"/>
+                <reportElement x="215" y="0" width="40" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567003"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[QTY]]></text>
             </staticText>
             <staticText>
-                <reportElement x="250" y="0" width="180" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567004"/>
+                <reportElement x="260" y="0" width="190" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567004"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[DETAILS]]></text>
             </staticText>
             <staticText>
-                <reportElement x="435" y="0" width="90" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567005"/>
+                <reportElement x="455" y="0" width="100" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567005"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
@@ -65,40 +65,40 @@
         <band height="28" splitType="Stretch">
             <!-- White base background for ALL rows -->
             <rectangle>
-                <reportElement x="15" y="0" width="545" height="28" backcolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef12345670b1"/>
+                <reportElement x="15" y="0" width="565" height="28" backcolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef12345670b1"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <!-- Alternating row highlight -->
             <rectangle>
-                <reportElement x="15" y="0" width="545" height="28" backcolor="#FAF6F1" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567006">
+                <reportElement x="15" y="0" width="565" height="28" backcolor="#FAF6F1" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567006">
                     <printWhenExpression><![CDATA[$V{ROW_NUMBER} % 2 == 0]]></printWhenExpression>
                 </reportElement>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
-                <reportElement x="20" y="5" width="180" height="20" forecolor="#2C1810" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567007"/>
+                <reportElement x="20" y="5" width="190" height="20" forecolor="#2C1810" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567007"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{customItem} != null && $F{customItem} ? $F{customItemName} : $F{accessoryName}]]></textFieldExpression>
             </textField>
             <textField isBlankWhenNull="true">
-                <reportElement x="205" y="5" width="40" height="20" forecolor="#2C1810" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567008"/>
+                <reportElement x="215" y="5" width="40" height="20" forecolor="#2C1810" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567008"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font fontName="Serif" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{quantity}]]></textFieldExpression>
             </textField>
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
-                <reportElement x="250" y="5" width="180" height="20" forecolor="#8B7355" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567009"/>
+                <reportElement x="260" y="5" width="190" height="20" forecolor="#8B7355" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567009"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{description}]]></textFieldExpression>
             </textField>
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
-                <reportElement x="435" y="5" width="90" height="20" forecolor="#2C1810" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567010"/>
+                <reportElement x="455" y="5" width="100" height="20" forecolor="#2C1810" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567010"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="8"/>
                 </textElement>
@@ -106,7 +106,7 @@
             </textField>
 
             <line>
-                <reportElement x="15" y="27" width="545" height="1" forecolor="#E8E0D5" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567011"/>
+                <reportElement x="15" y="27" width="565" height="1" forecolor="#E8E0D5" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567011"/>
             </line>
         </band>
     </detail>
@@ -118,7 +118,7 @@
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="25" y="5" width="505" height="20" forecolor="#8B7355" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567012"/>
+                <reportElement x="25" y="5" width="525" height="20" forecolor="#8B7355" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567012"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="9" isItalic="true"/>
                 </textElement>

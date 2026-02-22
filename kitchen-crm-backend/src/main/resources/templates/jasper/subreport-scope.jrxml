@@ -3,9 +3,9 @@
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
               name="subreport-scope"
-              pageWidth="575"
+              pageWidth="595"
               pageHeight="400"
-              columnWidth="575"
+              columnWidth="595"
               leftMargin="0"
               rightMargin="0"
               topMargin="0"
@@ -24,7 +24,7 @@
     <columnHeader>
         <band height="25">
             <rectangle radius="8">
-                <reportElement x="15" y="0" width="545" height="25" backcolor="#000000" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567001"/>
+                <reportElement x="15" y="0" width="565" height="25" backcolor="#000000" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
@@ -35,7 +35,7 @@
                 <text><![CDATA[SPECIFICATION]]></text>
             </staticText>
             <staticText>
-                <reportElement x="235" y="0" width="320" height="25" forecolor="#FFFFFF" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567003"/>
+                <reportElement x="235" y="0" width="340" height="25" forecolor="#FFFFFF" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567003"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="9" isBold="true"/>
                 </textElement>
@@ -48,12 +48,12 @@
         <band height="22" splitType="Stretch">
             <!-- White base background for ALL rows -->
             <rectangle>
-                <reportElement x="15" y="0" width="545" height="22" backcolor="#FFFFFF" uuid="d1d2d3d4-e5f6-7890-abcd-ef12345670b1"/>
+                <reportElement x="15" y="0" width="565" height="22" backcolor="#FFFFFF" uuid="d1d2d3d4-e5f6-7890-abcd-ef12345670b1"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <!-- Alternating row highlight -->
             <rectangle>
-                <reportElement x="15" y="0" width="545" height="22" backcolor="#FAF6F1" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567004">
+                <reportElement x="15" y="0" width="565" height="22" backcolor="#FAF6F1" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567004">
                     <printWhenExpression><![CDATA[$V{ROW_NUMBER} % 2 == 0]]></printWhenExpression>
                 </reportElement>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
@@ -68,7 +68,7 @@
             </textField>
 
             <textField textAdjust="StretchHeight">
-                <reportElement x="235" y="2" width="320" height="18" forecolor="#2C1810" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567006"/>
+                <reportElement x="235" y="2" width="340" height="18" forecolor="#2C1810" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567006"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="9" isBold="true"/>
                 </textElement>
@@ -76,7 +76,7 @@
             </textField>
 
             <line>
-                <reportElement x="15" y="21" width="545" height="1" forecolor="#E8E0D5" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567007"/>
+                <reportElement x="15" y="21" width="565" height="1" forecolor="#E8E0D5" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567007"/>
             </line>
         </band>
     </detail>

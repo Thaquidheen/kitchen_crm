@@ -42,7 +42,7 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
 
     private static final String JASPER_TEMPLATE_DIR = "classpath:templates/jasper/";
     private static final String MAIN_REPORT = "quotation-main.jrxml";
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMM-dd-yyyy", java.util.Locale.ENGLISH);
 
     @Value("${app.pdf.include-plan-images:true}")
     private boolean includePlanImages;
@@ -288,14 +288,14 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
 
         // Glassmorphism overlay for cover box (semi-transparent dark with rounded corners)
         try {
-            params.put("COVER_BOX_BG", generateGlassOverlay(495, 220, 12));
+            params.put("COVER_BOX_BG", generateGlassOverlay(495, 200, 12));
         } catch (Exception e) {
             params.put("COVER_BOX_BG", null);
         }
 
         // Page background — programmatic gradient (warm cream top → off-white bottom)
         try {
-            params.put("PAGE_BG", generateGradientBackground(575, 822));
+            params.put("PAGE_BG", generateGradientBackground(595, 842));
         } catch (Exception e) {
             params.put("PAGE_BG", null);
         }
@@ -474,7 +474,7 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
 
     private String formatDate(LocalDate date) {
         if (date == null) return "";
-        return date.format(DATE_FORMATTER);
+        return date.format(DATE_FORMATTER).toUpperCase();
     }
 
     private String getTermsGeneral() {
