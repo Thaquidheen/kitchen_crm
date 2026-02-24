@@ -314,9 +314,12 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
 
         // Quotation details
         params.put("QUOTATION_NUMBER", quotation.getQuotationNumber() != null ? quotation.getQuotationNumber() : "");
-        params.put("CREATED_DATE", quotation.getCreatedAt() != null ? formatDate(quotation.getCreatedAt().toLocalDate()) : "");
-        params.put("VALID_UNTIL", quotation.getValidUntil() != null ? formatDate(quotation.getValidUntil()) : "");
+        LocalDate createdDate = quotation.getCreatedAt() != null ? quotation.getCreatedAt().toLocalDate() : LocalDate.now();
+        LocalDate validUntil = quotation.getValidUntil() != null ? quotation.getValidUntil() : createdDate.plusDays(30);
+        params.put("CREATED_DATE", formatDate(createdDate));
+        params.put("VALID_UNTIL", formatDate(validUntil));
         params.put("CUSTOMER_NAME", quotation.getCustomerName() != null ? quotation.getCustomerName() : "");
+        params.put("CUSTOMER_ADDRESS", quotation.getCustomerAddress() != null ? quotation.getCustomerAddress() : "");
         params.put("PROJECT_NAME", quotation.getProjectName() != null ? quotation.getProjectName() : "");
 
         // Kitchen info

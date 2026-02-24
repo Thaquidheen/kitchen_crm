@@ -24,6 +24,7 @@ public class QuotationDto {
     private Long customerId;
 
     private String customerName;
+    private String customerAddress;
     private String quotationNumber;
     private String projectName;
 

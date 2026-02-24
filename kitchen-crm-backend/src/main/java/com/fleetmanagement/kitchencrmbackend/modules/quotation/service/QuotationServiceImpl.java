@@ -929,6 +929,7 @@ public class QuotationServiceImpl implements QuotationService {
         dto.setId(quotation.getId());
         dto.setCustomerId(quotation.getCustomer().getId());
         dto.setCustomerName(quotation.getCustomer().getName());
+        dto.setCustomerAddress(quotation.getCustomer().getAddress());
         dto.setQuotationNumber(quotation.getQuotationNumber());
         dto.setProjectName(quotation.getProjectName());
         dto.setTransportationPrice(quotation.getTransportationPrice());

@@ -245,7 +245,7 @@
                 </textElement>
                 <text><![CDATA[CABINETS TOTAL]]></text>
             </staticText>
-            <textField pattern="#,##0.00">
+            <textField pattern="₹ #,##0.00">
                 <reportElement x="320" y="110" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567028"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
@@ -265,7 +265,7 @@
                 </textElement>
                 <text><![CDATA[DOORS TOTAL]]></text>
             </staticText>
-            <textField pattern="#,##0.00">
+            <textField pattern="₹ #,##0.00">
                 <reportElement x="320" y="135" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567031"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
@@ -281,7 +281,7 @@
                 </textElement>
                 <text><![CDATA[ACCESSORIES TOTAL]]></text>
             </staticText>
-            <textField pattern="#,##0.00">
+            <textField pattern="₹ #,##0.00">
                 <reportElement x="320" y="160" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567033"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
@@ -301,7 +301,7 @@
                 </textElement>
                 <text><![CDATA[LIGHTS TOTAL]]></text>
             </staticText>
-            <textField pattern="#,##0.00">
+            <textField pattern="₹ #,##0.00">
                 <reportElement x="320" y="185" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567036"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
@@ -322,7 +322,7 @@
                 </textElement>
                 <text><![CDATA[SUBTOTAL]]></text>
             </staticText>
-            <textField pattern="#,##0.00">
+            <textField pattern="₹ #,##0.00">
                 <reportElement x="320" y="230" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567039"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
@@ -342,7 +342,7 @@
                 </textElement>
                 <text><![CDATA[GST]]></text>
             </staticText>
-            <textField pattern="#,##0.00">
+            <textField pattern="₹ #,##0.00">
                 <reportElement x="320" y="255" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567044"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
@@ -368,7 +368,7 @@
                 </textElement>
                 <text><![CDATA[KITCHEN TOTAL]]></text>
             </staticText>
-            <textField pattern="#,##0.00">
+            <textField pattern="₹ #,##0.00">
                 <reportElement x="300" y="295" width="115" height="25" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567047"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>

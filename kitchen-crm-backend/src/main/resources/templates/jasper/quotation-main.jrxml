@@ -40,6 +40,7 @@
     <parameter name="COVER_BOX_BG" class="java.lang.Object"/>
     <parameter name="COVER_BG" class="java.io.InputStream"/>
     <parameter name="PAGE_BG" class="java.lang.Object"/>
+    <parameter name="CUSTOMER_ADDRESS" class="java.lang.String"/>
 
     <!-- Background — dark on page 1 (behind kitchen image), cream on pages 2+ -->
     <background>
@@ -114,6 +115,13 @@
                     <font fontName="Serif" size="11"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{PROJECT_NAME}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="50" y="400" width="495" height="16" forecolor="#D4D0C8" uuid="bb000003-0000-0000-0000-000000000005"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Serif" size="9"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{CUSTOMER_ADDRESS}]]></textFieldExpression>
             </textField>
 
             <!-- Quotation Info — 3-column layout with headings -->
@@ -245,7 +253,7 @@
 
             <!-- ======== IMPORTANT NOTE Section ======== -->
             <rectangle>
-                <reportElement x="0" y="10" width="595" height="42" backcolor="#1B2A4A" uuid="ff000002-0000-0000-0000-000000000001"/>
+                <reportElement x="0" y="10" width="595" height="42" backcolor="#000000" uuid="ff000002-0000-0000-0000-000000000001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <rectangle>
@@ -299,7 +307,7 @@
 
             <!-- Terms Header -->
             <rectangle>
-                <reportElement x="0" y="280" width="595" height="35" backcolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000002"/>
+                <reportElement x="0" y="280" width="595" height="35" backcolor="#000000" uuid="ff000001-0000-0000-0000-000000000002"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <rectangle>
