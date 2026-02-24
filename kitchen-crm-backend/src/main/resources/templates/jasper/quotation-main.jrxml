@@ -385,15 +385,19 @@
             </staticText>
 
             <!-- Footer -->
-            <line>
-                <reportElement x="0" y="405" width="595" height="1" forecolor="#DDDDDD" uuid="ff000001-0000-0000-0000-000000000026"/>
-            </line>
-            <textField>
-                <reportElement x="0" y="413" width="595" height="16" forecolor="#888888" uuid="ff000001-0000-0000-0000-000000000027"/>
+            <staticText>
+                <reportElement x="230" y="408" width="135" height="8" forecolor="#C8B8A0" uuid="ff000001-0000-0000-0000-000000000026"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font fontName="Serif" size="8"/>
+                    <font fontName="Serif" size="6"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Thank you for choosing " + $P{COMPANY_NAME} + " | " + $P{COMPANY_PHONE}]]></textFieldExpression>
+                <text><![CDATA[— — —]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="0" y="418" width="595" height="18" forecolor="#6B5B4B" uuid="ff000001-0000-0000-0000-000000000027"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Serif" size="9" isItalic="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Thank you for choosing " + $P{COMPANY_NAME}]]></textFieldExpression>
             </textField>
         </band>
     </summary>
