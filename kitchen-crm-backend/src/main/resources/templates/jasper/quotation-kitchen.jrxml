@@ -179,12 +179,12 @@
         </band>
 
         <!-- ==================== KITCHEN TOTALS PAGE ==================== -->
-        <band height="340" splitType="Immediate">
+        <band height="590" splitType="Immediate">
             <break>
                 <reportElement x="0" y="0" width="595" height="1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567018"/>
             </break>
 
-            <!-- Kitchen Header (repeated) — navy background -->
+            <!-- Kitchen Header (repeated) — black background -->
             <rectangle>
                 <reportElement x="0" y="10" width="595" height="40" backcolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567019"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
@@ -210,19 +210,14 @@
             </staticText>
 
             <!-- Totals Table -->
-            <rectangle radius="5">
-                <reportElement x="110" y="70" width="315" height="255" backcolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567023"/>
-                <graphicElement><pen lineWidth="1" lineColor="#E8E0D5"/></graphicElement>
-            </rectangle>
-
             <!-- Table Header -->
-            <rectangle>
-                <reportElement x="110" y="70" width="315" height="30" backcolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567024"/>
+            <rectangle radius="8">
+                <reportElement x="15" y="70" width="565" height="30" backcolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567024"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
 
             <staticText>
-                <reportElement x="120" y="75" width="200" height="20" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567025"/>
+                <reportElement x="20" y="70" width="350" height="30" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567025"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
@@ -230,151 +225,211 @@
             </staticText>
 
             <staticText>
-                <reportElement x="320" y="75" width="95" height="20" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567026"/>
+                <reportElement x="370" y="70" width="200" height="30" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567026"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[AMOUNT (RS.)]]></text>
+                <text><![CDATA[AMOUNT]]></text>
             </staticText>
 
             <!-- Cabinets Total -->
             <staticText>
-                <reportElement x="120" y="110" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567027"/>
+                <reportElement x="20" y="108" width="350" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567027"/>
                 <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="10"/>
+                    <font fontName="Serif" size="9"/>
                 </textElement>
                 <text><![CDATA[CABINETS TOTAL]]></text>
             </staticText>
-            <textField pattern="₹ #,##0.00">
-                <reportElement x="320" y="110" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567028"/>
+            <textField>
+                <reportElement x="370" y="108" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567028"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
-                    <font fontName="Serif" size="10"/>
+                    <font fontName="Serif" size="9"/>
                 </textElement>
-                <textFieldExpression><![CDATA[$F{cabinetsFinalTotal}]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##0.00").format($F{cabinetsFinalTotal})]]></textFieldExpression>
             </textField>
+            <line>
+                <reportElement x="15" y="132" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670d1"/>
+            </line>
 
             <!-- Doors Total -->
             <rectangle>
-                <reportElement x="110" y="135" width="315" height="25" backcolor="#FAF6F1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567029"/>
+                <reportElement x="15" y="133" width="565" height="25" backcolor="#FAF6F1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567029"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="120" y="135" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567030"/>
+                <reportElement x="20" y="133" width="350" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567030"/>
                 <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="10"/>
+                    <font fontName="Serif" size="9"/>
                 </textElement>
                 <text><![CDATA[DOORS TOTAL]]></text>
             </staticText>
-            <textField pattern="₹ #,##0.00">
-                <reportElement x="320" y="135" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567031"/>
+            <textField>
+                <reportElement x="370" y="133" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567031"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
-                    <font fontName="Serif" size="10"/>
+                    <font fontName="Serif" size="9"/>
                 </textElement>
-                <textFieldExpression><![CDATA[$F{doorsFinalTotal}]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##0.00").format($F{doorsFinalTotal})]]></textFieldExpression>
             </textField>
+            <line>
+                <reportElement x="15" y="157" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670d2"/>
+            </line>
 
             <!-- Accessories Total -->
             <staticText>
-                <reportElement x="120" y="160" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567032"/>
+                <reportElement x="20" y="158" width="350" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567032"/>
                 <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="10"/>
+                    <font fontName="Serif" size="9"/>
                 </textElement>
                 <text><![CDATA[ACCESSORIES TOTAL]]></text>
             </staticText>
-            <textField pattern="₹ #,##0.00">
-                <reportElement x="320" y="160" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567033"/>
+            <textField>
+                <reportElement x="370" y="158" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567033"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
-                    <font fontName="Serif" size="10"/>
+                    <font fontName="Serif" size="9"/>
                 </textElement>
-                <textFieldExpression><![CDATA[$F{accessoriesFinalTotal}]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##0.00").format($F{accessoriesFinalTotal})]]></textFieldExpression>
             </textField>
+            <line>
+                <reportElement x="15" y="182" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670d3"/>
+            </line>
 
             <!-- Lights Total -->
             <rectangle>
-                <reportElement x="110" y="185" width="315" height="25" backcolor="#FAF6F1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567034"/>
+                <reportElement x="15" y="183" width="565" height="25" backcolor="#FAF6F1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567034"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="120" y="185" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567035"/>
+                <reportElement x="20" y="183" width="350" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567035"/>
                 <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="10"/>
+                    <font fontName="Serif" size="9"/>
                 </textElement>
                 <text><![CDATA[LIGHTS TOTAL]]></text>
             </staticText>
-            <textField pattern="₹ #,##0.00">
-                <reportElement x="320" y="185" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567036"/>
+            <textField>
+                <reportElement x="370" y="183" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567036"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
-                    <font fontName="Serif" size="10"/>
+                    <font fontName="Serif" size="9"/>
                 </textElement>
-                <textFieldExpression><![CDATA[$F{lightingFinalTotal}]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##0.00").format($F{lightingFinalTotal})]]></textFieldExpression>
             </textField>
+            <line>
+                <reportElement x="15" y="207" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670d4"/>
+            </line>
 
             <!-- Divider -->
             <line>
-                <reportElement x="120" y="220" width="295" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567037"/>
+                <reportElement x="15" y="218" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567037"/>
             </line>
 
             <!-- Subtotal -->
             <staticText>
-                <reportElement x="120" y="230" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567038"/>
+                <reportElement x="20" y="225" width="350" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567038"/>
                 <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="10" isBold="true"/>
+                    <font fontName="Serif" size="9" isBold="true"/>
                 </textElement>
                 <text><![CDATA[SUBTOTAL]]></text>
             </staticText>
-            <textField pattern="₹ #,##0.00">
-                <reportElement x="320" y="230" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567039"/>
+            <textField>
+                <reportElement x="370" y="225" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567039"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
-                    <font fontName="Serif" size="10" isBold="true"/>
+                    <font fontName="Serif" size="9" isBold="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA[$F{subtotal}]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##0.00").format($F{subtotal})]]></textFieldExpression>
             </textField>
+            <line>
+                <reportElement x="15" y="249" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670d5"/>
+            </line>
 
             <!-- GST -->
             <rectangle>
-                <reportElement x="110" y="255" width="315" height="25" backcolor="#FAF6F1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567040"/>
+                <reportElement x="15" y="250" width="565" height="25" backcolor="#FAF6F1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567040"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="120" y="255" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567043"/>
+                <reportElement x="20" y="250" width="350" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567043"/>
                 <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="10"/>
+                    <font fontName="Serif" size="9"/>
                 </textElement>
                 <text><![CDATA[GST]]></text>
             </staticText>
-            <textField pattern="₹ #,##0.00">
-                <reportElement x="320" y="255" width="95" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567044"/>
+            <textField>
+                <reportElement x="370" y="250" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567044"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
-                    <font fontName="Serif" size="10"/>
+                    <font fontName="Serif" size="9"/>
                 </textElement>
-                <textFieldExpression><![CDATA[$F{taxAmount}]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##0.00").format($F{taxAmount})]]></textFieldExpression>
             </textField>
 
             <!-- Accent line above total -->
             <line>
-                <reportElement x="110" y="287" width="315" height="1" forecolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa6"/>
+                <reportElement x="15" y="282" width="565" height="1" forecolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa6"/>
                 <graphicElement><pen lineWidth="2"/></graphicElement>
             </line>
 
             <!-- Kitchen Total -->
             <rectangle>
-                <reportElement x="110" y="290" width="315" height="35" backcolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567045"/>
+                <reportElement x="15" y="285" width="565" height="35" backcolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567045"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="120" y="295" width="200" height="25" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567046"/>
+                <reportElement x="20" y="290" width="350" height="25" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567046"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="12" isBold="true"/>
                 </textElement>
                 <text><![CDATA[KITCHEN TOTAL]]></text>
             </staticText>
-            <textField pattern="₹ #,##0.00">
-                <reportElement x="300" y="295" width="115" height="25" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567047"/>
+            <textField>
+                <reportElement x="370" y="290" width="200" height="25" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567047"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA[$F{totalAmount}]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##0.00").format($F{totalAmount})]]></textFieldExpression>
             </textField>
+
+            <!-- ==================== IMPORTANT NOTE ==================== -->
+            <rectangle>
+                <reportElement x="15" y="340" width="4" height="18" backcolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e1"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="27" y="340" width="300" height="18" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e2"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="11" isBold="true"/>
+                </textElement>
+                <text><![CDATA[IMPORTANT NOTE]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="30" y="368" width="535" height="30" forecolor="#333333" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e3"/>
+                <textElement verticalAlignment="Top">
+                    <font fontName="Serif" size="9"/>
+                </textElement>
+                <text><![CDATA[1. This quotation covers only the items specifically listed in this proposal.]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="30" y="400" width="535" height="45" forecolor="#333333" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e4"/>
+                <textElement verticalAlignment="Top">
+                    <font fontName="Serif" size="9"/>
+                </textElement>
+                <text><![CDATA[2. Any additional items such as appliances (hob, hood, oven, dishwasher, refrigerator, etc.), countertops, sinks, faucets, accessories, electrical, plumbing, civil work, or any other materials/services are not included unless clearly mentioned.]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="30" y="448" width="535" height="30" forecolor="#333333" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e5"/>
+                <textElement verticalAlignment="Top">
+                    <font fontName="Serif" size="9"/>
+                </textElement>
+                <text><![CDATA[3. The validity of this quotation is 30 days from the date of issue.]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="30" y="478" width="535" height="40" forecolor="#333333" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e6"/>
+                <textElement verticalAlignment="Top">
+                    <font fontName="Serif" size="9"/>
+                </textElement>
+                <text><![CDATA[4. Any changes, additions, or modifications requested after order confirmation will be charged separately.]]></text>
+            </staticText>
 
         </band>
     </detail>
