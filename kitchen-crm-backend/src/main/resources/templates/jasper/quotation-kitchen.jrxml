@@ -179,7 +179,7 @@
         </band>
 
         <!-- ==================== KITCHEN TOTALS PAGE ==================== -->
-        <band height="450" splitType="Immediate">
+        <band height="340" splitType="Immediate">
             <break>
                 <reportElement x="0" y="0" width="595" height="1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567018"/>
             </break>
@@ -369,39 +369,13 @@
                 <text><![CDATA[KITCHEN TOTAL]]></text>
             </staticText>
             <textField pattern="#,##0.00">
-                <reportElement x="300" y="295" width="115" height="25" forecolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567047"/>
+                <reportElement x="300" y="295" width="115" height="25" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567047"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$F{totalAmount}]]></textFieldExpression>
             </textField>
 
-            <!-- Quotation Info Box -->
-            <rectangle radius="6">
-                <reportElement x="110" y="345" width="315" height="70" backcolor="#333333" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670a1"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <textField>
-                <reportElement x="120" y="350" width="295" height="18" forecolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670a2"/>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="8" isBold="true"/>
-                </textElement>
-                <textFieldExpression><![CDATA["QUOTATION NO: " + $P{QUOTATION_NUMBER}]]></textFieldExpression>
-            </textField>
-            <textField>
-                <reportElement x="120" y="370" width="295" height="18" forecolor="#A09A90" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670a3"/>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="8"/>
-                </textElement>
-                <textFieldExpression><![CDATA["DATE: " + $P{CREATED_DATE}]]></textFieldExpression>
-            </textField>
-            <textField>
-                <reportElement x="120" y="390" width="295" height="18" forecolor="#A09A90" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670a4"/>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="8"/>
-                </textElement>
-                <textFieldExpression><![CDATA["VALID UNTIL: " + $P{VALID_UNTIL}]]></textFieldExpression>
-            </textField>
         </band>
     </detail>
 
