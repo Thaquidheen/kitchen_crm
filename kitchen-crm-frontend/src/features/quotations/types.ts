@@ -64,6 +64,15 @@ export interface QuotationCabinet extends QuotationLineItem {
   // Elevation reference
   elevationId?: number;
   elevationName?: string;
+  // Linked door reference (for edit modal restore)
+  linkedDoor?: {
+    doorTypeId: number;
+    doorType?: any;
+    widthMm: number;
+    heightMm: number;
+    quantity: number;
+    faceArea?: number;
+  };
 }
 
 // Door line item

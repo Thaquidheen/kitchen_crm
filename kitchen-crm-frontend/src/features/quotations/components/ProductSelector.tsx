@@ -138,6 +138,8 @@ export function ProductSelector({ selectedProducts, onProductsChange, availableE
         // Elevation fields
         elevationId: item.elevationId,
         elevationName: item.elevationName,
+        // Preserve linked door data for edit modal
+        linkedDoor: item.linkedDoor,
         // @ts-ignore temporary pair id for removal linkage
         _tempPairId: pairId,
       };
