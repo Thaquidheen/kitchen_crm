@@ -500,16 +500,20 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         if (terms != null && !terms.isEmpty()) {
             return terms;
         }
-        return "<p>We Warrant the Steel Furniture We Sell to Be Free from Defects in Material and Workmanship Under " +
+        return "We Warrant the Steel Furniture We Sell to Be Free from Defects in Material and Workmanship Under " +
             "Normal Residential Usage to The Original Purchaser for The Period Specified Below. We Will Repair Any " +
             "Part That Proves to Be Defective in Materials and Workmanship. If Repair Is Not Possible, We Will Either " +
-            "Replace the Part with A New Part or A Component of Similar Composition and Price.</p>" +
-            "<p>This Warranty Does Not Apply to Any Issues with Our Furniture or Parts of Our Furniture That Result from " +
+            "Replace the Part with A New Part or A Component of Similar Composition and Price." +
+            "<br/><br/>" +
+            "This Warranty Does Not Apply to Any Issues with Our Furniture or Parts of Our Furniture That Result from " +
             "Improper Handling, Negligence, Alterations, Accidents, Misuse, Improper Cleaning or Care, Or Natural " +
-            "Calamities. Additionally, Consequential and Incidental Damages Are Not Covered Under This Warranty.</p>" +
-            "<p><b>Stainless Steel Cabinets Have 15 Years of Warranty Against Any Manufacturing Defect</b><br/>" +
-            "<b>Any Other Doors Have 7 Years of Warranty Against Any Manufacturing Defect</b></p>" +
-            "<p><b>Hardware's And Accessories: As Provided by The Manufacturer</b></p>" +
-            "<p><b>Lightings: As Provided by The Manufacturer</b></p>";
+            "Calamities. Additionally, Consequential and Incidental Damages Are Not Covered Under This Warranty." +
+            "<br/><br/>" +
+            "<b>Stainless Steel Cabinets Have 15 Years of Warranty Against Any Manufacturing Defect</b><br/>" +
+            "<b>Any Other Doors Have 7 Years of Warranty Against Any Manufacturing Defect</b>" +
+            "<br/><br/>" +
+            "<b>Hardware's And Accessories: As Provided by The Manufacturer</b>" +
+            "<br/><br/>" +
+            "<b>Lightings: As Provided by The Manufacturer</b>";
     }
 }
