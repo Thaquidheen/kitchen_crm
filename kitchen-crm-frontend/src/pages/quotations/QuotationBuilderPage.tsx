@@ -162,6 +162,11 @@ export function QuotationBuilderPage() {
         materialRate: c.materialRate,
         lightingCost: c.lightingCost,
         accessoriesCost: c.accessoriesCost,
+        linkedDoorTypeId: c.linkedDoorTypeId || null,
+        linkedDoor: c.linkedDoorTypeId ? {
+          doorTypeId: c.linkedDoorTypeId,
+          doorTypeName: c.linkedDoorTypeName,
+        } : undefined,
       })),
       doors: (existingQuotation.doors || []).map((d: any) => ({
         doorTypeId: d.doorTypeId || d.id,
@@ -235,6 +240,11 @@ export function QuotationBuilderPage() {
           materialRate: c.materialRate,
           lightingCost: c.lightingCost,
           accessoriesCost: c.accessoriesCost,
+          linkedDoorTypeId: c.linkedDoorTypeId || null,
+          linkedDoor: c.linkedDoorTypeId ? {
+            doorTypeId: c.linkedDoorTypeId,
+            doorTypeName: c.linkedDoorTypeName,
+          } : undefined,
         })),
         doors: (k.doors || []).map((d: any) => ({
           doorTypeId: d.doorTypeId || d.id,
