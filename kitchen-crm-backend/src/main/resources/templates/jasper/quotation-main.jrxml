@@ -270,40 +270,40 @@
 
             <!-- General Terms -->
             <rectangle>
-                <reportElement x="15" y="55" width="4" height="16" backcolor="#8B0000" uuid="ff000001-0000-0000-0000-000000000005"/>
+                <reportElement x="15" y="55" width="4" height="20" backcolor="#8B0000" uuid="ff000001-0000-0000-0000-000000000005"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="27" y="55" width="555" height="16" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000006"/>
+                <reportElement x="27" y="55" width="555" height="20" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000006"/>
                 <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="11" isBold="true"/>
+                    <font fontName="Serif" size="13" isBold="true"/>
                 </textElement>
                 <text><![CDATA[General Terms]]></text>
             </staticText>
             <textField textAdjust="StretchHeight">
-                <reportElement x="15" y="73" width="565" height="80" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000007"/>
+                <reportElement x="15" y="77" width="565" height="80" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000007"/>
                 <textElement verticalAlignment="Top" markup="html">
-                    <font fontName="Serif" size="9"/>
+                    <font fontName="Serif" size="11"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{TERMS_GENERAL}]]></textFieldExpression>
             </textField>
 
             <!-- Warranty -->
             <rectangle>
-                <reportElement positionType="Float" x="15" y="160" width="4" height="16" backcolor="#8B0000" uuid="ff000001-0000-0000-0000-000000000008"/>
+                <reportElement positionType="Float" x="15" y="164" width="4" height="20" backcolor="#8B0000" uuid="ff000001-0000-0000-0000-000000000008"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement positionType="Float" x="27" y="160" width="555" height="16" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000009"/>
+                <reportElement positionType="Float" x="27" y="164" width="555" height="20" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000009"/>
                 <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="11" isBold="true"/>
+                    <font fontName="Serif" size="13" isBold="true"/>
                 </textElement>
                 <text><![CDATA[Warranty & Service]]></text>
             </staticText>
             <textField textAdjust="StretchHeight">
-                <reportElement positionType="Float" x="15" y="178" width="565" height="80" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000010"/>
+                <reportElement positionType="Float" x="15" y="186" width="565" height="80" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000010"/>
                 <textElement verticalAlignment="Top" markup="html">
-                    <font fontName="Serif" size="9"/>
+                    <font fontName="Serif" size="11"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{TERMS_WARRANTY}]]></textFieldExpression>
             </textField>
