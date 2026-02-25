@@ -251,59 +251,43 @@
                 <reportElement x="0" y="0" width="595" height="1" uuid="ff000001-0000-0000-0000-000000000001"/>
             </break>
 
-            <!-- Terms Header -->
-            <rectangle>
-                <reportElement x="0" y="10" width="595" height="35" backcolor="#000000" uuid="ff000001-0000-0000-0000-000000000002"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <rectangle>
-                <reportElement x="0" y="45" width="595" height="3" backcolor="#8B0000" uuid="ff000001-0000-0000-0000-000000000003"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
+            <!-- Terms & Conditions Header -->
             <staticText>
-                <reportElement x="0" y="10" width="595" height="35" forecolor="#FFFFFF" uuid="ff000001-0000-0000-0000-000000000004"/>
-                <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font fontName="Serif" size="15" isBold="true"/>
+                <reportElement x="50" y="30" width="495" height="25" forecolor="#000000" uuid="ff000001-0000-0000-0000-000000000004"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="16" isBold="true" isUnderline="true"/>
                 </textElement>
-                <text><![CDATA[TERMS & CONDITIONS]]></text>
+                <text><![CDATA[Terms & Conditions]]></text>
             </staticText>
 
             <!-- General Terms -->
-            <rectangle>
-                <reportElement x="15" y="55" width="4" height="20" backcolor="#8B0000" uuid="ff000001-0000-0000-0000-000000000005"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
             <staticText>
-                <reportElement x="27" y="55" width="555" height="20" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000006"/>
+                <reportElement x="50" y="70" width="495" height="22" forecolor="#000000" uuid="ff000001-0000-0000-0000-000000000006"/>
                 <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="13" isBold="true"/>
+                    <font fontName="Serif" size="14" isBold="true" isUnderline="true"/>
                 </textElement>
                 <text><![CDATA[General Terms]]></text>
             </staticText>
             <textField textAdjust="StretchHeight">
-                <reportElement x="15" y="77" width="565" height="80" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000007"/>
+                <reportElement x="50" y="95" width="495" height="80" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000007"/>
                 <textElement verticalAlignment="Top" markup="html">
-                    <font fontName="Serif" size="11"/>
+                    <font fontName="Serif" size="10"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{TERMS_GENERAL}]]></textFieldExpression>
             </textField>
 
-            <!-- Warranty -->
-            <rectangle>
-                <reportElement positionType="Float" x="15" y="164" width="4" height="20" backcolor="#8B0000" uuid="ff000001-0000-0000-0000-000000000008"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
+            <!-- Warranty & Service -->
             <staticText>
-                <reportElement positionType="Float" x="27" y="164" width="555" height="20" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000009"/>
+                <reportElement positionType="Float" x="50" y="185" width="495" height="22" forecolor="#000000" uuid="ff000001-0000-0000-0000-000000000009"/>
                 <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="13" isBold="true"/>
+                    <font fontName="Serif" size="14" isBold="true" isUnderline="true"/>
                 </textElement>
                 <text><![CDATA[Warranty & Service]]></text>
             </staticText>
             <textField textAdjust="StretchHeight">
-                <reportElement positionType="Float" x="15" y="186" width="565" height="80" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000010"/>
+                <reportElement positionType="Float" x="50" y="210" width="495" height="80" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000010"/>
                 <textElement verticalAlignment="Top" markup="html">
-                    <font fontName="Serif" size="11"/>
+                    <font fontName="Serif" size="10"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{TERMS_WARRANTY}]]></textFieldExpression>
             </textField>
