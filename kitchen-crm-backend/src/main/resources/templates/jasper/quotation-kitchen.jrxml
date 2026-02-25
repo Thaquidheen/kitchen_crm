@@ -220,7 +220,7 @@
 
             <staticText>
                 <reportElement x="370" y="70" width="185" height="30" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567026"/>
-                <textElement textAlignment="Right" verticalAlignment="Middle">
+                <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[AMOUNT]]></text>
@@ -236,7 +236,7 @@
             </staticText>
             <textField>
                 <reportElement x="370" y="108" width="185" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567028"/>
-                <textElement textAlignment="Right" verticalAlignment="Middle">
+                <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##0.00").format($F{cabinetsFinalTotal})]]></textFieldExpression>
@@ -259,7 +259,7 @@
             </staticText>
             <textField>
                 <reportElement x="370" y="133" width="185" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567031"/>
-                <textElement textAlignment="Right" verticalAlignment="Middle">
+                <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##0.00").format($F{doorsFinalTotal})]]></textFieldExpression>
@@ -278,7 +278,7 @@
             </staticText>
             <textField>
                 <reportElement x="370" y="158" width="185" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567033"/>
-                <textElement textAlignment="Right" verticalAlignment="Middle">
+                <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##0.00").format($F{accessoriesFinalTotal})]]></textFieldExpression>
@@ -301,7 +301,7 @@
             </staticText>
             <textField>
                 <reportElement x="370" y="183" width="185" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567036"/>
-                <textElement textAlignment="Right" verticalAlignment="Middle">
+                <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##0.00").format($F{lightingFinalTotal})]]></textFieldExpression>
@@ -325,7 +325,7 @@
             </staticText>
             <textField>
                 <reportElement x="370" y="225" width="185" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567039"/>
-                <textElement textAlignment="Right" verticalAlignment="Middle">
+                <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="9" isBold="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##0.00").format($F{subtotal})]]></textFieldExpression>
@@ -348,7 +348,7 @@
             </staticText>
             <textField>
                 <reportElement x="370" y="250" width="185" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567044"/>
-                <textElement textAlignment="Right" verticalAlignment="Middle">
+                <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##0.00").format($F{taxAmount})]]></textFieldExpression>
@@ -374,7 +374,7 @@
             </staticText>
             <textField>
                 <reportElement x="370" y="290" width="185" height="25" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567047"/>
-                <textElement textAlignment="Right" verticalAlignment="Middle">
+                <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##0.00").format($F{totalAmount})]]></textFieldExpression>
