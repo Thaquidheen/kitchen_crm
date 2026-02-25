@@ -209,6 +209,12 @@ export interface Quotation {
 
   // Kitchens (multi-kitchen support)
   kitchens?: QuotationKitchen[];
+
+  // Payment terms & important note
+  importantNote?: string;
+  paymentAcceptancePct?: number;
+  paymentDeliveryPct?: number;
+  paymentInstallationPct?: number;
 }
 
 // Quotation summary for list views
@@ -249,6 +255,12 @@ export interface CreateQuotationRequest {
 
   // Kitchens (multi-kitchen support)
   kitchens?: QuotationKitchen[];
+
+  // Payment terms & important note
+  importantNote?: string;
+  paymentAcceptancePct?: number;
+  paymentDeliveryPct?: number;
+  paymentInstallationPct?: number;
 }
 
 // Update quotation request
@@ -423,6 +435,10 @@ export interface QuotationFormData {
   doors: QuotationDoor[];
   lighting: QuotationLighting[];
   kitchens?: QuotationKitchenFormData[];
+  importantNote?: string;
+  paymentAcceptancePct?: number;
+  paymentDeliveryPct?: number;
+  paymentInstallationPct?: number;
 }
 
 // Quotation state

@@ -192,6 +192,19 @@ public class Quotation extends Auditable {
     @Column(name = "quotation_signed_at")
     private LocalDateTime quotationSignedAt;
 
+    // Important Note & Payment Terms
+    @Column(name = "important_note", columnDefinition = "TEXT")
+    private String importantNote;
+
+    @Column(name = "payment_acceptance_pct")
+    private BigDecimal paymentAcceptancePct;
+
+    @Column(name = "payment_delivery_pct")
+    private BigDecimal paymentDeliveryPct;
+
+    @Column(name = "payment_installation_pct")
+    private BigDecimal paymentInstallationPct;
+
     public enum QuotationStatus {
         DRAFT, SENT, APPROVED, REJECTED, REVISED
     }

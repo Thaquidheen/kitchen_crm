@@ -380,51 +380,6 @@
                 <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##0.00").format($F{totalAmount})]]></textFieldExpression>
             </textField>
 
-            <!-- ==================== IMPORTANT NOTE ==================== -->
-            <rectangle>
-                <reportElement x="15" y="340" width="4" height="18" backcolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e1"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <staticText>
-                <reportElement x="27" y="340" width="300" height="18" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e2"/>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="11" isBold="true"/>
-                </textElement>
-                <text><![CDATA[IMPORTANT NOTE]]></text>
-            </staticText>
-
-            <staticText>
-                <reportElement x="30" y="368" width="535" height="30" forecolor="#333333" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e3"/>
-                <textElement verticalAlignment="Top">
-                    <font fontName="Serif" size="9"/>
-                </textElement>
-                <text><![CDATA[1. This quotation covers only the items specifically listed in this proposal.]]></text>
-            </staticText>
-
-            <staticText>
-                <reportElement x="30" y="400" width="535" height="45" forecolor="#333333" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e4"/>
-                <textElement verticalAlignment="Top">
-                    <font fontName="Serif" size="9"/>
-                </textElement>
-                <text><![CDATA[2. Any additional items such as appliances (hob, hood, oven, dishwasher, refrigerator, etc.), countertops, sinks, faucets, accessories, electrical, plumbing, civil work, or any other materials/services are not included unless clearly mentioned.]]></text>
-            </staticText>
-
-            <staticText>
-                <reportElement x="30" y="448" width="535" height="30" forecolor="#333333" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e5"/>
-                <textElement verticalAlignment="Top">
-                    <font fontName="Serif" size="9"/>
-                </textElement>
-                <text><![CDATA[3. The validity of this quotation is 30 days from the date of issue.]]></text>
-            </staticText>
-
-            <staticText>
-                <reportElement x="30" y="478" width="535" height="40" forecolor="#333333" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e6"/>
-                <textElement verticalAlignment="Top">
-                    <font fontName="Serif" size="9"/>
-                </textElement>
-                <text><![CDATA[4. Any changes, additions, or modifications requested after order confirmation will be charged separately.]]></text>
-            </staticText>
-
         </band>
     </detail>
 

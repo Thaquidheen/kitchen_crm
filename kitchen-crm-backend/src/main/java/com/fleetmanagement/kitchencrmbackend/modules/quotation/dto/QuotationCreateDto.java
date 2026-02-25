@@ -48,4 +48,10 @@ public class QuotationCreateDto {
 
     // Kitchens (multi-kitchen support)
     private List<QuotationKitchenCreateDto> kitchens;
+
+    // Important Note & Payment Terms
+    private String importantNote;
+    private BigDecimal paymentAcceptancePct;
+    private BigDecimal paymentDeliveryPct;
+    private BigDecimal paymentInstallationPct;
 }

@@ -94,6 +94,10 @@ export function QuotationBuilderPage() {
     doors: [],
     lighting: [],
     kitchens: [],
+    importantNote: 'THIS QUOTE IS ONLY FOR THE ITEMS MENTIONED IN THIS OFFER. ANY OTHER ITEMS OR APPLIANCES LIKE HOB, HOOD, FRIDGE, OVEN ETC ARE EXCLUDED FROM THIS QUOTE. THE QUOTE FOR THOSE ITEMS ARE GIVEN SEPARATELY. VALIDITY OF THIS QUOTE IS ONLY FOR 30 DAYS. THERE WILL BE REVISION OF PRICES IN EVERY 30 DAYS AS PER MARKET COST FLUCTUATIONS.',
+    paymentAcceptancePct: 60,
+    paymentDeliveryPct: 30,
+    paymentInstallationPct: 10,
   });
 
   // Load margins from system settings on mount (only for new quotations, not when editing)
@@ -134,6 +138,10 @@ export function QuotationBuilderPage() {
       validUntil: existingQuotation.validUntil || '',
       notes: existingQuotation.notes || '',
       termsConditions: existingQuotation.termsConditions || '',
+      importantNote: existingQuotation.importantNote || 'THIS QUOTE IS ONLY FOR THE ITEMS MENTIONED IN THIS OFFER. ANY OTHER ITEMS OR APPLIANCES LIKE HOB, HOOD, FRIDGE, OVEN ETC ARE EXCLUDED FROM THIS QUOTE. THE QUOTE FOR THOSE ITEMS ARE GIVEN SEPARATELY. VALIDITY OF THIS QUOTE IS ONLY FOR 30 DAYS. THERE WILL BE REVISION OF PRICES IN EVERY 30 DAYS AS PER MARKET COST FLUCTUATIONS.',
+      paymentAcceptancePct: Number(existingQuotation.paymentAcceptancePct || 60),
+      paymentDeliveryPct: Number(existingQuotation.paymentDeliveryPct || 30),
+      paymentInstallationPct: Number(existingQuotation.paymentInstallationPct || 10),
       accessories: (existingQuotation.accessories || []).map((a: any) => ({
         id: a.accessoryId || a.id,
         quantity: a.quantity,
@@ -381,6 +389,10 @@ export function QuotationBuilderPage() {
       validUntil: formData.validUntil || undefined,
       notes: formData.notes || undefined,
       termsConditions: formData.termsConditions || undefined,
+      importantNote: formData.importantNote || undefined,
+      paymentAcceptancePct: formData.paymentAcceptancePct ?? 60,
+      paymentDeliveryPct: formData.paymentDeliveryPct ?? 30,
+      paymentInstallationPct: formData.paymentInstallationPct ?? 10,
       accessories: (formData.accessories || []).map((item: any) => ({
         accessoryId: item.id,
         quantity: item.quantity || 1,
@@ -1132,6 +1144,69 @@ export function QuotationBuilderPage() {
                         placeholder="Enter terms and conditions..."
                         rows={6}
                       />
+                    </div>
+
+                    {/* Important Note */}
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-text-700 mb-2">
+                        Important Note
+                      </label>
+                      <TextArea
+                        value={formData.importantNote || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, importantNote: e.target.value })
+                        }
+                        placeholder="Enter important note for the quotation..."
+                        rows={4}
+                      />
+                    </div>
+
+                    {/* Payment Terms */}
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-text-700 mb-2">
+                        Payment Terms (%)
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs text-text-600 mb-1">By Acceptance</label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={formData.paymentAcceptancePct ?? 60}
+                            onChange={(e) =>
+                              setFormData({ ...formData, paymentAcceptancePct: Number(e.target.value) })
+                            }
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-text-600 mb-1">On Delivery</label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={formData.paymentDeliveryPct ?? 30}
+                            onChange={(e) =>
+                              setFormData({ ...formData, paymentDeliveryPct: Number(e.target.value) })
+                            }
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-text-600 mb-1">After Installation</label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={formData.paymentInstallationPct ?? 10}
+                            onChange={(e) =>
+                              setFormData({ ...formData, paymentInstallationPct: Number(e.target.value) })
+                            }
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-text-500 mt-1">
+                        Total: {(formData.paymentAcceptancePct ?? 60) + (formData.paymentDeliveryPct ?? 30) + (formData.paymentInstallationPct ?? 10)}%
+                      </p>
                     </div>
                   </div>
                 </Card>

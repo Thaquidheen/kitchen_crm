@@ -214,7 +214,8 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
             "subreport-images.jrxml",
             "subreport-products.jrxml",
             "subreport-accessories.jrxml",
-            "subreport-lighting.jrxml"
+            "subreport-lighting.jrxml",
+            "subreport-kitchen-totals.jrxml"
         };
         for (String name : subreports) {
             Resource res = resourceLoader.getResource(JASPER_TEMPLATE_DIR + name);
@@ -343,6 +344,35 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         // Terms
         params.put("TERMS_GENERAL", getTermsGeneral());
         params.put("TERMS_WARRANTY", getTermsWarranty());
+
+        // Important Note & Payment Terms
+        String importantNote = quotation.getImportantNote();
+        if (importantNote == null || importantNote.isEmpty()) {
+            importantNote = getDefaultImportantNote();
+        }
+        params.put("IMPORTANT_NOTE", importantNote);
+
+        BigDecimal acceptPct = quotation.getPaymentAcceptancePct() != null ? quotation.getPaymentAcceptancePct() : BigDecimal.valueOf(60);
+        BigDecimal deliveryPct = quotation.getPaymentDeliveryPct() != null ? quotation.getPaymentDeliveryPct() : BigDecimal.valueOf(30);
+        BigDecimal installPct = quotation.getPaymentInstallationPct() != null ? quotation.getPaymentInstallationPct() : BigDecimal.valueOf(10);
+        params.put("PAYMENT_ACCEPTANCE_PCT", acceptPct);
+        params.put("PAYMENT_DELIVERY_PCT", deliveryPct);
+        params.put("PAYMENT_INSTALLATION_PCT", installPct);
+
+        // Kitchen totals data source (for combined totals table when multiple kitchens)
+        List<QuotationKitchenDto> kitchensList = quotation.getKitchens();
+        if (kitchensList != null && kitchensList.size() > 1) {
+            List<Map<String, Object>> kitchenTotals = new ArrayList<>();
+            for (QuotationKitchenDto k : kitchensList) {
+                Map<String, Object> row = new HashMap<>();
+                row.put("kitchenName", k.getKitchenName() != null ? k.getKitchenName() : "Kitchen");
+                row.put("totalAmount", k.getTotalAmount() != null ? k.getTotalAmount() : BigDecimal.ZERO);
+                kitchenTotals.add(row);
+            }
+            params.put("KITCHEN_TOTALS_DATA", new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource(kitchenTotals));
+        } else {
+            params.put("KITCHEN_TOTALS_DATA", null);
+        }
 
         return params;
     }
@@ -515,5 +545,12 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
             "<b>Hardware's And Accessories: As Provided by The Manufacturer</b>" +
             "<br/><br/>" +
             "<b>Lightings: As Provided by The Manufacturer</b>";
+    }
+
+    private String getDefaultImportantNote() {
+        return "THIS QUOTE IS ONLY FOR THE ITEMS MENTIONED IN THIS OFFER. ANY OTHER ITEMS OR APPLIANCES LIKE HOB, HOOD, " +
+            "FRIDGE, OVEN ETC ARE EXCLUDED FROM THIS QUOTE. THE QUOTE FOR THOSE ITEMS ARE GIVEN SEPARATELY. " +
+            "VALIDITY OF THIS QUOTE IS ONLY FOR 30 DAYS. THERE WILL BE REVISION OF PRICES IN EVERY 30 DAYS AS PER MARKET " +
+            "COST FLUCTUATIONS.";
     }
 }

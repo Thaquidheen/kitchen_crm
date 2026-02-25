@@ -107,6 +107,12 @@ public class QuotationDto {
 
     // Kitchens (multi-kitchen support)
     private List<QuotationKitchenDto> kitchens;
+
+    // Important Note & Payment Terms
+    private String importantNote;
+    private BigDecimal paymentAcceptancePct;
+    private BigDecimal paymentDeliveryPct;
+    private BigDecimal paymentInstallationPct;
 }
 
 

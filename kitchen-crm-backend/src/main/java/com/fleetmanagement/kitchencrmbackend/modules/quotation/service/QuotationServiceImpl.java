@@ -157,6 +157,12 @@ public class QuotationServiceImpl implements QuotationService {
             quotation.setDoorsTaxPercentage(dto.getDoorsTaxPercentage() != null ? dto.getDoorsTaxPercentage() : BigDecimal.valueOf(18.0));
             quotation.setLightingTaxPercentage(dto.getLightingTaxPercentage() != null ? dto.getLightingTaxPercentage() : BigDecimal.valueOf(18.0));
 
+            // Important Note & Payment Terms
+            quotation.setImportantNote(dto.getImportantNote());
+            quotation.setPaymentAcceptancePct(dto.getPaymentAcceptancePct() != null ? dto.getPaymentAcceptancePct() : BigDecimal.valueOf(60));
+            quotation.setPaymentDeliveryPct(dto.getPaymentDeliveryPct() != null ? dto.getPaymentDeliveryPct() : BigDecimal.valueOf(30));
+            quotation.setPaymentInstallationPct(dto.getPaymentInstallationPct() != null ? dto.getPaymentInstallationPct() : BigDecimal.valueOf(10));
+
             // Save quotation first to get ID
             Quotation savedQuotation = quotationRepository.save(quotation);
 
@@ -213,6 +219,12 @@ public class QuotationServiceImpl implements QuotationService {
         existingQuotation.setCabinetsTaxPercentage(quotationDto.getCabinetsTaxPercentage());
         existingQuotation.setDoorsTaxPercentage(quotationDto.getDoorsTaxPercentage());
         existingQuotation.setLightingTaxPercentage(quotationDto.getLightingTaxPercentage());
+
+        // Important Note & Payment Terms
+        existingQuotation.setImportantNote(quotationDto.getImportantNote());
+        existingQuotation.setPaymentAcceptancePct(quotationDto.getPaymentAcceptancePct());
+        existingQuotation.setPaymentDeliveryPct(quotationDto.getPaymentDeliveryPct());
+        existingQuotation.setPaymentInstallationPct(quotationDto.getPaymentInstallationPct());
 
         // Delete existing kitchens and line items
         kitchenRepository.deleteByQuotationId(id);
@@ -984,6 +996,12 @@ public class QuotationServiceImpl implements QuotationService {
             }
         }
         dto.setQuotationSignedAt(quotation.getQuotationSignedAt());
+
+        // Important Note & Payment Terms
+        dto.setImportantNote(quotation.getImportantNote());
+        dto.setPaymentAcceptancePct(quotation.getPaymentAcceptancePct());
+        dto.setPaymentDeliveryPct(quotation.getPaymentDeliveryPct());
+        dto.setPaymentInstallationPct(quotation.getPaymentInstallationPct());
 
         // Set category-wise totals if they exist
         if (quotation.getAccessoriesBaseTotal() != null) {
