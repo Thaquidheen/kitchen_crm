@@ -394,6 +394,8 @@ export function QuotationBuilderPage() {
         materialRate: item.materialRate,
         lightingCost: item.lightingCost,
         accessoriesCost: item.accessoriesCost,
+        // Linked door type
+        linkedDoorTypeId: item.linkedDoor?.doorTypeId || null,
       })) as QuotationCabinet[],
       doors: (formData.doors || []).map((item: any) => ({
         doorTypeId: item.doorTypeId || item.id,
@@ -454,6 +456,8 @@ export function QuotationBuilderPage() {
           materialRate: item.materialRate,
           lightingCost: item.lightingCost,
           accessoriesCost: item.accessoriesCost,
+          // Linked door type
+          linkedDoorTypeId: item.linkedDoorTypeId || item.linkedDoor?.doorTypeId || null,
         })),
         doors: kitchen.doors.map((item: any) => ({
           doorTypeId: item.doorTypeId || item.id,

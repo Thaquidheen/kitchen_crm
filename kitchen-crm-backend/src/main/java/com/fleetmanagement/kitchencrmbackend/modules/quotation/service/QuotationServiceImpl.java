@@ -539,6 +539,12 @@ public class QuotationServiceImpl implements QuotationService {
                     populateCabinetItemDetails(cabinet, cabinetDto.getCabinetTypeId());
                 }
 
+                // Set linked door type if provided
+                if (cabinetDto.getLinkedDoorTypeId() != null) {
+                    doorTypeRepository.findById(cabinetDto.getLinkedDoorTypeId())
+                            .ifPresent(cabinet::setLinkedDoorType);
+                }
+
                 pricingService.calculateCabinetLineTotal(cabinet, quotation.getCabinetsMarginPercentage(), quotation.getCabinetsTaxPercentage());
                 cabinetRepository.save(cabinet);
             }
@@ -735,6 +741,12 @@ public class QuotationServiceImpl implements QuotationService {
                 // Populate cabinet type details for proper name display
                 if (cabinetDto.getCabinetTypeId() != null) {
                     populateCabinetItemDetails(cabinet, cabinetDto.getCabinetTypeId());
+                }
+
+                // Set linked door type if provided
+                if (cabinetDto.getLinkedDoorTypeId() != null) {
+                    doorTypeRepository.findById(cabinetDto.getLinkedDoorTypeId())
+                            .ifPresent(cabinet::setLinkedDoorType);
                 }
 
                 pricingService.calculateCabinetLineTotal(cabinet, quotation.getCabinetsMarginPercentage(), quotation.getCabinetsTaxPercentage());
@@ -1264,6 +1276,12 @@ public class QuotationServiceImpl implements QuotationService {
                 dto.setCabinetTypeName(cabinetType.getName()); // THIS IS KEY FOR PDF NAME DISPLAY
             }
 
+            // Map linked door type for PDF display
+            if (cabinet.getLinkedDoorType() != null) {
+                dto.setLinkedDoorTypeId(cabinet.getLinkedDoorType().getId());
+                dto.setLinkedDoorTypeName(cabinet.getLinkedDoorType().getName());
+            }
+
             // Set material, lighting, and accessories fields
             dto.setMaterialId(cabinet.getMaterialId());
             dto.setMaterialRate(cabinet.getMaterialRate());
@@ -1432,6 +1450,12 @@ public class QuotationServiceImpl implements QuotationService {
             if (cabinetType != null) {
                 dto.setCabinetTypeId(cabinetType.getId());
                 dto.setCabinetTypeName(cabinetType.getName());
+            }
+
+            // Map linked door type for PDF display
+            if (cabinet.getLinkedDoorType() != null) {
+                dto.setLinkedDoorTypeId(cabinet.getLinkedDoorType().getId());
+                dto.setLinkedDoorTypeName(cabinet.getLinkedDoorType().getName());
             }
 
             // Set material, lighting, and accessories fields

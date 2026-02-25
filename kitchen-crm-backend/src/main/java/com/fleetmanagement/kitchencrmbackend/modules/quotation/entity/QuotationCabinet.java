@@ -1,6 +1,7 @@
 package com.fleetmanagement.kitchencrmbackend.modules.quotation.entity;
 
 import com.fleetmanagement.kitchencrmbackend.modules.product.entity.CabinetType;
+import com.fleetmanagement.kitchencrmbackend.modules.product.entity.DoorType;
 import com.fleetmanagement.kitchencrmbackend.shared.audit.Auditable;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -75,6 +76,11 @@ public class QuotationCabinet extends Auditable {
     // Accessories cost (BLUM standard accessories)
     @Column(name = "accessories_cost", precision = 10, scale = 2)
     private BigDecimal accessoriesCost;
+
+    // Linked door type (optional — set when "Add matching door" is checked)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "linked_door_type_id")
+    private DoorType linkedDoorType;
 
     // Elevation reference
     @Column(name = "elevation_id")

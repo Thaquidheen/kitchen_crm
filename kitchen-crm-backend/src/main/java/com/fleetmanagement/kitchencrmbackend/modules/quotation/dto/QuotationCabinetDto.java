@@ -30,6 +30,10 @@ public class QuotationCabinetDto {
     private String description;
     private Boolean customDimensions = false;
 
+    // Linked door type
+    private Long linkedDoorTypeId;
+    private String linkedDoorTypeName;
+
     private Long kitchenId;           // Reference to quotation_kitchens (nullable for backward compatibility)
 
     // Material selection for sqft-based pricing

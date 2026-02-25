@@ -25,27 +25,27 @@
     </variable>
 
     <columnHeader>
-        <band height="32">
+        <band height="42">
             <rectangle radius="8">
-                <reportElement x="15" y="0" width="565" height="32" backcolor="#000000" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567001"/>
+                <reportElement x="15" y="10" width="565" height="32" backcolor="#000000" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="20" y="0" width="350" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567002"/>
+                <reportElement x="20" y="10" width="350" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567002"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[ITEM / DESCRIPTION]]></text>
+                <text><![CDATA[ACCESSORY TYPE]]></text>
             </staticText>
             <staticText>
-                <reportElement x="375" y="0" width="60" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567003"/>
+                <reportElement x="375" y="10" width="60" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567003"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[QTY]]></text>
             </staticText>
             <staticText>
-                <reportElement x="440" y="0" width="130" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567005"/>
+                <reportElement x="440" y="10" width="130" height="32" forecolor="#FFFFFF" uuid="a1a2a3a4-b5b6-7890-abcd-ef1234567005"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>

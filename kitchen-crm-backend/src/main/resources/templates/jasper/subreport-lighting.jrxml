@@ -24,34 +24,34 @@
     </variable>
 
     <columnHeader>
-        <band height="32">
+        <band height="42">
             <rectangle radius="8">
-                <reportElement x="15" y="0" width="565" height="32" backcolor="#000000" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567001"/>
+                <reportElement x="15" y="10" width="565" height="32" backcolor="#000000" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="20" y="0" width="250" height="32" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567002"/>
+                <reportElement x="20" y="10" width="250" height="32" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567002"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[ITEM NAME]]></text>
             </staticText>
             <staticText>
-                <reportElement x="275" y="0" width="60" height="32" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567003"/>
+                <reportElement x="275" y="10" width="60" height="32" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567003"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[QTY]]></text>
             </staticText>
             <staticText>
-                <reportElement x="340" y="0" width="80" height="32" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567004"/>
+                <reportElement x="340" y="10" width="80" height="32" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567004"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[UNIT]]></text>
             </staticText>
             <staticText>
-                <reportElement x="425" y="0" width="140" height="32" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567006"/>
+                <reportElement x="425" y="10" width="140" height="32" forecolor="#FFFFFF" uuid="b1b2b3b4-c5c6-7890-abcd-ef1234567006"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>

@@ -119,11 +119,11 @@
 
             <!-- ==================== PRODUCTS SECTION ==================== -->
             <rectangle>
-                <reportElement positionType="Float" x="15" y="410" width="4" height="20" backcolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa4"/>
+                <reportElement positionType="Float" x="15" y="420" width="4" height="20" backcolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa4"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement positionType="Float" style="SectionTitle" x="27" y="410" width="508" height="25" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567011"/>
+                <reportElement positionType="Float" style="SectionTitle" x="27" y="420" width="508" height="25" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567011"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
@@ -131,25 +131,19 @@
             </staticText>
 
             <line>
-                <reportElement positionType="Float" x="15" y="435" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567012"/>
+                <reportElement positionType="Float" x="15" y="445" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567012"/>
             </line>
 
-            <!-- Cabinets & Doors Subreport -->
+            <!-- Cabinets Subreport -->
             <subreport>
-                <reportElement positionType="Float" x="0" y="440" width="595" height="80" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567013"/>
-                <subreportParameter name="CABINETS_DATA">
-                    <subreportParameterExpression><![CDATA[$F{cabinets}]]></subreportParameterExpression>
-                </subreportParameter>
-                <subreportParameter name="DOORS_DATA">
-                    <subreportParameterExpression><![CDATA[$F{doors}]]></subreportParameterExpression>
-                </subreportParameter>
+                <reportElement positionType="Float" x="0" y="450" width="595" height="80" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567013"/>
                 <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{cabinets})]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-products.jasper"]]></subreportExpression>
             </subreport>
 
             <!-- Accessories Subreport -->
             <staticText>
-                <reportElement positionType="Float" style="SectionTitle" x="15" y="530" width="565" height="25" forecolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567014"/>
+                <reportElement positionType="Float" style="SectionTitle" x="15" y="540" width="565" height="25" forecolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567014"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
@@ -157,14 +151,14 @@
             </staticText>
 
             <subreport>
-                <reportElement positionType="Float" x="0" y="555" width="595" height="60" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567015"/>
+                <reportElement positionType="Float" x="0" y="565" width="595" height="60" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567015"/>
                 <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{accessories})]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-accessories.jasper"]]></subreportExpression>
             </subreport>
 
             <!-- Lighting Subreport -->
             <staticText>
-                <reportElement positionType="Float" style="SectionTitle" x="15" y="625" width="565" height="25" forecolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567016"/>
+                <reportElement positionType="Float" style="SectionTitle" x="15" y="635" width="565" height="25" forecolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567016"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
@@ -172,7 +166,7 @@
             </staticText>
 
             <subreport>
-                <reportElement positionType="Float" x="0" y="650" width="595" height="60" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567017"/>
+                <reportElement positionType="Float" x="0" y="660" width="595" height="60" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567017"/>
                 <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{lighting})]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-lighting.jasper"]]></subreportExpression>
             </subreport>
@@ -225,7 +219,7 @@
             </staticText>
 
             <staticText>
-                <reportElement x="370" y="70" width="200" height="30" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567026"/>
+                <reportElement x="370" y="70" width="185" height="30" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567026"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
@@ -241,7 +235,7 @@
                 <text><![CDATA[CABINETS TOTAL]]></text>
             </staticText>
             <textField>
-                <reportElement x="370" y="108" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567028"/>
+                <reportElement x="370" y="108" width="185" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567028"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
@@ -264,7 +258,7 @@
                 <text><![CDATA[DOORS TOTAL]]></text>
             </staticText>
             <textField>
-                <reportElement x="370" y="133" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567031"/>
+                <reportElement x="370" y="133" width="185" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567031"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
@@ -283,7 +277,7 @@
                 <text><![CDATA[ACCESSORIES TOTAL]]></text>
             </staticText>
             <textField>
-                <reportElement x="370" y="158" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567033"/>
+                <reportElement x="370" y="158" width="185" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567033"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
@@ -306,7 +300,7 @@
                 <text><![CDATA[LIGHTS TOTAL]]></text>
             </staticText>
             <textField>
-                <reportElement x="370" y="183" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567036"/>
+                <reportElement x="370" y="183" width="185" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567036"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
@@ -330,7 +324,7 @@
                 <text><![CDATA[SUBTOTAL]]></text>
             </staticText>
             <textField>
-                <reportElement x="370" y="225" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567039"/>
+                <reportElement x="370" y="225" width="185" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567039"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="9" isBold="true"/>
                 </textElement>
@@ -353,7 +347,7 @@
                 <text><![CDATA[GST]]></text>
             </staticText>
             <textField>
-                <reportElement x="370" y="250" width="200" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567044"/>
+                <reportElement x="370" y="250" width="185" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567044"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
@@ -379,7 +373,7 @@
                 <text><![CDATA[KITCHEN TOTAL]]></text>
             </staticText>
             <textField>
-                <reportElement x="370" y="290" width="200" height="25" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567047"/>
+                <reportElement x="370" y="290" width="185" height="25" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567047"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
