@@ -22,20 +22,20 @@
     </variable>
 
     <columnHeader>
-        <band height="25">
+        <band height="35">
             <rectangle radius="8">
-                <reportElement x="15" y="0" width="565" height="25" backcolor="#000000" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567001"/>
+                <reportElement x="15" y="10" width="565" height="25" backcolor="#000000" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567001"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="25" y="0" width="190" height="25" forecolor="#FFFFFF" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567002"/>
+                <reportElement x="25" y="10" width="190" height="25" forecolor="#FFFFFF" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567002"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="9" isBold="true"/>
                 </textElement>
                 <text><![CDATA[SPECIFICATION]]></text>
             </staticText>
             <staticText>
-                <reportElement x="235" y="0" width="340" height="25" forecolor="#FFFFFF" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567003"/>
+                <reportElement x="235" y="10" width="340" height="25" forecolor="#FFFFFF" uuid="d1d2d3d4-e5f6-7890-abcd-ef1234567003"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="9" isBold="true"/>
                 </textElement>
