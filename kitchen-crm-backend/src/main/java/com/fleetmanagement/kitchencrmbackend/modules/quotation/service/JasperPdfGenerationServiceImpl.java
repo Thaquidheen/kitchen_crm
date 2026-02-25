@@ -486,12 +486,12 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
             return terms;
         }
         return "<ul>" +
-            "<li>The above-mentioned terms are subjected to change based on final site measurements.</li>" +
-            "<li>Kitchen delivery and installation will not proceed without payment of outstanding balance.</li>" +
-            "<li>Unloading expenses of the materials are not included in the quotation.</li>" +
-            "<li>Our scope is limited to the installation of kitchens only.</li>" +
-            "<li>The client must provide all plumbing and electrical items required for installation.</li>" +
-            "<li>The client should provide safe storage spaces for materials at site.</li>" +
+            "<li>The Above-mentioned Terms are Subjected to Change depending upon the delay from Client side to provide necessary Inputs/Approvals</li>" +
+            "<li>Kitchen Delivery and Installation will not proceed unless site condition requirements outlined in our Terms and Conditions.</li>" +
+            "<li>Unloading Expenses of the materials at the sight to be bear by the customer</li>" +
+            "<li>Our scope is limited to the installation of the specified items only. There will be additional charges for installing any items not included in this offer.</li>" +
+            "<li>The client must provide all plumbing and electrical items, including faucets, as part of their scope. All plumbing outlets and electrical points should be installed according to our site drawing</li>" +
+            "<li>The client should provide safe storage spaces for materials during installation at the site.</li>" +
             "</ul>";
     }
 
@@ -500,13 +500,16 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         if (terms != null && !terms.isEmpty()) {
             return terms;
         }
-        return "<ul>" +
-            "<li>We warrant the furniture we sell for defects in material and workmanship.</li>" +
-            "<li>This warranty does not apply to damage caused by misuse, abuse, or negligence.</li>" +
-            "<li><strong>Stainless Steel Cabinets:</strong> 20 Years of Warranty</li>" +
-            "<li><strong>Any Other Doors:</strong> 8 Years of Warranty</li>" +
-            "<li><strong>Hardware & Accessories:</strong> As provided by manufacturer</li>" +
-            "<li><strong>Lightings:</strong> As provided by manufacturer</li>" +
-            "</ul>";
+        return "<p>We Warrant the Steel Furniture We Sell to Be Free from Defects in Material and Workmanship Under " +
+            "Normal Residential Usage to The Original Purchaser for The Period Specified Below. We Will Repair Any " +
+            "Part That Proves to Be Defective in Materials and Workmanship. If Repair Is Not Possible, We Will Either " +
+            "Replace the Part with A New Part or A Component of Similar Composition and Price.</p>" +
+            "<p>This Warranty Does Not Apply to Any Issues with Our Furniture or Parts of Our Furniture That Result from " +
+            "Improper Handling, Negligence, Alterations, Accidents, Misuse, Improper Cleaning or Care, Or Natural " +
+            "Calamities. Additionally, Consequential and Incidental Damages Are Not Covered Under This Warranty.</p>" +
+            "<p><b>Stainless Steel Cabinets Have 15 Years of Warranty Against Any Manufacturing Defect</b><br/>" +
+            "<b>Any Other Doors Have 7 Years of Warranty Against Any Manufacturing Defect</b></p>" +
+            "<p><b>Hardware's And Accessories: As Provided by The Manufacturer</b></p>" +
+            "<p><b>Lightings: As Provided by The Manufacturer</b></p>";
     }
 }
