@@ -46,6 +46,13 @@
 
     <detail>
         <band height="720" splitType="Immediate">
+            <!-- Page break before 2nd+ kitchen so each kitchen starts on a new page -->
+            <break>
+                <reportElement x="0" y="0" width="595" height="1" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670b0">
+                    <printWhenExpression><![CDATA[$V{REPORT_COUNT} > 1]]></printWhenExpression>
+                </reportElement>
+            </break>
+
             <!-- Kitchen Header — navy background -->
             <rectangle>
                 <reportElement x="0" y="0" width="595" height="50" backcolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567001"/>
