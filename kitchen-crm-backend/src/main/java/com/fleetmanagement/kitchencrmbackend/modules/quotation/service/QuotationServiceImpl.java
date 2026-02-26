@@ -268,6 +268,11 @@ public class QuotationServiceImpl implements QuotationService {
                         return eldto;
                     }).toList());
                 }
+                // Copy kitchen products
+                kdto.setAccessories(k.getAccessories());
+                kdto.setCabinets(k.getCabinets());
+                kdto.setDoors(k.getDoors());
+                kdto.setLighting(k.getLighting());
                 return kdto;
             }).toList();
             saveKitchens(existingQuotation, kitchenCreateDtos);
