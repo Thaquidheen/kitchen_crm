@@ -166,32 +166,19 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
 
   return (
     <>
-    {/* Category filter pills for accessories */}
+    {/* Category filter dropdown for accessories */}
     {category === 'accessories' && categories && categories.length > 0 && (
-      <div className="px-3 sm:px-4 pt-3 sm:pt-4 flex flex-wrap gap-2">
-        <button
-          onClick={() => setSelectedCategoryId(undefined)}
-          className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${
-            !selectedCategoryId
-              ? 'bg-primary-600 text-white'
-              : 'bg-background-700 text-text-600 hover:bg-background-600 hover:text-text-800'
-          }`}
+      <div className="px-3 sm:px-4 pt-3 sm:pt-4">
+        <select
+          value={selectedCategoryId || ''}
+          onChange={(e) => setSelectedCategoryId(e.target.value ? Number(e.target.value) : undefined)}
+          className="w-full sm:w-64 px-3 py-2 bg-background-900 border border-background-600 rounded-md text-text-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary-600"
         >
-          All
-        </button>
-        {categories.map((cat: any) => (
-          <button
-            key={cat.id}
-            onClick={() => setSelectedCategoryId(cat.id === selectedCategoryId ? undefined : cat.id)}
-            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${
-              selectedCategoryId === cat.id
-                ? 'bg-primary-600 text-white'
-                : 'bg-background-700 text-text-600 hover:bg-background-600 hover:text-text-800'
-            }`}
-          >
-            {cat.name}
-          </button>
-        ))}
+          <option value="">All Categories</option>
+          {categories.map((cat: any) => (
+            <option key={cat.id} value={cat.id}>{cat.name}</option>
+          ))}
+        </select>
       </div>
     )}
 
