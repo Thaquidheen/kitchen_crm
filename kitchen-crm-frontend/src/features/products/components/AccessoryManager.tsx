@@ -6,7 +6,7 @@
 import { useState, useRef } from 'react';
 import { Plus, Edit2, Trash2, Eye, EyeOff, Search, Package, DollarSign, Upload, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useGetCategoriesQuery, useGetAccessoriesQuery, useCreateAccessoryMutation, useUpdateAccessoryMutation, useDeleteAccessoryMutation, useUploadAccessoryImageMutation } from '../productsAPI';
+import { useGetCategoriesQuery, useGetActiveBrandsQuery, useGetAccessoriesQuery, useCreateAccessoryMutation, useUpdateAccessoryMutation, useDeleteAccessoryMutation, useUploadAccessoryImageMutation } from '../productsAPI';
 import type { Accessory } from '../types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -282,10 +282,13 @@ function AccessoryForm({ initialValues, categories, onSubmit, onCancel, isLoadin
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
+  const { data: brands } = useGetActiveBrandsQuery();
+
   const [formData, setFormData] = useState<Partial<Accessory>>({
     name: initialValues?.name || '',
     materialCode: initialValues?.materialCode || '',
     categoryId: initialValues?.categoryId,
+    brandId: initialValues?.brandId,
     mrp: initialValues?.mrp || 0,
     discountPercentage: initialValues?.discountPercentage || 0,
     widthMm: initialValues?.widthMm,
@@ -366,23 +369,43 @@ function AccessoryForm({ initialValues, categories, onSubmit, onCancel, isLoadin
           </div>
         </div>
 
-        {/* Category */}
-        <div>
-          <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-            Category
-          </label>
-          <select
-            value={formData.categoryId || ''}
-            onChange={(e) => setFormData({ ...formData, categoryId: e.target.value ? Number(e.target.value) : undefined })}
-            className="w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-background-900 border border-background-600 rounded-md text-text-900 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary-600"
-          >
-            <option value="">-- Select Category --</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+        {/* Category & Brand */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
+              Category
+            </label>
+            <select
+              value={formData.categoryId || ''}
+              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value ? Number(e.target.value) : undefined })}
+              className="w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-background-900 border border-background-600 rounded-md text-text-900 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary-600"
+            >
+              <option value="">-- Select Category --</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
+              Brand
+            </label>
+            <select
+              value={formData.brandId || ''}
+              onChange={(e) => setFormData({ ...formData, brandId: e.target.value ? Number(e.target.value) : undefined })}
+              className="w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-background-900 border border-background-600 rounded-md text-text-900 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary-600"
+            >
+              <option value="">-- Select Brand --</option>
+              {(brands || []).map((brand: any) => (
+                <option key={brand.id} value={brand.id}>
+                  {brand.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Pricing */}
