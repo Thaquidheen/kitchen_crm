@@ -11,6 +11,7 @@ import { Pagination } from '@/components/shared/Pagination';
 import { getImageUrl } from '@/utils/imageUtils';
 import {
   useGetAccessoriesPaginatedQuery,
+  useGetActiveCategoriesQuery,
   useGetCabinetsQuery as useGetCabinetsArray,
   useGetDoorsQuery as useGetDoorsArray,
 } from '@/features/products/productsAPI';
@@ -51,13 +52,17 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
   const [selectedDoor, setSelectedDoor] = useState<DoorType | null>(null);
   const [selectedAccessory, setSelectedAccessory] = useState<{ id: number; name: string; price: number; raw?: any } | null>(null);
 
-  // Pagination state for accessories
+  // Pagination & category filter state for accessories
   const [accessoriesPage, setAccessoriesPage] = useState(0);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
   const ACCESSORIES_PAGE_SIZE = 12; // Divisible by 1, 2, 3 for responsive grid
 
-  // Fetch accessories with pagination
+  // Fetch categories for filter
+  const { data: categories } = useGetActiveCategoriesQuery();
+
+  // Fetch accessories with pagination and category filter
   const { data: accessoriesPaginated } = useGetAccessoriesPaginatedQuery(
-    { page: accessoriesPage, size: ACCESSORIES_PAGE_SIZE, name: search || undefined }
+    { page: accessoriesPage, size: ACCESSORIES_PAGE_SIZE, name: search || undefined, categoryId: selectedCategoryId }
   );
   const accessories = accessoriesPaginated?.content || [];
   const accessoriesTotalPages = accessoriesPaginated?.totalPages || 0;
@@ -68,10 +73,10 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
   const { data: connectors } = useGetConnectorsQuery();
   const { data: sensors } = useGetSensorsQuery();
 
-  // Reset pagination when search changes
+  // Reset pagination when search or category changes
   useEffect(() => {
     setAccessoriesPage(0);
-  }, [search]);
+  }, [search, selectedCategoryId]);
 
   // Map into generic items with id, name, price
   let base: Array<{ id: number; name: string; price: number; raw?: any }> = [];
@@ -161,6 +166,35 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
 
   return (
     <>
+    {/* Category filter pills for accessories */}
+    {category === 'accessories' && categories && categories.length > 0 && (
+      <div className="px-3 sm:px-4 pt-3 sm:pt-4 flex flex-wrap gap-2">
+        <button
+          onClick={() => setSelectedCategoryId(undefined)}
+          className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${
+            !selectedCategoryId
+              ? 'bg-primary-600 text-white'
+              : 'bg-background-700 text-text-600 hover:bg-background-600 hover:text-text-800'
+          }`}
+        >
+          All
+        </button>
+        {categories.map((cat: any) => (
+          <button
+            key={cat.id}
+            onClick={() => setSelectedCategoryId(cat.id === selectedCategoryId ? undefined : cat.id)}
+            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${
+              selectedCategoryId === cat.id
+                ? 'bg-primary-600 text-white'
+                : 'bg-background-700 text-text-600 hover:bg-background-600 hover:text-text-800'
+            }`}
+          >
+            {cat.name}
+          </button>
+        ))}
+      </div>
+    )}
+
     <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
       {items.map((item) => {
         // Generate unique key: for lighting items, combine itemType with id to avoid collisions
