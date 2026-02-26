@@ -440,7 +440,7 @@
 
             <!-- Terms & Conditions Header -->
             <staticText>
-                <reportElement x="50" y="30" width="495" height="25" forecolor="#000000" uuid="ff000001-0000-0000-0000-000000000004"/>
+                <reportElement positionType="Float" x="50" y="30" width="495" height="25" forecolor="#000000" uuid="ff000001-0000-0000-0000-000000000004"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="16" isBold="true" isUnderline="true"/>
                 </textElement>
@@ -449,14 +449,14 @@
 
             <!-- General Terms -->
             <staticText>
-                <reportElement x="50" y="70" width="495" height="22" forecolor="#000000" uuid="ff000001-0000-0000-0000-000000000006"/>
+                <reportElement positionType="Float" x="50" y="70" width="495" height="22" forecolor="#000000" uuid="ff000001-0000-0000-0000-000000000006"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true" isUnderline="true"/>
                 </textElement>
                 <text><![CDATA[General Terms]]></text>
             </staticText>
             <textField textAdjust="StretchHeight">
-                <reportElement x="50" y="95" width="495" height="80" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000007"/>
+                <reportElement positionType="Float" x="50" y="95" width="495" height="80" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000007"/>
                 <textElement verticalAlignment="Top" markup="html">
                     <font fontName="Serif" size="10"/>
                 </textElement>
