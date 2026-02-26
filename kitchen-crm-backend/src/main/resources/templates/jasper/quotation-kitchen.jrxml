@@ -119,11 +119,11 @@
 
             <!-- ==================== PRODUCTS SECTION ==================== -->
             <rectangle>
-                <reportElement positionType="Float" x="15" y="420" width="4" height="20" backcolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa4"/>
+                <reportElement positionType="Float" x="15" y="445" width="4" height="20" backcolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa4"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement positionType="Float" style="SectionTitle" x="27" y="420" width="508" height="25" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567011"/>
+                <reportElement positionType="Float" style="SectionTitle" x="27" y="445" width="508" height="25" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567011"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
@@ -131,12 +131,12 @@
             </staticText>
 
             <line>
-                <reportElement positionType="Float" x="15" y="445" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567012"/>
+                <reportElement positionType="Float" x="15" y="470" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567012"/>
             </line>
 
             <!-- Cabinets Subreport -->
             <subreport>
-                <reportElement positionType="Float" x="0" y="450" width="595" height="80" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567013"/>
+                <reportElement positionType="Float" x="0" y="475" width="595" height="80" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567013"/>
                 <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{cabinets})]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-products.jasper"]]></subreportExpression>
             </subreport>

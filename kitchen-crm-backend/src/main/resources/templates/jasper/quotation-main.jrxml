@@ -268,7 +268,7 @@
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true" isUnderline="true"/>
                 </textElement>
-                <text><![CDATA[Combined Totals]]></text>
+                <text><![CDATA[Final Summary]]></text>
             </staticText>
 
             <!-- Kitchen totals subreport (only if > 1 kitchen) -->
