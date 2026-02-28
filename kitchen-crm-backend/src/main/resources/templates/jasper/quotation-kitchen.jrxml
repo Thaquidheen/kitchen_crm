@@ -128,11 +128,11 @@
 
             <!-- ==================== PRODUCTS SECTION ==================== -->
             <rectangle>
-                <reportElement positionType="Float" x="15" y="460" width="4" height="20" backcolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa4"/>
+                <reportElement positionType="Float" x="15" y="490" width="4" height="20" backcolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa4"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement positionType="Float" style="SectionTitle" x="27" y="460" width="508" height="25" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567011"/>
+                <reportElement positionType="Float" style="SectionTitle" x="27" y="490" width="508" height="25" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567011"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
@@ -140,42 +140,56 @@
             </staticText>
 
             <line>
-                <reportElement positionType="Float" x="15" y="485" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567012"/>
+                <reportElement positionType="Float" x="15" y="515" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567012"/>
             </line>
 
             <!-- Cabinets Subreport -->
             <subreport>
-                <reportElement positionType="Float" x="0" y="490" width="595" height="40" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567013"/>
+                <reportElement positionType="Float" x="0" y="520" width="595" height="40" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567013"/>
                 <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{cabinets})]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-products.jasper"]]></subreportExpression>
             </subreport>
 
-            <!-- Accessories Subreport -->
+            <!-- ==================== ACCESSORIES SECTION ==================== -->
+            <rectangle>
+                <reportElement positionType="Float" x="15" y="570" width="4" height="18" backcolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa5"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
             <staticText>
-                <reportElement positionType="Float" style="SectionTitle" x="15" y="540" width="565" height="25" forecolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567014"/>
+                <reportElement positionType="Float" style="SectionTitle" x="27" y="570" width="538" height="25" forecolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567014"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
                 <text><![CDATA[ACCESSORIES]]></text>
             </staticText>
+            <line>
+                <reportElement positionType="Float" x="15" y="595" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670a1"/>
+            </line>
 
             <subreport>
-                <reportElement positionType="Float" x="0" y="565" width="595" height="60" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567015"/>
+                <reportElement positionType="Float" x="0" y="600" width="595" height="40" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567015"/>
                 <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{accessories})]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-accessories.jasper"]]></subreportExpression>
             </subreport>
 
-            <!-- Lighting Subreport -->
+            <!-- ==================== LIGHTING SECTION ==================== -->
+            <rectangle>
+                <reportElement positionType="Float" x="15" y="650" width="4" height="18" backcolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa7"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
             <staticText>
-                <reportElement positionType="Float" style="SectionTitle" x="15" y="635" width="565" height="25" forecolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567016"/>
+                <reportElement positionType="Float" style="SectionTitle" x="27" y="650" width="538" height="25" forecolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567016"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
                 <text><![CDATA[LIGHTING]]></text>
             </staticText>
+            <line>
+                <reportElement positionType="Float" x="15" y="675" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670a2"/>
+            </line>
 
             <subreport>
-                <reportElement positionType="Float" x="0" y="660" width="595" height="60" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567017"/>
+                <reportElement positionType="Float" x="0" y="680" width="595" height="40" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567017"/>
                 <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{lighting})]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-lighting.jasper"]]></subreportExpression>
             </subreport>
