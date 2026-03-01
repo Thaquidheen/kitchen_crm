@@ -1437,6 +1437,14 @@ public class QuotationServiceImpl implements QuotationService {
             if (accessory != null) {
                 dto.setAccessoryId(accessory.getId());
                 dto.setAccessoryName(accessory.getName());
+
+                // Brand and category info
+                if (accessory.getBrand() != null) {
+                    dto.setBrandName(accessory.getBrand().getName());
+                }
+                if (accessory.getCategory() != null) {
+                    dto.setCategoryName(accessory.getCategory().getName());
+                }
             } else if (quotationAccessory.getCustomItem() != null && quotationAccessory.getCustomItem()) {
                 dto.setAccessoryName(quotationAccessory.getCustomItemName());
             }
