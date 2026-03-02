@@ -288,7 +288,7 @@ export function SelectedProductsList({
 
     return (
       <div className="ml-3 mt-2">
-        <div className="text-xs font-medium text-text-600 mb-1">
+        <div className="text-sm font-semibold text-primary-400 mb-2 mt-3 pb-1 border-b border-background-600">
           {label} ({items.length})
         </div>
         <div className="space-y-1">
