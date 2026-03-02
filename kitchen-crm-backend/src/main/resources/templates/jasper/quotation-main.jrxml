@@ -303,7 +303,7 @@
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="12" isBold="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("##,##,##0.00").format($P{GRAND_TOTAL})]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{GRAND_TOTAL})]]></textFieldExpression>
             </textField>
 
             <!-- ===== IMPORTANT NOTE ===== -->
@@ -384,7 +384,7 @@
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
                 </textElement>
-                <textFieldExpression><![CDATA[new java.text.DecimalFormat("##,##,##0.00").format($P{GRAND_TOTAL}.multiply($P{PAYMENT_ACCEPTANCE_PCT}).divide(new java.math.BigDecimal(100)))]]></textFieldExpression>
+                <textFieldExpression><![CDATA[new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{GRAND_TOTAL}.multiply($P{PAYMENT_ACCEPTANCE_PCT}).divide(new java.math.BigDecimal(100)))]]></textFieldExpression>
             </textField>
 
             <!-- Row 2: ON DELIVERY AT SITE -->
@@ -407,7 +407,7 @@
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
                 </textElement>
-                <textFieldExpression><![CDATA[new java.text.DecimalFormat("##,##,##0.00").format($P{GRAND_TOTAL}.multiply($P{PAYMENT_DELIVERY_PCT}).divide(new java.math.BigDecimal(100)))]]></textFieldExpression>
+                <textFieldExpression><![CDATA[new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{GRAND_TOTAL}.multiply($P{PAYMENT_DELIVERY_PCT}).divide(new java.math.BigDecimal(100)))]]></textFieldExpression>
             </textField>
 
             <!-- Row 3: AFTER INSTALLATION -->
@@ -430,7 +430,7 @@
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
                 </textElement>
-                <textFieldExpression><![CDATA[new java.text.DecimalFormat("##,##,##0.00").format($P{GRAND_TOTAL}.multiply($P{PAYMENT_INSTALLATION_PCT}).divide(new java.math.BigDecimal(100)))]]></textFieldExpression>
+                <textFieldExpression><![CDATA[new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{GRAND_TOTAL}.multiply($P{PAYMENT_INSTALLATION_PCT}).divide(new java.math.BigDecimal(100)))]]></textFieldExpression>
             </textField>
 
             <!-- Page break before Terms & Conditions -->
