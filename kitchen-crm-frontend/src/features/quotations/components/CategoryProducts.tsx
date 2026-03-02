@@ -224,8 +224,11 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
               {category !== 'accessories' && isTypeSelected(item) && (
                 <span className="inline-flex items-center text-xs px-1.5 sm:px-2 py-0.5 rounded bg-success text-text-900">✓ Added</span>
               )}
-              <span className="truncate" title={item.name}>{item.name}</span>
+              <span className="line-clamp-2" title={item.name}>{item.name}</span>
             </div>
+            {category === 'accessories' && item.raw?.brandName && (
+              <div className="text-xs text-text-600 mt-0.5">{item.raw.brandName}</div>
+            )}
 
             {/* Price */}
             <div className="text-xs sm:text-sm text-text-700 mt-1">

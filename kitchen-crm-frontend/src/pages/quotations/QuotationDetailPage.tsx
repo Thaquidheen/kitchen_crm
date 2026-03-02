@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { useGetQuotationByIdQuery, useDuplicateQuotationMutation, useDownloadQuotationPDFMutation } from '@/app/baseApi';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import SignatureManagement from '@/components/quotations/SignatureManagement';
-import { Copy, Download, Edit } from 'lucide-react';
+import { ArrowLeft, Copy, Download, Edit } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export function QuotationDetailPage() {
@@ -107,6 +107,9 @@ export function QuotationDetailPage() {
 
   return (
     <div className="min-h-screen bg-background-900 p-4 sm:p-6">
+      <button onClick={() => navigate('/quotations')} className="flex items-center gap-2 text-text-700 hover:text-text-900 mb-4">
+        <ArrowLeft className="h-4 w-4" /> Back to Quotations
+      </button>
       <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>

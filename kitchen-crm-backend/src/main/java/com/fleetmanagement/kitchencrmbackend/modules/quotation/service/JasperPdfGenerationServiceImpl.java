@@ -315,7 +315,8 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
 
         // Quotation details
         params.put("QUOTATION_NUMBER", quotation.getQuotationNumber() != null ? quotation.getQuotationNumber() : "");
-        LocalDate createdDate = quotation.getCreatedAt() != null ? quotation.getCreatedAt().toLocalDate() : LocalDate.now();
+        LocalDate createdDate = quotation.getUpdatedAt() != null ? quotation.getUpdatedAt().toLocalDate() :
+                (quotation.getCreatedAt() != null ? quotation.getCreatedAt().toLocalDate() : LocalDate.now());
         LocalDate validUntil = quotation.getValidUntil() != null ? quotation.getValidUntil() : createdDate.plusDays(30);
         params.put("CREATED_DATE", formatDate(createdDate));
         params.put("VALID_UNTIL", formatDate(validUntil));
