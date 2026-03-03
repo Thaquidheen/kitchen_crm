@@ -1282,6 +1282,17 @@ export function QuotationBuilderPage() {
                     Back
                   </Button>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    {isEditMode && (
+                      <Button
+                        variant="secondary"
+                        onClick={handleSaveAsNew}
+                        disabled={isCreating || isUpdating}
+                        className="w-full sm:w-auto"
+                      >
+                        <FilePlus className="h-4 w-4 mr-2" />
+                        Save as New
+                      </Button>
+                    )}
                     <Button
                       variant="secondary"
                       onClick={handleSaveDraft}
