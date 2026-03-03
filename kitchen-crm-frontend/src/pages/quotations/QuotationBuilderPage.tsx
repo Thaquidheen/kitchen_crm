@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Tabs } from '@/components/ui/Tabs';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
-import { FileText, ArrowLeft, Save, Send } from 'lucide-react';
+import { FileText, ArrowLeft, Save, Send, FilePlus } from 'lucide-react';
 import { UnsavedChangesDialog } from '@/components/ui/UnsavedChangesDialog';
 import { CustomerSelector } from '@/features/quotations/components/CustomerSelector';
 import { ProductSelector } from '@/features/quotations/components/ProductSelector';
@@ -790,6 +790,26 @@ export function QuotationBuilderPage() {
     }
   };
 
+  const handleSaveAsNew = async () => {
+    const validation = validateFormData();
+    if (!validation.isValid) {
+      validation.errors.forEach((error) => toast.error(error));
+      return;
+    }
+    try {
+      const requestData = convertFormDataToRequest(false);
+      await createQuotation(requestData).unwrap();
+      toast.success('New quotation created successfully');
+      initialFormDataRef.current = JSON.stringify(formData);
+      setIsDirty(false);
+      skipNavigationBlockRef.current = true;
+      navigate('/quotations');
+    } catch (error: any) {
+      console.error('Error creating new quotation:', error);
+      toast.error(error?.data?.message || 'Failed to create new quotation');
+    }
+  };
+
   // Blocker dialog handlers
   const handleBlockerSave = async () => {
     try {
@@ -849,6 +869,13 @@ export function QuotationBuilderPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            {isEditMode && (
+              <Button variant="secondary" size="sm" onClick={handleSaveAsNew} className="w-full sm:w-auto">
+                <FilePlus className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Save as New</span>
+                <span className="sm:hidden">New</span>
+              </Button>
+            )}
             <Button variant="secondary" size="sm" onClick={handleSaveDraft} className="w-full sm:w-auto">
               <Save className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Save Draft</span>
