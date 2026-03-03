@@ -718,6 +718,18 @@ export function QuotationBuilderPage() {
     }
   };
 
+  const stepOrder: BuilderStep[] = ['customer', 'kitchens', 'products', 'review'];
+
+  const handleStepClick = (stepId: string) => {
+    const targetIndex = stepOrder.indexOf(stepId as BuilderStep);
+    const currentIndex = stepOrder.indexOf(currentStep);
+    if (targetIndex < 0 || targetIndex === currentIndex) return;
+    // Allow clicking any previous step freely
+    if (targetIndex < currentIndex) {
+      setCurrentStep(stepId as BuilderStep);
+    }
+  };
+
   const handleSaveDraft = async () => {
     const validation = validateFormData();
 
@@ -852,33 +864,40 @@ export function QuotationBuilderPage() {
         {/* Progress Steps */}
         <div className="overflow-x-auto pb-2">
           <div className="flex items-center gap-2 sm:gap-4 min-w-max">
-            {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <div className="flex items-center gap-2">
+            {steps.map((step, index) => {
+              const currentIndex = stepOrder.indexOf(currentStep);
+              const isClickable = index < currentIndex;
+              return (
+                <div key={step.id} className="flex items-center">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                      currentStep === step.id
-                        ? 'bg-primary-600 text-text-900'
-                        : step.completed
-                        ? 'bg-success text-text-900'
-                        : 'bg-background-700 text-text-600'
-                    }`}
+                    className={`flex items-center gap-2 ${isClickable ? 'cursor-pointer hover:opacity-80' : ''}`}
+                    onClick={() => isClickable && handleStepClick(step.id)}
                   >
-                    {index + 1}
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                        currentStep === step.id
+                          ? 'bg-primary-600 text-text-900'
+                          : step.completed
+                          ? 'bg-success text-text-900'
+                          : 'bg-background-700 text-text-600'
+                      }`}
+                    >
+                      {index + 1}
+                    </div>
+                    <span
+                      className={`text-xs sm:text-sm font-medium ${
+                        currentStep === step.id ? 'text-text-900' : 'text-text-600'
+                      }`}
+                    >
+                      {step.label}
+                    </span>
                   </div>
-                  <span
-                    className={`text-xs sm:text-sm font-medium ${
-                      currentStep === step.id ? 'text-text-900' : 'text-text-600'
-                    }`}
-                  >
-                    {step.label}
-                  </span>
+                  {index < steps.length - 1 && (
+                    <div className="w-8 sm:w-16 h-0.5 bg-background-600 mx-2 sm:mx-4" />
+                  )}
                 </div>
-                {index < steps.length - 1 && (
-                  <div className="w-8 sm:w-16 h-0.5 bg-background-600 mx-2 sm:mx-4" />
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

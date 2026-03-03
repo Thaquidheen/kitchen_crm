@@ -46,6 +46,8 @@
     <parameter name="PAYMENT_DELIVERY_PCT" class="java.math.BigDecimal"/>
     <parameter name="PAYMENT_INSTALLATION_PCT" class="java.math.BigDecimal"/>
     <parameter name="KITCHEN_TOTALS_DATA" class="java.lang.Object"/>
+    <parameter name="TRANSPORTATION_PRICE" class="java.math.BigDecimal"/>
+    <parameter name="INSTALLATION_PRICE" class="java.math.BigDecimal"/>
 
     <!-- Background — dark on page 1 (behind kitchen image), cream on pages 2+ -->
     <background>
@@ -280,15 +282,67 @@
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-kitchen-totals.jasper"]]></subreportExpression>
             </subreport>
 
+            <!-- Transportation row (only if > 1 kitchen and value > 0) -->
+            <rectangle>
+                <reportElement positionType="Float" x="50" y="85" width="495" height="25" backcolor="#FAF6F1" uuid="cf000002-0000-0000-0000-000000000001">
+                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{TRANSPORTATION_PRICE} != null && $P{TRANSPORTATION_PRICE}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+                </reportElement>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement positionType="Float" x="60" y="85" width="250" height="25" forecolor="#2C1810" uuid="cf000002-0000-0000-0000-000000000002">
+                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{TRANSPORTATION_PRICE} != null && $P{TRANSPORTATION_PRICE}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+                </reportElement>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="10"/>
+                </textElement>
+                <text><![CDATA[Transportation]]></text>
+            </staticText>
+            <textField>
+                <reportElement positionType="Float" x="310" y="85" width="225" height="25" forecolor="#2C1810" uuid="cf000002-0000-0000-0000-000000000003">
+                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{TRANSPORTATION_PRICE} != null && $P{TRANSPORTATION_PRICE}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Left" verticalAlignment="Middle">
+                    <font fontName="Serif" size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{TRANSPORTATION_PRICE})]]></textFieldExpression>
+            </textField>
+
+            <!-- Installation row (only if > 1 kitchen and value > 0) -->
+            <rectangle>
+                <reportElement positionType="Float" x="50" y="112" width="495" height="25" backcolor="#FFFFFF" uuid="cf000002-0000-0000-0000-000000000004">
+                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{INSTALLATION_PRICE} != null && $P{INSTALLATION_PRICE}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+                </reportElement>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement positionType="Float" x="60" y="112" width="250" height="25" forecolor="#2C1810" uuid="cf000002-0000-0000-0000-000000000005">
+                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{INSTALLATION_PRICE} != null && $P{INSTALLATION_PRICE}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+                </reportElement>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="10"/>
+                </textElement>
+                <text><![CDATA[Installation]]></text>
+            </staticText>
+            <textField>
+                <reportElement positionType="Float" x="310" y="112" width="225" height="25" forecolor="#2C1810" uuid="cf000002-0000-0000-0000-000000000006">
+                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{INSTALLATION_PRICE} != null && $P{INSTALLATION_PRICE}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Left" verticalAlignment="Middle">
+                    <font fontName="Serif" size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{INSTALLATION_PRICE})]]></textFieldExpression>
+            </textField>
+
             <!-- Grand Total row (only if > 1 kitchen) -->
             <rectangle>
-                <reportElement positionType="Float" x="50" y="85" width="495" height="30" backcolor="#000000" uuid="cf000001-0000-0000-0000-000000000003">
+                <reportElement positionType="Float" x="50" y="140" width="495" height="30" backcolor="#000000" uuid="cf000001-0000-0000-0000-000000000003">
                     <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1]]></printWhenExpression>
                 </reportElement>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement positionType="Float" x="60" y="85" width="250" height="30" forecolor="#FFFFFF" uuid="cf000001-0000-0000-0000-000000000004">
+                <reportElement positionType="Float" x="60" y="140" width="250" height="30" forecolor="#FFFFFF" uuid="cf000001-0000-0000-0000-000000000004">
                     <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1]]></printWhenExpression>
                 </reportElement>
                 <textElement verticalAlignment="Middle">
@@ -297,7 +351,7 @@
                 <text><![CDATA[GRAND TOTAL]]></text>
             </staticText>
             <textField>
-                <reportElement positionType="Float" x="310" y="85" width="225" height="30" forecolor="#FFFFFF" uuid="cf000001-0000-0000-0000-000000000005">
+                <reportElement positionType="Float" x="310" y="140" width="225" height="30" forecolor="#FFFFFF" uuid="cf000001-0000-0000-0000-000000000005">
                     <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1]]></printWhenExpression>
                 </reportElement>
                 <textElement textAlignment="Left" verticalAlignment="Middle">
@@ -308,14 +362,14 @@
 
             <!-- ===== IMPORTANT NOTE ===== -->
             <staticText>
-                <reportElement positionType="Float" x="50" y="135" width="495" height="22" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000010"/>
+                <reportElement positionType="Float" x="50" y="190" width="495" height="22" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000010"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true" isUnderline="true"/>
                 </textElement>
                 <text><![CDATA[IMPORTANT NOTE]]></text>
             </staticText>
             <textField textAdjust="StretchHeight">
-                <reportElement positionType="Float" x="50" y="165" width="495" height="40" forecolor="#333333" uuid="cf000001-0000-0000-0000-000000000011"/>
+                <reportElement positionType="Float" x="50" y="220" width="495" height="40" forecolor="#333333" uuid="cf000001-0000-0000-0000-000000000011"/>
                 <textElement verticalAlignment="Top">
                     <font fontName="Serif" size="10"/>
                 </textElement>
@@ -324,7 +378,7 @@
 
             <!-- ===== PAYMENT TERMS ===== -->
             <staticText>
-                <reportElement positionType="Float" x="50" y="225" width="495" height="22" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000020"/>
+                <reportElement positionType="Float" x="50" y="280" width="495" height="22" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000020"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true" isUnderline="true"/>
                 </textElement>
@@ -333,54 +387,54 @@
 
             <!-- Table Header -->
             <staticText>
-                <reportElement positionType="Float" x="50" y="255" width="150" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000021"/>
+                <reportElement positionType="Float" x="50" y="310" width="150" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000021"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[Payment]]></text>
             </staticText>
             <staticText>
-                <reportElement positionType="Float" x="200" y="255" width="80" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000022"/>
+                <reportElement positionType="Float" x="200" y="310" width="80" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000022"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[%]]></text>
             </staticText>
             <staticText>
-                <reportElement positionType="Float" x="280" y="255" width="140" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000023"/>
+                <reportElement positionType="Float" x="280" y="310" width="140" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000023"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[AMOUNT]]></text>
             </staticText>
             <staticText>
-                <reportElement positionType="Float" x="420" y="255" width="125" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000024"/>
+                <reportElement positionType="Float" x="420" y="310" width="125" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000024"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[DATE]]></text>
             </staticText>
             <line>
-                <reportElement positionType="Float" x="50" y="280" width="495" height="1" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000025"/>
+                <reportElement positionType="Float" x="50" y="335" width="495" height="1" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000025"/>
             </line>
 
             <!-- Row 1: BY ACCEPTANCE -->
             <staticText>
-                <reportElement positionType="Float" x="50" y="288" width="150" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000030"/>
+                <reportElement positionType="Float" x="50" y="343" width="150" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000030"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[BY ACCEPTANCE]]></text>
             </staticText>
             <textField>
-                <reportElement positionType="Float" x="200" y="288" width="80" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000031"/>
+                <reportElement positionType="Float" x="200" y="343" width="80" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000031"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{PAYMENT_ACCEPTANCE_PCT}.intValue()]]></textFieldExpression>
             </textField>
             <textField>
-                <reportElement positionType="Float" x="280" y="288" width="140" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000032"/>
+                <reportElement positionType="Float" x="280" y="343" width="140" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000032"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
                 </textElement>
@@ -389,21 +443,21 @@
 
             <!-- Row 2: ON DELIVERY AT SITE -->
             <staticText>
-                <reportElement positionType="Float" x="50" y="320" width="150" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000040"/>
+                <reportElement positionType="Float" x="50" y="375" width="150" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000040"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[ON DELIVERY AT SITE]]></text>
             </staticText>
             <textField>
-                <reportElement positionType="Float" x="200" y="320" width="80" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000041"/>
+                <reportElement positionType="Float" x="200" y="375" width="80" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000041"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{PAYMENT_DELIVERY_PCT}.intValue()]]></textFieldExpression>
             </textField>
             <textField>
-                <reportElement positionType="Float" x="280" y="320" width="140" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000042"/>
+                <reportElement positionType="Float" x="280" y="375" width="140" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000042"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
                 </textElement>
@@ -412,21 +466,21 @@
 
             <!-- Row 3: AFTER INSTALLATION -->
             <staticText>
-                <reportElement positionType="Float" x="50" y="352" width="150" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000050"/>
+                <reportElement positionType="Float" x="50" y="407" width="150" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000050"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
                 <text><![CDATA[AFTER INSTALLATION]]></text>
             </staticText>
             <textField>
-                <reportElement positionType="Float" x="200" y="352" width="80" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000051"/>
+                <reportElement positionType="Float" x="200" y="407" width="80" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000051"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{PAYMENT_INSTALLATION_PCT}.intValue()]]></textFieldExpression>
             </textField>
             <textField>
-                <reportElement positionType="Float" x="280" y="352" width="140" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000052"/>
+                <reportElement positionType="Float" x="280" y="407" width="140" height="25" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000052"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
                 </textElement>
@@ -435,12 +489,12 @@
 
             <!-- Page break before Terms & Conditions -->
             <break>
-                <reportElement positionType="Float" x="0" y="390" width="595" height="1" uuid="cf000001-0000-0000-0000-000000000060"/>
+                <reportElement positionType="Float" x="0" y="445" width="595" height="1" uuid="cf000001-0000-0000-0000-000000000060"/>
             </break>
 
             <!-- Terms & Conditions Header -->
             <staticText>
-                <reportElement positionType="Float" x="50" y="395" width="495" height="25" forecolor="#000000" uuid="ff000001-0000-0000-0000-000000000004"/>
+                <reportElement positionType="Float" x="50" y="450" width="495" height="25" forecolor="#000000" uuid="ff000001-0000-0000-0000-000000000004"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="16" isBold="true" isUnderline="true"/>
                 </textElement>
@@ -449,14 +503,14 @@
 
             <!-- General Terms -->
             <staticText>
-                <reportElement positionType="Float" x="50" y="425" width="495" height="22" forecolor="#000000" uuid="ff000001-0000-0000-0000-000000000006"/>
+                <reportElement positionType="Float" x="50" y="480" width="495" height="22" forecolor="#000000" uuid="ff000001-0000-0000-0000-000000000006"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true" isUnderline="true"/>
                 </textElement>
                 <text><![CDATA[General Terms]]></text>
             </staticText>
             <textField textAdjust="StretchHeight">
-                <reportElement positionType="Float" x="50" y="450" width="495" height="80" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000007"/>
+                <reportElement positionType="Float" x="50" y="505" width="495" height="80" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000007"/>
                 <textElement verticalAlignment="Top" markup="html">
                     <font fontName="Serif" size="10"/>
                 </textElement>
@@ -465,14 +519,14 @@
 
             <!-- Warranty & Service -->
             <staticText>
-                <reportElement positionType="Float" x="50" y="540" width="495" height="22" forecolor="#000000" uuid="ff000001-0000-0000-0000-000000000009"/>
+                <reportElement positionType="Float" x="50" y="595" width="495" height="22" forecolor="#000000" uuid="ff000001-0000-0000-0000-000000000009"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true" isUnderline="true"/>
                 </textElement>
                 <text><![CDATA[Warranty & Service]]></text>
             </staticText>
             <textField textAdjust="StretchHeight">
-                <reportElement positionType="Float" x="50" y="565" width="495" height="80" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000010"/>
+                <reportElement positionType="Float" x="50" y="620" width="495" height="80" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000010"/>
                 <textElement verticalAlignment="Top" markup="html">
                     <font fontName="Serif" size="10"/>
                 </textElement>
@@ -481,19 +535,19 @@
 
             <!-- Page break before Authorization -->
             <break>
-                <reportElement positionType="Float" x="0" y="650" width="595" height="1" uuid="ff000001-0000-0000-0000-000000000030"/>
+                <reportElement positionType="Float" x="0" y="705" width="595" height="1" uuid="ff000001-0000-0000-0000-000000000030"/>
             </break>
 
             <!-- Authorization Section -->
             <line>
-                <reportElement positionType="Float" x="15" y="655" width="565" height="1" forecolor="#DDDDDD" uuid="ff000001-0000-0000-0000-000000000011"/>
+                <reportElement positionType="Float" x="15" y="710" width="565" height="1" forecolor="#DDDDDD" uuid="ff000001-0000-0000-0000-000000000011"/>
             </line>
             <rectangle>
-                <reportElement positionType="Float" x="15" y="662" width="4" height="16" backcolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000012"/>
+                <reportElement positionType="Float" x="15" y="717" width="4" height="16" backcolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000012"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement positionType="Float" x="27" y="662" width="200" height="16" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000013"/>
+                <reportElement positionType="Float" x="27" y="717" width="200" height="16" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000013"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
@@ -502,67 +556,67 @@
 
             <!-- Client Signature -->
             <rectangle radius="4">
-                <reportElement positionType="Float" x="15" y="685" width="255" height="95" backcolor="#F5F5F5" uuid="ff000001-0000-0000-0000-000000000014"/>
+                <reportElement positionType="Float" x="15" y="740" width="255" height="95" backcolor="#F5F5F5" uuid="ff000001-0000-0000-0000-000000000014"/>
                 <graphicElement><pen lineWidth="1" lineColor="#DDDDDD"/></graphicElement>
             </rectangle>
             <rectangle>
-                <reportElement positionType="Float" x="15" y="685" width="3" height="95" backcolor="#8B0000" uuid="ff000001-0000-0000-0000-000000000015"/>
+                <reportElement positionType="Float" x="15" y="740" width="3" height="95" backcolor="#8B0000" uuid="ff000001-0000-0000-0000-000000000015"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement positionType="Float" x="28" y="692" width="230" height="14" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000016"/>
+                <reportElement positionType="Float" x="28" y="747" width="230" height="14" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000016"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="8" isBold="true"/>
                 </textElement>
                 <text><![CDATA[Client Signature]]></text>
             </staticText>
             <line>
-                <reportElement positionType="Float" x="28" y="745" width="220" height="1" forecolor="#DDDDDD" uuid="ff000001-0000-0000-0000-000000000017"/>
+                <reportElement positionType="Float" x="28" y="800" width="220" height="1" forecolor="#DDDDDD" uuid="ff000001-0000-0000-0000-000000000017"/>
             </line>
             <textField>
-                <reportElement positionType="Float" x="28" y="750" width="220" height="14" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000018"/>
+                <reportElement positionType="Float" x="28" y="805" width="220" height="14" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000018"/>
                 <textElement verticalAlignment="Middle"><font fontName="Serif" size="7"/></textElement>
                 <textFieldExpression><![CDATA[$P{CUSTOMER_NAME}]]></textFieldExpression>
             </textField>
             <staticText>
-                <reportElement positionType="Float" x="28" y="764" width="220" height="12" forecolor="#888888" uuid="ff000001-0000-0000-0000-000000000019"/>
+                <reportElement positionType="Float" x="28" y="819" width="220" height="12" forecolor="#888888" uuid="ff000001-0000-0000-0000-000000000019"/>
                 <textElement verticalAlignment="Middle"><font fontName="Serif" size="6"/></textElement>
                 <text><![CDATA[Date: _________________]]></text>
             </staticText>
 
             <!-- Company Signature -->
             <rectangle radius="4">
-                <reportElement positionType="Float" x="310" y="685" width="255" height="95" backcolor="#F5F5F5" uuid="ff000001-0000-0000-0000-000000000020"/>
+                <reportElement positionType="Float" x="310" y="740" width="255" height="95" backcolor="#F5F5F5" uuid="ff000001-0000-0000-0000-000000000020"/>
                 <graphicElement><pen lineWidth="1" lineColor="#DDDDDD"/></graphicElement>
             </rectangle>
             <rectangle>
-                <reportElement positionType="Float" x="310" y="685" width="3" height="95" backcolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000021"/>
+                <reportElement positionType="Float" x="310" y="740" width="3" height="95" backcolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000021"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement positionType="Float" x="323" y="692" width="230" height="14" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000022"/>
+                <reportElement positionType="Float" x="323" y="747" width="230" height="14" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000022"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="8" isBold="true"/>
                 </textElement>
                 <text><![CDATA[Authorized Signature]]></text>
             </staticText>
             <line>
-                <reportElement positionType="Float" x="323" y="745" width="220" height="1" forecolor="#DDDDDD" uuid="ff000001-0000-0000-0000-000000000023"/>
+                <reportElement positionType="Float" x="323" y="800" width="220" height="1" forecolor="#DDDDDD" uuid="ff000001-0000-0000-0000-000000000023"/>
             </line>
             <textField>
-                <reportElement positionType="Float" x="323" y="750" width="220" height="14" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000024"/>
+                <reportElement positionType="Float" x="323" y="805" width="220" height="14" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000024"/>
                 <textElement verticalAlignment="Middle"><font fontName="Serif" size="7"/></textElement>
                 <textFieldExpression><![CDATA[$P{COMPANY_NAME}]]></textFieldExpression>
             </textField>
             <staticText>
-                <reportElement positionType="Float" x="323" y="764" width="220" height="12" forecolor="#888888" uuid="ff000001-0000-0000-0000-000000000025"/>
+                <reportElement positionType="Float" x="323" y="819" width="220" height="12" forecolor="#888888" uuid="ff000001-0000-0000-0000-000000000025"/>
                 <textElement verticalAlignment="Middle"><font fontName="Serif" size="6"/></textElement>
                 <text><![CDATA[Date: _________________]]></text>
             </staticText>
 
             <!-- Footer -->
             <staticText>
-                <reportElement positionType="Float" x="230" y="798" width="135" height="8" forecolor="#C8B8A0" uuid="ff000001-0000-0000-0000-000000000026"/>
+                <reportElement positionType="Float" x="230" y="853" width="135" height="8" forecolor="#C8B8A0" uuid="ff000001-0000-0000-0000-000000000026"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font fontName="Serif" size="6"/>
                 </textElement>

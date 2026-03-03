@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
-import { Calculator, TrendingUp, Percent } from 'lucide-react';
+import { Calculator, TrendingUp, Percent, Truck, Wrench } from 'lucide-react';
 import clsx from 'clsx';
 
 export interface CategoryPricingPanelProps {
@@ -40,9 +40,15 @@ export interface CategoryPricingPanelProps {
   onDoorsTaxChange: (value: number) => void;
   onLightingTaxChange: (value: number) => void;
   
+  // Transportation & Installation
+  transportationPrice: number;
+  installationPrice: number;
+  onTransportationChange: (value: number) => void;
+  onInstallationChange: (value: number) => void;
+
   // User role for conditional rendering
   userRole?: 'ROLE_SUPER_ADMIN' | 'ROLE_STAFF';
-  
+
   // Optional kitchen name for context
   kitchenName?: string;
 }
@@ -68,6 +74,10 @@ export function CategoryPricingPanel({
   onCabinetsTaxChange,
   onDoorsTaxChange,
   onLightingTaxChange,
+  transportationPrice,
+  installationPrice,
+  onTransportationChange,
+  onInstallationChange,
   userRole = 'ROLE_SUPER_ADMIN', // Default to super admin for backward compatibility
   kitchenName,
 }: CategoryPricingPanelProps) {
@@ -113,15 +123,22 @@ export function CategoryPricingPanel({
     };
   }, [categorySubtotals, accessoriesMargin, accessoriesTax, cabinetsMargin, cabinetsTax, doorsMargin, doorsTax, lightingMargin, lightingTax]);
 
-  // Grand total (without transportation/installation - those are at quotation level)
+  // Grand total including transportation and installation
   const grandTotal = categoryTotals.accessories.finalTotal +
     categoryTotals.cabinets.finalTotal +
     categoryTotals.doors.finalTotal +
-    categoryTotals.lighting.finalTotal;
+    categoryTotals.lighting.finalTotal +
+    transportationPrice +
+    installationPrice;
 
-  const handleNumberInput = (value: string, onChange: (val: number) => void) => {
+  const handlePercentInput = (value: string, onChange: (val: number) => void) => {
     const numValue = parseFloat(value) || 0;
     onChange(Math.max(0, Math.min(numValue, 100)));
+  };
+
+  const handleCurrencyInput = (value: string, onChange: (val: number) => void) => {
+    const numValue = parseFloat(value) || 0;
+    onChange(Math.max(0, numValue));
   };
 
   const CategorySection = ({ 
@@ -166,7 +183,7 @@ export function CategoryPricingPanel({
                 max="100"
                 step="0.1"
                 value={marginPercent}
-                onChange={(e) => onMarginChange && handleNumberInput(e.target.value, onMarginChange)}
+                onChange={(e) => onMarginChange && handlePercentInput(e.target.value, onMarginChange)}
                 className="text-xs sm:text-sm"
                 title="Adjust margin per quotation for discounts/alterations (Super Admin only)"
               />
@@ -190,7 +207,7 @@ export function CategoryPricingPanel({
               max="100"
               step="0.1"
               value={taxPercent}
-              onChange={(e) => handleNumberInput(e.target.value, onTaxChange)}
+              onChange={(e) => handlePercentInput(e.target.value, onTaxChange)}
               className="text-xs sm:text-sm"
             />
             <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-text-600" />
@@ -276,6 +293,47 @@ export function CategoryPricingPanel({
               onTaxChange={onLightingTaxChange}
               total={categoryTotals.lighting}
             />
+          </div>
+        </div>
+
+        {/* Additional Costs */}
+        <div className="border-t border-background-600 pt-3 sm:pt-4 space-y-3 sm:space-y-4">
+          <h4 className="text-xs sm:text-sm font-semibold text-text-800">Additional Costs</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+            <div className="border border-background-600 rounded-lg p-3 sm:p-4 bg-background-800/50">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-orange-500/10">
+                  <Truck className="h-4 w-4 text-orange-500" />
+                </div>
+                <label className="text-xs sm:text-sm font-semibold text-text-800">Transportation</label>
+              </div>
+              <Input
+                type="number"
+                min="0"
+                step="100"
+                value={transportationPrice}
+                onChange={(e) => handleCurrencyInput(e.target.value, onTransportationChange)}
+                placeholder="0"
+                className="text-xs sm:text-sm"
+              />
+            </div>
+            <div className="border border-background-600 rounded-lg p-3 sm:p-4 bg-background-800/50">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-teal-500/10">
+                  <Wrench className="h-4 w-4 text-teal-500" />
+                </div>
+                <label className="text-xs sm:text-sm font-semibold text-text-800">Installation</label>
+              </div>
+              <Input
+                type="number"
+                min="0"
+                step="100"
+                value={installationPrice}
+                onChange={(e) => handleCurrencyInput(e.target.value, onInstallationChange)}
+                placeholder="0"
+                className="text-xs sm:text-sm"
+              />
+            </div>
           </div>
         </div>
 
