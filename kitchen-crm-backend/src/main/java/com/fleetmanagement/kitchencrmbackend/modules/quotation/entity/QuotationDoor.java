@@ -71,16 +71,4 @@ public class QuotationDoor extends Auditable {
     @Column(name = "elevation_name", length = 100)
     private String elevationName;
 
-    // Calculate base total price (without margin/tax)
-    @PrePersist
-    @PreUpdate
-    public void calculateTotalPrice() {
-        if (unitPrice != null && quantity != null) {
-            if (calculatedSqft != null) {
-                this.totalPrice = unitPrice.multiply(calculatedSqft).multiply(BigDecimal.valueOf(quantity));
-            } else {
-                this.totalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
-            }
-        }
-    }
 }
