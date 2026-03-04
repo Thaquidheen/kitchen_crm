@@ -66,6 +66,14 @@ export function QuotationBuilderPage() {
   const [editingDoorKitchenIndex, setEditingDoorKitchenIndex] = useState<number | null>(null);
 
   const [currentStep, setCurrentStep] = useState<BuilderStep>('customer');
+  const [highestVisitedStep, setHighestVisitedStep] = useState(0);
+
+  useEffect(() => {
+    const steps: BuilderStep[] = ['customer', 'kitchens', 'products', 'review'];
+    const idx = steps.indexOf(currentStep);
+    setHighestVisitedStep(prev => Math.max(prev, idx));
+  }, [currentStep]);
+
   const [customerKitchenTypes, setCustomerKitchenTypes] = useState<string[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const initialFormDataRef = useRef<string | null>(null);
@@ -370,11 +378,12 @@ export function QuotationBuilderPage() {
 
   // Helper function to convert form data to API request format
   const convertFormDataToRequest = (isDraft: boolean): CreateQuotationRequest => {
+    const hasKitchens = (formData.kitchens?.length || 0) > 0;
     return {
       customerId: formData.customerId || 0,
       projectName: formData.projectName || undefined,
-      transportationPrice: formData.transportationPrice || 0,
-      installationPrice: formData.installationPrice || 0,
+      transportationPrice: hasKitchens ? 0 : (formData.transportationPrice || 0),
+      installationPrice: hasKitchens ? 0 : (formData.installationPrice || 0),
       marginPercentage: formData.marginPercentage || 0, // Global (backward compatibility)
       taxPercentage: formData.taxPercentage || 0, // Global (backward compatibility)
       // Category-specific rates
@@ -724,8 +733,8 @@ export function QuotationBuilderPage() {
     const targetIndex = stepOrder.indexOf(stepId as BuilderStep);
     const currentIndex = stepOrder.indexOf(currentStep);
     if (targetIndex < 0 || targetIndex === currentIndex) return;
-    // Allow clicking any previous step freely
-    if (targetIndex < currentIndex) {
+    // Allow clicking any previously visited step (backward or forward)
+    if (targetIndex <= highestVisitedStep) {
       setCurrentStep(stepId as BuilderStep);
     }
   };
@@ -893,7 +902,7 @@ export function QuotationBuilderPage() {
           <div className="flex items-center gap-2 sm:gap-4 min-w-max">
             {steps.map((step, index) => {
               const currentIndex = stepOrder.indexOf(currentStep);
-              const isClickable = index < currentIndex;
+              const isClickable = index !== currentIndex && index <= highestVisitedStep;
               return (
                 <div key={step.id} className="flex items-center">
                   <div
@@ -1003,7 +1012,7 @@ export function QuotationBuilderPage() {
                             />
                           </div>
 
-                          {/* Transportation and Installation are set at quotation level, not per kitchen */}
+                          {/* Transportation and Installation are set per-kitchen in the Products step */}
                         </div>
                       </Card>
                     ))}
@@ -1248,8 +1257,8 @@ export function QuotationBuilderPage() {
                   cabinets={formData.cabinets || []}
                   doors={formData.doors || []}
                   lighting={formData.lighting || []}
-                  transportationPrice={formData.transportationPrice || 0}
-                  installationPrice={formData.installationPrice || 0}
+                  transportationPrice={formData.kitchens && formData.kitchens.length > 0 ? 0 : (formData.transportationPrice || 0)}
+                  installationPrice={formData.kitchens && formData.kitchens.length > 0 ? 0 : (formData.installationPrice || 0)}
                   accessoriesMarginPercentage={formData.accessoriesMarginPercentage || 20}
                   cabinetsMarginPercentage={formData.cabinetsMarginPercentage || 20}
                   doorsMarginPercentage={formData.doorsMarginPercentage || 20}

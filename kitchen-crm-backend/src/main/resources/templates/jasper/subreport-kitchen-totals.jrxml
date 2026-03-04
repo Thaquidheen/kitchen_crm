@@ -14,6 +14,7 @@
 
     <field name="kitchenName" class="java.lang.String"/>
     <field name="totalAmount" class="java.math.BigDecimal"/>
+    <field name="otherExpenses" class="java.math.BigDecimal"/>
 
     <detail>
         <band height="28" splitType="Stretch">
@@ -34,6 +35,16 @@
             <line>
                 <reportElement x="0" y="27" width="495" height="1" forecolor="#E8E0D5" uuid="cf100001-0000-0000-0000-000000000012"/>
             </line>
+        </band>
+        <band height="20" splitType="Stretch">
+            <printWhenExpression><![CDATA[$F{otherExpenses} != null && $F{otherExpenses}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+            <textField>
+                <reportElement x="20" y="0" width="240" height="18" forecolor="#777777" uuid="cf100001-0000-0000-0000-000000000020"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="8" isItalic="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["(Incl. Other Expenses: Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($F{otherExpenses}) + ")"]]></textFieldExpression>
+            </textField>
         </band>
     </detail>
 

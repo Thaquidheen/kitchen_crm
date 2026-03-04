@@ -88,6 +88,24 @@ export function KitchenProductTabs({
     onKitchensChange(updatedKitchens);
   };
 
+  const handleKitchenTransportationChange = (kitchenIndex: number, value: number) => {
+    const updatedKitchens = [...kitchens];
+    updatedKitchens[kitchenIndex] = {
+      ...updatedKitchens[kitchenIndex],
+      transportationPrice: value,
+    };
+    onKitchensChange(updatedKitchens);
+  };
+
+  const handleKitchenInstallationChange = (kitchenIndex: number, value: number) => {
+    const updatedKitchens = [...kitchens];
+    updatedKitchens[kitchenIndex] = {
+      ...updatedKitchens[kitchenIndex],
+      installationPrice: value,
+    };
+    onKitchensChange(updatedKitchens);
+  };
+
 
   const tabs = kitchens.map((kitchen, index) => ({
     label: kitchen.kitchenName,
@@ -142,6 +160,10 @@ export function KitchenProductTabs({
                 cabinetsTax={cabinetsTaxPercentage}
                 doorsTax={doorsTaxPercentage}
                 lightingTax={lightingTaxPercentage}
+                transportationPrice={kitchen.transportationPrice || 0}
+                installationPrice={kitchen.installationPrice || 0}
+                onTransportationChange={(val) => handleKitchenTransportationChange(index, val)}
+                onInstallationChange={(val) => handleKitchenInstallationChange(index, val)}
                 onAccessoriesTaxChange={onAccessoriesTaxChange}
                 onCabinetsTaxChange={onCabinetsTaxChange}
                 onDoorsTaxChange={onDoorsTaxChange}

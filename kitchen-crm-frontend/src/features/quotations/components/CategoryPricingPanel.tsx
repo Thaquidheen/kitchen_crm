@@ -296,9 +296,9 @@ export function CategoryPricingPanel({
           </div>
         </div>
 
-        {/* Additional Costs */}
+        {/* Other Expenses */}
         <div className="border-t border-background-600 pt-3 sm:pt-4 space-y-3 sm:space-y-4">
-          <h4 className="text-xs sm:text-sm font-semibold text-text-800">Additional Costs</h4>
+          <h4 className="text-xs sm:text-sm font-semibold text-text-800">Other Expenses</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             <div className="border border-background-600 rounded-lg p-3 sm:p-4 bg-background-800/50">
               <div className="flex items-center gap-2 mb-2">
@@ -308,9 +308,8 @@ export function CategoryPricingPanel({
                 <label className="text-xs sm:text-sm font-semibold text-text-800">Transportation</label>
               </div>
               <Input
-                type="number"
-                min="0"
-                step="100"
+                type="text"
+                inputMode="decimal"
                 value={transportationPrice}
                 onChange={(e) => handleCurrencyInput(e.target.value, onTransportationChange)}
                 placeholder="0"
@@ -325,15 +324,20 @@ export function CategoryPricingPanel({
                 <label className="text-xs sm:text-sm font-semibold text-text-800">Installation</label>
               </div>
               <Input
-                type="number"
-                min="0"
-                step="100"
+                type="text"
+                inputMode="decimal"
                 value={installationPrice}
                 onChange={(e) => handleCurrencyInput(e.target.value, onInstallationChange)}
                 placeholder="0"
                 className="text-xs sm:text-sm"
               />
             </div>
+          </div>
+          <div className="flex justify-between text-xs sm:text-sm pt-1">
+            <span className="text-text-700 font-medium">Other Expenses Total</span>
+            <span className="font-semibold text-text-900">
+              ₹{(transportationPrice + installationPrice).toLocaleString('en-IN')}
+            </span>
           </div>
         </div>
 

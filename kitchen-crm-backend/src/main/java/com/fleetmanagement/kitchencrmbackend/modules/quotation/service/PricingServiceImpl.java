@@ -262,10 +262,8 @@ public class PricingServiceImpl implements PricingService {
                 totalTax = totalTax.add(kitchen.getTaxAmount());
             }
             
-            // Add quotation-level transportation/installation (if any)
-            grandTotal = grandTotal
-                    .add(quotation.getTransportationPrice() != null ? quotation.getTransportationPrice() : BigDecimal.ZERO)
-                    .add(quotation.getInstallationPrice() != null ? quotation.getInstallationPrice() : BigDecimal.ZERO);
+            // Transportation/installation are now per-kitchen (included in kitchen.totalAmount)
+            // No quotation-level transportation/installation addition needed for multi-kitchen mode
             
             // Set quotation totals
             quotation.setSubtotal(grandTotal.subtract(totalMargin).subtract(totalTax));
@@ -536,6 +534,10 @@ public class PricingServiceImpl implements PricingService {
         kitchen.setSubtotal(kitchenSubtotal);
         kitchen.setMarginAmount(kitchenMargin);
         kitchen.setTaxAmount(kitchenTax);
-        kitchen.setTotalAmount(kitchenSubtotal.add(kitchenTax));
+
+        // Other Expenses = Transportation + Installation (per-kitchen)
+        BigDecimal otherExpenses = (kitchen.getTransportationPrice() != null ? kitchen.getTransportationPrice() : BigDecimal.ZERO)
+                .add(kitchen.getInstallationPrice() != null ? kitchen.getInstallationPrice() : BigDecimal.ZERO);
+        kitchen.setTotalAmount(kitchenSubtotal.add(kitchenTax).add(otherExpenses));
     }
 }

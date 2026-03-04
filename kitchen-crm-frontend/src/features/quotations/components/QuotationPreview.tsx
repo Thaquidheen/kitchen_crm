@@ -197,12 +197,14 @@ export function QuotationPreview({
         kCabinetsTotal.finalTotal +
         kDoorsTotal.finalTotal +
         kLightingTotal.finalTotal;
-      // Kitchen total is just the subtotal (transportation/installation are at quotation level)
-      const kitchenTotal = kitchenSubtotal;
+      // Other Expenses = Transportation + Installation (per-kitchen)
+      const otherExpenses = (kitchen.transportationPrice || 0) + (kitchen.installationPrice || 0);
+      const kitchenTotal = kitchenSubtotal + otherExpenses;
 
       return {
         kitchen,
         subtotal: kitchenSubtotal,
+        otherExpenses,
         total: kitchenTotal,
         categoryTotals: {
           accessories: kAccessoriesTotal,
@@ -358,6 +360,32 @@ export function QuotationPreview({
               {/* Kitchen Totals */}
               <div className="border-t border-background-600 pt-3 sm:pt-4">
                 <div className="space-y-2 text-xs sm:text-sm">
+                  {kitchenCalc.otherExpenses > 0 && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-text-700">Other Expenses</span>
+                        <span className="font-medium text-text-900">
+                          ₹{kitchenCalc.otherExpenses.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      {(kitchenCalc.kitchen.transportationPrice || 0) > 0 && (
+                        <div className="flex justify-between pl-3">
+                          <span className="text-text-600 text-xs">Transportation</span>
+                          <span className="text-text-700 text-xs">
+                            ₹{(kitchenCalc.kitchen.transportationPrice || 0).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
+                      {(kitchenCalc.kitchen.installationPrice || 0) > 0 && (
+                        <div className="flex justify-between pl-3">
+                          <span className="text-text-600 text-xs">Installation</span>
+                          <span className="text-text-700 text-xs">
+                            ₹{(kitchenCalc.kitchen.installationPrice || 0).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
                   <div className="flex justify-between border-t border-background-600 pt-2">
                     <span className="font-semibold text-text-900">Kitchen Total</span>
                     <span className="font-bold text-primary-600">
@@ -376,22 +404,14 @@ export function QuotationPreview({
               <h3 className="text-base sm:text-lg font-bold text-text-900">Grand Total Summary</h3>
             </div>
             <div className="space-y-2 sm:space-y-3">
-              {transportationPrice > 0 && (
-                <div className="flex justify-between text-xs sm:text-sm">
-                  <span className="text-text-700">Quotation Transportation</span>
+              {kitchenCalculations.map((kitchenCalc, idx) => (
+                <div key={idx} className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-text-700">{kitchenCalc.kitchen.kitchenName}</span>
                   <span className="font-medium text-text-900">
-                    ₹{transportationPrice.toLocaleString('en-IN')}
+                    ₹{kitchenCalc.total.toLocaleString('en-IN')}
                   </span>
                 </div>
-              )}
-              {installationPrice > 0 && (
-                <div className="flex justify-between text-xs sm:text-sm">
-                  <span className="text-text-700">Quotation Installation</span>
-                  <span className="font-medium text-text-900">
-                    ₹{installationPrice.toLocaleString('en-IN')}
-                  </span>
-                </div>
-              )}
+              ))}
               <div className="border-t-2 border-primary-700 pt-2 sm:pt-3 mt-2 sm:mt-3">
                 <div className="flex justify-between items-center">
                   <span className="text-base sm:text-xl font-bold text-text-900">Grand Total</span>
