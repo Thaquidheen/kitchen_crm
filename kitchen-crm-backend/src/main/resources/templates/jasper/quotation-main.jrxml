@@ -257,7 +257,7 @@
     <!-- SUMMARY BAND — Terms & Conditions                            -->
     <!-- ============================================================ -->
     <summary>
-        <band height="870" splitType="Stretch">
+        <band height="812" splitType="Stretch">
             <break>
                 <reportElement x="0" y="0" width="595" height="1" uuid="ff000001-0000-0000-0000-000000000001"/>
             </break>
@@ -615,20 +615,20 @@
             </staticText>
 
             <!-- Footer -->
-            <staticText>
-                <reportElement positionType="Float" x="230" y="853" width="135" height="8" forecolor="#C8B8A0" uuid="ff000001-0000-0000-0000-000000000026"/>
-                <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font fontName="Serif" size="6"/>
-                </textElement>
-                <text><![CDATA[— — —]]></text>
-            </staticText>
             <textField>
-                <reportElement positionType="Float" x="0" y="794" width="595" height="18" forecolor="#6B5B4B" uuid="ff000001-0000-0000-0000-000000000027"/>
+                <reportElement positionType="Float" x="0" y="780" width="595" height="18" forecolor="#6B5B4B" uuid="ff000001-0000-0000-0000-000000000027"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font fontName="Serif" size="9" isItalic="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Thank you for choosing " + $P{COMPANY_NAME}]]></textFieldExpression>
             </textField>
+            <staticText>
+                <reportElement positionType="Float" x="230" y="800" width="135" height="8" forecolor="#C8B8A0" uuid="ff000001-0000-0000-0000-000000000026"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Serif" size="6"/>
+                </textElement>
+                <text><![CDATA[— — —]]></text>
+            </staticText>
         </band>
     </summary>
 
