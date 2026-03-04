@@ -946,10 +946,25 @@ export function QuotationBuilderPage() {
             {currentStep === 'customer' && (
               <div>
                 <h2 className="text-lg sm:text-xl font-bold text-text-900 mb-4">Select Customer</h2>
-                <CustomerSelector
-                  selectedCustomerId={formData.customerId}
-                  onSelect={handleCustomerSelect}
-                />
+                {isEditMode && selectedCustomer ? (
+                  <div className="p-4 rounded-lg border border-primary-600 bg-primary-900/20">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-background-600 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-text-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-text-900">{selectedCustomer.name}</p>
+                        {selectedCustomer.phone && <p className="text-sm text-text-600">{selectedCustomer.phone}</p>}
+                        {selectedCustomer.email && <p className="text-sm text-text-600">{selectedCustomer.email}</p>}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <CustomerSelector
+                    selectedCustomerId={formData.customerId}
+                    onSelect={handleCustomerSelect}
+                  />
+                )}
                 <div className="mt-4 sm:mt-6 flex justify-end">
                   <Button variant="primary" onClick={handleNext} className="w-full sm:w-auto">
                     Next: Add Kitchens
