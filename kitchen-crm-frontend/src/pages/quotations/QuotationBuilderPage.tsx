@@ -66,7 +66,7 @@ export function QuotationBuilderPage() {
   const [editingDoorKitchenIndex, setEditingDoorKitchenIndex] = useState<number | null>(null);
 
   const [currentStep, setCurrentStep] = useState<BuilderStep>('customer');
-  const [highestVisitedStep, setHighestVisitedStep] = useState(0);
+  const [highestVisitedStep, setHighestVisitedStep] = useState(isEditMode ? 3 : 0);
 
   useEffect(() => {
     const steps: BuilderStep[] = ['customer', 'kitchens', 'products', 'review'];
