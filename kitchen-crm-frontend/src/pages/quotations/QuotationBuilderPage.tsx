@@ -1151,19 +1151,6 @@ export function QuotationBuilderPage() {
                       />
                     </div>
 
-                    {/* Validity Date */}
-                    <div>
-                      <label className="block text-xs sm:text-sm font-medium text-text-700 mb-2">
-                        Valid Until
-                      </label>
-                      <Input
-                        type="date"
-                        value={formData.validUntil || ''}
-                        onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
-                        min={new Date().toISOString().split('T')[0]}
-                      />
-                    </div>
-
                     {/* Notes */}
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-text-700 mb-2">
@@ -1216,36 +1203,33 @@ export function QuotationBuilderPage() {
                         <div>
                           <label className="block text-xs text-text-600 mb-1">By Acceptance</label>
                           <Input
-                            type="number"
-                            min={0}
-                            max={100}
+                            type="text"
+                            inputMode="decimal"
                             value={formData.paymentAcceptancePct ?? 60}
                             onChange={(e) =>
-                              setFormData({ ...formData, paymentAcceptancePct: Number(e.target.value) })
+                              setFormData({ ...formData, paymentAcceptancePct: parseFloat(e.target.value) || 0 })
                             }
                           />
                         </div>
                         <div>
                           <label className="block text-xs text-text-600 mb-1">On Delivery</label>
                           <Input
-                            type="number"
-                            min={0}
-                            max={100}
+                            type="text"
+                            inputMode="decimal"
                             value={formData.paymentDeliveryPct ?? 30}
                             onChange={(e) =>
-                              setFormData({ ...formData, paymentDeliveryPct: Number(e.target.value) })
+                              setFormData({ ...formData, paymentDeliveryPct: parseFloat(e.target.value) || 0 })
                             }
                           />
                         </div>
                         <div>
                           <label className="block text-xs text-text-600 mb-1">After Installation</label>
                           <Input
-                            type="number"
-                            min={0}
-                            max={100}
+                            type="text"
+                            inputMode="decimal"
                             value={formData.paymentInstallationPct ?? 10}
                             onChange={(e) =>
-                              setFormData({ ...formData, paymentInstallationPct: Number(e.target.value) })
+                              setFormData({ ...formData, paymentInstallationPct: parseFloat(e.target.value) || 0 })
                             }
                           />
                         </div>

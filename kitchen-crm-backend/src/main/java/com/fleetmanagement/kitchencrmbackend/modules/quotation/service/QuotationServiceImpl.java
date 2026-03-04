@@ -131,7 +131,7 @@ public class QuotationServiceImpl implements QuotationService {
             Quotation quotation = new Quotation();
             quotation.setCustomer(customer);
             quotation.setProjectName(dto.getProjectName());
-            quotation.setValidUntil(dto.getValidUntil());
+            quotation.setValidUntil(LocalDate.now().plusDays(30));
             quotation.setNotes(dto.getNotes());
             quotation.setTermsConditions(dto.getTermsConditions());
 
@@ -206,7 +206,7 @@ public class QuotationServiceImpl implements QuotationService {
         existingQuotation.setInstallationPrice(quotationDto.getInstallationPrice());
         existingQuotation.setMarginPercentage(quotationDto.getMarginPercentage());
         existingQuotation.setTaxPercentage(quotationDto.getTaxPercentage());
-        existingQuotation.setValidUntil(quotationDto.getValidUntil());
+        existingQuotation.setValidUntil(LocalDate.now().plusDays(30));
         existingQuotation.setNotes(quotationDto.getNotes());
         existingQuotation.setTermsConditions(quotationDto.getTermsConditions());
         
