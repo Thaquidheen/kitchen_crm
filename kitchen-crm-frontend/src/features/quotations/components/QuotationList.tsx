@@ -95,7 +95,7 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
                 </th>
                 <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm hidden md:table-cell">
                   <button onClick={() => handleSort('createdAt')} className="flex items-center gap-1 hover:text-primary-500 transition-colors">
-                    Created
+                    Date
                     {filters.sortBy === 'createdAt' && (
                       <span className="text-xs">{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
                     )}

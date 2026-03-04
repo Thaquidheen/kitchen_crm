@@ -1071,7 +1071,7 @@ public class QuotationServiceImpl implements QuotationService {
                 quotation.getTotalAmount(),
                 quotation.getStatus(),
                 quotation.getValidUntil(),
-                quotation.getCreatedAt(),
+                quotation.getUpdatedAt() != null ? quotation.getUpdatedAt() : quotation.getCreatedAt(),
                 quotation.getCreatedBy()
         );
     }
