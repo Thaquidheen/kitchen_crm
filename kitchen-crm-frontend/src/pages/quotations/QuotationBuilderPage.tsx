@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
 import { FileText, ArrowLeft, Save, Send, FilePlus } from 'lucide-react';
 import { UnsavedChangesDialog } from '@/components/ui/UnsavedChangesDialog';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { CustomerSelector } from '@/features/quotations/components/CustomerSelector';
 import { ProductSelector } from '@/features/quotations/components/ProductSelector';
 import { SelectedProductsList } from '@/features/quotations/components/SelectedProductsList';
@@ -58,6 +59,15 @@ export function QuotationBuilderPage() {
   const [editingCabinetData, setEditingCabinetData] = useState<CabinetWithDimensions | null>(null);
   const [editingCabinetIndex, setEditingCabinetIndex] = useState<number | null>(null);
   const [editingKitchenIndex, setEditingKitchenIndex] = useState<number | null>(null);
+
+  // Linked door removal confirmation dialog state
+  const [pendingCabinetRemoval, setPendingCabinetRemoval] = useState<{
+    category: string;
+    index: number;
+    pairId: any;
+    kitchenIndex?: number;
+  } | null>(null);
+  const [showLinkedDoorRemoveDialog, setShowLinkedDoorRemoveDialog] = useState(false);
 
   // Edit door modal state
   const [editDoorModalOpen, setEditDoorModalOpen] = useState(false);
@@ -597,15 +607,134 @@ export function QuotationBuilderPage() {
       const updatedKitchens = [...(formData.kitchens || [])];
       const kitchen = { ...updatedKitchens[editingKitchenIndex] };
       const cabinets = [...(kitchen.cabinets || [])];
+      const oldCabinet = cabinets[editIndex] as any;
+      const oldPairId = oldCabinet?._tempPairId;
+
+      // Sync linked door changes
+      let doors = [...(kitchen.doors || [])];
+      if (oldPairId) {
+        if (!data.linkedDoor) {
+          // Door was unticked: remove the paired door
+          doors = doors.filter((d: any) => d._tempPairId !== oldPairId);
+        } else {
+          // Door still exists: update paired door data
+          doors = doors.map((d: any) => {
+            if (d._tempPairId !== oldPairId) return d;
+            const doorArea = data.linkedDoor!.faceArea || 0;
+            const doorPrice = data.linkedDoor!.doorType?.companyPrice || 0;
+            return {
+              ...d,
+              doorTypeId: data.linkedDoor!.doorTypeId,
+              doorTypeName: data.linkedDoor!.doorType?.name,
+              brandName: data.linkedDoor!.doorType?.brandName,
+              material: data.linkedDoor!.doorType?.material,
+              widthMm: data.linkedDoor!.widthMm,
+              heightMm: data.linkedDoor!.heightMm,
+              quantity: data.linkedDoor!.quantity,
+              unitPrice: doorPrice,
+              totalPrice: doorArea * doorPrice * data.linkedDoor!.quantity,
+              description: `${data.linkedDoor!.doorType?.name} (${data.linkedDoor!.widthMm}×${data.linkedDoor!.heightMm}mm)`,
+            };
+          });
+        }
+      } else if (data.linkedDoor) {
+        // Door was newly added: create paired door
+        const pairId = Date.now() + Math.random();
+        (data as any)._tempPairId = pairId;
+        const doorArea = data.linkedDoor.faceArea || 0;
+        const doorPrice = data.linkedDoor.doorType?.companyPrice || 0;
+        doors.push({
+          doorTypeId: data.linkedDoor.doorTypeId,
+          doorTypeName: data.linkedDoor.doorType?.name,
+          brandName: data.linkedDoor.doorType?.brandName,
+          material: data.linkedDoor.doorType?.material,
+          widthMm: data.linkedDoor.widthMm,
+          heightMm: data.linkedDoor.heightMm,
+          quantity: data.linkedDoor.quantity,
+          unitPrice: doorPrice,
+          totalPrice: doorArea * doorPrice * data.linkedDoor.quantity,
+          customDimensions: true,
+          description: `${data.linkedDoor.doorType?.name} (${data.linkedDoor.widthMm}×${data.linkedDoor.heightMm}mm)`,
+          elevationId: data.elevationId,
+          elevationName: data.elevationName,
+          _tempPairId: pairId,
+        } as any);
+      }
+
+      // Preserve _tempPairId on updated cabinet
+      if (oldPairId && data.linkedDoor) {
+        (data as any)._tempPairId = oldPairId;
+      }
+
       cabinets[editIndex] = data;
       kitchen.cabinets = cabinets;
+      kitchen.doors = doors;
       updatedKitchens[editingKitchenIndex] = kitchen;
       setFormData({ ...formData, kitchens: updatedKitchens });
     } else {
       // Update in global list
       const cabinets = [...(formData.cabinets || [])];
+      const oldCabinet = cabinets[editIndex] as any;
+      const oldPairId = oldCabinet?._tempPairId;
+
+      // Sync linked door changes
+      let doors = [...(formData.doors || [])];
+      if (oldPairId) {
+        if (!data.linkedDoor) {
+          // Door was unticked: remove the paired door
+          doors = doors.filter((d: any) => d._tempPairId !== oldPairId);
+        } else {
+          // Door still exists: update paired door data
+          doors = doors.map((d: any) => {
+            if (d._tempPairId !== oldPairId) return d;
+            const doorArea = data.linkedDoor!.faceArea || 0;
+            const doorPrice = data.linkedDoor!.doorType?.companyPrice || 0;
+            return {
+              ...d,
+              doorTypeId: data.linkedDoor!.doorTypeId,
+              doorTypeName: data.linkedDoor!.doorType?.name,
+              brandName: data.linkedDoor!.doorType?.brandName,
+              material: data.linkedDoor!.doorType?.material,
+              widthMm: data.linkedDoor!.widthMm,
+              heightMm: data.linkedDoor!.heightMm,
+              quantity: data.linkedDoor!.quantity,
+              unitPrice: doorPrice,
+              totalPrice: doorArea * doorPrice * data.linkedDoor!.quantity,
+              description: `${data.linkedDoor!.doorType?.name} (${data.linkedDoor!.widthMm}×${data.linkedDoor!.heightMm}mm)`,
+            };
+          });
+        }
+      } else if (data.linkedDoor) {
+        // Door was newly added: create paired door
+        const pairId = Date.now() + Math.random();
+        (data as any)._tempPairId = pairId;
+        const doorArea = data.linkedDoor.faceArea || 0;
+        const doorPrice = data.linkedDoor.doorType?.companyPrice || 0;
+        doors.push({
+          doorTypeId: data.linkedDoor.doorTypeId,
+          doorTypeName: data.linkedDoor.doorType?.name,
+          brandName: data.linkedDoor.doorType?.brandName,
+          material: data.linkedDoor.doorType?.material,
+          widthMm: data.linkedDoor.widthMm,
+          heightMm: data.linkedDoor.heightMm,
+          quantity: data.linkedDoor.quantity,
+          unitPrice: doorPrice,
+          totalPrice: doorArea * doorPrice * data.linkedDoor.quantity,
+          customDimensions: true,
+          description: `${data.linkedDoor.doorType?.name} (${data.linkedDoor.widthMm}×${data.linkedDoor.heightMm}mm)`,
+          elevationId: data.elevationId,
+          elevationName: data.elevationName,
+          _tempPairId: pairId,
+        } as any);
+      }
+
+      // Preserve _tempPairId on updated cabinet
+      if (oldPairId && data.linkedDoor) {
+        (data as any)._tempPairId = oldPairId;
+      }
+
       cabinets[editIndex] = data;
-      setFormData({ ...formData, cabinets });
+      setFormData({ ...formData, cabinets, doors });
     }
 
     // Reset edit state
@@ -613,6 +742,38 @@ export function QuotationBuilderPage() {
     setEditingCabinetData(null);
     setEditingCabinetIndex(null);
     setEditingKitchenIndex(null);
+  };
+
+  // Handle cabinet removal with linked door confirmation
+  const performCabinetRemoval = (removeDoorToo: boolean) => {
+    if (!pendingCabinetRemoval) return;
+    const { category, index, pairId, kitchenIndex } = pendingCabinetRemoval;
+
+    if (kitchenIndex !== undefined) {
+      // Kitchen-specific removal
+      const updatedKitchens = [...(formData.kitchens || [])];
+      const kitchen = { ...updatedKitchens[kitchenIndex] };
+      const list = [...(kitchen[category as keyof typeof kitchen] as any[] || [])];
+      list.splice(index, 1);
+      updatedKitchens[kitchenIndex] = { ...kitchen, [category]: list };
+      if (removeDoorToo && pairId && Array.isArray(kitchen.doors)) {
+        updatedKitchens[kitchenIndex].doors = kitchen.doors.filter((d: any) => d._tempPairId !== pairId);
+      }
+      setFormData({ ...formData, kitchens: updatedKitchens });
+    } else {
+      // Global removal
+      const next: any = { ...formData };
+      const list = (next[category] || []).slice();
+      list.splice(index, 1);
+      next[category] = list;
+      if (removeDoorToo && pairId && Array.isArray(next.doors)) {
+        next.doors = next.doors.filter((d: any) => d._tempPairId !== pairId);
+      }
+      setFormData(next);
+    }
+
+    setPendingCabinetRemoval(null);
+    setShowLinkedDoorRemoveDialog(false);
   };
 
   // Handle edit door from SelectedProductsList (kitchen-specific)
@@ -1343,21 +1504,22 @@ export function QuotationBuilderPage() {
                       lighting={kitchen.lighting || []}
                       availableElevations={kitchen.elevations || []}
                       onRemove={(category, index) => {
-                        const updatedKitchens = [...(formData.kitchens || [])];
-                        const kitchen = updatedKitchens[kitchenIndex];
-                        const list = [...(kitchen[category] || [])];
-                        const removed = list[index];
-                        list.splice(index, 1);
-                        updatedKitchens[kitchenIndex] = {
-                          ...kitchen,
-                          [category]: list,
-                        };
-                        // Cascade removal: if cabinet removed, also remove linked door
-                        // @ts-ignore
+                        const kitchen = (formData.kitchens || [])[kitchenIndex];
+                        const list = [...(kitchen?.[category] || [])];
+                        const removed = list[index] as any;
                         const pairId = removed?._tempPairId;
-                        if (category === 'cabinets' && pairId && Array.isArray(kitchen.doors)) {
-                          updatedKitchens[kitchenIndex].doors = kitchen.doors.filter((d: any) => d._tempPairId !== pairId);
+
+                        if (category === 'cabinets' && pairId) {
+                          // Cabinet has linked door — ask user
+                          setPendingCabinetRemoval({ category, index, pairId, kitchenIndex });
+                          setShowLinkedDoorRemoveDialog(true);
+                          return;
                         }
+
+                        // No linked door — remove directly
+                        const updatedKitchens = [...(formData.kitchens || [])];
+                        list.splice(index, 1);
+                        updatedKitchens[kitchenIndex] = { ...kitchen, [category]: list };
                         setFormData({ ...formData, kitchens: updatedKitchens });
                       }}
                       onEditCabinet={(cabinetIndex) => handleEditCabinetInKitchen(kitchenIndex, cabinetIndex)}
@@ -1375,17 +1537,21 @@ export function QuotationBuilderPage() {
                 lighting={formData.lighting || []}
                 availableElevations={[]}
                 onRemove={(category, index) => {
+                  const list = ((formData as any)[category] || []).slice();
+                  const removed = list[index] as any;
+                  const pairId = removed?._tempPairId;
+
+                  if (category === 'cabinets' && pairId) {
+                    // Cabinet has linked door — ask user
+                    setPendingCabinetRemoval({ category, index, pairId });
+                    setShowLinkedDoorRemoveDialog(true);
+                    return;
+                  }
+
+                  // No linked door — remove directly
                   const next: any = { ...formData };
-                  const list = (next[category] || []).slice();
-                  const removed = list[index];
                   list.splice(index, 1);
                   next[category] = list;
-                  // Cascade removal: if cabinet removed, also remove linked door
-                  // @ts-ignore
-                  const pairId = removed?._tempPairId;
-                  if (category === 'cabinets' && pairId && Array.isArray(next.doors)) {
-                    next.doors = next.doors.filter((d: any) => d._tempPairId !== pairId);
-                  }
                   setFormData(next);
                 }}
                 onEditCabinet={handleEditCabinetGlobal}
@@ -1431,6 +1597,18 @@ export function QuotationBuilderPage() {
           editIndex={editingDoorIndex}
         />
       )}
+
+      {/* Linked Door Removal Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showLinkedDoorRemoveDialog}
+        onClose={() => performCabinetRemoval(false)}
+        onConfirm={() => performCabinetRemoval(true)}
+        title="Remove Linked Door?"
+        message="This cabinet has a linked door. Do you want to remove the linked door as well?"
+        confirmText="Yes, Remove Door Too"
+        cancelText="No, Keep Door"
+        type="warning"
+      />
 
       {/* Unsaved Changes Dialog */}
       <UnsavedChangesDialog
