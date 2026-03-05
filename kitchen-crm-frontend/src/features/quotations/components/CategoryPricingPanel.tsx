@@ -3,7 +3,7 @@
  * Shows separate margin and tax inputs for each product category
  */
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Calculator, TrendingUp, Percent, Truck, Wrench } from 'lucide-react';
@@ -22,18 +22,6 @@ interface CategorySectionProps {
   showMargins: boolean;
 }
 
-function handlePercentInput(value: string, onChange: (val: number) => void) {
-  const numValue = value === '' ? 0 : parseFloat(value);
-  if (isNaN(numValue)) return;
-  onChange(Math.max(0, Math.min(numValue, 100)));
-}
-
-function handleCurrencyInput(value: string, onChange: (val: number) => void) {
-  const numValue = value === '' ? 0 : parseFloat(value);
-  if (isNaN(numValue)) return;
-  onChange(Math.max(0, numValue));
-}
-
 function CategorySection({
   label,
   icon,
@@ -46,6 +34,33 @@ function CategorySection({
   total,
   showMargins,
 }: CategorySectionProps) {
+  const [marginStr, setMarginStr] = useState(marginPercent ? String(marginPercent) : '');
+  const [taxStr, setTaxStr] = useState(taxPercent ? String(taxPercent) : '');
+
+  useEffect(() => {
+    setMarginStr(marginPercent ? String(marginPercent) : '');
+  }, [marginPercent]);
+
+  useEffect(() => {
+    setTaxStr(taxPercent ? String(taxPercent) : '');
+  }, [taxPercent]);
+
+  const handleMarginInput = (value: string) => {
+    setMarginStr(value);
+    const num = value === '' ? 0 : parseFloat(value);
+    if (!isNaN(num) && onMarginChange) {
+      onMarginChange(Math.max(0, Math.min(num, 100)));
+    }
+  };
+
+  const handleTaxInput = (value: string) => {
+    setTaxStr(value);
+    const num = value === '' ? 0 : parseFloat(value);
+    if (!isNaN(num)) {
+      onTaxChange(Math.max(0, Math.min(num, 100)));
+    }
+  };
+
   return (
     <div className="border border-background-600 rounded-lg p-3 sm:p-4 bg-background-800/50">
       <div className="flex items-center gap-2 mb-2 sm:mb-3">
@@ -72,8 +87,8 @@ function CategorySection({
               <Input
                 type="text"
                 inputMode="decimal"
-                value={marginPercent || ''}
-                onChange={(e) => onMarginChange && handlePercentInput(e.target.value, onMarginChange)}
+                value={marginStr}
+                onChange={(e) => handleMarginInput(e.target.value)}
                 placeholder="0"
                 className="text-xs sm:text-sm"
                 title="Adjust margin per quotation for discounts/alterations (Super Admin only)"
@@ -95,8 +110,8 @@ function CategorySection({
             <Input
               type="text"
               inputMode="decimal"
-              value={taxPercent || ''}
-              onChange={(e) => handlePercentInput(e.target.value, onTaxChange)}
+              value={taxStr}
+              onChange={(e) => handleTaxInput(e.target.value)}
               placeholder="0"
               className="text-xs sm:text-sm"
             />
@@ -192,6 +207,33 @@ export function CategoryPricingPanel({
 }: CategoryPricingPanelProps) {
 
   const showMargins = userRole === 'ROLE_SUPER_ADMIN';
+
+  const [transportStr, setTransportStr] = useState(transportationPrice ? String(transportationPrice) : '');
+  const [installStr, setInstallStr] = useState(installationPrice ? String(installationPrice) : '');
+
+  useEffect(() => {
+    setTransportStr(transportationPrice ? String(transportationPrice) : '');
+  }, [transportationPrice]);
+
+  useEffect(() => {
+    setInstallStr(installationPrice ? String(installationPrice) : '');
+  }, [installationPrice]);
+
+  const handleTransportInput = (value: string) => {
+    setTransportStr(value);
+    const num = value === '' ? 0 : parseFloat(value);
+    if (!isNaN(num)) {
+      onTransportationChange(Math.max(0, num));
+    }
+  };
+
+  const handleInstallInput = (value: string) => {
+    setInstallStr(value);
+    const num = value === '' ? 0 : parseFloat(value);
+    if (!isNaN(num)) {
+      onInstallationChange(Math.max(0, num));
+    }
+  };
 
   const categorySubtotals = useMemo(() => {
     const accessoriesSubtotal = accessories.reduce((sum, item) => sum + (item.totalPrice ?? item.price ?? 0), 0);
@@ -319,8 +361,8 @@ export function CategoryPricingPanel({
               <Input
                 type="text"
                 inputMode="decimal"
-                value={transportationPrice || ''}
-                onChange={(e) => handleCurrencyInput(e.target.value, onTransportationChange)}
+                value={transportStr}
+                onChange={(e) => handleTransportInput(e.target.value)}
                 placeholder="0"
                 className="text-xs sm:text-sm"
               />
@@ -335,8 +377,8 @@ export function CategoryPricingPanel({
               <Input
                 type="text"
                 inputMode="decimal"
-                value={installationPrice || ''}
-                onChange={(e) => handleCurrencyInput(e.target.value, onInstallationChange)}
+                value={installStr}
+                onChange={(e) => handleInstallInput(e.target.value)}
                 placeholder="0"
                 className="text-xs sm:text-sm"
               />
