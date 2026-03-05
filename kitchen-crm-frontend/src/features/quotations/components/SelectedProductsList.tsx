@@ -6,9 +6,9 @@
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Pencil, ChevronDown, ChevronRight, Layers } from 'lucide-react';
+import { Pencil, ChevronDown, ChevronRight, Layers, Receipt } from 'lucide-react';
 import { useState } from 'react';
-import type { QuotationElevation } from '../types';
+import type { QuotationElevation, QuotationOtherExpense } from '../types';
 
 interface AccessoryItem {
   id?: number;
@@ -66,8 +66,10 @@ export interface SelectedProductsListProps {
   cabinets: CabinetItem[];
   doors: DoorItem[];
   lighting: LightingItem[];
+  otherExpenses?: QuotationOtherExpense[];
   availableElevations?: QuotationElevation[];
   onRemove?: (category: 'accessories' | 'cabinets' | 'doors' | 'lighting', index: number) => void;
+  onRemoveOtherExpense?: (index: number) => void;
   onEditCabinet?: (index: number) => void;
   onEditDoor?: (index: number) => void;
 }
@@ -87,8 +89,10 @@ export function SelectedProductsList({
   cabinets,
   doors,
   lighting,
+  otherExpenses = [],
   availableElevations = [],
   onRemove,
+  onRemoveOtherExpense,
   onEditCabinet,
   onEditDoor
 }: SelectedProductsListProps) {
@@ -204,10 +208,12 @@ export function SelectedProductsList({
     );
   }, [accessories, cabinets, doors, lighting, availableElevations]);
 
-  const grandTotal = [...accessories, ...cabinets, ...doors, ...lighting].reduce(
+  const productTotal = [...accessories, ...cabinets, ...doors, ...lighting].reduce(
     (sum, i) => sum + ((i as any).totalPrice ?? (i as any).price ?? 0),
     0
   );
+  const otherExpensesTotal = otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const grandTotal = productTotal + otherExpensesTotal;
 
   const toggleElevation = (elevationName: string) => {
     setExpandedElevations(prev => ({
@@ -356,6 +362,38 @@ export function SelectedProductsList({
           </Card>
         );
       })}
+
+      {/* Other Expenses */}
+      {otherExpenses.length > 0 && otherExpenses.some(e => e.amount > 0) && (
+        <Card className="p-3 sm:p-4 bg-background-800 border-background-600">
+          <div className="flex items-center gap-2 mb-2">
+            <Receipt className="h-4 w-4 text-text-600" />
+            <span className="text-xs sm:text-sm font-semibold text-text-800">Other Expenses</span>
+          </div>
+          <div className="space-y-1">
+            {otherExpenses.filter(e => e.amount > 0).map((expense, index) => (
+              <div key={`expense-${index}`} className="text-xs text-text-700 p-2 bg-background-700/50 rounded-lg">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex-1">{expense.name}</span>
+                  <span className="font-semibold text-primary-400">
+                    ₹{expense.amount.toLocaleString('en-IN')}
+                  </span>
+                  {!expense.isDefault && onRemoveOtherExpense && (
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      onClick={() => onRemoveOtherExpense(index)}
+                      className="flex-shrink-0 text-xs px-2 py-1 text-error hover:text-error"
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card className="p-3 sm:p-4 bg-background-800 border-background-600 border-2 border-primary-700/50">
         <div className="text-xs sm:text-sm font-semibold text-text-800 mb-1">Grand Total</div>

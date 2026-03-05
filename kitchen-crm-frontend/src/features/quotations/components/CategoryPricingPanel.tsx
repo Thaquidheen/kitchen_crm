@@ -3,11 +3,11 @@
  * Shows separate margin and tax inputs for each product category
  */
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Calculator, TrendingUp, Percent, Truck, Wrench } from 'lucide-react';
+import { Calculator, TrendingUp, Percent, Receipt } from 'lucide-react';
 import clsx from 'clsx';
+import type { QuotationOtherExpense } from '../types';
 
 interface CategorySectionProps {
   label: string;
@@ -21,6 +21,9 @@ interface CategorySectionProps {
   total: { marginAmount: number; finalTotal: number };
   showMargins: boolean;
 }
+
+import { useState, useEffect } from 'react';
+import { Input } from '@/components/ui/Input';
 
 function CategorySection({
   label,
@@ -170,11 +173,8 @@ export interface CategoryPricingPanelProps {
   onDoorsTaxChange: (value: number) => void;
   onLightingTaxChange: (value: number) => void;
 
-  // Transportation & Installation
-  transportationPrice: number;
-  installationPrice: number;
-  onTransportationChange: (value: number) => void;
-  onInstallationChange: (value: number) => void;
+  // Other Expenses (Transportation, Installation, custom items)
+  otherExpenses?: QuotationOtherExpense[];
 
   // User role for conditional rendering
   userRole?: 'ROLE_SUPER_ADMIN' | 'ROLE_STAFF';
@@ -204,48 +204,17 @@ export function CategoryPricingPanel({
   onCabinetsTaxChange,
   onDoorsTaxChange,
   onLightingTaxChange,
-  transportationPrice,
-  installationPrice,
-  onTransportationChange,
-  onInstallationChange,
+  otherExpenses = [],
   userRole = 'ROLE_SUPER_ADMIN',
   kitchenName,
 }: CategoryPricingPanelProps) {
 
   const showMargins = userRole === 'ROLE_SUPER_ADMIN';
 
-  const [transportStr, setTransportStr] = useState(transportationPrice ? String(transportationPrice) : '');
-  const [installStr, setInstallStr] = useState(installationPrice ? String(installationPrice) : '');
-
-  useEffect(() => {
-    const localNum = transportStr === '' ? 0 : parseFloat(transportStr);
-    if (isNaN(localNum) || localNum !== transportationPrice) {
-      setTransportStr(transportationPrice ? String(transportationPrice) : '');
-    }
-  }, [transportationPrice]);
-
-  useEffect(() => {
-    const localNum = installStr === '' ? 0 : parseFloat(installStr);
-    if (isNaN(localNum) || localNum !== installationPrice) {
-      setInstallStr(installationPrice ? String(installationPrice) : '');
-    }
-  }, [installationPrice]);
-
-  const handleTransportInput = (value: string) => {
-    setTransportStr(value);
-    const num = value === '' ? 0 : parseFloat(value);
-    if (!isNaN(num)) {
-      onTransportationChange(Math.max(0, num));
-    }
-  };
-
-  const handleInstallInput = (value: string) => {
-    setInstallStr(value);
-    const num = value === '' ? 0 : parseFloat(value);
-    if (!isNaN(num)) {
-      onInstallationChange(Math.max(0, num));
-    }
-  };
+  const otherExpensesTotal = useMemo(
+    () => otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0),
+    [otherExpenses]
+  );
 
   const categorySubtotals = useMemo(() => {
     const accessoriesSubtotal = accessories.reduce((sum, item) => sum + (item.totalPrice ?? item.price ?? 0), 0);
@@ -287,8 +256,7 @@ export function CategoryPricingPanel({
     categoryTotals.cabinets.finalTotal +
     categoryTotals.doors.finalTotal +
     categoryTotals.lighting.finalTotal +
-    transportationPrice +
-    installationPrice;
+    otherExpensesTotal;
 
   return (
     <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
@@ -360,49 +328,30 @@ export function CategoryPricingPanel({
         </div>
 
         {/* Other Expenses */}
-        <div className="border-t border-background-600 pt-3 sm:pt-4 space-y-3 sm:space-y-4">
-          <h4 className="text-xs sm:text-sm font-semibold text-text-800">Other Expenses</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-            <div className="border border-background-600 rounded-lg p-3 sm:p-4 bg-background-800/50">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-1.5 sm:p-2 rounded-lg bg-orange-500/10">
-                  <Truck className="h-4 w-4 text-orange-500" />
-                </div>
-                <label className="text-xs sm:text-sm font-semibold text-text-800">Transportation</label>
-              </div>
-              <Input
-                type="text"
-                inputMode="decimal"
-                value={transportStr}
-                onChange={(e) => handleTransportInput(e.target.value)}
-                placeholder="0"
-                className="text-xs sm:text-sm"
-              />
+        {otherExpenses.length > 0 && (
+          <div className="border-t border-background-600 pt-3 sm:pt-4 space-y-3 sm:space-y-4">
+            <div className="flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-text-600" />
+              <h4 className="text-xs sm:text-sm font-semibold text-text-800">Other Expenses</h4>
             </div>
-            <div className="border border-background-600 rounded-lg p-3 sm:p-4 bg-background-800/50">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-1.5 sm:p-2 rounded-lg bg-teal-500/10">
-                  <Wrench className="h-4 w-4 text-teal-500" />
+            <div className="space-y-2">
+              {otherExpenses.filter(e => e.amount > 0).map((expense, index) => (
+                <div key={`expense-${index}`} className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-text-700">{expense.name}</span>
+                  <span className="font-medium text-text-900">
+                    ₹{expense.amount.toLocaleString('en-IN')}
+                  </span>
                 </div>
-                <label className="text-xs sm:text-sm font-semibold text-text-800">Installation</label>
-              </div>
-              <Input
-                type="text"
-                inputMode="decimal"
-                value={installStr}
-                onChange={(e) => handleInstallInput(e.target.value)}
-                placeholder="0"
-                className="text-xs sm:text-sm"
-              />
+              ))}
+            </div>
+            <div className="flex justify-between text-xs sm:text-sm pt-1 border-t border-background-700">
+              <span className="text-text-700 font-medium">Other Expenses Total</span>
+              <span className="font-semibold text-text-900">
+                ₹{otherExpensesTotal.toLocaleString('en-IN')}
+              </span>
             </div>
           </div>
-          <div className="flex justify-between text-xs sm:text-sm pt-1">
-            <span className="text-text-700 font-medium">Other Expenses Total</span>
-            <span className="font-semibold text-text-900">
-              ₹{(transportationPrice + installationPrice).toLocaleString('en-IN')}
-            </span>
-          </div>
-        </div>
+        )}
 
         {/* Grand Total */}
         <div className="border-t-2 border-primary-700 pt-3 sm:pt-4 mt-3 sm:mt-4">

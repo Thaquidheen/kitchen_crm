@@ -32,5 +32,6 @@ public class QuotationKitchenCreateDto {
     private List<QuotationCabinetDto> cabinets;
     private List<QuotationDoorDto> doors;
     private List<QuotationLightingDto> lighting;
+    private List<QuotationOtherExpenseDto> otherExpenses;
 }
 

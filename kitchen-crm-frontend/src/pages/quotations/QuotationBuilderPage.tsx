@@ -27,7 +27,7 @@ import { KitchenPlanImageSelector } from '@/features/quotations/components/Kitch
 import { KitchenProductTabs } from '@/features/quotations/components/KitchenProductTabs';
 import { AddCabinetModal, type CabinetWithDimensions } from '@/features/quotations/components/AddCabinetModal';
 import { AddDoorModal, type DoorWithDimensions } from '@/features/quotations/components/AddDoorModal';
-import type { QuotationFormData, CreateQuotationRequest, QuotationAccessory, QuotationCabinet, QuotationDoor, QuotationLighting, QuotationKitchenFormData } from '@/features/quotations/types';
+import type { QuotationFormData, CreateQuotationRequest, QuotationAccessory, QuotationCabinet, QuotationDoor, QuotationLighting, QuotationKitchenFormData, QuotationOtherExpense } from '@/features/quotations/types';
 import { SCOPE_FIELD_NAMES } from '@/features/quotations/types';
 import toast from 'react-hot-toast';
 import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
@@ -111,6 +111,10 @@ export function QuotationBuilderPage() {
     cabinets: [],
     doors: [],
     lighting: [],
+    otherExpenses: [
+      { name: 'Transportation', amount: 0, isDefault: true },
+      { name: 'Installation', amount: 0, isDefault: true },
+    ],
     kitchens: [],
     importantNote: 'THIS QUOTE IS ONLY FOR THE ITEMS MENTIONED IN THIS OFFER. ANY OTHER ITEMS OR APPLIANCES LIKE HOB, HOOD, FRIDGE, OVEN ETC ARE EXCLUDED FROM THIS QUOTE. THE QUOTE FOR THOSE ITEMS ARE GIVEN SEPARATELY. VALIDITY OF THIS QUOTE IS ONLY FOR 30 DAYS. THERE WILL BE REVISION OF PRICES IN EVERY 30 DAYS AS PER MARKET COST FLUCTUATIONS.',
     paymentAcceptancePct: 60,
@@ -187,6 +191,23 @@ export function QuotationBuilderPage() {
     };
 
     const globalPaired = pairCabinetsAndDoors(existingQuotation.cabinets || [], existingQuotation.doors || []);
+
+    // Build otherExpenses from backend data
+    const buildOtherExpenses = (transportPrice: number, installPrice: number, backendExpenses?: any[]): QuotationOtherExpense[] => {
+      if (backendExpenses && backendExpenses.length > 0) {
+        return backendExpenses.map((e: any) => ({
+          id: e.id,
+          name: e.name,
+          amount: Number(e.amount || 0),
+          isDefault: e.isDefault ?? false,
+        }));
+      }
+      // Fallback: build from transportationPrice/installationPrice
+      return [
+        { name: 'Transportation', amount: transportPrice, isDefault: true },
+        { name: 'Installation', amount: installPrice, isDefault: true },
+      ];
+    };
 
     // Map API quotation to builder form shape
     setFormData({
@@ -282,6 +303,11 @@ export function QuotationBuilderPage() {
             itemType: itemType,
           };
         }),
+        otherExpenses: buildOtherExpenses(
+          Number(k.transportationPrice || 0),
+          Number(k.installationPrice || 0),
+          k.otherExpenses
+        ),
       })),
       lighting: (existingQuotation.lighting || []).map((l: any) => {
         // Try to reconstruct the itemType from the description or fallback to itemType
@@ -301,6 +327,11 @@ export function QuotationBuilderPage() {
           itemType: itemType,
         };
       }),
+      otherExpenses: buildOtherExpenses(
+        Number(existingQuotation.transportationPrice || 0),
+        Number(existingQuotation.installationPrice || 0),
+        existingQuotation.otherExpenses
+      ),
     });
   }, [isEditMode, existingQuotation]);
 
@@ -372,11 +403,15 @@ export function QuotationBuilderPage() {
   // Helper function to convert form data to API request format
   const convertFormDataToRequest = (isDraft: boolean): CreateQuotationRequest => {
     const hasKitchens = (formData.kitchens?.length || 0) > 0;
+    // Extract transportation/installation from otherExpenses for backward compat
+    const globalExpenses = formData.otherExpenses || [];
+    const transportFromExpenses = globalExpenses.find(e => e.name === 'Transportation')?.amount || 0;
+    const installFromExpenses = globalExpenses.find(e => e.name === 'Installation')?.amount || 0;
     return {
       customerId: formData.customerId || 0,
       projectName: formData.projectName || undefined,
-      transportationPrice: hasKitchens ? 0 : (formData.transportationPrice || 0),
-      installationPrice: hasKitchens ? 0 : (formData.installationPrice || 0),
+      transportationPrice: hasKitchens ? 0 : transportFromExpenses,
+      installationPrice: hasKitchens ? 0 : installFromExpenses,
       marginPercentage: formData.marginPercentage || 0, // Global (backward compatibility)
       taxPercentage: formData.taxPercentage || 0, // Global (backward compatibility)
       // Category-specific rates
@@ -440,11 +475,16 @@ export function QuotationBuilderPage() {
         totalPrice: item.totalPrice || item.price || 0,
         description: item.name || item.description || 'Lighting Item',
       })) as QuotationLighting[],
-      kitchens: (formData.kitchens || []).map((kitchen: QuotationKitchenFormData) => ({
+      otherExpenses: hasKitchens ? [] : (formData.otherExpenses || []).filter(e => e.amount > 0 || e.isDefault),
+      kitchens: (formData.kitchens || []).map((kitchen: QuotationKitchenFormData) => {
+        const kitchenExpenses = kitchen.otherExpenses || [];
+        const kitchenTransport = kitchenExpenses.find(e => e.name === 'Transportation')?.amount || 0;
+        const kitchenInstall = kitchenExpenses.find(e => e.name === 'Installation')?.amount || 0;
+        return {
         kitchenName: kitchen.kitchenName,
         kitchenOrder: kitchen.kitchenOrder,
-        transportationPrice: kitchen.transportationPrice || 0,
-        installationPrice: kitchen.installationPrice || 0,
+        transportationPrice: kitchenTransport,
+        installationPrice: kitchenInstall,
         scopeDetails: kitchen.scopeDetails.map((sd) => ({
           fieldName: sd.fieldName,
           fieldValue: sd.fieldValue,
@@ -502,7 +542,9 @@ export function QuotationBuilderPage() {
           totalPrice: item.totalPrice || item.price || 0,
           description: item.name || item.description || 'Lighting Item',
         })),
-      })),
+        otherExpenses: kitchenExpenses.filter(e => e.amount > 0 || e.isDefault),
+      };
+      }),
     };
   };
 
@@ -1228,6 +1270,7 @@ export function QuotationBuilderPage() {
                         cabinets: formData.cabinets || [],
                         doors: formData.doors || [],
                         lighting: formData.lighting || [],
+                        otherExpenses: formData.otherExpenses || [],
                       }}
                       onProductsChange={(products) => setFormData({ ...formData, ...products })}
                     />
@@ -1239,8 +1282,7 @@ export function QuotationBuilderPage() {
                         cabinets={formData.cabinets || []}
                         doors={formData.doors || []}
                         lighting={formData.lighting || []}
-                        transportationPrice={formData.transportationPrice || 0}
-                        installationPrice={formData.installationPrice || 0}
+                        otherExpenses={formData.otherExpenses || []}
                         accessoriesMargin={formData.accessoriesMarginPercentage ?? 20}
                         cabinetsMargin={formData.cabinetsMarginPercentage ?? 20}
                         doorsMargin={formData.doorsMarginPercentage ?? 20}
@@ -1249,12 +1291,6 @@ export function QuotationBuilderPage() {
                         cabinetsTax={formData.cabinetsTaxPercentage ?? 18}
                         doorsTax={formData.doorsTaxPercentage ?? 18}
                         lightingTax={formData.lightingTaxPercentage ?? 18}
-                        onTransportationChange={(val) =>
-                          setFormData({ ...formData, transportationPrice: val })
-                        }
-                        onInstallationChange={(val) =>
-                          setFormData({ ...formData, installationPrice: val })
-                        }
                         onAccessoriesTaxChange={(val) => setFormData({ ...formData, accessoriesTaxPercentage: val })}
                         onCabinetsTaxChange={(val) => setFormData({ ...formData, cabinetsTaxPercentage: val })}
                         onDoorsTaxChange={(val) => setFormData({ ...formData, doorsTaxPercentage: val })}
@@ -1416,8 +1452,8 @@ export function QuotationBuilderPage() {
                   cabinets={formData.cabinets || []}
                   doors={formData.doors || []}
                   lighting={formData.lighting || []}
-                  transportationPrice={formData.kitchens && formData.kitchens.length > 0 ? 0 : (formData.transportationPrice || 0)}
-                  installationPrice={formData.kitchens && formData.kitchens.length > 0 ? 0 : (formData.installationPrice || 0)}
+                  transportationPrice={formData.kitchens && formData.kitchens.length > 0 ? 0 : ((formData.otherExpenses || []).find(e => e.name === 'Transportation')?.amount || 0)}
+                  installationPrice={formData.kitchens && formData.kitchens.length > 0 ? 0 : ((formData.otherExpenses || []).find(e => e.name === 'Installation')?.amount || 0)}
                   accessoriesMarginPercentage={formData.accessoriesMarginPercentage ?? 20}
                   cabinetsMarginPercentage={formData.cabinetsMarginPercentage ?? 20}
                   doorsMarginPercentage={formData.doorsMarginPercentage ?? 20}
@@ -1485,6 +1521,7 @@ export function QuotationBuilderPage() {
                       cabinets={kitchen.cabinets || []}
                       doors={kitchen.doors || []}
                       lighting={kitchen.lighting || []}
+                      otherExpenses={kitchen.otherExpenses || []}
                       availableElevations={kitchen.elevations || []}
                       onRemove={(category, index) => {
                         const kitchen = (formData.kitchens || [])[kitchenIndex];
@@ -1505,6 +1542,14 @@ export function QuotationBuilderPage() {
                         updatedKitchens[kitchenIndex] = { ...kitchen, [category]: list };
                         setFormData({ ...formData, kitchens: updatedKitchens });
                       }}
+                      onRemoveOtherExpense={(expenseIndex) => {
+                        const updatedKitchens = [...(formData.kitchens || [])];
+                        const kitchen = updatedKitchens[kitchenIndex];
+                        const expenses = [...(kitchen.otherExpenses || [])];
+                        expenses.splice(expenseIndex, 1);
+                        updatedKitchens[kitchenIndex] = { ...kitchen, otherExpenses: expenses };
+                        setFormData({ ...formData, kitchens: updatedKitchens });
+                      }}
                       onEditCabinet={(cabinetIndex) => handleEditCabinetInKitchen(kitchenIndex, cabinetIndex)}
                       onEditDoor={(doorIndex) => handleEditDoorInKitchen(kitchenIndex, doorIndex)}
                     />
@@ -1518,6 +1563,7 @@ export function QuotationBuilderPage() {
                 cabinets={formData.cabinets || []}
                 doors={formData.doors || []}
                 lighting={formData.lighting || []}
+                otherExpenses={formData.otherExpenses || []}
                 availableElevations={[]}
                 onRemove={(category, index) => {
                   const list = ((formData as any)[category] || []).slice();
@@ -1536,6 +1582,11 @@ export function QuotationBuilderPage() {
                   list.splice(index, 1);
                   next[category] = list;
                   setFormData(next);
+                }}
+                onRemoveOtherExpense={(expenseIndex) => {
+                  const expenses = [...(formData.otherExpenses || [])];
+                  expenses.splice(expenseIndex, 1);
+                  setFormData({ ...formData, otherExpenses: expenses });
                 }}
                 onEditCabinet={handleEditCabinetGlobal}
                 onEditDoor={handleEditDoorGlobal}

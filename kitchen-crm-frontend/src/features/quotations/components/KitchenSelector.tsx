@@ -48,6 +48,10 @@ export function KitchenSelector({ kitchens, onKitchensChange, suggestedKitchenTy
       cabinets: [],
       doors: [],
       lighting: [],
+      otherExpenses: [
+        { name: 'Transportation', amount: 0, isDefault: true },
+        { name: 'Installation', amount: 0, isDefault: true },
+      ],
     };
 
     onKitchensChange([...kitchens, newKitchen]);

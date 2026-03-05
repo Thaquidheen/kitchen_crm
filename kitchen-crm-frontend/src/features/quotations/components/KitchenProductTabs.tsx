@@ -76,6 +76,7 @@ export function KitchenProductTabs({
     cabinets?: any[];
     doors?: any[];
     lighting?: any[];
+    otherExpenses?: any[];
   }) => {
     const updatedKitchens = [...kitchens];
     updatedKitchens[kitchenIndex] = {
@@ -84,24 +85,7 @@ export function KitchenProductTabs({
       cabinets: products.cabinets ?? updatedKitchens[kitchenIndex].cabinets,
       doors: products.doors ?? updatedKitchens[kitchenIndex].doors,
       lighting: products.lighting ?? updatedKitchens[kitchenIndex].lighting,
-    };
-    onKitchensChange(updatedKitchens);
-  };
-
-  const handleKitchenTransportationChange = (kitchenIndex: number, value: number) => {
-    const updatedKitchens = [...kitchens];
-    updatedKitchens[kitchenIndex] = {
-      ...updatedKitchens[kitchenIndex],
-      transportationPrice: value,
-    };
-    onKitchensChange(updatedKitchens);
-  };
-
-  const handleKitchenInstallationChange = (kitchenIndex: number, value: number) => {
-    const updatedKitchens = [...kitchens];
-    updatedKitchens[kitchenIndex] = {
-      ...updatedKitchens[kitchenIndex],
-      installationPrice: value,
+      otherExpenses: products.otherExpenses ?? updatedKitchens[kitchenIndex].otherExpenses,
     };
     onKitchensChange(updatedKitchens);
   };
@@ -122,6 +106,7 @@ export function KitchenProductTabs({
               cabinets: kitchen.cabinets || [],
               doors: kitchen.doors || [],
               lighting: kitchen.lighting || [],
+              otherExpenses: kitchen.otherExpenses || [],
             }}
             onProductsChange={(products) => handleKitchenProductsChange(index, products)}
             availableElevations={kitchen.elevations || []}
@@ -160,10 +145,7 @@ export function KitchenProductTabs({
                 cabinetsTax={cabinetsTaxPercentage}
                 doorsTax={doorsTaxPercentage}
                 lightingTax={lightingTaxPercentage}
-                transportationPrice={kitchen.transportationPrice || 0}
-                installationPrice={kitchen.installationPrice || 0}
-                onTransportationChange={(val) => handleKitchenTransportationChange(index, val)}
-                onInstallationChange={(val) => handleKitchenInstallationChange(index, val)}
+                otherExpenses={kitchen.otherExpenses || []}
                 onAccessoriesTaxChange={onAccessoriesTaxChange}
                 onCabinetsTaxChange={onCabinetsTaxChange}
                 onDoorsTaxChange={onDoorsTaxChange}

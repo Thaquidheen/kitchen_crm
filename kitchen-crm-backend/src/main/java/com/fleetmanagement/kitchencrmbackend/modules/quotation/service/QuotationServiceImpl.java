@@ -97,6 +97,9 @@ public class QuotationServiceImpl implements QuotationService {
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.customer.repository.DesignPhaseFileRepository designPhaseFileRepository;
 
+    @Autowired
+    private QuotationOtherExpenseRepository otherExpenseRepository;
+
     @Override
     public ApiResponse<Page<QuotationSummaryDto>> getAllQuotations(Long customerId, Quotation.QuotationStatus status,
                                                                    String customerName, LocalDateTime fromDate,
@@ -625,6 +628,18 @@ public class QuotationServiceImpl implements QuotationService {
                 lightingRepository.save(lighting);
             }
         }
+
+        // Save other expenses
+        if (dto.getOtherExpenses() != null) {
+            for (QuotationOtherExpenseDto expenseDto : dto.getOtherExpenses()) {
+                QuotationOtherExpense expense = new QuotationOtherExpense();
+                expense.setQuotation(quotation);
+                expense.setName(expenseDto.getName());
+                expense.setAmount(expenseDto.getAmount() != null ? expenseDto.getAmount() : BigDecimal.ZERO);
+                expense.setIsDefault(expenseDto.getIsDefault() != null ? expenseDto.getIsDefault() : false);
+                otherExpenseRepository.save(expense);
+            }
+        }
     }
 
     // NEW: Helper method to determine unit based on lighting item type
@@ -821,6 +836,19 @@ public class QuotationServiceImpl implements QuotationService {
                 lightingRepository.save(lighting);
             }
         }
+
+        // Save other expenses for this kitchen
+        if (kitchenDto.getOtherExpenses() != null) {
+            for (QuotationOtherExpenseDto expenseDto : kitchenDto.getOtherExpenses()) {
+                QuotationOtherExpense expense = new QuotationOtherExpense();
+                expense.setQuotation(quotation);
+                expense.setKitchen(kitchen);
+                expense.setName(expenseDto.getName());
+                expense.setAmount(expenseDto.getAmount() != null ? expenseDto.getAmount() : BigDecimal.ZERO);
+                expense.setIsDefault(expenseDto.getIsDefault() != null ? expenseDto.getIsDefault() : false);
+                otherExpenseRepository.save(expense);
+            }
+        }
     }
 
     private void deleteExistingLineItems(Long quotationId) {
@@ -828,6 +856,7 @@ public class QuotationServiceImpl implements QuotationService {
         cabinetRepository.deleteByQuotationId(quotationId);
         doorRepository.deleteByQuotationId(quotationId);
         lightingRepository.deleteByQuotationId(quotationId);
+        otherExpenseRepository.deleteByQuotationId(quotationId);
     }
 
     private void duplicateLineItems(Long originalQuotationId, Quotation newQuotation) {
@@ -1055,6 +1084,7 @@ public class QuotationServiceImpl implements QuotationService {
         dto.setCabinets(loadCabinets(quotation.getId(), userRole));
         dto.setDoors(loadDoors(quotation.getId(), userRole));
         dto.setLighting(loadLighting(quotation.getId(), userRole));
+        dto.setOtherExpenses(loadOtherExpenses(quotation.getId()));
 
         // Load kitchens
         dto.setKitchens(loadKitchens(quotation.getId()));
@@ -1254,7 +1284,8 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setCabinets(cabinets);
             dto.setDoors(doors);
             dto.setLighting(lighting);
-            
+            dto.setOtherExpenses(loadOtherExpensesForKitchen(kitchen.getId()));
+
             return dto;
         }).toList();
     }
@@ -1413,6 +1444,30 @@ public class QuotationServiceImpl implements QuotationService {
                 dto.setKitchenId(lighting.getKitchen().getId());
             }
 
+            return dto;
+        }).toList();
+    }
+
+    private List<QuotationOtherExpenseDto> loadOtherExpenses(Long quotationId) {
+        List<QuotationOtherExpense> expenses = otherExpenseRepository.findByQuotationId(quotationId);
+        return expenses.stream().map(expense -> {
+            QuotationOtherExpenseDto dto = new QuotationOtherExpenseDto();
+            dto.setId(expense.getId());
+            dto.setName(expense.getName());
+            dto.setAmount(expense.getAmount());
+            dto.setIsDefault(expense.getIsDefault());
+            return dto;
+        }).toList();
+    }
+
+    private List<QuotationOtherExpenseDto> loadOtherExpensesForKitchen(Long kitchenId) {
+        List<QuotationOtherExpense> expenses = otherExpenseRepository.findByKitchenId(kitchenId);
+        return expenses.stream().map(expense -> {
+            QuotationOtherExpenseDto dto = new QuotationOtherExpenseDto();
+            dto.setId(expense.getId());
+            dto.setName(expense.getName());
+            dto.setAmount(expense.getAmount());
+            dto.setIsDefault(expense.getIsDefault());
             return dto;
         }).toList();
     }

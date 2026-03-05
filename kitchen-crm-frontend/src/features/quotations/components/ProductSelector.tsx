@@ -8,11 +8,13 @@ import { Tabs } from '@/components/ui/Tabs';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { CategoryProducts } from './CategoryProducts';
+import { OtherExpensesTab } from './OtherExpensesTab';
 import type {
   QuotationAccessory,
   QuotationCabinet,
   QuotationDoor,
   QuotationLighting,
+  QuotationOtherExpense,
   QuotationElevation,
 } from '../types';
 
@@ -22,6 +24,7 @@ export interface ProductSelectorProps {
     cabinets: QuotationCabinet[];
     doors: QuotationDoor[];
     lighting: QuotationLighting[];
+    otherExpenses?: QuotationOtherExpense[];
   };
   onProductsChange: (products: Partial<ProductSelectorProps['selectedProducts']>) => void;
   availableElevations?: QuotationElevation[];
@@ -30,7 +33,7 @@ export interface ProductSelectorProps {
 export function ProductSelector({ selectedProducts, onProductsChange, availableElevations = [] }: ProductSelectorProps) {
   const [search, setSearch] = useState('');
 
-  const tabs = useMemo(
+  const productTabs = useMemo(
     () => [
       { key: 'accessories', label: 'Accessories' },
       { key: 'cabinets', label: 'Cabinets' },
@@ -286,24 +289,35 @@ export function ProductSelector({ selectedProducts, onProductsChange, availableE
       {/* Category Tabs */}
       <Card className="p-0 bg-background-800 border-background-600">
         <Tabs
-          tabs={tabs.map((t) => ({
-            label: t.label,
-            content: (
-              <CategoryProducts
-                category={t.key as any}
-                search={search}
-                onAdd={(item) => handleAdd(t.key as any, item)}
-                getQuantity={(id: number, itemType?: string) => getQuantity(t.key as any, id, itemType)}
-                onIncrement={(id: number, unitPrice: number, initial: any) => handleIncrement(t.key as any, id, unitPrice, initial)}
-                onDecrement={(id: number, unitPrice: number) => handleDecrement(t.key as any, id, unitPrice)}
-                selectedAccessories={selectedProducts.accessories}
-                selectedCabinets={selectedProducts.cabinets}
-                selectedDoors={selectedProducts.doors}
-                selectedLighting={selectedProducts.lighting}
-                availableElevations={availableElevations}
-              />
-            ),
-          }))}
+          tabs={[
+            ...productTabs.map((t) => ({
+              label: t.label,
+              content: (
+                <CategoryProducts
+                  category={t.key as any}
+                  search={search}
+                  onAdd={(item) => handleAdd(t.key as any, item)}
+                  getQuantity={(id: number, itemType?: string) => getQuantity(t.key as any, id, itemType)}
+                  onIncrement={(id: number, unitPrice: number, initial: any) => handleIncrement(t.key as any, id, unitPrice, initial)}
+                  onDecrement={(id: number, unitPrice: number) => handleDecrement(t.key as any, id, unitPrice)}
+                  selectedAccessories={selectedProducts.accessories}
+                  selectedCabinets={selectedProducts.cabinets}
+                  selectedDoors={selectedProducts.doors}
+                  selectedLighting={selectedProducts.lighting}
+                  availableElevations={availableElevations}
+                />
+              ),
+            })),
+            {
+              label: 'Other Expenses',
+              content: (
+                <OtherExpensesTab
+                  expenses={selectedProducts.otherExpenses || []}
+                  onChange={(otherExpenses) => onProductsChange({ otherExpenses })}
+                />
+              ),
+            },
+          ]}
         />
       </Card>
     </div>

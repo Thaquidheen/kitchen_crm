@@ -111,6 +111,14 @@ export interface QuotationLighting extends QuotationLineItem {
   kitchenId?: number; // Reference to quotation_kitchens
 }
 
+// Other expense line item (custom or default like Transportation/Installation)
+export interface QuotationOtherExpense {
+  id?: number;
+  name: string;
+  amount: number;
+  isDefault?: boolean; // true for Transportation/Installation
+}
+
 // Category totals
 export interface CategoryTotals {
   base: number;
@@ -206,6 +214,7 @@ export interface Quotation {
   cabinets?: QuotationCabinet[];
   doors?: QuotationDoor[];
   lighting?: QuotationLighting[];
+  otherExpenses?: QuotationOtherExpense[];
 
   // Kitchens (multi-kitchen support)
   kitchens?: QuotationKitchen[];
@@ -252,6 +261,7 @@ export interface CreateQuotationRequest {
   cabinets?: QuotationCabinet[];
   doors?: QuotationDoor[];
   lighting?: QuotationLighting[];
+  otherExpenses?: QuotationOtherExpense[];
 
   // Kitchens (multi-kitchen support)
   kitchens?: QuotationKitchen[];
@@ -403,6 +413,7 @@ export interface QuotationKitchen {
   cabinets?: QuotationCabinet[];
   doors?: QuotationDoor[];
   lighting?: QuotationLighting[];
+  otherExpenses?: QuotationOtherExpense[];
 }
 
 export interface QuotationKitchenFormData {
@@ -417,6 +428,7 @@ export interface QuotationKitchenFormData {
   cabinets: QuotationCabinet[];
   doors: QuotationDoor[];
   lighting: QuotationLighting[];
+  otherExpenses: QuotationOtherExpense[];
 }
 
 // Quotation form data for the builder
@@ -434,6 +446,7 @@ export interface QuotationFormData {
   cabinets: QuotationCabinet[];
   doors: QuotationDoor[];
   lighting: QuotationLighting[];
+  otherExpenses: QuotationOtherExpense[];
   kitchens?: QuotationKitchenFormData[];
   importantNote?: string;
   paymentAcceptancePct?: number;

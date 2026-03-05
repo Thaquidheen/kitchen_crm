@@ -162,6 +162,10 @@ public class Quotation extends Auditable {
     @OneToMany(mappedBy = "quotation", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<QuotationLighting> lighting = new ArrayList<>();
 
+    // Relationship with other expenses
+    @OneToMany(mappedBy = "quotation", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<QuotationOtherExpense> otherExpenses = new ArrayList<>();
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private QuotationStatus status = QuotationStatus.DRAFT;

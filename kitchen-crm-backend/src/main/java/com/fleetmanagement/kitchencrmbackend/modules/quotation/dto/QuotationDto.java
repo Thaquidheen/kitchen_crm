@@ -104,6 +104,7 @@ public class QuotationDto {
     private List<QuotationCabinetDto> cabinets;
     private List<QuotationDoorDto> doors;
     private List<QuotationLightingDto> lighting;
+    private List<QuotationOtherExpenseDto> otherExpenses;
 
     // Kitchens (multi-kitchen support)
     private List<QuotationKitchenDto> kitchens;
