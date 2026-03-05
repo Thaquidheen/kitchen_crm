@@ -137,6 +137,57 @@ export function QuotationBuilderPage() {
 
   useEffect(() => {
     if (!isEditMode || !existingQuotation) return;
+
+    // Helper: pair cabinets with linked doors via _tempPairId
+    const pairCabinetsAndDoors = (rawCabinets: any[], rawDoors: any[]) => {
+      const cabinets = rawCabinets.map((c: any) => ({
+        cabinetTypeId: c.cabinetTypeId || c.id,
+        widthMm: c.widthMm,
+        heightMm: c.heightMm,
+        depthMm: c.depthMm,
+        calculatedSqft: c.calculatedSqft,
+        customDimensions: c.customDimensions,
+        quantity: c.quantity,
+        unitPrice: Number(c.unitPrice || 0),
+        totalPrice: Number(c.unitPrice || 0) * (c.quantity || 1),
+        cabinetTypeName: c.cabinetTypeName || c.cabinetType?.name || c.description || 'Cabinet',
+        description: c.description || `${c.cabinetTypeName || c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.depthMm}×${c.heightMm}mm)`,
+        materialId: c.materialId,
+        materialRate: c.materialRate,
+        lightingCost: c.lightingCost,
+        accessoriesCost: c.accessoriesCost,
+        linkedDoorTypeId: c.linkedDoorTypeId || null,
+        linkedDoor: c.linkedDoorTypeId ? {
+          doorTypeId: c.linkedDoorTypeId,
+          doorTypeName: c.linkedDoorTypeName,
+        } : undefined,
+      }));
+      const doors = rawDoors.map((d: any) => ({
+        doorTypeId: d.doorTypeId || d.id,
+        widthMm: d.widthMm,
+        heightMm: d.heightMm,
+        calculatedSqft: d.calculatedSqft,
+        customDimensions: d.customDimensions,
+        quantity: d.quantity,
+        unitPrice: Number(d.unitPrice || 0),
+        totalPrice: Number(d.unitPrice || 0) * (d.quantity || 1),
+        doorTypeName: d.doorType?.name || d.description || 'Door',
+        description: d.description || `${d.doorType?.name || 'Door'} (${d.widthMm}×${d.heightMm}mm)`,
+      }));
+      // Establish _tempPairId links between cabinets and their linked doors
+      cabinets.forEach((cab: any) => {
+        if (cab.linkedDoorTypeId) {
+          const pairId = Date.now() + Math.random();
+          cab._tempPairId = pairId;
+          const match = doors.find((d: any) => d.doorTypeId === cab.linkedDoorTypeId && !(d as any)._tempPairId);
+          if (match) (match as any)._tempPairId = pairId;
+        }
+      });
+      return { cabinets, doors };
+    };
+
+    const globalPaired = pairCabinetsAndDoors(existingQuotation.cabinets || [], existingQuotation.doors || []);
+
     // Map API quotation to builder form shape
     setFormData({
       customerId: existingQuotation.customerId,
@@ -170,43 +221,8 @@ export function QuotationBuilderPage() {
         description: a.description || a.accessoryName || 'Accessory',
         price: Number(a.unitPrice || 0),
       })),
-      cabinets: (existingQuotation.cabinets || []).map((c: any) => ({
-        cabinetTypeId: c.cabinetTypeId || c.id,
-        widthMm: c.widthMm,
-        heightMm: c.heightMm,
-        depthMm: c.depthMm,
-        calculatedSqft: c.calculatedSqft,
-        customDimensions: c.customDimensions,
-        quantity: c.quantity,
-        unitPrice: Number(c.unitPrice || 0),
-        // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
-        totalPrice: Number(c.unitPrice || 0) * (c.quantity || 1),
-        cabinetTypeName: c.cabinetTypeName || c.cabinetType?.name || c.description || 'Cabinet',
-        description: c.description || `${c.cabinetTypeName || c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.depthMm}×${c.heightMm}mm)`,
-        // Material, lighting, and accessories fields
-        materialId: c.materialId,
-        materialRate: c.materialRate,
-        lightingCost: c.lightingCost,
-        accessoriesCost: c.accessoriesCost,
-        linkedDoorTypeId: c.linkedDoorTypeId || null,
-        linkedDoor: c.linkedDoorTypeId ? {
-          doorTypeId: c.linkedDoorTypeId,
-          doorTypeName: c.linkedDoorTypeName,
-        } : undefined,
-      })),
-      doors: (existingQuotation.doors || []).map((d: any) => ({
-        doorTypeId: d.doorTypeId || d.id,
-        widthMm: d.widthMm,
-        heightMm: d.heightMm,
-        calculatedSqft: d.calculatedSqft,
-        customDimensions: d.customDimensions,
-        quantity: d.quantity,
-        unitPrice: Number(d.unitPrice || 0),
-        // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
-        totalPrice: Number(d.unitPrice || 0) * (d.quantity || 1),
-        doorTypeName: d.doorType?.name || d.description || 'Door',
-        description: d.description || `${d.doorType?.name || 'Door'} (${d.widthMm}×${d.heightMm}mm)`,
-      })),
+      cabinets: globalPaired.cabinets,
+      doors: globalPaired.doors,
       kitchens: (existingQuotation.kitchens || []).map((k: any) => ({
         kitchenName: k.kitchenName || 'Kitchen',
         kitchenOrder: k.kitchenOrder || 0,
@@ -248,43 +264,10 @@ export function QuotationBuilderPage() {
           description: a.description || a.accessoryName || 'Accessory',
           price: Number(a.unitPrice || 0),
         })),
-        cabinets: (k.cabinets || []).map((c: any) => ({
-          cabinetTypeId: c.cabinetTypeId || c.id,
-          widthMm: c.widthMm,
-          heightMm: c.heightMm,
-          depthMm: c.depthMm,
-          calculatedSqft: c.calculatedSqft,
-          customDimensions: c.customDimensions,
-          quantity: c.quantity,
-          unitPrice: Number(c.unitPrice || 0),
-          // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
-          totalPrice: Number(c.unitPrice || 0) * (c.quantity || 1),
-          cabinetTypeName: c.cabinetTypeName || c.cabinetType?.name || c.description || 'Cabinet',
-          description: c.description || `${c.cabinetTypeName || c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.depthMm}×${c.heightMm}mm)`,
-          // Material, lighting, and accessories fields
-          materialId: c.materialId,
-          materialRate: c.materialRate,
-          lightingCost: c.lightingCost,
-          accessoriesCost: c.accessoriesCost,
-          linkedDoorTypeId: c.linkedDoorTypeId || null,
-          linkedDoor: c.linkedDoorTypeId ? {
-            doorTypeId: c.linkedDoorTypeId,
-            doorTypeName: c.linkedDoorTypeName,
-          } : undefined,
-        })),
-        doors: (k.doors || []).map((d: any) => ({
-          doorTypeId: d.doorTypeId || d.id,
-          widthMm: d.widthMm,
-          heightMm: d.heightMm,
-          calculatedSqft: d.calculatedSqft,
-          customDimensions: d.customDimensions,
-          quantity: d.quantity,
-          unitPrice: Number(d.unitPrice || 0),
-          // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
-          totalPrice: Number(d.unitPrice || 0) * (d.quantity || 1),
-          doorTypeName: d.doorType?.name || d.description || 'Door',
-          description: d.description || `${d.doorType?.name || 'Door'} (${d.widthMm}×${d.heightMm}mm)`,
-        })),
+        ...(() => {
+          const paired = pairCabinetsAndDoors(k.cabinets || [], k.doors || []);
+          return { cabinets: paired.cabinets, doors: paired.doors };
+        })(),
         lighting: (k.lighting || []).map((l: any) => {
           const itemType = l.itemType || 'LIGHT_PROFILE';
           let displayName = l.itemName || l.description || 'Lighting Item';

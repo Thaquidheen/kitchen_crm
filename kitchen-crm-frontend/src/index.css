@@ -5,6 +5,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide number input spinner arrows globally */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 @layer base {
   /* CSS Variable defaults - will be overridden by ThemeProvider */
   :root {
