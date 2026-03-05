@@ -38,11 +38,17 @@ function CategorySection({
   const [taxStr, setTaxStr] = useState(taxPercent ? String(taxPercent) : '');
 
   useEffect(() => {
-    setMarginStr(marginPercent ? String(marginPercent) : '');
+    const localNum = marginStr === '' ? 0 : parseFloat(marginStr);
+    if (isNaN(localNum) || localNum !== marginPercent) {
+      setMarginStr(marginPercent ? String(marginPercent) : '');
+    }
   }, [marginPercent]);
 
   useEffect(() => {
-    setTaxStr(taxPercent ? String(taxPercent) : '');
+    const localNum = taxStr === '' ? 0 : parseFloat(taxStr);
+    if (isNaN(localNum) || localNum !== taxPercent) {
+      setTaxStr(taxPercent ? String(taxPercent) : '');
+    }
   }, [taxPercent]);
 
   const handleMarginInput = (value: string) => {
@@ -212,11 +218,17 @@ export function CategoryPricingPanel({
   const [installStr, setInstallStr] = useState(installationPrice ? String(installationPrice) : '');
 
   useEffect(() => {
-    setTransportStr(transportationPrice ? String(transportationPrice) : '');
+    const localNum = transportStr === '' ? 0 : parseFloat(transportStr);
+    if (isNaN(localNum) || localNum !== transportationPrice) {
+      setTransportStr(transportationPrice ? String(transportationPrice) : '');
+    }
   }, [transportationPrice]);
 
   useEffect(() => {
-    setInstallStr(installationPrice ? String(installationPrice) : '');
+    const localNum = installStr === '' ? 0 : parseFloat(installStr);
+    if (isNaN(localNum) || localNum !== installationPrice) {
+      setInstallStr(installationPrice ? String(installationPrice) : '');
+    }
   }, [installationPrice]);
 
   const handleTransportInput = (value: string) => {
