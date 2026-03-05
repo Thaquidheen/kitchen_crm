@@ -380,14 +380,14 @@ export function QuotationBuilderPage() {
       marginPercentage: formData.marginPercentage || 0, // Global (backward compatibility)
       taxPercentage: formData.taxPercentage || 0, // Global (backward compatibility)
       // Category-specific rates
-      accessoriesMarginPercentage: formData.accessoriesMarginPercentage || 20,
-      cabinetsMarginPercentage: formData.cabinetsMarginPercentage || 20,
-      doorsMarginPercentage: formData.doorsMarginPercentage || 20,
-      lightingMarginPercentage: formData.lightingMarginPercentage || 20,
-      accessoriesTaxPercentage: formData.accessoriesTaxPercentage || 18,
-      cabinetsTaxPercentage: formData.cabinetsTaxPercentage || 18,
-      doorsTaxPercentage: formData.doorsTaxPercentage || 18,
-      lightingTaxPercentage: formData.lightingTaxPercentage || 18,
+      accessoriesMarginPercentage: formData.accessoriesMarginPercentage ?? 20,
+      cabinetsMarginPercentage: formData.cabinetsMarginPercentage ?? 20,
+      doorsMarginPercentage: formData.doorsMarginPercentage ?? 20,
+      lightingMarginPercentage: formData.lightingMarginPercentage ?? 20,
+      accessoriesTaxPercentage: formData.accessoriesTaxPercentage ?? 18,
+      cabinetsTaxPercentage: formData.cabinetsTaxPercentage ?? 18,
+      doorsTaxPercentage: formData.doorsTaxPercentage ?? 18,
+      lightingTaxPercentage: formData.lightingTaxPercentage ?? 18,
       validUntil: formData.validUntil || undefined,
       notes: formData.notes || undefined,
       termsConditions: formData.termsConditions || undefined,
@@ -1201,14 +1201,14 @@ export function QuotationBuilderPage() {
                     <KitchenProductTabs
                       kitchens={formData.kitchens}
                       onKitchensChange={(kitchens) => setFormData({ ...formData, kitchens })}
-                      accessoriesMarginPercentage={formData.accessoriesMarginPercentage || 20}
-                      cabinetsMarginPercentage={formData.cabinetsMarginPercentage || 20}
-                      doorsMarginPercentage={formData.doorsMarginPercentage || 20}
-                      lightingMarginPercentage={formData.lightingMarginPercentage || 20}
-                      accessoriesTaxPercentage={formData.accessoriesTaxPercentage || 18}
-                      cabinetsTaxPercentage={formData.cabinetsTaxPercentage || 18}
-                      doorsTaxPercentage={formData.doorsTaxPercentage || 18}
-                      lightingTaxPercentage={formData.lightingTaxPercentage || 18}
+                      accessoriesMarginPercentage={formData.accessoriesMarginPercentage ?? 20}
+                      cabinetsMarginPercentage={formData.cabinetsMarginPercentage ?? 20}
+                      doorsMarginPercentage={formData.doorsMarginPercentage ?? 20}
+                      lightingMarginPercentage={formData.lightingMarginPercentage ?? 20}
+                      accessoriesTaxPercentage={formData.accessoriesTaxPercentage ?? 18}
+                      cabinetsTaxPercentage={formData.cabinetsTaxPercentage ?? 18}
+                      doorsTaxPercentage={formData.doorsTaxPercentage ?? 18}
+                      lightingTaxPercentage={formData.lightingTaxPercentage ?? 18}
                       userRole={userRole}
                       onAccessoriesTaxChange={(val) => setFormData({ ...formData, accessoriesTaxPercentage: val })}
                       onCabinetsTaxChange={(val) => setFormData({ ...formData, cabinetsTaxPercentage: val })}
@@ -1274,14 +1274,14 @@ export function QuotationBuilderPage() {
                         cabinets={formData.cabinets || []}
                         doors={formData.doors || []}
                         lighting={formData.lighting || []}
-                        accessoriesMarginPercentage={formData.accessoriesMarginPercentage || 20}
-                        cabinetsMarginPercentage={formData.cabinetsMarginPercentage || 20}
-                        doorsMarginPercentage={formData.doorsMarginPercentage || 20}
-                        lightingMarginPercentage={formData.lightingMarginPercentage || 20}
-                        accessoriesTaxPercentage={formData.accessoriesTaxPercentage || 18}
-                        cabinetsTaxPercentage={formData.cabinetsTaxPercentage || 18}
-                        doorsTaxPercentage={formData.doorsTaxPercentage || 18}
-                        lightingTaxPercentage={formData.lightingTaxPercentage || 18}
+                        accessoriesMarginPercentage={formData.accessoriesMarginPercentage ?? 20}
+                        cabinetsMarginPercentage={formData.cabinetsMarginPercentage ?? 20}
+                        doorsMarginPercentage={formData.doorsMarginPercentage ?? 20}
+                        lightingMarginPercentage={formData.lightingMarginPercentage ?? 20}
+                        accessoriesTaxPercentage={formData.accessoriesTaxPercentage ?? 18}
+                        cabinetsTaxPercentage={formData.cabinetsTaxPercentage ?? 18}
+                        doorsTaxPercentage={formData.doorsTaxPercentage ?? 18}
+                        lightingTaxPercentage={formData.lightingTaxPercentage ?? 18}
                       />
                     </div>
                   </>
@@ -1418,14 +1418,14 @@ export function QuotationBuilderPage() {
                   lighting={formData.lighting || []}
                   transportationPrice={formData.kitchens && formData.kitchens.length > 0 ? 0 : (formData.transportationPrice || 0)}
                   installationPrice={formData.kitchens && formData.kitchens.length > 0 ? 0 : (formData.installationPrice || 0)}
-                  accessoriesMarginPercentage={formData.accessoriesMarginPercentage || 20}
-                  cabinetsMarginPercentage={formData.cabinetsMarginPercentage || 20}
-                  doorsMarginPercentage={formData.doorsMarginPercentage || 20}
-                  lightingMarginPercentage={formData.lightingMarginPercentage || 20}
-                  accessoriesTaxPercentage={formData.accessoriesTaxPercentage || 18}
-                  cabinetsTaxPercentage={formData.cabinetsTaxPercentage || 18}
-                  doorsTaxPercentage={formData.doorsTaxPercentage || 18}
-                  lightingTaxPercentage={formData.lightingTaxPercentage || 18}
+                  accessoriesMarginPercentage={formData.accessoriesMarginPercentage ?? 20}
+                  cabinetsMarginPercentage={formData.cabinetsMarginPercentage ?? 20}
+                  doorsMarginPercentage={formData.doorsMarginPercentage ?? 20}
+                  lightingMarginPercentage={formData.lightingMarginPercentage ?? 20}
+                  accessoriesTaxPercentage={formData.accessoriesTaxPercentage ?? 18}
+                  cabinetsTaxPercentage={formData.cabinetsTaxPercentage ?? 18}
+                  doorsTaxPercentage={formData.doorsTaxPercentage ?? 18}
+                  lightingTaxPercentage={formData.lightingTaxPercentage ?? 18}
                   kitchens={formData.kitchens}
                 />
 
