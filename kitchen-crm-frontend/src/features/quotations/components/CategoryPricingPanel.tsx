@@ -182,7 +182,7 @@ export function CategoryPricingPanel({
               <Input
                 type="text"
                 inputMode="decimal"
-                value={marginPercent}
+                value={marginPercent || ''}
                 onChange={(e) => onMarginChange && handlePercentInput(e.target.value, onMarginChange)}
                 placeholder="0"
                 className="text-xs sm:text-sm"
@@ -205,7 +205,7 @@ export function CategoryPricingPanel({
             <Input
               type="text"
               inputMode="decimal"
-              value={taxPercent}
+              value={taxPercent || ''}
               onChange={(e) => handlePercentInput(e.target.value, onTaxChange)}
               placeholder="0"
               className="text-xs sm:text-sm"
