@@ -180,12 +180,11 @@ export function CategoryPricingPanel({
             </label>
             <div className="relative">
               <Input
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
+                type="text"
+                inputMode="decimal"
                 value={marginPercent}
                 onChange={(e) => onMarginChange && handlePercentInput(e.target.value, onMarginChange)}
+                placeholder="0"
                 className="text-xs sm:text-sm"
                 title="Adjust margin per quotation for discounts/alterations (Super Admin only)"
               />
@@ -204,12 +203,11 @@ export function CategoryPricingPanel({
           </label>
           <div className="relative">
             <Input
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
+              type="text"
+              inputMode="decimal"
               value={taxPercent}
               onChange={(e) => handlePercentInput(e.target.value, onTaxChange)}
+              placeholder="0"
               className="text-xs sm:text-sm"
             />
             <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-text-600" />
