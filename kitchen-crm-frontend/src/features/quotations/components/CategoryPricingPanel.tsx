@@ -3,166 +3,56 @@
  * Shows separate margin and tax inputs for each product category
  */
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Calculator, TrendingUp, Percent, Truck, Wrench } from 'lucide-react';
 import clsx from 'clsx';
 
-export interface CategoryPricingPanelProps {
-  // Products per category
-  accessories: any[];
-  cabinets: any[];
-  doors: any[];
-  lighting: any[];
-  
-  // Category-specific margin percentages
-  accessoriesMargin: number;
-  cabinetsMargin: number;
-  doorsMargin: number;
-  lightingMargin: number;
-  
-  // Category-specific tax percentages
-  accessoriesTax: number;
-  cabinetsTax: number;
-  doorsTax: number;
-  lightingTax: number;
-  
-  // Callbacks for margin changes (optional for staff users)
-  onAccessoriesMarginChange?: (value: number) => void;
-  onCabinetsMarginChange?: (value: number) => void;
-  onDoorsMarginChange?: (value: number) => void;
-  onLightingMarginChange?: (value: number) => void;
-  
-  // Callbacks for tax changes
-  onAccessoriesTaxChange: (value: number) => void;
-  onCabinetsTaxChange: (value: number) => void;
-  onDoorsTaxChange: (value: number) => void;
-  onLightingTaxChange: (value: number) => void;
-  
-  // Transportation & Installation
-  transportationPrice: number;
-  installationPrice: number;
-  onTransportationChange: (value: number) => void;
-  onInstallationChange: (value: number) => void;
-
-  // User role for conditional rendering
-  userRole?: 'ROLE_SUPER_ADMIN' | 'ROLE_STAFF';
-
-  // Optional kitchen name for context
-  kitchenName?: string;
+interface CategorySectionProps {
+  label: string;
+  icon: React.ReactNode;
+  color: string;
+  subtotal: number;
+  marginPercent: number;
+  taxPercent: number;
+  onMarginChange?: (value: number) => void;
+  onTaxChange: (value: number) => void;
+  total: { marginAmount: number; finalTotal: number };
+  showMargins: boolean;
 }
 
-export function CategoryPricingPanel({
-  accessories,
-  cabinets,
-  doors,
-  lighting,
-  accessoriesMargin,
-  cabinetsMargin,
-  doorsMargin,
-  lightingMargin,
-  accessoriesTax,
-  cabinetsTax,
-  doorsTax,
-  lightingTax,
-  onAccessoriesMarginChange,
-  onCabinetsMarginChange,
-  onDoorsMarginChange,
-  onLightingMarginChange,
-  onAccessoriesTaxChange,
-  onCabinetsTaxChange,
-  onDoorsTaxChange,
-  onLightingTaxChange,
-  transportationPrice,
-  installationPrice,
-  onTransportationChange,
-  onInstallationChange,
-  userRole = 'ROLE_SUPER_ADMIN', // Default to super admin for backward compatibility
-  kitchenName,
-}: CategoryPricingPanelProps) {
-  
-  // Determine if margins should be visible (super admin only)
-  const showMargins = userRole === 'ROLE_SUPER_ADMIN';
-  
-  // Calculate category subtotals
-  const categorySubtotals = useMemo(() => {
-    const accessoriesSubtotal = accessories.reduce((sum, item) => sum + (item.totalPrice ?? item.price ?? 0), 0);
-    const cabinetsSubtotal = cabinets.reduce((sum, item) => sum + (item.totalPrice ?? item.price ?? 0), 0);
-    const doorsSubtotal = doors.reduce((sum, item) => sum + (item.totalPrice ?? item.price ?? 0), 0);
-    const lightingSubtotal = lighting.reduce((sum, item) => sum + (item.totalPrice ?? item.price ?? 0), 0);
-    
-    return {
-      accessories: accessoriesSubtotal,
-      cabinets: cabinetsSubtotal,
-      doors: doorsSubtotal,
-      lighting: lightingSubtotal,
-    };
-  }, [accessories, cabinets, doors, lighting]);
+function handlePercentInput(value: string, onChange: (val: number) => void) {
+  const numValue = value === '' ? 0 : parseFloat(value);
+  if (isNaN(numValue)) return;
+  onChange(Math.max(0, Math.min(numValue, 100)));
+}
 
-  // Calculate category totals with margin and tax
-  const categoryTotals = useMemo(() => {
-    const calculateCategoryTotal = (subtotal: number, marginPercent: number, taxPercent: number) => {
-      const marginAmount = (subtotal * marginPercent) / 100;
-      const totalBeforeTax = subtotal + marginAmount;
-      const taxAmount = (totalBeforeTax * taxPercent) / 100;
-      return {
-        subtotal,
-        marginAmount,
-        totalBeforeTax,
-        taxAmount,
-        finalTotal: totalBeforeTax + taxAmount,
-      };
-    };
+function handleCurrencyInput(value: string, onChange: (val: number) => void) {
+  const numValue = value === '' ? 0 : parseFloat(value);
+  if (isNaN(numValue)) return;
+  onChange(Math.max(0, numValue));
+}
 
-    return {
-      accessories: calculateCategoryTotal(categorySubtotals.accessories, accessoriesMargin, accessoriesTax),
-      cabinets: calculateCategoryTotal(categorySubtotals.cabinets, cabinetsMargin, cabinetsTax),
-      doors: calculateCategoryTotal(categorySubtotals.doors, doorsMargin, doorsTax),
-      lighting: calculateCategoryTotal(categorySubtotals.lighting, lightingMargin, lightingTax),
-    };
-  }, [categorySubtotals, accessoriesMargin, accessoriesTax, cabinetsMargin, cabinetsTax, doorsMargin, doorsTax, lightingMargin, lightingTax]);
-
-  // Grand total including transportation and installation
-  const grandTotal = categoryTotals.accessories.finalTotal +
-    categoryTotals.cabinets.finalTotal +
-    categoryTotals.doors.finalTotal +
-    categoryTotals.lighting.finalTotal +
-    transportationPrice +
-    installationPrice;
-
-  const handlePercentInput = (value: string, onChange: (val: number) => void) => {
-    const numValue = value === '' ? 0 : parseFloat(value);
-    if (isNaN(numValue)) return;
-    onChange(Math.max(0, Math.min(numValue, 100)));
-  };
-
-  const handleCurrencyInput = (value: string, onChange: (val: number) => void) => {
-    const numValue = value === '' ? 0 : parseFloat(value);
-    if (isNaN(numValue)) return;
-    onChange(Math.max(0, numValue));
-  };
-
-  const CategorySection = ({ 
-    label, 
-    icon, 
-    color,
-    subtotal,
-    marginPercent,
-    taxPercent,
-    onMarginChange,
-    onTaxChange,
-    total,
-  }: any) => (
+function CategorySection({
+  label,
+  icon,
+  color,
+  subtotal,
+  marginPercent,
+  taxPercent,
+  onMarginChange,
+  onTaxChange,
+  total,
+  showMargins,
+}: CategorySectionProps) {
+  return (
     <div className="border border-background-600 rounded-lg p-3 sm:p-4 bg-background-800/50">
       <div className="flex items-center gap-2 mb-2 sm:mb-3">
         <div className={clsx('p-1.5 sm:p-2 rounded-lg', color)}>
           {icon}
         </div>
         <h4 className="text-xs sm:text-sm font-semibold text-text-800">{label}</h4>
-        <div className="flex-1 text-right text-xs text-text-600">
-          {cabinets.length > 0 || accessories.length > 0 || doors.length > 0 || lighting.length > 0 ? '' : 'No items'}
-        </div>
       </div>
 
       <div className="space-y-2 sm:space-y-3">
@@ -226,6 +116,125 @@ export function CategoryPricingPanel({
       </div>
     </div>
   );
+}
+
+export interface CategoryPricingPanelProps {
+  // Products per category
+  accessories: any[];
+  cabinets: any[];
+  doors: any[];
+  lighting: any[];
+
+  // Category-specific margin percentages
+  accessoriesMargin: number;
+  cabinetsMargin: number;
+  doorsMargin: number;
+  lightingMargin: number;
+
+  // Category-specific tax percentages
+  accessoriesTax: number;
+  cabinetsTax: number;
+  doorsTax: number;
+  lightingTax: number;
+
+  // Callbacks for margin changes (optional for staff users)
+  onAccessoriesMarginChange?: (value: number) => void;
+  onCabinetsMarginChange?: (value: number) => void;
+  onDoorsMarginChange?: (value: number) => void;
+  onLightingMarginChange?: (value: number) => void;
+
+  // Callbacks for tax changes
+  onAccessoriesTaxChange: (value: number) => void;
+  onCabinetsTaxChange: (value: number) => void;
+  onDoorsTaxChange: (value: number) => void;
+  onLightingTaxChange: (value: number) => void;
+
+  // Transportation & Installation
+  transportationPrice: number;
+  installationPrice: number;
+  onTransportationChange: (value: number) => void;
+  onInstallationChange: (value: number) => void;
+
+  // User role for conditional rendering
+  userRole?: 'ROLE_SUPER_ADMIN' | 'ROLE_STAFF';
+
+  // Optional kitchen name for context
+  kitchenName?: string;
+}
+
+export function CategoryPricingPanel({
+  accessories,
+  cabinets,
+  doors,
+  lighting,
+  accessoriesMargin,
+  cabinetsMargin,
+  doorsMargin,
+  lightingMargin,
+  accessoriesTax,
+  cabinetsTax,
+  doorsTax,
+  lightingTax,
+  onAccessoriesMarginChange,
+  onCabinetsMarginChange,
+  onDoorsMarginChange,
+  onLightingMarginChange,
+  onAccessoriesTaxChange,
+  onCabinetsTaxChange,
+  onDoorsTaxChange,
+  onLightingTaxChange,
+  transportationPrice,
+  installationPrice,
+  onTransportationChange,
+  onInstallationChange,
+  userRole = 'ROLE_SUPER_ADMIN',
+  kitchenName,
+}: CategoryPricingPanelProps) {
+
+  const showMargins = userRole === 'ROLE_SUPER_ADMIN';
+
+  const categorySubtotals = useMemo(() => {
+    const accessoriesSubtotal = accessories.reduce((sum, item) => sum + (item.totalPrice ?? item.price ?? 0), 0);
+    const cabinetsSubtotal = cabinets.reduce((sum, item) => sum + (item.totalPrice ?? item.price ?? 0), 0);
+    const doorsSubtotal = doors.reduce((sum, item) => sum + (item.totalPrice ?? item.price ?? 0), 0);
+    const lightingSubtotal = lighting.reduce((sum, item) => sum + (item.totalPrice ?? item.price ?? 0), 0);
+
+    return {
+      accessories: accessoriesSubtotal,
+      cabinets: cabinetsSubtotal,
+      doors: doorsSubtotal,
+      lighting: lightingSubtotal,
+    };
+  }, [accessories, cabinets, doors, lighting]);
+
+  const categoryTotals = useMemo(() => {
+    const calculateCategoryTotal = (subtotal: number, marginPercent: number, taxPercent: number) => {
+      const marginAmount = (subtotal * marginPercent) / 100;
+      const totalBeforeTax = subtotal + marginAmount;
+      const taxAmount = (totalBeforeTax * taxPercent) / 100;
+      return {
+        subtotal,
+        marginAmount,
+        totalBeforeTax,
+        taxAmount,
+        finalTotal: totalBeforeTax + taxAmount,
+      };
+    };
+
+    return {
+      accessories: calculateCategoryTotal(categorySubtotals.accessories, accessoriesMargin, accessoriesTax),
+      cabinets: calculateCategoryTotal(categorySubtotals.cabinets, cabinetsMargin, cabinetsTax),
+      doors: calculateCategoryTotal(categorySubtotals.doors, doorsMargin, doorsTax),
+      lighting: calculateCategoryTotal(categorySubtotals.lighting, lightingMargin, lightingTax),
+    };
+  }, [categorySubtotals, accessoriesMargin, accessoriesTax, cabinetsMargin, cabinetsTax, doorsMargin, doorsTax, lightingMargin, lightingTax]);
+
+  const grandTotal = categoryTotals.accessories.finalTotal +
+    categoryTotals.cabinets.finalTotal +
+    categoryTotals.doors.finalTotal +
+    categoryTotals.lighting.finalTotal +
+    transportationPrice +
+    installationPrice;
 
   return (
     <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
@@ -240,9 +249,8 @@ export function CategoryPricingPanel({
         {/* Category Sections */}
         <div className="space-y-3 sm:space-y-4">
           <h4 className="text-xs sm:text-sm font-semibold text-text-800">Category Rates & Totals</h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-            {/* Accessories */}
             <CategorySection
               label="Accessories"
               icon={<TrendingUp className="h-4 w-4 text-info" />}
@@ -253,9 +261,9 @@ export function CategoryPricingPanel({
               onMarginChange={onAccessoriesMarginChange}
               onTaxChange={onAccessoriesTaxChange}
               total={categoryTotals.accessories}
+              showMargins={showMargins}
             />
 
-            {/* Cabinets */}
             <CategorySection
               label="Cabinets"
               icon={<TrendingUp className="h-4 w-4 text-success" />}
@@ -266,9 +274,9 @@ export function CategoryPricingPanel({
               onMarginChange={onCabinetsMarginChange}
               onTaxChange={onCabinetsTaxChange}
               total={categoryTotals.cabinets}
+              showMargins={showMargins}
             />
 
-            {/* Doors */}
             <CategorySection
               label="Doors"
               icon={<TrendingUp className="h-4 w-4 text-purple-500" />}
@@ -279,9 +287,9 @@ export function CategoryPricingPanel({
               onMarginChange={onDoorsMarginChange}
               onTaxChange={onDoorsTaxChange}
               total={categoryTotals.doors}
+              showMargins={showMargins}
             />
 
-            {/* Lighting */}
             <CategorySection
               label="Lighting"
               icon={<TrendingUp className="h-4 w-4 text-accent-500" />}
@@ -292,6 +300,7 @@ export function CategoryPricingPanel({
               onMarginChange={onLightingMarginChange}
               onTaxChange={onLightingTaxChange}
               total={categoryTotals.lighting}
+              showMargins={showMargins}
             />
           </div>
         </div>
@@ -310,7 +319,7 @@ export function CategoryPricingPanel({
               <Input
                 type="text"
                 inputMode="decimal"
-                value={transportationPrice}
+                value={transportationPrice || ''}
                 onChange={(e) => handleCurrencyInput(e.target.value, onTransportationChange)}
                 placeholder="0"
                 className="text-xs sm:text-sm"
@@ -326,7 +335,7 @@ export function CategoryPricingPanel({
               <Input
                 type="text"
                 inputMode="decimal"
-                value={installationPrice}
+                value={installationPrice || ''}
                 onChange={(e) => handleCurrencyInput(e.target.value, onInstallationChange)}
                 placeholder="0"
                 className="text-xs sm:text-sm"
@@ -356,4 +365,3 @@ export function CategoryPricingPanel({
 }
 
 export default CategoryPricingPanel;
-
