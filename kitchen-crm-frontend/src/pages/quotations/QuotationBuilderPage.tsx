@@ -196,14 +196,14 @@ export function QuotationBuilderPage() {
       installationPrice: Number(existingQuotation.installationPrice || 0),
       marginPercentage: Number(existingQuotation.marginPercentage || 0),
       taxPercentage: Number(existingQuotation.taxPercentage || 0),
-      accessoriesMarginPercentage: Number(existingQuotation.accessoriesMarginPercentage || 20),
-      cabinetsMarginPercentage: Number(existingQuotation.cabinetsMarginPercentage || 20),
-      doorsMarginPercentage: Number(existingQuotation.doorsMarginPercentage || 20),
-      lightingMarginPercentage: Number(existingQuotation.lightingMarginPercentage || 20),
-      accessoriesTaxPercentage: Number(existingQuotation.accessoriesTaxPercentage || 18),
-      cabinetsTaxPercentage: Number(existingQuotation.cabinetsTaxPercentage || 18),
-      doorsTaxPercentage: Number(existingQuotation.doorsTaxPercentage || 18),
-      lightingTaxPercentage: Number(existingQuotation.lightingTaxPercentage || 18),
+      accessoriesMarginPercentage: Number(existingQuotation.accessoriesMarginPercentage ?? 20),
+      cabinetsMarginPercentage: Number(existingQuotation.cabinetsMarginPercentage ?? 20),
+      doorsMarginPercentage: Number(existingQuotation.doorsMarginPercentage ?? 20),
+      lightingMarginPercentage: Number(existingQuotation.lightingMarginPercentage ?? 20),
+      accessoriesTaxPercentage: Number(existingQuotation.accessoriesTaxPercentage ?? 18),
+      cabinetsTaxPercentage: Number(existingQuotation.cabinetsTaxPercentage ?? 18),
+      doorsTaxPercentage: Number(existingQuotation.doorsTaxPercentage ?? 18),
+      lightingTaxPercentage: Number(existingQuotation.lightingTaxPercentage ?? 18),
       validUntil: existingQuotation.validUntil || '',
       notes: existingQuotation.notes || '',
       termsConditions: existingQuotation.termsConditions || '',
@@ -1241,14 +1241,14 @@ export function QuotationBuilderPage() {
                         lighting={formData.lighting || []}
                         transportationPrice={formData.transportationPrice || 0}
                         installationPrice={formData.installationPrice || 0}
-                        accessoriesMargin={formData.accessoriesMarginPercentage || 20}
-                        cabinetsMargin={formData.cabinetsMarginPercentage || 20}
-                        doorsMargin={formData.doorsMarginPercentage || 20}
-                        lightingMargin={formData.lightingMarginPercentage || 20}
-                        accessoriesTax={formData.accessoriesTaxPercentage || 18}
-                        cabinetsTax={formData.cabinetsTaxPercentage || 18}
-                        doorsTax={formData.doorsTaxPercentage || 18}
-                        lightingTax={formData.lightingTaxPercentage || 18}
+                        accessoriesMargin={formData.accessoriesMarginPercentage ?? 20}
+                        cabinetsMargin={formData.cabinetsMarginPercentage ?? 20}
+                        doorsMargin={formData.doorsMarginPercentage ?? 20}
+                        lightingMargin={formData.lightingMarginPercentage ?? 20}
+                        accessoriesTax={formData.accessoriesTaxPercentage ?? 18}
+                        cabinetsTax={formData.cabinetsTaxPercentage ?? 18}
+                        doorsTax={formData.doorsTaxPercentage ?? 18}
+                        lightingTax={formData.lightingTaxPercentage ?? 18}
                         onTransportationChange={(val) =>
                           setFormData({ ...formData, transportationPrice: val })
                         }
