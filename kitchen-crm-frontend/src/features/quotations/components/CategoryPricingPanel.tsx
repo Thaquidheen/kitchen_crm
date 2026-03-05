@@ -132,12 +132,14 @@ export function CategoryPricingPanel({
     installationPrice;
 
   const handlePercentInput = (value: string, onChange: (val: number) => void) => {
-    const numValue = parseFloat(value) || 0;
+    const numValue = value === '' ? 0 : parseFloat(value);
+    if (isNaN(numValue)) return;
     onChange(Math.max(0, Math.min(numValue, 100)));
   };
 
   const handleCurrencyInput = (value: string, onChange: (val: number) => void) => {
-    const numValue = parseFloat(value) || 0;
+    const numValue = value === '' ? 0 : parseFloat(value);
+    if (isNaN(numValue)) return;
     onChange(Math.max(0, numValue));
   };
 

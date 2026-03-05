@@ -178,7 +178,7 @@ export function AddCabinetModal({
   // Door calculations
   const selectedDoor = availableDoors.find(d => d.id === Number(selectedDoorId));
   const doorArea = calculateDoorFaceArea();
-  const doorPrice = selectedDoor ? doorArea * (selectedDoor.companyPrice || 0) * quantity : 0;
+  const doorPrice = addDoor && selectedDoor ? doorArea * (selectedDoor.companyPrice || 0) * quantity : 0;
 
   // Elevation selection
   const selectedElevation = availableElevations.find(e => e.id === Number(selectedElevationId));
