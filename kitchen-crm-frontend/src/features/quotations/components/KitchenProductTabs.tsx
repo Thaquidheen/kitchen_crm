@@ -185,6 +185,7 @@ export function KitchenProductTabs({
                 cabinets={kitchen.cabinets || []}
                 doors={kitchen.doors || []}
                 lighting={kitchen.lighting || []}
+                otherExpenses={kitchen.otherExpenses || []}
                 accessoriesMarginPercentage={accessoriesMarginPercentage}
                 cabinetsMarginPercentage={cabinetsMarginPercentage}
                 doorsMarginPercentage={doorsMarginPercentage}

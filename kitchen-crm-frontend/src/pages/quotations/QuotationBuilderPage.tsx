@@ -1523,6 +1523,14 @@ export function QuotationBuilderPage() {
                       lighting={kitchen.lighting || []}
                       otherExpenses={kitchen.otherExpenses || []}
                       availableElevations={kitchen.elevations || []}
+                      accessoriesMarginPercentage={formData.accessoriesMarginPercentage}
+                      cabinetsMarginPercentage={formData.cabinetsMarginPercentage}
+                      doorsMarginPercentage={formData.doorsMarginPercentage}
+                      lightingMarginPercentage={formData.lightingMarginPercentage}
+                      accessoriesTaxPercentage={formData.accessoriesTaxPercentage}
+                      cabinetsTaxPercentage={formData.cabinetsTaxPercentage}
+                      doorsTaxPercentage={formData.doorsTaxPercentage}
+                      lightingTaxPercentage={formData.lightingTaxPercentage}
                       onRemove={(category, index) => {
                         const kitchen = (formData.kitchens || [])[kitchenIndex];
                         const list = [...(kitchen?.[category] || [])];
@@ -1565,6 +1573,14 @@ export function QuotationBuilderPage() {
                 lighting={formData.lighting || []}
                 otherExpenses={formData.otherExpenses || []}
                 availableElevations={[]}
+                accessoriesMarginPercentage={formData.accessoriesMarginPercentage}
+                cabinetsMarginPercentage={formData.cabinetsMarginPercentage}
+                doorsMarginPercentage={formData.doorsMarginPercentage}
+                lightingMarginPercentage={formData.lightingMarginPercentage}
+                accessoriesTaxPercentage={formData.accessoriesTaxPercentage}
+                cabinetsTaxPercentage={formData.cabinetsTaxPercentage}
+                doorsTaxPercentage={formData.doorsTaxPercentage}
+                lightingTaxPercentage={formData.lightingTaxPercentage}
                 onRemove={(category, index) => {
                   const list = ((formData as any)[category] || []).slice();
                   const removed = list[index] as any;

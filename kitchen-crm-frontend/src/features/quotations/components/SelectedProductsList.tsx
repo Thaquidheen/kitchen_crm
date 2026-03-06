@@ -68,6 +68,14 @@ export interface SelectedProductsListProps {
   lighting: LightingItem[];
   otherExpenses?: QuotationOtherExpense[];
   availableElevations?: QuotationElevation[];
+  accessoriesMarginPercentage?: number;
+  cabinetsMarginPercentage?: number;
+  doorsMarginPercentage?: number;
+  lightingMarginPercentage?: number;
+  accessoriesTaxPercentage?: number;
+  cabinetsTaxPercentage?: number;
+  doorsTaxPercentage?: number;
+  lightingTaxPercentage?: number;
   onRemove?: (category: 'accessories' | 'cabinets' | 'doors' | 'lighting', index: number) => void;
   onRemoveOtherExpense?: (index: number) => void;
   onEditCabinet?: (index: number) => void;
@@ -91,6 +99,14 @@ export function SelectedProductsList({
   lighting,
   otherExpenses = [],
   availableElevations = [],
+  accessoriesMarginPercentage = 0,
+  cabinetsMarginPercentage = 0,
+  doorsMarginPercentage = 0,
+  lightingMarginPercentage = 0,
+  accessoriesTaxPercentage = 0,
+  cabinetsTaxPercentage = 0,
+  doorsTaxPercentage = 0,
+  lightingTaxPercentage = 0,
   onRemove,
   onRemoveOtherExpense,
   onEditCabinet,
@@ -208,10 +224,15 @@ export function SelectedProductsList({
     );
   }, [accessories, cabinets, doors, lighting, availableElevations]);
 
-  const productTotal = [...accessories, ...cabinets, ...doors, ...lighting].reduce(
-    (sum, i) => sum + ((i as any).totalPrice ?? (i as any).price ?? 0),
-    0
-  );
+  const calcCategoryFinal = (items: any[], marginPct: number, taxPct: number) => {
+    const base = items.reduce((sum: number, i: any) => sum + (i.totalPrice ?? i.price ?? 0), 0);
+    const withMargin = base + (base * marginPct) / 100;
+    return withMargin + (withMargin * taxPct) / 100;
+  };
+  const productTotal = calcCategoryFinal(accessories, accessoriesMarginPercentage, accessoriesTaxPercentage)
+    + calcCategoryFinal(cabinets, cabinetsMarginPercentage, cabinetsTaxPercentage)
+    + calcCategoryFinal(doors, doorsMarginPercentage, doorsTaxPercentage)
+    + calcCategoryFinal(lighting, lightingMarginPercentage, lightingTaxPercentage);
   const otherExpensesTotal = otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   const grandTotal = productTotal + otherExpensesTotal;
 

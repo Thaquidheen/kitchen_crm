@@ -6,12 +6,14 @@
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Package, DoorClosed, Lightbulb, Wrench } from 'lucide-react';
+import type { QuotationOtherExpense } from '../types';
 
 export interface CategoryTotalsProps {
   accessories: Array<{ id?: number; name?: string; totalPrice?: number; price?: number }>;
   cabinets: Array<{ id?: number; name?: string; totalPrice?: number; price?: number }>;
   doors: Array<{ id?: number; name?: string; totalPrice?: number; price?: number }>;
   lighting: Array<{ id?: number; name?: string; totalPrice?: number; price?: number }>;
+  otherExpenses?: QuotationOtherExpense[];
   // Category-specific margin percentages
   accessoriesMarginPercentage: number;
   cabinetsMarginPercentage: number;
@@ -22,7 +24,7 @@ export interface CategoryTotalsProps {
   cabinetsTaxPercentage: number;
   doorsTaxPercentage: number;
   lightingTaxPercentage: number;
-  
+
   // Optional kitchen name for context
   kitchenName?: string;
 }
@@ -47,6 +49,7 @@ export function CategoryTotals({
   accessoriesTaxPercentage,
   cabinetsTaxPercentage,
   doorsTaxPercentage,
+  otherExpenses = [],
   lightingTaxPercentage,
   kitchenName,
 }: CategoryTotalsProps) {
@@ -124,7 +127,8 @@ export function CategoryTotals({
     lightingTaxPercentage,
   ]);
 
-  const grandTotal = categories.reduce((sum, cat) => sum + cat.breakdown.finalTotal, 0);
+  const otherExpensesTotal = otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const grandTotal = categories.reduce((sum, cat) => sum + cat.breakdown.finalTotal, 0) + otherExpensesTotal;
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -192,7 +196,7 @@ export function CategoryTotals({
         {/* Grand Total */}
         <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t-2 border-primary-700">
           <div className="flex justify-between items-center">
-            <span className="text-base sm:text-lg font-bold text-text-900">All Categories Total</span>
+            <span className="text-base sm:text-lg font-bold text-text-900">Grand Total</span>
             <span className="text-xl sm:text-2xl font-bold text-primary-600">
               ₹{grandTotal.toLocaleString('en-IN')}
             </span>
