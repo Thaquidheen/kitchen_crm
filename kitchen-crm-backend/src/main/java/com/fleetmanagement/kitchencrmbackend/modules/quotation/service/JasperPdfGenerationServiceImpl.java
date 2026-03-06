@@ -215,6 +215,7 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
             "subreport-products.jrxml",
             "subreport-accessories.jrxml",
             "subreport-lighting.jrxml",
+            "subreport-other-expenses.jrxml",
             "subreport-kitchen-totals.jrxml"
         };
         for (String name : subreports) {
@@ -338,14 +339,22 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         }
         params.put("KITCHEN_NAMES", kitchenNames);
 
-        // Transportation & Installation (quotation-level only for single-kitchen; per-kitchen for multi-kitchen)
+        // Other expenses total (for summary page)
         boolean isMultiKitchen = quotation.getKitchens() != null && !quotation.getKitchens().isEmpty();
-        BigDecimal transportationPrice = isMultiKitchen ? BigDecimal.ZERO
-                : (quotation.getTransportationPrice() != null ? quotation.getTransportationPrice() : BigDecimal.ZERO);
-        BigDecimal installationPrice = isMultiKitchen ? BigDecimal.ZERO
-                : (quotation.getInstallationPrice() != null ? quotation.getInstallationPrice() : BigDecimal.ZERO);
-        params.put("TRANSPORTATION_PRICE", transportationPrice);
-        params.put("INSTALLATION_PRICE", installationPrice);
+        BigDecimal otherExpensesGrandTotal = BigDecimal.ZERO;
+        if (isMultiKitchen) {
+            for (QuotationKitchenDto k : quotation.getKitchens()) {
+                if (k.getOtherExpenses() != null) {
+                    for (QuotationOtherExpenseDto e : k.getOtherExpenses()) {
+                        if (e.getAmount() != null) otherExpensesGrandTotal = otherExpensesGrandTotal.add(e.getAmount());
+                    }
+                }
+            }
+        }
+        params.put("OTHER_EXPENSES_TOTAL", otherExpensesGrandTotal);
+        // Legacy params (kept for backward compat)
+        params.put("TRANSPORTATION_PRICE", BigDecimal.ZERO);
+        params.put("INSTALLATION_PRICE", BigDecimal.ZERO);
 
         // Grand total
         BigDecimal grandTotal = calculateGrandTotal(quotation);
@@ -377,8 +386,12 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
                 Map<String, Object> row = new HashMap<>();
                 row.put("kitchenName", k.getKitchenName() != null ? k.getKitchenName() : "Kitchen");
                 row.put("totalAmount", k.getTotalAmount() != null ? k.getTotalAmount() : BigDecimal.ZERO);
-                BigDecimal otherExpenses = (k.getTransportationPrice() != null ? k.getTransportationPrice() : BigDecimal.ZERO)
-                        .add(k.getInstallationPrice() != null ? k.getInstallationPrice() : BigDecimal.ZERO);
+                BigDecimal otherExpenses = BigDecimal.ZERO;
+                if (k.getOtherExpenses() != null) {
+                    otherExpenses = k.getOtherExpenses().stream()
+                            .map(e -> e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                }
                 row.put("otherExpenses", otherExpenses);
                 kitchenTotals.add(row);
             }
@@ -449,6 +462,14 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         map.put("accessories", kitchen.getAccessories() != null ? kitchen.getAccessories() : Collections.emptyList());
         map.put("lighting", kitchen.getLighting() != null ? kitchen.getLighting() : Collections.emptyList());
 
+        // Other expenses
+        List<QuotationOtherExpenseDto> otherExpensesList = kitchen.getOtherExpenses() != null ? kitchen.getOtherExpenses() : Collections.emptyList();
+        map.put("otherExpenses", otherExpensesList);
+        BigDecimal otherExpensesTotal = otherExpensesList.stream()
+                .map(e -> e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        map.put("otherExpensesTotal", otherExpensesTotal);
+
         // Totals
         map.put("cabinetsFinalTotal", kitchen.getCabinetsFinalTotal() != null ? kitchen.getCabinetsFinalTotal() : BigDecimal.ZERO);
         map.put("doorsFinalTotal", kitchen.getDoorsFinalTotal() != null ? kitchen.getDoorsFinalTotal() : BigDecimal.ZERO);
@@ -471,6 +492,7 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         kitchen.setDoors(quotation.getDoors());
         kitchen.setAccessories(quotation.getAccessories());
         kitchen.setLighting(quotation.getLighting());
+        kitchen.setOtherExpenses(quotation.getOtherExpenses());
 
         // Copy totals from quotation level
         kitchen.setCabinetsFinalTotal(quotation.getCabinetsFinalTotal());
@@ -497,10 +519,17 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         } else {
             total = BigDecimal.ZERO;
         }
-        // Add quotation-level transportation and installation (only for single-kitchen mode)
+        // Add quotation-level other expenses (only for single-kitchen mode)
         if (quotation.getKitchens() == null || quotation.getKitchens().isEmpty()) {
-            if (quotation.getTransportationPrice() != null) total = total.add(quotation.getTransportationPrice());
-            if (quotation.getInstallationPrice() != null) total = total.add(quotation.getInstallationPrice());
+            if (quotation.getOtherExpenses() != null) {
+                for (QuotationOtherExpenseDto e : quotation.getOtherExpenses()) {
+                    if (e.getAmount() != null) total = total.add(e.getAmount());
+                }
+            } else {
+                // Fallback to legacy fields
+                if (quotation.getTransportationPrice() != null) total = total.add(quotation.getTransportationPrice());
+                if (quotation.getInstallationPrice() != null) total = total.add(quotation.getInstallationPrice());
+            }
         }
         return total;
     }

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="subreport-other-expenses"
+              pageWidth="595"
+              pageHeight="300"
+              columnWidth="595"
+              leftMargin="0"
+              rightMargin="0"
+              topMargin="0"
+              bottomMargin="0"
+              uuid="d1d2d3d4-e5e6-7890-abcd-ef1234567890">
+
+    <!-- Fields from QuotationOtherExpenseDto -->
+    <field name="name" class="java.lang.String"/>
+    <field name="amount" class="java.math.BigDecimal"/>
+
+    <variable name="ROW_NUMBER" class="java.lang.Integer" calculation="Count">
+        <variableExpression><![CDATA[Boolean.TRUE]]></variableExpression>
+    </variable>
+
+    <columnHeader>
+        <band height="42">
+            <rectangle radius="8">
+                <reportElement x="15" y="10" width="565" height="32" backcolor="#000000" uuid="d1d2d3d4-e5e6-7890-abcd-ef1234567001"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="20" y="10" width="350" height="32" forecolor="#FFFFFF" uuid="d1d2d3d4-e5e6-7890-abcd-ef1234567002"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="10" isBold="true"/>
+                </textElement>
+                <text><![CDATA[ITEM NAME]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="370" y="10" width="185" height="32" forecolor="#FFFFFF" uuid="d1d2d3d4-e5e6-7890-abcd-ef1234567003"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="10" isBold="true"/>
+                </textElement>
+                <text><![CDATA[AMOUNT]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="28" splitType="Stretch">
+            <!-- White base background for ALL rows -->
+            <rectangle>
+                <reportElement x="15" y="0" width="565" height="28" backcolor="#FFFFFF" uuid="d1d2d3d4-e5e6-7890-abcd-ef12345670b1"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <!-- Alternating row highlight -->
+            <rectangle>
+                <reportElement x="15" y="0" width="565" height="28" backcolor="#FAF6F1" uuid="d1d2d3d4-e5e6-7890-abcd-ef1234567007">
+                    <printWhenExpression><![CDATA[$V{ROW_NUMBER} % 2 == 0]]></printWhenExpression>
+                </reportElement>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+
+            <textField textAdjust="StretchHeight" isBlankWhenNull="true">
+                <reportElement x="20" y="5" width="350" height="20" forecolor="#2C1810" uuid="d1d2d3d4-e5e6-7890-abcd-ef1234567008"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{name}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="370" y="5" width="185" height="20" forecolor="#2C1810" uuid="d1d2d3d4-e5e6-7890-abcd-ef1234567009"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($F{amount})]]></textFieldExpression>
+            </textField>
+
+            <line>
+                <reportElement x="15" y="27" width="565" height="1" forecolor="#E8E0D5" uuid="d1d2d3d4-e5e6-7890-abcd-ef1234567013"/>
+            </line>
+        </band>
+    </detail>
+
+    <noData>
+        <band height="30">
+            <rectangle>
+                <reportElement x="15" y="5" width="3" height="20" backcolor="#E8E0D5" uuid="d1d2d3d4-e5e6-7890-abcd-ef12345670a1"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="25" y="5" width="525" height="20" forecolor="#8B7355" uuid="d1d2d3d4-e5e6-7890-abcd-ef1234567014"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="9" isItalic="true"/>
+                </textElement>
+                <text><![CDATA[No other expenses in this kitchen]]></text>
+            </staticText>
+        </band>
+    </noData>
+
+</jasperReport>

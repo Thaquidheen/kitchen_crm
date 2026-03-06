@@ -48,6 +48,7 @@
     <parameter name="KITCHEN_TOTALS_DATA" class="java.lang.Object"/>
     <parameter name="TRANSPORTATION_PRICE" class="java.math.BigDecimal"/>
     <parameter name="INSTALLATION_PRICE" class="java.math.BigDecimal"/>
+    <parameter name="OTHER_EXPENSES_TOTAL" class="java.math.BigDecimal"/>
 
     <!-- Background — dark on page 1 (behind kitchen image), cream on pages 2+ -->
     <background>
@@ -282,56 +283,30 @@
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-kitchen-totals.jasper"]]></subreportExpression>
             </subreport>
 
-            <!-- Transportation row (only if > 1 kitchen and value > 0) -->
+            <!-- Other Expenses row (only if > 1 kitchen and value > 0) -->
             <rectangle>
                 <reportElement positionType="Float" x="50" y="85" width="495" height="25" backcolor="#FAF6F1" uuid="cf000002-0000-0000-0000-000000000001">
-                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{TRANSPORTATION_PRICE} != null && $P{TRANSPORTATION_PRICE}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{OTHER_EXPENSES_TOTAL} != null && $P{OTHER_EXPENSES_TOTAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
                 </reportElement>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
                 <reportElement positionType="Float" x="60" y="85" width="250" height="25" forecolor="#2C1810" uuid="cf000002-0000-0000-0000-000000000002">
-                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{TRANSPORTATION_PRICE} != null && $P{TRANSPORTATION_PRICE}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{OTHER_EXPENSES_TOTAL} != null && $P{OTHER_EXPENSES_TOTAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
                 </reportElement>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
                 </textElement>
-                <text><![CDATA[Transportation]]></text>
+                <text><![CDATA[Other Expenses]]></text>
             </staticText>
             <textField>
                 <reportElement positionType="Float" x="310" y="85" width="225" height="25" forecolor="#2C1810" uuid="cf000002-0000-0000-0000-000000000003">
-                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{TRANSPORTATION_PRICE} != null && $P{TRANSPORTATION_PRICE}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{OTHER_EXPENSES_TOTAL} != null && $P{OTHER_EXPENSES_TOTAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
                 </reportElement>
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{TRANSPORTATION_PRICE})]]></textFieldExpression>
-            </textField>
-
-            <!-- Installation row (only if > 1 kitchen and value > 0) -->
-            <rectangle>
-                <reportElement positionType="Float" x="50" y="112" width="495" height="25" backcolor="#FFFFFF" uuid="cf000002-0000-0000-0000-000000000004">
-                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{INSTALLATION_PRICE} != null && $P{INSTALLATION_PRICE}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
-                </reportElement>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <staticText>
-                <reportElement positionType="Float" x="60" y="112" width="250" height="25" forecolor="#2C1810" uuid="cf000002-0000-0000-0000-000000000005">
-                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{INSTALLATION_PRICE} != null && $P{INSTALLATION_PRICE}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
-                </reportElement>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="10"/>
-                </textElement>
-                <text><![CDATA[Installation]]></text>
-            </staticText>
-            <textField>
-                <reportElement positionType="Float" x="310" y="112" width="225" height="25" forecolor="#2C1810" uuid="cf000002-0000-0000-0000-000000000006">
-                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{INSTALLATION_PRICE} != null && $P{INSTALLATION_PRICE}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
-                </reportElement>
-                <textElement textAlignment="Left" verticalAlignment="Middle">
-                    <font fontName="Serif" size="10"/>
-                </textElement>
-                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{INSTALLATION_PRICE})]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{OTHER_EXPENSES_TOTAL})]]></textFieldExpression>
             </textField>
 
             <!-- Grand Total row (only if > 1 kitchen) -->
