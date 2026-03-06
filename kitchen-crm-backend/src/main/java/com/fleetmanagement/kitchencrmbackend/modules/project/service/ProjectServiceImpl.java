@@ -9,6 +9,9 @@ import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.QuotationKitchen;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.QuotationRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.QuotationKitchenRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.project.repository.PaymentRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.expense.repository.ProjectExpenseRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.warranty.repository.WarrantyCardRepository;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,6 +45,15 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Autowired
     private QuotationKitchenRepository kitchenRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
+    private ProjectExpenseRepository projectExpenseRepository;
+
+    @Autowired
+    private WarrantyCardRepository warrantyCardRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -221,9 +233,16 @@ public class ProjectServiceImpl implements ProjectService {
             return ApiResponse.error("Project not found");
         }
 
-        // Soft delete by changing status to cancelled
-        project.setStatus(CustomerProject.ProjectStatus.CANCELLED);
-        projectRepository.save(project);
+        // Delete related payments and expenses
+        paymentRepository.deleteByProjectId(id);
+        projectExpenseRepository.deleteByProjectId(id);
+
+        // Unlink quotations and warranty cards (set project_id to NULL)
+        quotationRepository.unlinkFromProject(id);
+        warrantyCardRepository.unlinkFromProject(id);
+
+        // Permanently delete the project
+        projectRepository.delete(project);
 
         return ApiResponse.success("Project deleted successfully");
     }

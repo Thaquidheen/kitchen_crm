@@ -208,7 +208,6 @@ export function ProjectList({ customerId, showFilters = true }: ProjectListProps
               { value: ProjectStatus.IN_PROGRESS, label: 'In Progress' },
               { value: ProjectStatus.COMPLETED, label: 'Completed' },
               { value: ProjectStatus.ON_HOLD, label: 'On Hold' },
-              { value: ProjectStatus.CANCELLED, label: 'Cancelled' },
             ]}
           />
 

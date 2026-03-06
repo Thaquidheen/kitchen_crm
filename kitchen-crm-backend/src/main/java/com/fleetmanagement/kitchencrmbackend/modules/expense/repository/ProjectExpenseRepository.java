@@ -58,4 +58,6 @@ public interface ProjectExpenseRepository extends JpaRepository<ProjectExpense, 
      * Find expenses by payment method
      */
     List<ProjectExpense> findByProjectIdAndPaymentMethod(Long projectId, String paymentMethod);
+
+    void deleteByProjectId(Long projectId);
 }

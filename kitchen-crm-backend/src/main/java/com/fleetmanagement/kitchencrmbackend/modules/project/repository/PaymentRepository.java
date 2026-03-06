@@ -48,4 +48,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     @Query("SELECT p.paymentMethod, SUM(p.amount) FROM Payment p WHERE p.paymentStatus = 'COMPLETED' GROUP BY p.paymentMethod")
     List<Object[]> getPaymentMethodSummary();
+
+    void deleteByProjectId(Long projectId);
 }

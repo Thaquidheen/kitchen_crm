@@ -4,6 +4,7 @@ import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -59,4 +60,8 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
 
     @Query("SELECT COUNT(q) FROM Quotation q WHERE q.createdAt BETWEEN :fromDate AND :toDate")
     Long countByCreatedAtBetween(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
+
+    @Modifying
+    @Query("UPDATE Quotation q SET q.project = null WHERE q.project.id = :projectId")
+    void unlinkFromProject(@Param("projectId") Long projectId);
 }
