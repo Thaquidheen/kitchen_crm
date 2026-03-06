@@ -211,9 +211,37 @@ export function KitchenSelector({ kitchens, onKitchensChange, suggestedKitchenTy
         </div>
       )}
 
+      {/* Manual Add Kitchen Input — always visible */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <Input
+          type="text"
+          placeholder="Enter kitchen name (e.g. Kitchen, Wardrobe, Pantry)"
+          value={editingIndex === null ? newKitchenName : ''}
+          onChange={(e) => {
+            if (editingIndex === null) setNewKitchenName(e.target.value);
+          }}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter' && editingIndex === null) handleAddKitchen();
+          }}
+          disabled={editingIndex !== null}
+          className="flex-1"
+        />
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          onClick={handleAddKitchen}
+          disabled={!newKitchenName.trim() || editingIndex !== null}
+          className="w-full sm:w-auto"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Kitchen
+        </Button>
+      </div>
+
       {kitchens.length === 0 ? (
         <Card className="p-4 sm:p-6 bg-background-800 border-background-600 text-center">
-          <p className="text-xs sm:text-sm text-text-600">No kitchens added yet. Click on a kitchen type above to add it.</p>
+          <p className="text-xs sm:text-sm text-text-600">No kitchens added yet. Use the input above or click a suggested kitchen type to add one.</p>
         </Card>
       ) : (
         <div className="space-y-2 sm:space-y-3">
