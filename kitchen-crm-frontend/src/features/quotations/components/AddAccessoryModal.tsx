@@ -80,6 +80,7 @@ export function AddAccessoryModal({
       price: unitPrice,
       elevationId: selectedElevation?.id,
       elevationName: selectedElevation?.name,
+      brandName: accessory.raw?.brandName,
       raw: accessory.raw,
     });
     onClose();

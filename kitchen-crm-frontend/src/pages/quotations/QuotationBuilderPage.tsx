@@ -241,6 +241,7 @@ export function QuotationBuilderPage() {
         name: a.description || a.accessoryName || 'Accessory',
         description: a.description || a.accessoryName || 'Accessory',
         price: Number(a.unitPrice || 0),
+        brandName: a.brandName,
       })),
       cabinets: globalPaired.cabinets,
       doors: globalPaired.doors,
@@ -284,6 +285,7 @@ export function QuotationBuilderPage() {
           name: a.description || a.accessoryName || 'Accessory',
           description: a.description || a.accessoryName || 'Accessory',
           price: Number(a.unitPrice || 0),
+          brandName: a.brandName,
         })),
         ...(() => {
           const paired = pairCabinetsAndDoors(k.cabinets || [], k.doors || []);

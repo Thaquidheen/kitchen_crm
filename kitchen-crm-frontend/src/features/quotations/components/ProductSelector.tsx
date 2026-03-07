@@ -211,6 +211,7 @@ export function ProductSelector({ selectedProducts, onProductsChange, availableE
         unitPrice: item.unitPrice,
         totalPrice: item.totalPrice,
         price: item.price || item.unitPrice,
+        brandName: item.brandName || item.raw?.brandName,
         // Elevation fields
         elevationId: item.elevationId,
         elevationName: item.elevationName,
