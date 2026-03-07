@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Pencil, ChevronDown, ChevronRight, Layers, Receipt } from 'lucide-react';
+import { Pencil, ChevronDown, ChevronRight, Layers, Receipt, X } from 'lucide-react';
 import { useState } from 'react';
 import type { QuotationElevation, QuotationOtherExpense } from '../types';
 
@@ -251,54 +251,42 @@ export function SelectedProductsList({
     const displayName = item.description || item.cabinetTypeName || item.doorTypeName || item.name || `Item ${originalIndex + 1}`;
     const uniqueKey = `${category}-${originalIndex}-${item.id || item.cabinetTypeId || item.doorTypeId || item._tempPairId || originalIndex}`;
 
+    const showEdit = (category === 'cabinets' && onEditCabinet) || (category === 'doors' && onEditDoor);
+    const handleEdit = () => {
+      if (category === 'cabinets' && onEditCabinet) onEditCabinet(originalIndex);
+      if (category === 'doors' && onEditDoor) onEditDoor(originalIndex);
+    };
+
     return (
-      <div key={uniqueKey} className="text-xs text-text-700 p-2 bg-background-700/50 rounded-lg">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-start justify-between gap-2">
-            <span className="flex-1 min-w-0 break-words leading-tight">{displayName}</span>
+      <div key={uniqueKey} className="text-xs text-text-700 p-2 bg-background-700/50 rounded-lg relative group">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <span className="break-words leading-tight">{displayName}</span>
+            {item.quantity && item.quantity > 1 && (
+              <span className="text-text-600 ml-1">× {item.quantity}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
             <span className="font-semibold whitespace-nowrap text-primary-400">
               ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
             </span>
-          </div>
-
-          {item.quantity && item.quantity > 1 && (
-            <div className="text-xs text-text-600">Qty: {item.quantity}</div>
-          )}
-
-          <div className="flex items-center justify-end gap-1 mt-1 pt-1 border-t border-background-600">
-            {category === 'cabinets' && onEditCabinet && (
-              <Button
-                size="xs"
-                variant="ghost"
-                onClick={() => onEditCabinet(originalIndex)}
-                className="flex-shrink-0 text-xs px-2 py-1"
+            {showEdit && (
+              <button
+                onClick={handleEdit}
+                className="p-0.5 rounded hover:bg-background-600 text-text-600 hover:text-primary-400 transition-colors"
                 title="Edit"
               >
-                <Pencil className="w-3 h-3 mr-1" />
-                <span>Edit</span>
-              </Button>
-            )}
-            {category === 'doors' && onEditDoor && (
-              <Button
-                size="xs"
-                variant="ghost"
-                onClick={() => onEditDoor(originalIndex)}
-                className="flex-shrink-0 text-xs px-2 py-1"
-                title="Edit"
-              >
-                <Pencil className="w-3 h-3 mr-1" />
-                <span>Edit</span>
-              </Button>
+                <Pencil className="w-3 h-3" />
+              </button>
             )}
             {onRemove && (
-              <Button
-                size="xs"
-                variant="ghost"
+              <button
                 onClick={() => onRemove(category, originalIndex)}
-                className="flex-shrink-0 text-xs px-2 py-1 text-error hover:text-error"
+                className="p-0.5 rounded hover:bg-background-600 text-text-600 hover:text-error transition-colors"
+                title="Remove"
               >
-                Remove
-              </Button>
+                <X className="w-3 h-3" />
+              </button>
             )}
           </div>
         </div>

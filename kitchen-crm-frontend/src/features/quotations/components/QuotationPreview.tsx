@@ -342,11 +342,19 @@ export function QuotationPreview({
                         <div className="space-y-1">
                           {category.items.map((item: any, idx: number) => (
                             <div key={idx} className="flex justify-between text-xs">
-                              <span className="text-text-600">
-                                {item.name || item.description || `Item ${idx + 1}`}
-                                {item.quantity && item.quantity > 1 && ` × ${item.quantity}`}
-                              </span>
-                              <span className="font-medium text-text-900">
+                              <div className="flex-1 min-w-0">
+                                <span className="text-text-600">
+                                  {item.name || item.description || `Item ${idx + 1}`}
+                                  {item.quantity && item.quantity > 1 && ` × ${item.quantity}`}
+                                </span>
+                                {category.category === 'Cabinets' && item.materialName && (
+                                  <span className="text-text-500 ml-1">({item.materialName})</span>
+                                )}
+                                {category.category === 'Accessories' && item.brandName && (
+                                  <span className="text-text-500 ml-1">({item.brandName})</span>
+                                )}
+                              </div>
+                              <span className="font-medium text-text-900 flex-shrink-0">
                                 ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
                               </span>
                             </div>
@@ -438,15 +446,21 @@ export function QuotationPreview({
                   <div key={category.category} className="border-b border-background-600 pb-2 sm:pb-3 last:border-b-0">
                     <h4 className="font-semibold text-xs sm:text-sm text-text-800 mb-2">{category.category}</h4>
                     <div className="space-y-1 sm:space-y-2">
-                      {category.items.map((item, idx) => (
+                      {category.items.map((item: any, idx: number) => (
                         <div key={idx} className="flex justify-between text-xs sm:text-sm">
-                          <div className="flex gap-1 sm:gap-2">
+                          <div className="flex-1 min-w-0 flex flex-wrap gap-1 sm:gap-2">
                             <span className="text-text-700">{item.name ?? `Item ${idx + 1}`}</span>
                             {item.quantity && item.quantity > 1 && (
                               <span className="text-text-600">× {item.quantity}</span>
                             )}
+                            {category.category === 'Cabinets' && item.materialName && (
+                              <span className="text-text-500">({item.materialName})</span>
+                            )}
+                            {category.category === 'Accessories' && item.brandName && (
+                              <span className="text-text-500">({item.brandName})</span>
+                            )}
                           </div>
-                          <span className="font-medium text-text-900">
+                          <span className="font-medium text-text-900 flex-shrink-0">
                             ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
                           </span>
                         </div>

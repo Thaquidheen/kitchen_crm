@@ -1507,8 +1507,8 @@ export function QuotationBuilderPage() {
         </div>
 
         {/* Sidebar - Selected Products Summary */}
-        <div className="lg:col-span-1">
-          <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
+        <div className="lg:col-span-1 lg:sticky lg:top-4 lg:self-start">
+          <Card className="p-4 sm:p-6 bg-background-800 border-background-600 max-h-[calc(100vh-2rem)] overflow-y-auto">
             <h3 className="text-base sm:text-lg font-bold text-text-900 mb-4">Selected Products</h3>
             {formData.kitchens && formData.kitchens.length > 0 ? (
               // Show products per kitchen
