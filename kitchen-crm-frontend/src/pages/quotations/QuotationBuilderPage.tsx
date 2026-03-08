@@ -166,18 +166,22 @@ export function QuotationBuilderPage() {
           doorTypeName: c.linkedDoorTypeName,
         } : undefined,
       }));
-      const doors = rawDoors.map((d: any) => ({
-        doorTypeId: d.doorTypeId || d.id,
-        widthMm: d.widthMm,
-        heightMm: d.heightMm,
-        calculatedSqft: d.calculatedSqft,
-        customDimensions: d.customDimensions,
-        quantity: d.quantity,
-        unitPrice: Number(d.unitPrice || 0),
-        totalPrice: Number(d.unitPrice || 0) * (d.quantity || 1),
-        doorTypeName: d.doorType?.name || d.description || 'Door',
-        description: d.description || `${d.doorType?.name || 'Door'} (${d.widthMm}×${d.heightMm}mm)`,
-      }));
+      const doors = rawDoors.map((d: any) => {
+        // Door unitPrice is per-sqft rate, so totalPrice must use face area
+        const faceArea = d.widthMm && d.heightMm ? (d.widthMm / 304) * (d.heightMm / 304) : 1;
+        return {
+          doorTypeId: d.doorTypeId || d.id,
+          widthMm: d.widthMm,
+          heightMm: d.heightMm,
+          calculatedSqft: d.calculatedSqft,
+          customDimensions: d.customDimensions,
+          quantity: d.quantity,
+          unitPrice: Number(d.unitPrice || 0),
+          totalPrice: faceArea * Number(d.unitPrice || 0) * (d.quantity || 1),
+          doorTypeName: d.doorType?.name || d.description || 'Door',
+          description: d.description || `${d.doorType?.name || 'Door'} (${d.widthMm}×${d.heightMm}mm)`,
+        };
+      });
       // Establish _tempPairId links between cabinets and their linked doors
       cabinets.forEach((cab: any) => {
         if (cab.linkedDoorTypeId) {

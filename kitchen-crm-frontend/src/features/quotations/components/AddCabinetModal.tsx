@@ -278,9 +278,13 @@ export function AddCabinetModal({
           <Input
             ref={quantityRef}
             label="Quantity"
-            type="number"
-            value={quantity || ''}
-            onChange={(e) => setQuantity(e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
+            type="text"
+            inputMode="numeric"
+            value={quantity > 0 ? String(quantity) : ''}
+            onChange={(e) => {
+              const val = e.target.value.replace(/[^0-9]/g, '');
+              setQuantity(val === '' ? 0 : parseInt(val));
+            }}
             placeholder="1"
           />
           <Select
