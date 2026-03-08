@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { User, Package, DollarSign, Calculator, Home, Image as ImageIcon } from 'lucide-react';
-import type { QuotationKitchenFormData } from '@/features/quotations/types';
+import type { QuotationKitchenFormData, QuotationOtherExpense } from '@/features/quotations/types';
 import { getImageUrl } from '@/utils/imageUtils';
 
 export interface QuotationPreviewProps {
@@ -23,6 +23,7 @@ export interface QuotationPreviewProps {
   lighting: Array<{ id?: number; name?: string; totalPrice?: number; price?: number; quantity?: number }>;
   transportationPrice: number;
   installationPrice: number;
+  otherExpenses?: QuotationOtherExpense[];
   // Category-specific margin percentages
   accessoriesMarginPercentage: number;
   cabinetsMarginPercentage: number;
@@ -45,6 +46,7 @@ export function QuotationPreview({
   lighting,
   transportationPrice,
   installationPrice,
+  otherExpenses: otherExpensesProp,
   accessoriesMarginPercentage,
   cabinetsMarginPercentage,
   doorsMarginPercentage,
@@ -95,8 +97,11 @@ export function QuotationPreview({
     // Sum up category final totals
     const categoriesFinalTotal = accessoriesTotal.finalTotal + cabinetsTotal.finalTotal + doorsTotal.finalTotal + lightingTotal.finalTotal;
 
-    // Grand total = sum of category final totals + transportation + installation
-    const grandTotal = categoriesFinalTotal + transportationPrice + installationPrice;
+    // Grand total = sum of category final totals + all other expenses
+    const otherExpensesTotal = otherExpensesProp && otherExpensesProp.length > 0
+      ? otherExpensesProp.reduce((sum, e) => sum + (e.amount || 0), 0)
+      : transportationPrice + installationPrice;
+    const grandTotal = categoriesFinalTotal + otherExpensesTotal;
 
     return {
       productsSubtotal,
@@ -117,6 +122,7 @@ export function QuotationPreview({
     lighting,
     transportationPrice,
     installationPrice,
+    otherExpensesProp,
     accessoriesMarginPercentage,
     accessoriesTaxPercentage,
     cabinetsMarginPercentage,
@@ -197,8 +203,11 @@ export function QuotationPreview({
         kCabinetsTotal.finalTotal +
         kDoorsTotal.finalTotal +
         kLightingTotal.finalTotal;
-      // Other Expenses = Transportation + Installation (per-kitchen)
-      const otherExpenses = (kitchen.transportationPrice || 0) + (kitchen.installationPrice || 0);
+      // Other Expenses = sum of all other expense items (per-kitchen)
+      const otherExpenses = (kitchen.otherExpenses || []).reduce(
+        (sum, e) => sum + (e.amount || 0),
+        0
+      );
       const kitchenTotal = kitchenSubtotal + otherExpenses;
 
       return {
@@ -376,22 +385,16 @@ export function QuotationPreview({
                           ₹{kitchenCalc.otherExpenses.toLocaleString('en-IN')}
                         </span>
                       </div>
-                      {(kitchenCalc.kitchen.transportationPrice || 0) > 0 && (
-                        <div className="flex justify-between pl-3">
-                          <span className="text-text-600 text-xs">Transportation</span>
-                          <span className="text-text-700 text-xs">
-                            ₹{(kitchenCalc.kitchen.transportationPrice || 0).toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                      )}
-                      {(kitchenCalc.kitchen.installationPrice || 0) > 0 && (
-                        <div className="flex justify-between pl-3">
-                          <span className="text-text-600 text-xs">Installation</span>
-                          <span className="text-text-700 text-xs">
-                            ₹{(kitchenCalc.kitchen.installationPrice || 0).toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                      )}
+                      {(kitchenCalc.kitchen.otherExpenses || [])
+                        .filter((e) => (e.amount || 0) > 0)
+                        .map((expense, idx) => (
+                          <div key={idx} className="flex justify-between pl-3">
+                            <span className="text-text-600 text-xs">{expense.name}</span>
+                            <span className="text-text-700 text-xs">
+                              ₹{(expense.amount || 0).toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        ))}
                     </>
                   )}
                   <div className="flex justify-between border-t border-background-600 pt-2">
@@ -513,19 +516,17 @@ export function QuotationPreview({
               </span>
             </div>
 
-            <div className="flex justify-between text-xs sm:text-sm">
-              <span className="text-text-700">Transportation Cost</span>
-              <span className="font-medium text-text-900">
-                ₹{transportationPrice.toLocaleString('en-IN')}
-              </span>
-            </div>
-
-            <div className="flex justify-between text-xs sm:text-sm">
-              <span className="text-text-700">Installation Cost</span>
-              <span className="font-medium text-text-900">
-                ₹{installationPrice.toLocaleString('en-IN')}
-              </span>
-            </div>
+            {(otherExpensesProp && otherExpensesProp.length > 0 ? otherExpensesProp : [
+              { name: 'Transportation', amount: transportationPrice },
+              { name: 'Installation', amount: installationPrice },
+            ]).map((expense, idx) => (
+              <div key={idx} className="flex justify-between text-xs sm:text-sm">
+                <span className="text-text-700">{expense.name}</span>
+                <span className="font-medium text-text-900">
+                  ₹{(expense.amount || 0).toLocaleString('en-IN')}
+                </span>
+              </div>
+            ))}
 
             {/* Grand Total */}
             <div className="border-t-2 border-primary-700 pt-2 sm:pt-3 mt-2 sm:mt-3">

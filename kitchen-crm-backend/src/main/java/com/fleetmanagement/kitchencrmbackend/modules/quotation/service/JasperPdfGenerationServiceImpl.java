@@ -360,8 +360,18 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         BigDecimal grandTotal = calculateGrandTotal(quotation);
         params.put("GRAND_TOTAL", grandTotal);
 
+        // Notes (per-quotation)
+        String notes = quotation.getNotes();
+        params.put("NOTES", notes != null ? notes : "");
+
         // Terms
-        params.put("TERMS_GENERAL", getTermsGeneral());
+        String termsGeneral = getTermsGeneral();
+        // Per-quotation custom T&C overrides global general terms when provided
+        String customTerms = quotation.getTermsConditions();
+        if (customTerms != null && !customTerms.trim().isEmpty()) {
+            termsGeneral = customTerms;
+        }
+        params.put("TERMS_GENERAL", termsGeneral);
         params.put("TERMS_WARRANTY", getTermsWarranty());
 
         // Important Note & Payment Terms

@@ -49,6 +49,7 @@
     <parameter name="TRANSPORTATION_PRICE" class="java.math.BigDecimal"/>
     <parameter name="INSTALLATION_PRICE" class="java.math.BigDecimal"/>
     <parameter name="OTHER_EXPENSES_TOTAL" class="java.math.BigDecimal"/>
+    <parameter name="NOTES" class="java.lang.String"/>
 
     <!-- Background — dark on page 1 (behind kitchen image), cream on pages 2+ -->
     <background>
@@ -335,9 +336,29 @@
                 <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{GRAND_TOTAL})]]></textFieldExpression>
             </textField>
 
+            <!-- ===== NOTES (only shown when not empty) ===== -->
+            <staticText>
+                <reportElement positionType="Float" x="50" y="185" width="495" height="22" forecolor="#000000" uuid="cf000001-0000-0000-0000-0000000000a1">
+                    <printWhenExpression><![CDATA[$P{NOTES} != null && !$P{NOTES}.trim().isEmpty()]]></printWhenExpression>
+                </reportElement>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="14" isBold="true" isUnderline="true"/>
+                </textElement>
+                <text><![CDATA[Notes]]></text>
+            </staticText>
+            <textField textAdjust="StretchHeight">
+                <reportElement positionType="Float" x="50" y="210" width="495" height="20" forecolor="#333333" uuid="cf000001-0000-0000-0000-0000000000a2">
+                    <printWhenExpression><![CDATA[$P{NOTES} != null && !$P{NOTES}.trim().isEmpty()]]></printWhenExpression>
+                </reportElement>
+                <textElement verticalAlignment="Top">
+                    <font fontName="Serif" size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{NOTES}]]></textFieldExpression>
+            </textField>
+
             <!-- ===== IMPORTANT NOTE ===== -->
             <staticText>
-                <reportElement positionType="Float" x="50" y="190" width="495" height="22" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000010"/>
+                <reportElement positionType="Float" x="50" y="250" width="495" height="22" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000010"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true" isUnderline="true"/>
                 </textElement>

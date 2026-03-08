@@ -1460,6 +1460,7 @@ export function QuotationBuilderPage() {
                   lighting={formData.lighting || []}
                   transportationPrice={formData.kitchens && formData.kitchens.length > 0 ? 0 : ((formData.otherExpenses || []).find(e => e.name === 'Transportation')?.amount || 0)}
                   installationPrice={formData.kitchens && formData.kitchens.length > 0 ? 0 : ((formData.otherExpenses || []).find(e => e.name === 'Installation')?.amount || 0)}
+                  otherExpenses={formData.kitchens && formData.kitchens.length > 0 ? undefined : (formData.otherExpenses || [])}
                   accessoriesMarginPercentage={formData.accessoriesMarginPercentage ?? 20}
                   cabinetsMarginPercentage={formData.cabinetsMarginPercentage ?? 20}
                   doorsMarginPercentage={formData.doorsMarginPercentage ?? 20}
