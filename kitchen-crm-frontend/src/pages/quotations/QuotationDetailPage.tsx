@@ -123,7 +123,7 @@ export function QuotationDetailPage() {
           <div>
             <div className="font-semibold text-text-800 mb-2">Details</div>
             <div className="text-sm sm:text-base">Amount: ₹{data.totalAmount?.toLocaleString('en-IN') ?? '-'}</div>
-            <div className="text-sm sm:text-base">Created: {data.createdAt ? new Date(data.createdAt).toLocaleString() : '-'}</div>
+            <div className="text-sm sm:text-base">Created: {data.createdAt ? new Date(data.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</div>
           </div>
           <div>
             <div className="font-semibold text-text-800 mb-2">Actions</div>
@@ -185,7 +185,7 @@ export function QuotationDetailPage() {
             <div>
               <label className="text-xs sm:text-sm text-text-600 block mb-1">Approved At</label>
               <p className="font-medium text-sm sm:text-base text-text-900">
-                {new Date(data.quotationSignedAt).toLocaleString()}
+                {new Date(data.quotationSignedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
               </p>
             </div>
           </div>

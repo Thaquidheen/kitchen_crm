@@ -279,10 +279,9 @@ export function AddCabinetModal({
             ref={quantityRef}
             label="Quantity"
             type="number"
-            value={quantity}
-            onChange={(e) => setQuantity(Number(e.target.value))}
+            value={quantity || ''}
+            onChange={(e) => setQuantity(e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
             placeholder="1"
-            min={1}
           />
           <Select
             label="Material *"
