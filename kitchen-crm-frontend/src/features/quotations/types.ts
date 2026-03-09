@@ -193,6 +193,7 @@ export interface Quotation {
   validUntil?: string;
   notes?: string;
   termsConditions?: string;
+  warrantyAndService?: string;
   createdBy?: string;
   approvedBy?: string;
   approvedAt?: string;
@@ -442,6 +443,7 @@ export interface QuotationFormData {
   validUntil: string;
   notes: string;
   termsConditions: string;
+  warrantyAndService: string;
   accessories: QuotationAccessory[];
   cabinets: QuotationCabinet[];
   doors: QuotationDoor[];

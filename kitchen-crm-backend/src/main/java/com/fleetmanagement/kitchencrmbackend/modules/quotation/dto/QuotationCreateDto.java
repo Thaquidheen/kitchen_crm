@@ -39,6 +39,7 @@ public class QuotationCreateDto {
     private LocalDate validUntil;
     private String notes;
     private String termsConditions;
+    private String warrantyAndService;
 
     // Line items
     private List<QuotationAccessoryDto> accessories;

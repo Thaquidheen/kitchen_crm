@@ -58,6 +58,7 @@ public class QuotationDto {
     private LocalDate validUntil;
     private String notes;
     private String termsConditions;
+    private String warrantyAndService;
     private String createdBy;
     private String approvedBy;
     private LocalDate approvedAt;

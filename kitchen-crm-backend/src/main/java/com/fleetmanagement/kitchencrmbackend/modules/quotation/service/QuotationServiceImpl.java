@@ -137,6 +137,7 @@ public class QuotationServiceImpl implements QuotationService {
             quotation.setValidUntil(LocalDate.now().plusDays(30));
             quotation.setNotes(dto.getNotes());
             quotation.setTermsConditions(dto.getTermsConditions());
+            quotation.setWarrantyAndService(dto.getWarrantyAndService());
 
             // Set the createdBy field using the parameter
             quotation.setCreatedBy(createdBy);
@@ -212,7 +213,8 @@ public class QuotationServiceImpl implements QuotationService {
         existingQuotation.setValidUntil(LocalDate.now().plusDays(30));
         existingQuotation.setNotes(quotationDto.getNotes());
         existingQuotation.setTermsConditions(quotationDto.getTermsConditions());
-        
+        existingQuotation.setWarrantyAndService(quotationDto.getWarrantyAndService());
+
         // Update category-specific margin and tax percentages (super admin can modify these)
         existingQuotation.setAccessoriesMarginPercentage(quotationDto.getAccessoriesMarginPercentage());
         existingQuotation.setCabinetsMarginPercentage(quotationDto.getCabinetsMarginPercentage());
@@ -390,6 +392,7 @@ public class QuotationServiceImpl implements QuotationService {
         newQuotation.setTaxPercentage(originalQuotation.getTaxPercentage());
         newQuotation.setNotes(originalQuotation.getNotes());
         newQuotation.setTermsConditions(originalQuotation.getTermsConditions());
+        newQuotation.setWarrantyAndService(originalQuotation.getWarrantyAndService());
         newQuotation.setCreatedBy(createdBy);
         newQuotation.setStatus(Quotation.QuotationStatus.DRAFT);
 
@@ -1013,6 +1016,7 @@ public class QuotationServiceImpl implements QuotationService {
         dto.setValidUntil(quotation.getValidUntil());
         dto.setNotes(quotation.getNotes());
         dto.setTermsConditions(quotation.getTermsConditions());
+        dto.setWarrantyAndService(quotation.getWarrantyAndService());
         dto.setCreatedBy(quotation.getCreatedBy());
         dto.setApprovedBy(quotation.getApprovedBy());
         dto.setApprovedAt(quotation.getApprovedAt());

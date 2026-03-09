@@ -179,6 +179,9 @@ public class Quotation extends Auditable {
     @Column(name = "terms_conditions", columnDefinition = "TEXT")
     private String termsConditions;
 
+    @Column(name = "warranty_and_service", columnDefinition = "TEXT")
+    private String warrantyAndService;
+
     @Column(name = "created_by")
     private String createdBy;
 

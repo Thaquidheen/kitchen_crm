@@ -372,7 +372,12 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
             termsGeneral = customTerms;
         }
         params.put("TERMS_GENERAL", termsGeneral);
-        params.put("TERMS_WARRANTY", getTermsWarranty());
+        String termsWarranty = getTermsWarranty();
+        String customWarranty = quotation.getWarrantyAndService();
+        if (customWarranty != null && !customWarranty.trim().isEmpty()) {
+            termsWarranty = customWarranty;
+        }
+        params.put("TERMS_WARRANTY", termsWarranty);
 
         // Important Note & Payment Terms
         String importantNote = quotation.getImportantNote();
