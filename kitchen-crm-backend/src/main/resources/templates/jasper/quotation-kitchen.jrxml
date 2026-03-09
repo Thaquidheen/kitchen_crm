@@ -196,24 +196,27 @@
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-lighting.jasper"]]></subreportExpression>
             </subreport>
 
-            <!-- ==================== OTHER EXPENSES SECTION ==================== -->
+        </band>
+
+        <!-- ==================== OTHER EXPENSES (MISCELLANEOUS) SECTION ==================== -->
+        <band height="120" splitType="Stretch">
             <rectangle>
-                <reportElement positionType="Float" x="15" y="740" width="4" height="18" backcolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa8"/>
+                <reportElement positionType="Float" x="15" y="10" width="4" height="18" backcolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa8"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement positionType="Float" style="SectionTitle" x="27" y="740" width="538" height="25" forecolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e1"/>
+                <reportElement positionType="Float" style="SectionTitle" x="27" y="10" width="538" height="25" forecolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e1"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
-                <text><![CDATA[OTHER EXPENSES]]></text>
+                <text><![CDATA[MISCELLANEOUS]]></text>
             </staticText>
             <line>
-                <reportElement positionType="Float" x="15" y="765" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e2"/>
+                <reportElement positionType="Float" x="15" y="35" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e2"/>
             </line>
 
             <subreport>
-                <reportElement positionType="Float" x="0" y="770" width="595" height="40" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e3"/>
+                <reportElement positionType="Float" x="0" y="40" width="595" height="40" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670e3"/>
                 <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{otherExpenses})]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-other-expenses.jasper"]]></subreportExpression>
             </subreport>
@@ -363,7 +366,7 @@
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
-                <text><![CDATA[OTHER EXPENSES TOTAL]]></text>
+                <text><![CDATA[MISCELLANEOUS TOTAL]]></text>
             </staticText>
             <textField>
                 <reportElement x="370" y="208" width="185" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670f2"/>

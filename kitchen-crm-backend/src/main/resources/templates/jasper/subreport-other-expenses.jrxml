@@ -90,7 +90,7 @@
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="9" isItalic="true"/>
                 </textElement>
-                <text><![CDATA[No other expenses in this kitchen]]></text>
+                <text><![CDATA[No miscellaneous items in this kitchen]]></text>
             </staticText>
         </band>
     </noData>
