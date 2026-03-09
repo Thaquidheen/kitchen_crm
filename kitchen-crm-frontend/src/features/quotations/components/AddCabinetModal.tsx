@@ -73,7 +73,8 @@ export function AddCabinetModal({
   const [widthMm, setWidthMm] = useState<number>(0);
   const [heightMm, setHeightMm] = useState<number>(0);
   const [depthMm, setDepthMm] = useState<number>(0);
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantityStr, setQuantityStr] = useState<string>('1');
+  const quantity = quantityStr === '' ? 0 : parseInt(quantityStr) || 0;
   const [addDoor, setAddDoor] = useState<boolean>(false);
   const [selectedDoorId, setSelectedDoorId] = useState<number | string>('');
 
@@ -108,7 +109,7 @@ export function AddCabinetModal({
         setWidthMm(editData.widthMm || 0);
         setHeightMm(editData.heightMm || 0);
         setDepthMm(editData.depthMm || 0);
-        setQuantity(editData.quantity || 1);
+        setQuantityStr(String(editData.quantity || 1));
         setSelectedMaterialId(editData.materialId || '');
         setIncludeAccessories((editData.accessoriesCost ?? 0) > 0);
         setIncludeLighting((editData.lightingCost ?? 0) > 0);
@@ -126,7 +127,7 @@ export function AddCabinetModal({
         setWidthMm(0);
         setHeightMm(0);
         setDepthMm(0);
-        setQuantity(1);
+        setQuantityStr('1');
         setAddDoor(false);
         setSelectedDoorId('');
         setSelectedMaterialId('');
@@ -280,10 +281,9 @@ export function AddCabinetModal({
             label="Quantity"
             type="text"
             inputMode="numeric"
-            value={quantity > 0 ? String(quantity) : ''}
+            value={quantityStr}
             onChange={(e) => {
-              const val = e.target.value.replace(/[^0-9]/g, '');
-              setQuantity(val === '' ? 0 : parseInt(val));
+              setQuantityStr(e.target.value.replace(/[^0-9]/g, ''));
             }}
             placeholder="1"
           />

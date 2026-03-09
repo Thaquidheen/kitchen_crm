@@ -97,7 +97,7 @@ export interface QuotationDoor extends QuotationLineItem {
 
 // Lighting line item
 export interface QuotationLighting extends QuotationLineItem {
-  itemType: 'LIGHT_PROFILE' | 'DRIVER' | 'CONNECTOR' | 'SENSOR';
+  itemType: 'LIGHT_PROFILE' | 'DRIVER' | 'CONNECTOR' | 'SENSOR' | 'CUSTOM';
   itemId: number;
   itemName?: string;
   unit?: string;

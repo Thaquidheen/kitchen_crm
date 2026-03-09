@@ -262,6 +262,9 @@ export function SelectedProductsList({
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <span className="break-words leading-tight">{displayName}</span>
+            {category === 'cabinets' && item.materialName && (
+              <span className="text-text-500 ml-1">- {item.materialName}</span>
+            )}
             {item.quantity && item.quantity > 1 && (
               <span className="text-text-600 ml-1">× {item.quantity}</span>
             )}

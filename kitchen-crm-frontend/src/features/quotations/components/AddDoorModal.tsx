@@ -45,7 +45,8 @@ export function AddDoorModal({
   const isEditMode = editData !== undefined && editIndex !== undefined;
   const [widthMm, setWidthMm] = useState<number>(0);
   const [heightMm, setHeightMm] = useState<number>(0);
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantityStr, setQuantityStr] = useState<string>('1');
+  const quantity = quantityStr === '' ? 0 : parseInt(quantityStr) || 0;
   const [selectedElevationId, setSelectedElevationId] = useState<number | string>('');
 
   // Reset form when modal opens or populate with edit data
@@ -55,13 +56,13 @@ export function AddDoorModal({
         // Populate with edit data
         setWidthMm(editData.widthMm || 0);
         setHeightMm(editData.heightMm || 0);
-        setQuantity(editData.quantity || 1);
+        setQuantityStr(String(editData.quantity || 1));
         setSelectedElevationId(editData.elevationId || (availableElevations.length > 0 ? availableElevations[0].id || '' : ''));
       } else {
         // Reset for new door
         setWidthMm(0);
         setHeightMm(0);
-        setQuantity(1);
+        setQuantityStr('1');
         setSelectedElevationId(availableElevations.length > 0 ? availableElevations[0].id || '' : '');
       }
     }
@@ -145,10 +146,9 @@ export function AddDoorModal({
             label="Quantity"
             type="text"
             inputMode="numeric"
-            value={quantity > 0 ? String(quantity) : ''}
+            value={quantityStr}
             onChange={(e) => {
-              const val = e.target.value.replace(/[^0-9]/g, '');
-              setQuantity(val === '' ? 0 : parseInt(val));
+              setQuantityStr(e.target.value.replace(/[^0-9]/g, ''));
             }}
             placeholder="1"
           />

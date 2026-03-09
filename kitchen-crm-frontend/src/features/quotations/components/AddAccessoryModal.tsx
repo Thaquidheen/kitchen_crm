@@ -44,17 +44,19 @@ export function AddAccessoryModal({
   availableElevations = [],
   onAdd,
 }: AddAccessoryModalProps) {
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantityStr, setQuantityStr] = useState<string>('1');
+  const quantity = quantityStr === '' ? 0 : parseInt(quantityStr) || 0;
   const [selectedElevationId, setSelectedElevationId] = useState<number | string>('');
 
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setQuantity(1);
+      setQuantityStr('1');
       // Pre-select first elevation if available
       setSelectedElevationId(availableElevations.length > 0 ? availableElevations[0].id || '' : '');
     }
-  }, [isOpen, availableElevations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const unitPrice = accessory.price || 0;
   const totalPrice = unitPrice * quantity;
@@ -103,10 +105,9 @@ export function AddAccessoryModal({
             label="Quantity *"
             type="text"
             inputMode="numeric"
-            value={quantity > 0 ? String(quantity) : ''}
+            value={quantityStr}
             onChange={(e) => {
-              const val = e.target.value.replace(/[^0-9]/g, '');
-              setQuantity(val === '' ? 0 : parseInt(val));
+              setQuantityStr(e.target.value.replace(/[^0-9]/g, ''));
             }}
             placeholder="1"
           />

@@ -4,8 +4,9 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Package } from 'lucide-react';
+import { Package, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { Pagination } from '@/components/shared/Pagination';
 import { getImageUrl } from '@/utils/imageUtils';
@@ -51,6 +52,11 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
   const [selectedCabinet, setSelectedCabinet] = useState<CabinetType | null>(null);
   const [selectedDoor, setSelectedDoor] = useState<DoorType | null>(null);
   const [selectedAccessory, setSelectedAccessory] = useState<{ id: number; name: string; price: number; raw?: any } | null>(null);
+
+  // Custom lighting item state
+  const [customLightName, setCustomLightName] = useState('');
+  const [customLightPrice, setCustomLightPrice] = useState('');
+  const [customLightQty, setCustomLightQty] = useState('1');
 
   // Pagination & category filter state for accessories
   const [accessoriesPage, setAccessoriesPage] = useState(0);
@@ -162,6 +168,28 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
       // Direct add for lighting (no elevation)
       onAdd(item);
     }
+  };
+
+  const handleAddCustomLighting = () => {
+    const name = customLightName.trim();
+    if (!name) return;
+    const unitPrice = customLightPrice === '' ? 0 : parseFloat(customLightPrice);
+    if (isNaN(unitPrice)) return;
+    const qty = customLightQty === '' ? 1 : parseInt(customLightQty) || 1;
+
+    // Add as a single item with quantity already set
+    // Use a unique negative ID so it doesn't conflict with catalog items
+    onAdd({
+      id: -Date.now(),
+      name,
+      price: Math.max(0, unitPrice),
+      quantity: qty,
+      totalPrice: Math.max(0, unitPrice) * qty,
+      raw: { itemType: 'CUSTOM' },
+    });
+    setCustomLightName('');
+    setCustomLightPrice('');
+    setCustomLightQty('1');
   };
 
   return (
@@ -287,6 +315,55 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
           totalPages={accessoriesTotalPages}
           onPageChange={(page) => setAccessoriesPage(page - 1)}
         />
+      </div>
+    )}
+
+    {/* Custom Lighting Item */}
+    {category === 'lighting' && (
+      <div className="mx-3 sm:mx-4 mb-4 p-3 sm:p-4 border border-background-600 rounded-lg bg-background-800">
+        <h4 className="text-xs font-semibold text-text-700 mb-3">Add Custom Lighting Item</h4>
+        <div className="flex flex-col sm:flex-row items-end gap-2">
+          <div className="flex-1 w-full">
+            <Input
+              type="text"
+              value={customLightName}
+              onChange={(e) => setCustomLightName(e.target.value)}
+              placeholder="Item name"
+              className="text-sm"
+            />
+          </div>
+          <div className="w-full sm:w-32">
+            <Input
+              type="text"
+              inputMode="decimal"
+              value={customLightPrice}
+              onChange={(e) => setCustomLightPrice(e.target.value)}
+              placeholder="Price"
+              className="text-sm"
+            />
+          </div>
+          <div className="w-full sm:w-24">
+            <Input
+              type="text"
+              inputMode="numeric"
+              value={customLightQty}
+              onChange={(e) => setCustomLightQty(e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="Qty"
+              className="text-sm"
+            />
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={handleAddCustomLighting}
+            disabled={!customLightName.trim()}
+            className="w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add
+          </Button>
+        </div>
       </div>
     )}
 

@@ -22,6 +22,7 @@ import {
   Building2,
 } from 'lucide-react';
 import clsx from 'clsx';
+import logo from '../../assets/logo.png';
 import { ROUTES } from '../../routes/routes.config';
 import { selectCurrentTheme } from '../../features/theme/themeSlice';
 
@@ -181,9 +182,7 @@ export const Sidebar = ({ isCollapsed, onToggle, isMobileOpen = false, onMobileC
       {/* Logo */}
       <div className="h-16 flex items-center justify-between px-4 border-b-2 border-background-700">
         {!isCollapsed && (
-          <h1 className="text-xl font-heading font-bold text-text-900">
-            HOCH
-          </h1>
+          <img src={logo} alt="HOCH" className="h-8" />
         )}
         <button
           onClick={onToggle}

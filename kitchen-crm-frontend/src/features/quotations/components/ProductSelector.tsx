@@ -84,7 +84,7 @@ export function ProductSelector({ selectedProducts, onProductsChange, availableE
     });
     if (index === -1) {
       if (mode === 'inc' || mode === 'set') {
-        const quantity = 1;
+        const quantity = initialItem?.quantity || 1;
         const nextItem = {
           ...initialItem,
           // Ensure sidebar has a readable name
