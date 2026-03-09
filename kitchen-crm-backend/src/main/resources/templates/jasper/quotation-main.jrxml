@@ -529,11 +529,6 @@
                 <textFieldExpression><![CDATA[$P{TERMS_WARRANTY}]]></textFieldExpression>
             </textField>
 
-            <!-- Page break before Authorization -->
-            <break>
-                <reportElement positionType="Float" x="0" y="705" width="595" height="1" uuid="ff000001-0000-0000-0000-000000000030"/>
-            </break>
-
             <!-- Authorization Section -->
             <line>
                 <reportElement positionType="Float" x="15" y="710" width="565" height="1" forecolor="#DDDDDD" uuid="ff000001-0000-0000-0000-000000000011"/>

@@ -224,10 +224,6 @@
 
         <!-- ==================== KITCHEN TOTALS PAGE ==================== -->
         <band height="590" splitType="Immediate">
-            <break>
-                <reportElement x="0" y="0" width="595" height="1" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567018"/>
-            </break>
-
             <!-- Kitchen Header (repeated) — black background -->
             <rectangle>
                 <reportElement x="0" y="10" width="595" height="40" backcolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567019"/>
