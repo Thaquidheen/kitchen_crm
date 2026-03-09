@@ -286,6 +286,7 @@ public class QuotationServiceImpl implements QuotationService {
         createDto.setCabinets(quotationDto.getCabinets());
         createDto.setDoors(quotationDto.getDoors());
         createDto.setLighting(quotationDto.getLighting());
+        createDto.setOtherExpenses(quotationDto.getOtherExpenses());
 
         saveLineItems(existingQuotation, createDto, userRole);
 
