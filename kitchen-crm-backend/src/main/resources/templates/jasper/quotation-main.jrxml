@@ -365,7 +365,7 @@
                 <text><![CDATA[IMPORTANT NOTE]]></text>
             </staticText>
             <textField textAdjust="StretchHeight">
-                <reportElement positionType="Float" x="50" y="220" width="495" height="40" forecolor="#333333" uuid="cf000001-0000-0000-0000-000000000011"/>
+                <reportElement positionType="Float" x="50" y="275" width="495" height="40" forecolor="#333333" uuid="cf000001-0000-0000-0000-000000000011"/>
                 <textElement verticalAlignment="Top">
                     <font fontName="Serif" size="10"/>
                 </textElement>
@@ -529,92 +529,81 @@
                 <textFieldExpression><![CDATA[$P{TERMS_WARRANTY}]]></textFieldExpression>
             </textField>
 
-            <!-- Authorization Section -->
-            <line>
-                <reportElement positionType="Float" x="15" y="710" width="565" height="1" forecolor="#DDDDDD" uuid="ff000001-0000-0000-0000-000000000011"/>
-            </line>
-            <rectangle>
-                <reportElement positionType="Float" x="15" y="717" width="4" height="16" backcolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000012"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <staticText>
-                <reportElement positionType="Float" x="27" y="717" width="200" height="16" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000013"/>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="10" isBold="true"/>
-                </textElement>
-                <text><![CDATA[AUTHORIZATION]]></text>
-            </staticText>
+            <!-- Signature Section - using frame for side-by-side layout -->
+            <frame>
+                <reportElement positionType="Float" x="15" y="720" width="565" height="110" uuid="ff000001-0000-0000-0000-000000000040"/>
 
-            <!-- Client Signature -->
-            <rectangle radius="4">
-                <reportElement positionType="Float" x="15" y="710" width="255" height="95" backcolor="#F5F5F5" uuid="ff000001-0000-0000-0000-000000000014"/>
-                <graphicElement><pen lineWidth="1" lineColor="#DDDDDD"/></graphicElement>
-            </rectangle>
-            <rectangle>
-                <reportElement positionType="Float" x="15" y="710" width="3" height="95" backcolor="#8B0000" uuid="ff000001-0000-0000-0000-000000000015"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <staticText>
-                <reportElement positionType="Float" x="28" y="717" width="230" height="14" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000016"/>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="8" isBold="true"/>
-                </textElement>
-                <text><![CDATA[Client Signature]]></text>
-            </staticText>
-            <line>
-                <reportElement positionType="Float" x="28" y="770" width="220" height="1" forecolor="#DDDDDD" uuid="ff000001-0000-0000-0000-000000000017"/>
-            </line>
-            <textField>
-                <reportElement positionType="Float" x="28" y="775" width="220" height="14" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000018"/>
-                <textElement verticalAlignment="Middle"><font fontName="Serif" size="7"/></textElement>
-                <textFieldExpression><![CDATA[$P{CUSTOMER_NAME}]]></textFieldExpression>
-            </textField>
-            <staticText>
-                <reportElement positionType="Float" x="28" y="789" width="220" height="12" forecolor="#888888" uuid="ff000001-0000-0000-0000-000000000019"/>
-                <textElement verticalAlignment="Middle"><font fontName="Serif" size="6"/></textElement>
-                <text><![CDATA[Date: _________________]]></text>
-            </staticText>
+                <!-- Client Signature -->
+                <rectangle radius="4">
+                    <reportElement x="0" y="0" width="255" height="95" backcolor="#F5F5F5" uuid="ff000001-0000-0000-0000-000000000014"/>
+                    <graphicElement><pen lineWidth="1" lineColor="#DDDDDD"/></graphicElement>
+                </rectangle>
+                <rectangle>
+                    <reportElement x="0" y="0" width="3" height="95" backcolor="#8B0000" uuid="ff000001-0000-0000-0000-000000000015"/>
+                    <graphicElement><pen lineWidth="0"/></graphicElement>
+                </rectangle>
+                <staticText>
+                    <reportElement x="13" y="7" width="230" height="14" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000016"/>
+                    <textElement verticalAlignment="Middle">
+                        <font fontName="Serif" size="8" isBold="true"/>
+                    </textElement>
+                    <text><![CDATA[Client Signature]]></text>
+                </staticText>
+                <line>
+                    <reportElement x="13" y="60" width="220" height="1" forecolor="#DDDDDD" uuid="ff000001-0000-0000-0000-000000000017"/>
+                </line>
+                <textField>
+                    <reportElement x="13" y="65" width="220" height="14" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000018"/>
+                    <textElement verticalAlignment="Middle"><font fontName="Serif" size="7"/></textElement>
+                    <textFieldExpression><![CDATA[$P{CUSTOMER_NAME}]]></textFieldExpression>
+                </textField>
+                <staticText>
+                    <reportElement x="13" y="79" width="220" height="12" forecolor="#888888" uuid="ff000001-0000-0000-0000-000000000019"/>
+                    <textElement verticalAlignment="Middle"><font fontName="Serif" size="6"/></textElement>
+                    <text><![CDATA[Date: _________________]]></text>
+                </staticText>
 
-            <!-- Company Signature -->
-            <rectangle radius="4">
-                <reportElement positionType="Float" x="310" y="710" width="255" height="95" backcolor="#F5F5F5" uuid="ff000001-0000-0000-0000-000000000020"/>
-                <graphicElement><pen lineWidth="1" lineColor="#DDDDDD"/></graphicElement>
-            </rectangle>
-            <rectangle>
-                <reportElement positionType="Float" x="310" y="710" width="3" height="95" backcolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000021"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <staticText>
-                <reportElement positionType="Float" x="323" y="717" width="230" height="14" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000022"/>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="8" isBold="true"/>
-                </textElement>
-                <text><![CDATA[Authorized Signature]]></text>
-            </staticText>
-            <line>
-                <reportElement positionType="Float" x="323" y="770" width="220" height="1" forecolor="#DDDDDD" uuid="ff000001-0000-0000-0000-000000000023"/>
-            </line>
-            <textField>
-                <reportElement positionType="Float" x="323" y="775" width="220" height="14" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000024"/>
-                <textElement verticalAlignment="Middle"><font fontName="Serif" size="7"/></textElement>
-                <textFieldExpression><![CDATA[$P{COMPANY_NAME}]]></textFieldExpression>
-            </textField>
-            <staticText>
-                <reportElement positionType="Float" x="323" y="789" width="220" height="12" forecolor="#888888" uuid="ff000001-0000-0000-0000-000000000025"/>
-                <textElement verticalAlignment="Middle"><font fontName="Serif" size="6"/></textElement>
-                <text><![CDATA[Date: _________________]]></text>
-            </staticText>
+                <!-- Company Signature -->
+                <rectangle radius="4">
+                    <reportElement x="295" y="0" width="255" height="95" backcolor="#F5F5F5" uuid="ff000001-0000-0000-0000-000000000020"/>
+                    <graphicElement><pen lineWidth="1" lineColor="#DDDDDD"/></graphicElement>
+                </rectangle>
+                <rectangle>
+                    <reportElement x="295" y="0" width="3" height="95" backcolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000021"/>
+                    <graphicElement><pen lineWidth="0"/></graphicElement>
+                </rectangle>
+                <staticText>
+                    <reportElement x="308" y="7" width="230" height="14" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000022"/>
+                    <textElement verticalAlignment="Middle">
+                        <font fontName="Serif" size="8" isBold="true"/>
+                    </textElement>
+                    <text><![CDATA[Authorized Signature]]></text>
+                </staticText>
+                <line>
+                    <reportElement x="308" y="60" width="220" height="1" forecolor="#DDDDDD" uuid="ff000001-0000-0000-0000-000000000023"/>
+                </line>
+                <textField>
+                    <reportElement x="308" y="65" width="220" height="14" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000024"/>
+                    <textElement verticalAlignment="Middle"><font fontName="Serif" size="7"/></textElement>
+                    <textFieldExpression><![CDATA[$P{COMPANY_NAME}]]></textFieldExpression>
+                </textField>
+                <staticText>
+                    <reportElement x="308" y="79" width="220" height="12" forecolor="#888888" uuid="ff000001-0000-0000-0000-000000000025"/>
+                    <textElement verticalAlignment="Middle"><font fontName="Serif" size="6"/></textElement>
+                    <text><![CDATA[Date: _________________]]></text>
+                </staticText>
+            </frame>
 
             <!-- Footer -->
             <textField>
-                <reportElement positionType="Float" x="0" y="780" width="595" height="18" forecolor="#6B5B4B" uuid="ff000001-0000-0000-0000-000000000027"/>
+                <reportElement positionType="Float" x="0" y="840" width="595" height="18" forecolor="#6B5B4B" uuid="ff000001-0000-0000-0000-000000000027"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font fontName="Serif" size="9" isItalic="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Thank you for choosing " + $P{COMPANY_NAME}]]></textFieldExpression>
             </textField>
             <staticText>
-                <reportElement positionType="Float" x="230" y="800" width="135" height="8" forecolor="#C8B8A0" uuid="ff000001-0000-0000-0000-000000000026"/>
+                <reportElement positionType="Float" x="230" y="860" width="135" height="8" forecolor="#C8B8A0" uuid="ff000001-0000-0000-0000-000000000026"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font fontName="Serif" size="6"/>
                 </textElement>

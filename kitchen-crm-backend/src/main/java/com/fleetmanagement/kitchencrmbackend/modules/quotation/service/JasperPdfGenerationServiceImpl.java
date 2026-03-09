@@ -369,13 +369,15 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         // Per-quotation custom T&C overrides global general terms when provided
         String customTerms = quotation.getTermsConditions();
         if (customTerms != null && !customTerms.trim().isEmpty()) {
-            termsGeneral = customTerms;
+            // Convert plain text newlines to HTML line breaks for JRXML html markup
+            termsGeneral = customTerms.replace("\n", "<br/>");
         }
         params.put("TERMS_GENERAL", termsGeneral);
         String termsWarranty = getTermsWarranty();
         String customWarranty = quotation.getWarrantyAndService();
         if (customWarranty != null && !customWarranty.trim().isEmpty()) {
-            termsWarranty = customWarranty;
+            // Convert plain text newlines to HTML line breaks for JRXML html markup
+            termsWarranty = customWarranty.replace("\n", "<br/>");
         }
         params.put("TERMS_WARRANTY", termsWarranty);
 
