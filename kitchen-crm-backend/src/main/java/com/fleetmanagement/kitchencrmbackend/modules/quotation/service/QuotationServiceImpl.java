@@ -276,6 +276,7 @@ public class QuotationServiceImpl implements QuotationService {
                 kdto.setCabinets(k.getCabinets());
                 kdto.setDoors(k.getDoors());
                 kdto.setLighting(k.getLighting());
+                kdto.setOtherExpenses(k.getOtherExpenses());
                 return kdto;
             }).toList();
             saveKitchens(existingQuotation, kitchenCreateDtos);
