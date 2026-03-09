@@ -150,7 +150,7 @@ export function AddDoorModal({
             onChange={(e) => {
               setQuantityStr(e.target.value.replace(/[^0-9]/g, ''));
             }}
-            placeholder="1"
+            placeholder="Enter quantity"
           />
         </div>
 

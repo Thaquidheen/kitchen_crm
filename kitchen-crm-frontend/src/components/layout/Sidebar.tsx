@@ -180,9 +180,9 @@ export const Sidebar = ({ isCollapsed, onToggle, isMobileOpen = false, onMobileC
         )}
       >
       {/* Logo */}
-      <div className="h-16 flex items-center justify-between px-4 border-b-2 border-background-700">
+      <div className="h-20 flex items-center justify-between px-4 border-b-2 border-background-700">
         {!isCollapsed && (
-          <img src={logo} alt="HOCH" className="h-8" />
+          <img src={logo} alt="HOCH" className="h-10 sm:h-12" />
         )}
         <button
           onClick={onToggle}
