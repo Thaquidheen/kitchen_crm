@@ -1565,6 +1565,23 @@ export function QuotationBuilderPage() {
                         updatedKitchens[kitchenIndex] = { ...kitchen, otherExpenses: expenses };
                         setFormData({ ...formData, kitchens: updatedKitchens });
                       }}
+                      onClearCategory={(category) => {
+                        const updatedKitchens = [...(formData.kitchens || [])];
+                        const k = { ...updatedKitchens[kitchenIndex] };
+                        if (category === 'cabinets') {
+                          // Also remove linked doors
+                          const pairIds = new Set((k.cabinets || []).map((c: any) => c._tempPairId).filter(Boolean));
+                          k.doors = (k.doors || []).filter((d: any) => !d._tempPairId || !pairIds.has(d._tempPairId));
+                        }
+                        (k as any)[category] = [];
+                        updatedKitchens[kitchenIndex] = k;
+                        setFormData({ ...formData, kitchens: updatedKitchens });
+                      }}
+                      onClearOtherExpenses={() => {
+                        const updatedKitchens = [...(formData.kitchens || [])];
+                        updatedKitchens[kitchenIndex] = { ...updatedKitchens[kitchenIndex], otherExpenses: [] };
+                        setFormData({ ...formData, kitchens: updatedKitchens });
+                      }}
                       onEditCabinet={(cabinetIndex) => handleEditCabinetInKitchen(kitchenIndex, cabinetIndex)}
                       onEditDoor={(doorIndex) => handleEditDoorInKitchen(kitchenIndex, doorIndex)}
                     />
@@ -1610,6 +1627,18 @@ export function QuotationBuilderPage() {
                   const expenses = [...(formData.otherExpenses || [])];
                   expenses.splice(expenseIndex, 1);
                   setFormData({ ...formData, otherExpenses: expenses });
+                }}
+                onClearCategory={(category) => {
+                  const next: any = { ...formData };
+                  if (category === 'cabinets') {
+                    const pairIds = new Set((next.cabinets || []).map((c: any) => c._tempPairId).filter(Boolean));
+                    next.doors = (next.doors || []).filter((d: any) => !d._tempPairId || !pairIds.has(d._tempPairId));
+                  }
+                  next[category] = [];
+                  setFormData(next);
+                }}
+                onClearOtherExpenses={() => {
+                  setFormData({ ...formData, otherExpenses: [] });
                 }}
                 onEditCabinet={handleEditCabinetGlobal}
                 onEditDoor={handleEditDoorGlobal}

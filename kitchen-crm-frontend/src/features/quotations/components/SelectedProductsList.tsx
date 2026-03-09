@@ -78,6 +78,8 @@ export interface SelectedProductsListProps {
   lightingTaxPercentage?: number;
   onRemove?: (category: 'accessories' | 'cabinets' | 'doors' | 'lighting', index: number) => void;
   onRemoveOtherExpense?: (index: number) => void;
+  onClearCategory?: (category: 'accessories' | 'cabinets' | 'doors' | 'lighting') => void;
+  onClearOtherExpenses?: () => void;
   onEditCabinet?: (index: number) => void;
   onEditDoor?: (index: number) => void;
 }
@@ -109,6 +111,8 @@ export function SelectedProductsList({
   lightingTaxPercentage = 0,
   onRemove,
   onRemoveOtherExpense,
+  onClearCategory,
+  onClearOtherExpenses,
   onEditCabinet,
   onEditDoor
 }: SelectedProductsListProps) {
@@ -306,8 +310,16 @@ export function SelectedProductsList({
 
     return (
       <div className="ml-3 mt-2">
-        <div className="text-sm font-semibold text-primary-400 mb-2 mt-3 pb-1 border-b border-background-600">
-          {label} ({items.length})
+        <div className="text-sm font-semibold text-primary-400 mb-2 mt-3 pb-1 border-b border-background-600 flex items-center justify-between">
+          <span>{label} ({items.length})</span>
+          {onClearCategory && (
+            <button
+              onClick={() => onClearCategory(category)}
+              className="text-xs text-error hover:text-error/80 font-normal transition-colors"
+            >
+              Clear All
+            </button>
+          )}
         </div>
         <div className="space-y-1">
           {items.map(({ item, originalIndex }) => renderItem(item, category, originalIndex))}
@@ -378,9 +390,19 @@ export function SelectedProductsList({
       {/* Other Expenses */}
       {otherExpenses.length > 0 && otherExpenses.some(e => e.amount > 0) && (
         <Card className="p-3 sm:p-4 bg-background-800 border-background-600">
-          <div className="flex items-center gap-2 mb-2">
-            <Receipt className="h-4 w-4 text-text-600" />
-            <span className="text-xs sm:text-sm font-semibold text-text-800">Other Expenses</span>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-text-600" />
+              <span className="text-xs sm:text-sm font-semibold text-text-800">Other Expenses</span>
+            </div>
+            {onClearOtherExpenses && (
+              <button
+                onClick={onClearOtherExpenses}
+                className="text-xs text-error hover:text-error/80 font-normal transition-colors"
+              >
+                Clear All
+              </button>
+            )}
           </div>
           <div className="space-y-1">
             {otherExpenses.filter(e => e.amount > 0).map((expense, index) => (
