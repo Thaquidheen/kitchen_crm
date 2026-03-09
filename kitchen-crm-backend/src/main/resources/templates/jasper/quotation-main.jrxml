@@ -531,7 +531,7 @@
 
             <!-- Signature Section - using frame for side-by-side layout -->
             <frame>
-                <reportElement positionType="Float" x="15" y="720" width="565" height="110" uuid="ff000001-0000-0000-0000-000000000040"/>
+                <reportElement positionType="Float" x="15" y="690" width="565" height="100" uuid="ff000001-0000-0000-0000-000000000040"/>
 
                 <!-- Client Signature -->
                 <rectangle radius="4">
@@ -596,14 +596,14 @@
 
             <!-- Footer -->
             <textField>
-                <reportElement positionType="Float" x="0" y="840" width="595" height="18" forecolor="#6B5B4B" uuid="ff000001-0000-0000-0000-000000000027"/>
+                <reportElement positionType="Float" x="0" y="792" width="595" height="14" forecolor="#6B5B4B" uuid="ff000001-0000-0000-0000-000000000027"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font fontName="Serif" size="9" isItalic="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Thank you for choosing " + $P{COMPANY_NAME}]]></textFieldExpression>
             </textField>
             <staticText>
-                <reportElement positionType="Float" x="230" y="860" width="135" height="8" forecolor="#C8B8A0" uuid="ff000001-0000-0000-0000-000000000026"/>
+                <reportElement positionType="Float" x="230" y="804" width="135" height="8" forecolor="#C8B8A0" uuid="ff000001-0000-0000-0000-000000000026"/>
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font fontName="Serif" size="6"/>
                 </textElement>
