@@ -28,6 +28,22 @@ import { KitchenProductTabs } from '@/features/quotations/components/KitchenProd
 import { AddCabinetModal, type CabinetWithDimensions } from '@/features/quotations/components/AddCabinetModal';
 import { AddDoorModal, type DoorWithDimensions } from '@/features/quotations/components/AddDoorModal';
 import type { QuotationFormData, CreateQuotationRequest, QuotationAccessory, QuotationCabinet, QuotationDoor, QuotationLighting, QuotationKitchenFormData, QuotationOtherExpense } from '@/features/quotations/types';
+
+const DEFAULT_TERMS_CONDITIONS = `• The Above-mentioned Terms are Subjected to Change depending upon the delay from Client side to provide necessary Inputs/Approvals
+• Kitchen Delivery and Installation will not proceed unless site condition requirements outlined in our Terms and Conditions.
+• Unloading Expenses of the materials at the sight to bear by the customer
+• Our scope is limited to the installation of the specified items only. There will be additional charges for installing any items not included in this offer.
+• The client must provide all plumbing and electrical items, including faucets, as part of their scope. All plumbing outlets and electrical points should be installed according to our site drawing
+• The client should provide safe storage spaces for materials during installation at the site.`;
+
+const DEFAULT_WARRANTY_SERVICE = `We Warrant the Furniture We Sell to Be Free from Defects in Material and Workmanship Under Normal Residential Usage to The Original Purchaser for The Period Specified Below. We Will Repair Any Part That Proves to Be Defective in Materials and Workmanship. If Repair Is Not Possible, We Will Either Replace the Part with A New Part or A Component of Similar Composition and Price.
+
+This Warranty Does Not Apply to Any Issues with Our Furniture or Parts of Our Furniture That Result from Improper Handling, Negligence, Alterations, Accidents, Misuse, Improper Cleaning or Care, Or Natural Calamities. Additionally, Consequential and Incidental Damages Are Not Covered Under This Warranty.
+
+Stainless Steel Cabinets Have 20 Years of Warranty Against Any Manufacturing Defect
+Any Other Doors Have 8 Years of Warranty Against Any Manufacturing Defect
+Hardware & Accessories: As Provided by The Manufacturer
+Lightings: As Provided by The Manufacturer`;
 import { SCOPE_FIELD_NAMES } from '@/features/quotations/types';
 import toast from 'react-hot-toast';
 import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
@@ -106,8 +122,8 @@ export function QuotationBuilderPage() {
     lightingTaxPercentage: 18,
     validUntil: '',
     notes: '',
-    termsConditions: '• The Above-mentioned Terms are Subjected to Change depending upon the delay from Client side to provide necessary Inputs/Approvals\n• Kitchen Delivery and Installation will not proceed unless site condition requirements outlined in our Terms and Conditions.\n• Unloading Expenses of the materials at the sight to be bear by the customer\n• Our scope is limited to the installation of the specified items only. There will be additional charges for installing any items not included in this offer.\n• The client must provide all plumbing and electrical items, including faucets, as part of their scope. All plumbing outlets and electrical points should be installed according to our site drawing\n• The client should provide safe storage spaces for materials during installation at the site.',
-    warrantyAndService: 'We Warrant the Steel Furniture We Sell to Be Free from Defects in Material and Workmanship Under Normal Residential Usage to The Original Purchaser for The Period Specified Below. We Will Repair Any Part That Proves to Be Defective in Materials and Workmanship. If Repair Is Not Possible, We Will Either Replace the Part with A New Part or A Component of Similar Composition and Price.\n\nThis Warranty Does Not Apply to Any Issues with Our Furniture or Parts of Our Furniture That Result from Improper Handling, Negligence, Alterations, Accidents, Misuse, Improper Cleaning or Care, Or Natural Calamities. Additionally, Consequential and Incidental Damages Are Not Covered Under This Warranty.\n\nStainless Steel Cabinets Have 15 Years of Warranty Against Any Manufacturing Defect\nAny Other Doors Have 7 Years of Warranty Against Any Manufacturing Defect\n\nHardware\'s And Accessories: As Provided by The Manufacturer\n\nLightings: As Provided by The Manufacturer',
+    termsConditions: DEFAULT_TERMS_CONDITIONS,
+    warrantyAndService: DEFAULT_WARRANTY_SERVICE,
     accessories: [],
     cabinets: [],
     doors: [],
@@ -232,8 +248,8 @@ export function QuotationBuilderPage() {
       lightingTaxPercentage: Number(existingQuotation.lightingTaxPercentage ?? 18),
       validUntil: existingQuotation.validUntil || '',
       notes: existingQuotation.notes || '',
-      termsConditions: existingQuotation.termsConditions || '',
-      warrantyAndService: existingQuotation.warrantyAndService || '',
+      termsConditions: existingQuotation.termsConditions || DEFAULT_TERMS_CONDITIONS,
+      warrantyAndService: existingQuotation.warrantyAndService || DEFAULT_WARRANTY_SERVICE,
       importantNote: existingQuotation.importantNote || 'THIS QUOTE IS ONLY FOR THE ITEMS MENTIONED IN THIS OFFER. ANY OTHER ITEMS OR APPLIANCES LIKE HOB, HOOD, FRIDGE, OVEN ETC ARE EXCLUDED FROM THIS QUOTE. THE QUOTE FOR THOSE ITEMS ARE GIVEN SEPARATELY. VALIDITY OF THIS QUOTE IS ONLY FOR 30 DAYS. THERE WILL BE REVISION OF PRICES IN EVERY 30 DAYS AS PER MARKET COST FLUCTUATIONS.',
       paymentAcceptancePct: Number(existingQuotation.paymentAcceptancePct || 60),
       paymentDeliveryPct: Number(existingQuotation.paymentDeliveryPct || 30),
@@ -1380,7 +1396,7 @@ export function QuotationBuilderPage() {
                     {/* Terms & Conditions */}
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-text-700 mb-2">
-                        Terms & Conditions (Optional)
+                        Terms & Conditions
                       </label>
                       <TextArea
                         value={formData.termsConditions || ''}
@@ -1395,7 +1411,7 @@ export function QuotationBuilderPage() {
                     {/* Warranty & Service */}
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-text-700 mb-2">
-                        Warranty & Service (Optional)
+                        Warranty & Service
                       </label>
                       <TextArea
                         value={formData.warrantyAndService || ''}
