@@ -583,14 +583,17 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         if (terms != null && !terms.isEmpty()) {
             return terms;
         }
-        return "<ul>" +
-            "<li>The Above-mentioned Terms are Subjected to Change depending upon the delay from Client side to provide necessary Inputs/Approvals</li>" +
-            "<li>Kitchen Delivery and Installation will not proceed unless site condition requirements outlined in our Terms and Conditions.</li>" +
-            "<li>Unloading Expenses of the materials at the sight to be bear by the customer</li>" +
-            "<li>Our scope is limited to the installation of the specified items only. There will be additional charges for installing any items not included in this offer.</li>" +
-            "<li>The client must provide all plumbing and electrical items, including faucets, as part of their scope. All plumbing outlets and electrical points should be installed according to our site drawing</li>" +
-            "<li>The client should provide safe storage spaces for materials during installation at the site.</li>" +
-            "</ul>";
+        return "\u2022 The Above-mentioned Terms are Subjected to Change depending upon the delay from Client side to provide necessary Inputs/Approvals" +
+            "<br/><br/>" +
+            "\u2022 Kitchen Delivery and Installation will not proceed unless site condition requirements outlined in our Terms and Conditions." +
+            "<br/><br/>" +
+            "\u2022 Unloading Expenses of the materials at the sight to be bear by the customer" +
+            "<br/><br/>" +
+            "\u2022 Our scope is limited to the installation of the specified items only. There will be additional charges for installing any items not included in this offer." +
+            "<br/><br/>" +
+            "\u2022 The client must provide all plumbing and electrical items, including faucets, as part of their scope. All plumbing outlets and electrical points should be installed according to our site drawing" +
+            "<br/><br/>" +
+            "\u2022 The client should provide safe storage spaces for materials during installation at the site.";
     }
 
     private String getTermsWarranty() {
