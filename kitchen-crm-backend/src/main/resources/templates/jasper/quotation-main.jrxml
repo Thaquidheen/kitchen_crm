@@ -277,7 +277,7 @@
 
             <!-- Kitchen totals subreport (only if > 1 kitchen) -->
             <subreport>
-                <reportElement positionType="Float" x="30" y="28" width="535" height="30" uuid="cf000001-0000-0000-0000-000000000002">
+                <reportElement positionType="Float" x="30" y="5" width="535" height="30" uuid="cf000001-0000-0000-0000-000000000002">
                     <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{KITCHEN_TOTALS_DATA} != null]]></printWhenExpression>
                 </reportElement>
                 <dataSourceExpression><![CDATA[(net.sf.jasperreports.engine.JRDataSource)$P{KITCHEN_TOTALS_DATA}]]></dataSourceExpression>
@@ -285,56 +285,46 @@
             </subreport>
 
             <!-- Miscellaneous row (only if > 1 kitchen and value > 0) -->
-            <rectangle>
-                <reportElement positionType="Float" x="30" y="60" width="535" height="25" backcolor="#FAF6F1" uuid="cf000002-0000-0000-0000-000000000001">
+            <frame>
+                <reportElement positionType="Float" x="30" y="5" width="535" height="25" backcolor="#FAF6F1" mode="Opaque" uuid="cf000002-0000-0000-0000-000000000001">
                     <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{OTHER_EXPENSES_TOTAL} != null && $P{OTHER_EXPENSES_TOTAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
                 </reportElement>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <staticText>
-                <reportElement positionType="Float" x="40" y="60" width="250" height="25" forecolor="#2C1810" uuid="cf000002-0000-0000-0000-000000000002">
-                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{OTHER_EXPENSES_TOTAL} != null && $P{OTHER_EXPENSES_TOTAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
-                </reportElement>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="10"/>
-                </textElement>
-                <text><![CDATA[Miscellaneous]]></text>
-            </staticText>
-            <textField>
-                <reportElement positionType="Float" x="310" y="60" width="255" height="25" forecolor="#2C1810" uuid="cf000002-0000-0000-0000-000000000003">
-                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{OTHER_EXPENSES_TOTAL} != null && $P{OTHER_EXPENSES_TOTAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
-                </reportElement>
-                <textElement textAlignment="Left" verticalAlignment="Middle">
-                    <font fontName="Serif" size="10"/>
-                </textElement>
-                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{OTHER_EXPENSES_TOTAL})]]></textFieldExpression>
-            </textField>
+                <staticText>
+                    <reportElement x="10" y="0" width="250" height="25" forecolor="#2C1810" uuid="cf000002-0000-0000-0000-000000000002"/>
+                    <textElement verticalAlignment="Middle">
+                        <font fontName="Serif" size="10"/>
+                    </textElement>
+                    <text><![CDATA[Miscellaneous]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="280" y="0" width="245" height="25" forecolor="#2C1810" uuid="cf000002-0000-0000-0000-000000000003"/>
+                    <textElement textAlignment="Left" verticalAlignment="Middle">
+                        <font fontName="Serif" size="10"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{OTHER_EXPENSES_TOTAL})]]></textFieldExpression>
+                </textField>
+            </frame>
 
             <!-- Grand Total row (only if > 1 kitchen) -->
-            <rectangle>
-                <reportElement positionType="Float" x="30" y="90" width="535" height="30" backcolor="#000000" uuid="cf000001-0000-0000-0000-000000000003">
+            <frame>
+                <reportElement positionType="Float" x="30" y="5" width="535" height="30" backcolor="#000000" mode="Opaque" uuid="cf000001-0000-0000-0000-000000000003">
                     <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1]]></printWhenExpression>
                 </reportElement>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <staticText>
-                <reportElement positionType="Float" x="40" y="90" width="250" height="30" forecolor="#FFFFFF" uuid="cf000001-0000-0000-0000-000000000004">
-                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1]]></printWhenExpression>
-                </reportElement>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="12" isBold="true"/>
-                </textElement>
-                <text><![CDATA[GRAND TOTAL]]></text>
-            </staticText>
-            <textField>
-                <reportElement positionType="Float" x="310" y="90" width="255" height="30" forecolor="#FFFFFF" uuid="cf000001-0000-0000-0000-000000000005">
-                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1]]></printWhenExpression>
-                </reportElement>
-                <textElement textAlignment="Left" verticalAlignment="Middle">
-                    <font fontName="Serif" size="12" isBold="true"/>
-                </textElement>
-                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{GRAND_TOTAL})]]></textFieldExpression>
-            </textField>
+                <staticText>
+                    <reportElement x="10" y="0" width="250" height="30" forecolor="#FFFFFF" uuid="cf000001-0000-0000-0000-000000000004"/>
+                    <textElement verticalAlignment="Middle">
+                        <font fontName="Serif" size="12" isBold="true"/>
+                    </textElement>
+                    <text><![CDATA[GRAND TOTAL]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="280" y="0" width="245" height="30" forecolor="#FFFFFF" uuid="cf000001-0000-0000-0000-000000000005"/>
+                    <textElement textAlignment="Left" verticalAlignment="Middle">
+                        <font fontName="Serif" size="12" isBold="true"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{GRAND_TOTAL})]]></textFieldExpression>
+                </textField>
+            </frame>
 
             <!-- ===== NOTES (matching Important Note style) ===== -->
             <frame>
