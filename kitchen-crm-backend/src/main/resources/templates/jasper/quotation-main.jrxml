@@ -492,11 +492,11 @@
             <frame>
                 <reportElement positionType="Float" x="0" y="447" width="595" height="40" uuid="ff000001-0000-0000-0000-000000000004"/>
                 <rectangle>
-                    <reportElement x="30" y="2" width="535" height="35" backcolor="#000000" uuid="ff000001-0000-0000-0000-000000000005"/>
+                    <reportElement x="0" y="2" width="595" height="35" backcolor="#000000" uuid="ff000001-0000-0000-0000-000000000005"/>
                     <graphicElement><pen lineWidth="0"/></graphicElement>
                 </rectangle>
                 <staticText>
-                    <reportElement x="50" y="2" width="495" height="35" forecolor="#FFFFFF" uuid="ff000001-0000-0000-0000-000000000070"/>
+                    <reportElement x="20" y="2" width="555" height="35" forecolor="#FFFFFF" uuid="ff000001-0000-0000-0000-000000000070"/>
                     <textElement verticalAlignment="Middle">
                         <font fontName="Serif" size="14" isBold="true"/>
                     </textElement>
@@ -616,18 +616,6 @@
                     <text><![CDATA[Date: _________________]]></text>
                 </staticText>
             </frame>
-
-            <!-- Footer -->
-            <line>
-                <reportElement positionType="Float" x="200" y="698" width="195" height="1" forecolor="#E0E0E0" uuid="ff000001-0000-0000-0000-000000000064"/>
-            </line>
-            <textField>
-                <reportElement positionType="Float" x="0" y="700" width="595" height="16" forecolor="#8B7355" uuid="ff000001-0000-0000-0000-000000000027"/>
-                <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font fontName="Serif" size="9" isItalic="true"/>
-                </textElement>
-                <textFieldExpression><![CDATA["Thank you for choosing " + $P{COMPANY_NAME}]]></textFieldExpression>
-            </textField>
         </band>
     </summary>
 
