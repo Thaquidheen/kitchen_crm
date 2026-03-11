@@ -517,10 +517,10 @@
                 </textField>
             </frame>
 
-            <!-- Divider before T&C -->
-            <line>
-                <reportElement positionType="Float" x="30" y="5" width="535" height="1" forecolor="#E0E0E0" uuid="cf000001-0000-0000-0000-000000000060"/>
-            </line>
+            <!-- ===== PAGE BREAK — Terms & Conditions Page ===== -->
+            <break>
+                <reportElement positionType="Float" x="0" y="5" width="595" height="1" uuid="cf000001-0000-0000-0000-000000000060"/>
+            </break>
 
             <!-- ===== TERMS & CONDITIONS Heading ===== -->
             <frame>
