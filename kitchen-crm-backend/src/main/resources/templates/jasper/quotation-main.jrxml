@@ -517,30 +517,29 @@
                 </textField>
             </frame>
 
-            <!-- ===== PAGE BREAK — Terms & Conditions Page ===== -->
-            <break>
-                <reportElement positionType="Float" x="0" y="7" width="595" height="1" uuid="cf000001-0000-0000-0000-000000000060"/>
-            </break>
+            <!-- Divider before T&C -->
+            <line>
+                <reportElement positionType="Float" x="30" y="5" width="535" height="1" forecolor="#E0E0E0" uuid="cf000001-0000-0000-0000-000000000060"/>
+            </line>
 
-            <!-- Black Header Bar (frame so rect + text overlap properly) -->
+            <!-- ===== TERMS & CONDITIONS Heading ===== -->
             <frame>
-                <reportElement positionType="Float" x="0" y="8" width="595" height="40" uuid="ff000001-0000-0000-0000-000000000004"/>
-                <rectangle>
-                    <reportElement x="0" y="2" width="595" height="35" backcolor="#000000" uuid="ff000001-0000-0000-0000-000000000005"/>
-                    <graphicElement><pen lineWidth="0"/></graphicElement>
-                </rectangle>
+                <reportElement positionType="Float" x="30" y="5" width="535" height="28" uuid="ff000001-0000-0000-0000-000000000004"/>
                 <staticText>
-                    <reportElement x="20" y="2" width="555" height="35" forecolor="#FFFFFF" uuid="ff000001-0000-0000-0000-000000000070"/>
+                    <reportElement x="0" y="0" width="535" height="22" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000070"/>
                     <textElement verticalAlignment="Middle">
-                        <font fontName="Serif" size="14" isBold="true"/>
+                        <font fontName="Serif" size="12" isBold="true"/>
                     </textElement>
                     <text><![CDATA[TERMS & CONDITIONS]]></text>
                 </staticText>
+                <line>
+                    <reportElement x="0" y="24" width="535" height="1" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000005"/>
+                </line>
             </frame>
 
             <!-- General Terms Subheader (frame so text + underline overlap properly) -->
             <frame>
-                <reportElement positionType="Float" x="0" y="8" width="595" height="30" uuid="ff000001-0000-0000-0000-000000000006"/>
+                <reportElement positionType="Float" x="0" y="5" width="595" height="30" uuid="ff000001-0000-0000-0000-000000000006"/>
                 <staticText>
                     <reportElement x="30" y="0" width="535" height="22" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000071"/>
                     <textElement verticalAlignment="Middle">
@@ -555,7 +554,7 @@
 
             <!-- General Terms Content -->
             <textField textAdjust="StretchHeight">
-                <reportElement positionType="Float" x="30" y="8" width="535" height="20" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000007"/>
+                <reportElement positionType="Float" x="30" y="5" width="535" height="20" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000007"/>
                 <textElement verticalAlignment="Top" markup="html">
                     <font fontName="Serif" size="9"/>
                 </textElement>
@@ -564,7 +563,7 @@
 
             <!-- Warranty & Service Subheader (frame so text + underline overlap properly) -->
             <frame>
-                <reportElement positionType="Float" x="0" y="8" width="595" height="30" uuid="ff000001-0000-0000-0000-000000000009"/>
+                <reportElement positionType="Float" x="0" y="5" width="595" height="30" uuid="ff000001-0000-0000-0000-000000000009"/>
                 <staticText>
                     <reportElement x="30" y="0" width="535" height="22" forecolor="#1B2A4A" uuid="ff000001-0000-0000-0000-000000000072"/>
                     <textElement verticalAlignment="Middle">
@@ -579,7 +578,7 @@
 
             <!-- Warranty & Service Content -->
             <textField textAdjust="StretchHeight">
-                <reportElement positionType="Float" x="30" y="8" width="535" height="20" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000010"/>
+                <reportElement positionType="Float" x="30" y="5" width="535" height="20" forecolor="#333333" uuid="ff000001-0000-0000-0000-000000000010"/>
                 <textElement verticalAlignment="Top" markup="html">
                     <font fontName="Serif" size="9"/>
                 </textElement>
@@ -588,7 +587,7 @@
 
             <!-- Signature Section - frame for side-by-side layout -->
             <frame>
-                <reportElement positionType="Float" x="30" y="8" width="535" height="105" uuid="ff000001-0000-0000-0000-000000000040"/>
+                <reportElement positionType="Float" x="30" y="5" width="535" height="105" uuid="ff000001-0000-0000-0000-000000000040"/>
 
                 <!-- Client Signature Box -->
                 <rectangle radius="4">
