@@ -27,6 +27,9 @@ public class PricingServiceImpl implements PricingService {
     @Autowired
     private QuotationKitchenRepository kitchenRepository;
 
+    @Autowired
+    private QuotationOtherExpenseRepository otherExpenseRepository;
+
     /**
      * Calculate cabinet surface area using Excel formula
      * Conversion: 304mm = 1 foot
@@ -320,6 +323,14 @@ public class PricingServiceImpl implements PricingService {
                     .add(quotation.getTransportationPrice() != null ? quotation.getTransportationPrice() : BigDecimal.ZERO)
                     .add(quotation.getInstallationPrice() != null ? quotation.getInstallationPrice() : BigDecimal.ZERO);
 
+            // Add custom expense amounts (non-default items)
+            List<QuotationOtherExpense> quotationExpenses = otherExpenseRepository.findByQuotationIdAndKitchenIsNull(quotation.getId());
+            for (QuotationOtherExpense expense : quotationExpenses) {
+                if (expense.getIsDefault() == null || !expense.getIsDefault()) {
+                    totalWithServices = totalWithServices.add(expense.getAmount() != null ? expense.getAmount() : BigDecimal.ZERO);
+                }
+            }
+
             BigDecimal totalMargin = quotation.getAccessoriesMarginAmount()
                     .add(quotation.getCabinetsMarginAmount())
                     .add(quotation.getDoorsMarginAmount())
@@ -535,9 +546,18 @@ public class PricingServiceImpl implements PricingService {
         kitchen.setMarginAmount(kitchenMargin);
         kitchen.setTaxAmount(kitchenTax);
 
-        // Other Expenses = Transportation + Installation (per-kitchen)
+        // Other Expenses = Transportation + Installation + custom expenses (per-kitchen)
         BigDecimal otherExpenses = (kitchen.getTransportationPrice() != null ? kitchen.getTransportationPrice() : BigDecimal.ZERO)
                 .add(kitchen.getInstallationPrice() != null ? kitchen.getInstallationPrice() : BigDecimal.ZERO);
+
+        // Add custom expense amounts (non-default items from quotation_other_expenses table)
+        List<QuotationOtherExpense> kitchenExpenses = otherExpenseRepository.findByKitchenId(kitchen.getId());
+        for (QuotationOtherExpense expense : kitchenExpenses) {
+            if (expense.getIsDefault() == null || !expense.getIsDefault()) {
+                otherExpenses = otherExpenses.add(expense.getAmount() != null ? expense.getAmount() : BigDecimal.ZERO);
+            }
+        }
+
         kitchen.setTotalAmount(kitchenSubtotal.add(kitchenTax).add(otherExpenses));
     }
 }

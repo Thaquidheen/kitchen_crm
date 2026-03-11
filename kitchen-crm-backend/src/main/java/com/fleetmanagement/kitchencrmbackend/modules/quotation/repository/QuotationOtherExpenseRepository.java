@@ -12,6 +12,8 @@ public interface QuotationOtherExpenseRepository extends JpaRepository<Quotation
 
     List<QuotationOtherExpense> findByQuotationId(Long quotationId);
 
+    List<QuotationOtherExpense> findByQuotationIdAndKitchenIsNull(Long quotationId);
+
     List<QuotationOtherExpense> findByKitchenId(@Param("kitchenId") Long kitchenId);
 
     void deleteByQuotationId(Long quotationId);

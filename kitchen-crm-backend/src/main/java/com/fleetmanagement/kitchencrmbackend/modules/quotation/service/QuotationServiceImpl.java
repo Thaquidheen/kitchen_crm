@@ -669,9 +669,8 @@ public class QuotationServiceImpl implements QuotationService {
             kitchen.setQuotation(quotation);
             kitchen.setKitchenName(kitchenDto.getKitchenName());
             kitchen.setKitchenOrder(kitchenDto.getKitchenOrder() != null ? kitchenDto.getKitchenOrder() : 0);
-            // Transportation and installation are at quotation level, not per kitchen
-            kitchen.setTransportationPrice(BigDecimal.ZERO);
-            kitchen.setInstallationPrice(BigDecimal.ZERO);
+            kitchen.setTransportationPrice(kitchenDto.getTransportationPrice() != null ? kitchenDto.getTransportationPrice() : BigDecimal.ZERO);
+            kitchen.setInstallationPrice(kitchenDto.getInstallationPrice() != null ? kitchenDto.getInstallationPrice() : BigDecimal.ZERO);
             
             QuotationKitchen savedKitchen = kitchenRepository.save(kitchen);
             
@@ -1455,7 +1454,7 @@ public class QuotationServiceImpl implements QuotationService {
     }
 
     private List<QuotationOtherExpenseDto> loadOtherExpenses(Long quotationId) {
-        List<QuotationOtherExpense> expenses = otherExpenseRepository.findByQuotationId(quotationId);
+        List<QuotationOtherExpense> expenses = otherExpenseRepository.findByQuotationIdAndKitchenIsNull(quotationId);
         return expenses.stream().map(expense -> {
             QuotationOtherExpenseDto dto = new QuotationOtherExpenseDto();
             dto.setId(expense.getId());
