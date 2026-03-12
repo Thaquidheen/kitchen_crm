@@ -326,14 +326,9 @@
                 </textField>
             </frame>
 
-            <!-- ===== PAGE BREAK — Last Page ===== -->
-            <break>
-                <reportElement positionType="Float" x="0" y="5" width="595" height="1" uuid="cf000001-0000-0000-0000-000000000060"/>
-            </break>
-
             <!-- ===== NOTES (conditional) ===== -->
             <frame>
-                <reportElement positionType="Float" x="30" y="8" width="535" height="22" uuid="cf000001-0000-0000-0000-0000000000a1">
+                <reportElement positionType="Float" x="30" y="20" width="535" height="22" uuid="cf000001-0000-0000-0000-0000000000a1">
                     <printWhenExpression><![CDATA[$P{NOTES} != null && !$P{NOTES}.trim().isEmpty()]]></printWhenExpression>
                 </reportElement>
                 <rectangle>
@@ -365,7 +360,7 @@
 
             <!-- ===== TERMS & CONDITIONS ===== -->
             <frame>
-                <reportElement positionType="Float" x="30" y="8" width="535" height="22" uuid="cf000001-0000-0000-0000-000000000070"/>
+                <reportElement positionType="Float" x="30" y="12" width="535" height="22" uuid="cf000001-0000-0000-0000-000000000070"/>
                 <rectangle>
                     <reportElement x="0" y="0" width="4" height="22" backcolor="#8B0000" uuid="cf000001-0000-0000-0000-000000000071"/>
                     <graphicElement><pen lineWidth="0"/></graphicElement>
