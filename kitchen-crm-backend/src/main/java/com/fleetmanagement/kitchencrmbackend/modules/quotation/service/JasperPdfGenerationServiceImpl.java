@@ -395,6 +395,41 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         params.put("PAYMENT_DELIVERY_PCT", deliveryPct);
         params.put("PAYMENT_INSTALLATION_PCT", installPct);
 
+        // Build combined last-page HTML content (single textField avoids Float overlap)
+        java.text.DecimalFormat inrFormat = new java.text.DecimalFormat("#,##,##0.00",
+                new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN")));
+        StringBuilder lastPage = new StringBuilder();
+
+        if (notes != null && !notes.trim().isEmpty()) {
+            lastPage.append("<font size=\"3\" color=\"#2C1810\"><b>NOTES</b></font><br/>");
+            lastPage.append(notes.replace("\n", "<br/>"));
+            lastPage.append("<br/><br/>");
+        }
+
+        lastPage.append("<font size=\"3\" color=\"#2C1810\"><b>TERMS &amp; CONDITIONS</b></font><br/>");
+        lastPage.append(termsGeneral);
+        lastPage.append("<br/><br/>");
+
+        lastPage.append("<font size=\"3\" color=\"#2C1810\"><b>WARRANTY &amp; SERVICE</b></font><br/>");
+        lastPage.append(termsWarranty);
+        lastPage.append("<br/><br/>");
+
+        if (importantNote != null && !importantNote.trim().isEmpty()) {
+            lastPage.append("<font size=\"3\" color=\"#2C1810\"><b>IMPORTANT NOTE</b></font><br/>");
+            lastPage.append(importantNote.replace("\n", "<br/>"));
+            lastPage.append("<br/><br/>");
+        }
+
+        lastPage.append("<font size=\"3\" color=\"#2C1810\"><b>PAYMENT TERMS</b></font><br/>");
+        lastPage.append("By Acceptance - ").append(acceptPct.intValue()).append("% - Rs. ")
+                .append(inrFormat.format(grandTotal.multiply(acceptPct).divide(new BigDecimal(100)))).append("<br/>");
+        lastPage.append("On Delivery at Site - ").append(deliveryPct.intValue()).append("% - Rs. ")
+                .append(inrFormat.format(grandTotal.multiply(deliveryPct).divide(new BigDecimal(100)))).append("<br/>");
+        lastPage.append("After Installation - ").append(installPct.intValue()).append("% - Rs. ")
+                .append(inrFormat.format(grandTotal.multiply(installPct).divide(new BigDecimal(100))));
+
+        params.put("LAST_PAGE_CONTENT", lastPage.toString());
+
         // Kitchen totals data source (for combined totals table when multiple kitchens)
         List<QuotationKitchenDto> kitchensList = quotation.getKitchens();
         if (kitchensList != null && kitchensList.size() > 1) {
