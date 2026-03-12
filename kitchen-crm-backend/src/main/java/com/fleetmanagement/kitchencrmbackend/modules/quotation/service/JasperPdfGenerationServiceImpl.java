@@ -383,12 +383,12 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
 
         // Combined T&C HTML for single textField (avoids Float ordering issues on page splits)
         String termsCombined =
-            "<font size=\"14\" color=\"#1B2A4A\"><b>TERMS &amp; CONDITIONS</b></font>" +
+            "<font size=\"4\" color=\"#1B2A4A\"><b>TERMS &amp; CONDITIONS</b></font>" +
             "<br/><br/>" +
-            "<font size=\"12\" color=\"#1B2A4A\"><b>General Terms</b></font><br/>" +
+            "<font size=\"3\" color=\"#1B2A4A\"><b>General Terms</b></font><br/>" +
             termsGeneral +
             "<br/><br/>" +
-            "<font size=\"12\" color=\"#1B2A4A\"><b>Warranty &amp; Service</b></font><br/>" +
+            "<font size=\"3\" color=\"#1B2A4A\"><b>Warranty &amp; Service</b></font><br/>" +
             termsWarranty;
         params.put("TERMS_COMBINED", termsCombined);
 
