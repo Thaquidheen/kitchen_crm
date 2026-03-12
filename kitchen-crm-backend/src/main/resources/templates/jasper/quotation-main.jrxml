@@ -50,8 +50,6 @@
     <parameter name="INSTALLATION_PRICE" class="java.math.BigDecimal"/>
     <parameter name="OTHER_EXPENSES_TOTAL" class="java.math.BigDecimal"/>
     <parameter name="NOTES" class="java.lang.String"/>
-    <parameter name="LAST_PAGE_CONTENT" class="java.lang.String"/>
-
     <!-- Background — dark on page 1 (behind kitchen image), cream on pages 2+ -->
     <background>
         <band height="842">
@@ -327,14 +325,36 @@
                 </textField>
             </frame>
 
-            <!-- ===== All last-page content in single textField (prevents Float overlap on page split) ===== -->
-            <textField textAdjust="StretchHeight">
-                <reportElement positionType="Float" x="30" y="20" width="535" height="20" forecolor="#2C1810" uuid="cf000001-0000-0000-0000-000000000090"/>
-                <textElement verticalAlignment="Top" markup="html">
-                    <font fontName="Serif" size="9"/>
-                </textElement>
-                <textFieldExpression><![CDATA[$P{LAST_PAGE_CONTENT}]]></textFieldExpression>
-            </textField>
+            <!-- ===== Terms & Conditions Subreport ===== -->
+            <subreport>
+                <reportElement positionType="Float" x="30" y="20" width="535" height="30" uuid="cf000001-0000-0000-0000-000000000090"/>
+                <subreportParameter name="NOTES">
+                    <subreportParameterExpression><![CDATA[$P{NOTES}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="TERMS_GENERAL">
+                    <subreportParameterExpression><![CDATA[$P{TERMS_GENERAL}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="TERMS_WARRANTY">
+                    <subreportParameterExpression><![CDATA[$P{TERMS_WARRANTY}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="IMPORTANT_NOTE">
+                    <subreportParameterExpression><![CDATA[$P{IMPORTANT_NOTE}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="PAYMENT_ACCEPTANCE_PCT">
+                    <subreportParameterExpression><![CDATA[$P{PAYMENT_ACCEPTANCE_PCT}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="PAYMENT_DELIVERY_PCT">
+                    <subreportParameterExpression><![CDATA[$P{PAYMENT_DELIVERY_PCT}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="PAYMENT_INSTALLATION_PCT">
+                    <subreportParameterExpression><![CDATA[$P{PAYMENT_INSTALLATION_PCT}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="GRAND_TOTAL">
+                    <subreportParameterExpression><![CDATA[$P{GRAND_TOTAL}]]></subreportParameterExpression>
+                </subreportParameter>
+                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JREmptyDataSource(1)]]></dataSourceExpression>
+                <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-terms.jasper"]]></subreportExpression>
+            </subreport>
 
         </band>
     </summary>
