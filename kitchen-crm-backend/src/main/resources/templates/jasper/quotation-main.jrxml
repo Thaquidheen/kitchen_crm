@@ -522,6 +522,10 @@
                 <reportElement positionType="Float" x="0" y="5" width="595" height="1" uuid="cf000001-0000-0000-0000-000000000060"/>
             </break>
 
+            <!-- ===== T&C PARENT FRAME — keeps all T&C content in order across page splits ===== -->
+            <frame>
+                <reportElement positionType="Float" x="0" y="8" width="595" height="750" uuid="ff000001-0000-0000-0000-0000000000f0"/>
+
             <!-- ===== TERMS & CONDITIONS Heading ===== -->
             <frame>
                 <reportElement positionType="Float" x="30" y="5" width="535" height="28" uuid="ff000001-0000-0000-0000-000000000004"/>
@@ -649,6 +653,8 @@
                     <text><![CDATA[Date: _________________]]></text>
                 </staticText>
             </frame>
+
+            </frame> <!-- END T&C parent frame -->
         </band>
     </summary>
 
