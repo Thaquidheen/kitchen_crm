@@ -22,7 +22,7 @@
     <parameter name="GRAND_TOTAL" class="java.math.BigDecimal"/>
 
     <detail>
-        <band height="40" splitType="Stretch">
+        <band height="500" splitType="Stretch">
 
             <!-- ===== NOTES (conditional) ===== -->
             <frame>
