@@ -20,6 +20,8 @@
     <parameter name="PAYMENT_DELIVERY_PCT" class="java.math.BigDecimal"/>
     <parameter name="PAYMENT_INSTALLATION_PCT" class="java.math.BigDecimal"/>
     <parameter name="GRAND_TOTAL" class="java.math.BigDecimal"/>
+    <parameter name="COMPANY_NAME" class="java.lang.String"/>
+    <parameter name="CUSTOMER_NAME" class="java.lang.String"/>
 
     <detail>
         <!-- ===== NOTES (conditional) ===== -->
@@ -234,6 +236,61 @@
                 </textElement>
                 <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{GRAND_TOTAL}.multiply($P{PAYMENT_INSTALLATION_PCT}).divide(new java.math.BigDecimal(100)))]]></textFieldExpression>
             </textField>
+        </band>
+
+        <!-- ===== SIGNATURE BLOCK ===== -->
+        <band height="130">
+            <!-- Left column: Company -->
+            <textField>
+                <reportElement x="0" y="15" width="250" height="16" forecolor="#1B2A4A" uuid="ab000001-0000-0000-0000-000000000071"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="SansSerif" size="10" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["For " + ($P{COMPANY_NAME} != null ? $P{COMPANY_NAME} : "HOCH Kitchen Studio")]]></textFieldExpression>
+            </textField>
+            <line>
+                <reportElement x="0" y="80" width="200" height="1" forecolor="#333333" uuid="ab000001-0000-0000-0000-000000000072"/>
+            </line>
+            <staticText>
+                <reportElement x="0" y="84" width="200" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000073"/>
+                <textElement verticalAlignment="Top">
+                    <font fontName="SansSerif" size="8"/>
+                </textElement>
+                <text><![CDATA[Authorized Signatory]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="0" y="100" width="200" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000074"/>
+                <textElement verticalAlignment="Top">
+                    <font fontName="SansSerif" size="8"/>
+                </textElement>
+                <text><![CDATA[Date: _______________]]></text>
+            </staticText>
+
+            <!-- Right column: Client -->
+            <textField>
+                <reportElement x="285" y="15" width="250" height="16" forecolor="#1B2A4A" uuid="ab000001-0000-0000-0000-000000000075"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="SansSerif" size="10" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["For " + ($P{CUSTOMER_NAME} != null ? $P{CUSTOMER_NAME} : "Client")]]></textFieldExpression>
+            </textField>
+            <line>
+                <reportElement x="285" y="80" width="200" height="1" forecolor="#333333" uuid="ab000001-0000-0000-0000-000000000076"/>
+            </line>
+            <staticText>
+                <reportElement x="285" y="84" width="200" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000077"/>
+                <textElement verticalAlignment="Top">
+                    <font fontName="SansSerif" size="8"/>
+                </textElement>
+                <text><![CDATA[Client Signature]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="285" y="100" width="200" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000078"/>
+                <textElement verticalAlignment="Top">
+                    <font fontName="SansSerif" size="8"/>
+                </textElement>
+                <text><![CDATA[Date: _______________]]></text>
+            </staticText>
         </band>
     </detail>
 

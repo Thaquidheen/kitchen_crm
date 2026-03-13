@@ -259,7 +259,7 @@
     <!-- SUMMARY BAND — Terms & Conditions                            -->
     <!-- ============================================================ -->
     <summary>
-        <band height="842" splitType="Stretch">
+        <band height="400" splitType="Stretch">
             <break>
                 <reportElement x="0" y="0" width="595" height="1" uuid="ff000001-0000-0000-0000-000000000001"/>
             </break>
@@ -352,6 +352,12 @@
                 </subreportParameter>
                 <subreportParameter name="GRAND_TOTAL">
                     <subreportParameterExpression><![CDATA[$P{GRAND_TOTAL}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="COMPANY_NAME">
+                    <subreportParameterExpression><![CDATA[$P{COMPANY_NAME}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="CUSTOMER_NAME">
+                    <subreportParameterExpression><![CDATA[$P{CUSTOMER_NAME}]]></subreportParameterExpression>
                 </subreportParameter>
                 <dataSourceExpression><![CDATA[$P{TERMS_DATA_SOURCE}]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-terms.jasper"]]></subreportExpression>
