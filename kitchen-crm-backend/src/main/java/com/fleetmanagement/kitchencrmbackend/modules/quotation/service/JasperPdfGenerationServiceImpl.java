@@ -395,6 +395,7 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         params.put("PAYMENT_ACCEPTANCE_PCT", acceptPct);
         params.put("PAYMENT_DELIVERY_PCT", deliveryPct);
         params.put("PAYMENT_INSTALLATION_PCT", installPct);
+        params.put("TERMS_DATA_SOURCE", new JREmptyDataSource(1));
 
         // Kitchen totals data source (for combined totals table when multiple kitchens)
         List<QuotationKitchenDto> kitchensList = quotation.getKitchens();

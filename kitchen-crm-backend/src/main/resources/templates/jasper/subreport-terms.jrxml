@@ -48,8 +48,9 @@
                 <reportElement positionType="Float" x="0" y="4" width="535" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000014">
                     <printWhenExpression><![CDATA[$P{NOTES} != null && !$P{NOTES}.trim().isEmpty()]]></printWhenExpression>
                 </reportElement>
-                <textElement verticalAlignment="Top" lineSpacing="1_1_2">
+                <textElement verticalAlignment="Top">
                     <font fontName="SansSerif" size="8"/>
+                    <paragraph lineSpacing="1_1_2"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{NOTES}]]></textFieldExpression>
             </textField>
@@ -80,8 +81,9 @@
             </frame>
             <textField textAdjust="StretchHeight">
                 <reportElement positionType="Float" x="0" y="4" width="535" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000024"/>
-                <textElement verticalAlignment="Top" markup="html" lineSpacing="1_1_2">
+                <textElement verticalAlignment="Top" markup="html">
                     <font fontName="SansSerif" size="8"/>
+                    <paragraph lineSpacing="1_1_2"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{TERMS_GENERAL}]]></textFieldExpression>
             </textField>
@@ -110,8 +112,9 @@
             </frame>
             <textField textAdjust="StretchHeight">
                 <reportElement positionType="Float" x="0" y="4" width="535" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000034"/>
-                <textElement verticalAlignment="Top" markup="html" lineSpacing="1_1_2">
+                <textElement verticalAlignment="Top" markup="html">
                     <font fontName="SansSerif" size="8"/>
+                    <paragraph lineSpacing="1_1_2"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{TERMS_WARRANTY}]]></textFieldExpression>
             </textField>
@@ -144,8 +147,9 @@
                 <reportElement positionType="Float" x="0" y="4" width="535" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000044">
                     <printWhenExpression><![CDATA[$P{IMPORTANT_NOTE} != null && !$P{IMPORTANT_NOTE}.trim().isEmpty()]]></printWhenExpression>
                 </reportElement>
-                <textElement verticalAlignment="Top" lineSpacing="1_1_2">
+                <textElement verticalAlignment="Top">
                     <font fontName="SansSerif" size="8"/>
+                    <paragraph lineSpacing="1_1_2"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$P{IMPORTANT_NOTE}]]></textFieldExpression>
             </textField>

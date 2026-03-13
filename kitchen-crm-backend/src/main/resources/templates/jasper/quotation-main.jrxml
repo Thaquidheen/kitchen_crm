@@ -50,6 +50,7 @@
     <parameter name="INSTALLATION_PRICE" class="java.math.BigDecimal"/>
     <parameter name="OTHER_EXPENSES_TOTAL" class="java.math.BigDecimal"/>
     <parameter name="NOTES" class="java.lang.String"/>
+    <parameter name="TERMS_DATA_SOURCE" class="net.sf.jasperreports.engine.JRDataSource"/>
     <!-- Background — dark on page 1 (behind kitchen image), cream on pages 2+ -->
     <background>
         <band height="842">
@@ -352,7 +353,7 @@
                 <subreportParameter name="GRAND_TOTAL">
                     <subreportParameterExpression><![CDATA[$P{GRAND_TOTAL}]]></subreportParameterExpression>
                 </subreportParameter>
-                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JREmptyDataSource(1)]]></dataSourceExpression>
+                <dataSourceExpression><![CDATA[$P{TERMS_DATA_SOURCE}]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-terms.jasper"]]></subreportExpression>
             </subreport>
 
