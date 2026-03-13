@@ -21,8 +21,8 @@
     <parameter name="PAYMENT_INSTALLATION_PCT" class="java.math.BigDecimal"/>
     <parameter name="GRAND_TOTAL" class="java.math.BigDecimal"/>
 
-    <!-- ===== NOTES (conditional) ===== -->
     <detail>
+        <!-- ===== NOTES (conditional) ===== -->
         <band height="50" splitType="Stretch">
             <printWhenExpression><![CDATA[$P{NOTES} != null && !$P{NOTES}.trim().isEmpty()]]></printWhenExpression>
             <line>
@@ -48,10 +48,8 @@
                 <textFieldExpression><![CDATA[$P{NOTES}]]></textFieldExpression>
             </textField>
         </band>
-    </detail>
 
-    <!-- ===== TERMS & CONDITIONS ===== -->
-    <detail>
+        <!-- ===== TERMS & CONDITIONS ===== -->
         <band height="50" splitType="Stretch">
             <line>
                 <reportElement x="0" y="8" width="30" height="1" forecolor="#8B0000" uuid="ab000001-0000-0000-0000-000000000021"/>
@@ -76,10 +74,8 @@
                 <textFieldExpression><![CDATA[$P{TERMS_GENERAL}]]></textFieldExpression>
             </textField>
         </band>
-    </detail>
 
-    <!-- ===== WARRANTY & SERVICE ===== -->
-    <detail>
+        <!-- ===== WARRANTY & SERVICE ===== -->
         <band height="50" splitType="Stretch">
             <line>
                 <reportElement x="0" y="8" width="30" height="1" forecolor="#8B0000" uuid="ab000001-0000-0000-0000-000000000031"/>
@@ -104,10 +100,8 @@
                 <textFieldExpression><![CDATA[$P{TERMS_WARRANTY}]]></textFieldExpression>
             </textField>
         </band>
-    </detail>
 
-    <!-- ===== IMPORTANT NOTE (conditional) ===== -->
-    <detail>
+        <!-- ===== IMPORTANT NOTE (conditional) ===== -->
         <band height="50" splitType="Stretch">
             <printWhenExpression><![CDATA[$P{IMPORTANT_NOTE} != null && !$P{IMPORTANT_NOTE}.trim().isEmpty()]]></printWhenExpression>
             <line>
@@ -133,10 +127,8 @@
                 <textFieldExpression><![CDATA[$P{IMPORTANT_NOTE}]]></textFieldExpression>
             </textField>
         </band>
-    </detail>
 
-    <!-- ===== PAYMENT TERMS (highlighted card) ===== -->
-    <detail>
+        <!-- ===== PAYMENT TERMS (highlighted card) ===== -->
         <band height="145">
             <!-- Card background -->
             <rectangle radius="6">
