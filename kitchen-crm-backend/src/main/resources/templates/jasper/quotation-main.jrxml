@@ -259,7 +259,7 @@
     <!-- SUMMARY BAND — Terms & Conditions                            -->
     <!-- ============================================================ -->
     <summary>
-        <band height="5" splitType="Stretch">
+        <band height="50" splitType="Stretch">
             <break>
                 <reportElement x="0" y="0" width="595" height="1" uuid="ff000001-0000-0000-0000-000000000001"/>
             </break>
