@@ -25,24 +25,20 @@
 
     <detail>
         <!-- ===== NOTES (conditional) ===== -->
-        <band height="50" splitType="Stretch">
+        <band height="46" splitType="Stretch">
             <printWhenExpression><![CDATA[$P{NOTES} != null && !$P{NOTES}.trim().isEmpty()]]></printWhenExpression>
-            <line>
-                <reportElement x="0" y="8" width="30" height="1" forecolor="#8B0000" uuid="ab000001-0000-0000-0000-000000000011"/>
-                <graphicElement><pen lineWidth="2"/></graphicElement>
-            </line>
             <staticText>
-                <reportElement x="0" y="12" width="535" height="16" forecolor="#1B2A4A" uuid="ab000001-0000-0000-0000-000000000012"/>
+                <reportElement x="0" y="8" width="535" height="16" forecolor="#1B2A4A" uuid="ab000001-0000-0000-0000-000000000012"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="SansSerif" size="11" isBold="true"/>
                 </textElement>
                 <text><![CDATA[NOTES]]></text>
             </staticText>
             <line>
-                <reportElement x="0" y="32" width="535" height="1" forecolor="#E0E0E0" uuid="ab000001-0000-0000-0000-000000000013"/>
+                <reportElement x="0" y="28" width="535" height="1" forecolor="#E0E0E0" uuid="ab000001-0000-0000-0000-000000000013"/>
             </line>
             <textField textAdjust="StretchHeight">
-                <reportElement x="0" y="36" width="535" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000014"/>
+                <reportElement x="0" y="32" width="535" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000014"/>
                 <textElement verticalAlignment="Top">
                     <font fontName="SansSerif" size="8"/>
                     <paragraph lineSpacing="1_1_2"/>
@@ -52,23 +48,19 @@
         </band>
 
         <!-- ===== TERMS & CONDITIONS ===== -->
-        <band height="50" splitType="Stretch">
-            <line>
-                <reportElement x="0" y="8" width="30" height="1" forecolor="#8B0000" uuid="ab000001-0000-0000-0000-000000000021"/>
-                <graphicElement><pen lineWidth="2"/></graphicElement>
-            </line>
+        <band height="46" splitType="Stretch">
             <staticText>
-                <reportElement x="0" y="12" width="535" height="16" forecolor="#1B2A4A" uuid="ab000001-0000-0000-0000-000000000022"/>
+                <reportElement x="0" y="8" width="535" height="16" forecolor="#1B2A4A" uuid="ab000001-0000-0000-0000-000000000022"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="SansSerif" size="11" isBold="true"/>
                 </textElement>
                 <text><![CDATA[TERMS & CONDITIONS]]></text>
             </staticText>
             <line>
-                <reportElement x="0" y="32" width="535" height="1" forecolor="#E0E0E0" uuid="ab000001-0000-0000-0000-000000000023"/>
+                <reportElement x="0" y="28" width="535" height="1" forecolor="#E0E0E0" uuid="ab000001-0000-0000-0000-000000000023"/>
             </line>
             <textField textAdjust="StretchHeight">
-                <reportElement x="0" y="36" width="535" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000024"/>
+                <reportElement x="0" y="32" width="535" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000024"/>
                 <textElement verticalAlignment="Top" markup="html">
                     <font fontName="SansSerif" size="8"/>
                     <paragraph lineSpacing="1_1_2"/>
@@ -78,23 +70,19 @@
         </band>
 
         <!-- ===== WARRANTY & SERVICE ===== -->
-        <band height="50" splitType="Stretch">
-            <line>
-                <reportElement x="0" y="8" width="30" height="1" forecolor="#8B0000" uuid="ab000001-0000-0000-0000-000000000031"/>
-                <graphicElement><pen lineWidth="2"/></graphicElement>
-            </line>
+        <band height="46" splitType="Stretch">
             <staticText>
-                <reportElement x="0" y="12" width="535" height="16" forecolor="#1B2A4A" uuid="ab000001-0000-0000-0000-000000000032"/>
+                <reportElement x="0" y="8" width="535" height="16" forecolor="#1B2A4A" uuid="ab000001-0000-0000-0000-000000000032"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="SansSerif" size="11" isBold="true"/>
                 </textElement>
                 <text><![CDATA[WARRANTY & SERVICE]]></text>
             </staticText>
             <line>
-                <reportElement x="0" y="32" width="535" height="1" forecolor="#E0E0E0" uuid="ab000001-0000-0000-0000-000000000033"/>
+                <reportElement x="0" y="28" width="535" height="1" forecolor="#E0E0E0" uuid="ab000001-0000-0000-0000-000000000033"/>
             </line>
             <textField textAdjust="StretchHeight">
-                <reportElement x="0" y="36" width="535" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000034"/>
+                <reportElement x="0" y="32" width="535" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000034"/>
                 <textElement verticalAlignment="Top" markup="html">
                     <font fontName="SansSerif" size="8"/>
                     <paragraph lineSpacing="1_1_2"/>
@@ -104,24 +92,20 @@
         </band>
 
         <!-- ===== IMPORTANT NOTE (conditional) ===== -->
-        <band height="50" splitType="Stretch">
+        <band height="46" splitType="Stretch">
             <printWhenExpression><![CDATA[$P{IMPORTANT_NOTE} != null && !$P{IMPORTANT_NOTE}.trim().isEmpty()]]></printWhenExpression>
-            <line>
-                <reportElement x="0" y="8" width="30" height="1" forecolor="#8B0000" uuid="ab000001-0000-0000-0000-000000000041"/>
-                <graphicElement><pen lineWidth="2"/></graphicElement>
-            </line>
             <staticText>
-                <reportElement x="0" y="12" width="535" height="16" forecolor="#1B2A4A" uuid="ab000001-0000-0000-0000-000000000042"/>
+                <reportElement x="0" y="8" width="535" height="16" forecolor="#1B2A4A" uuid="ab000001-0000-0000-0000-000000000042"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="SansSerif" size="11" isBold="true"/>
                 </textElement>
                 <text><![CDATA[IMPORTANT NOTE]]></text>
             </staticText>
             <line>
-                <reportElement x="0" y="32" width="535" height="1" forecolor="#E0E0E0" uuid="ab000001-0000-0000-0000-000000000043"/>
+                <reportElement x="0" y="28" width="535" height="1" forecolor="#E0E0E0" uuid="ab000001-0000-0000-0000-000000000043"/>
             </line>
             <textField textAdjust="StretchHeight">
-                <reportElement x="0" y="36" width="535" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000044"/>
+                <reportElement x="0" y="32" width="535" height="14" forecolor="#555555" uuid="ab000001-0000-0000-0000-000000000044"/>
                 <textElement verticalAlignment="Top">
                     <font fontName="SansSerif" size="8"/>
                     <paragraph lineSpacing="1_1_2"/>
@@ -138,15 +122,9 @@
                 <graphicElement><pen lineWidth="1" lineColor="#E0E0E0"/></graphicElement>
             </rectangle>
 
-            <!-- Accent line -->
-            <line>
-                <reportElement x="15" y="22" width="30" height="1" forecolor="#8B0000" uuid="ab000001-0000-0000-0000-000000000052"/>
-                <graphicElement><pen lineWidth="2"/></graphicElement>
-            </line>
-
             <!-- Heading -->
             <staticText>
-                <reportElement x="15" y="26" width="505" height="16" forecolor="#1B2A4A" uuid="ab000001-0000-0000-0000-000000000053"/>
+                <reportElement x="15" y="18" width="505" height="16" forecolor="#1B2A4A" uuid="ab000001-0000-0000-0000-000000000053"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="SansSerif" size="11" isBold="true"/>
                 </textElement>
@@ -155,7 +133,7 @@
 
             <!-- Divider -->
             <line>
-                <reportElement x="15" y="46" width="505" height="1" forecolor="#E0E0E0" uuid="ab000001-0000-0000-0000-000000000054"/>
+                <reportElement x="15" y="38" width="505" height="1" forecolor="#E0E0E0" uuid="ab000001-0000-0000-0000-000000000054"/>
             </line>
 
             <!-- Row 1: By Acceptance -->
