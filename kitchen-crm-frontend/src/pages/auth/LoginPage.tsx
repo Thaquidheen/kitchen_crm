@@ -14,9 +14,10 @@ import { loginSchema, type LoginFormData } from '../../features/auth/authSchemas
 import type { User } from '../../types';
 import { UserRole } from '../../types';
 import { ROUTES } from '../../routes/routes.config';
-import { Eye, EyeOff, Lock, Mail, ChefHat, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ErrorDisplay } from '../../components/ErrorDisplay';
+import logo from '../../assets/logo.png';
 import './LoginPage.css';
 
 const LoginPage = () => {
@@ -113,9 +114,7 @@ const LoginPage = () => {
           <div className="login-form-wrapper">
             {/* Logo & Header */}
             <div className="login-header">
-              <div className="login-logo">
-                <ChefHat strokeWidth={1.5} />
-              </div>
+              <img src={logo} alt="HOCH" className="login-logo-img" />
               <h1 className="login-title">Welcome to HOCH</h1>
               <p className="login-subtitle">
                 Sign in to manage your kitchen business
@@ -226,9 +225,7 @@ const LoginPage = () => {
           </div>
 
           <div className="right-content">
-            <div className="hero-icon">
-              <ChefHat strokeWidth={1} />
-            </div>
+            <img src={logo} alt="HOCH" className="hero-logo-img" />
             <h2 className="hero-title">
               Streamline Your Kitchen Operations
             </h2>

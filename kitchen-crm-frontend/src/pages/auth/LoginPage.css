@@ -39,22 +39,10 @@
   margin-bottom: 2.5rem;
 }
 
-.login-logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  border-radius: 16px;
+.login-logo-img {
+  max-height: 56px;
   margin-bottom: 1.5rem;
-  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.3);
-}
-
-.login-logo svg {
-  width: 28px;
-  height: 28px;
-  color: white;
+  object-fit: contain;
 }
 
 .login-title {
@@ -362,22 +350,10 @@
   text-align: center;
 }
 
-.hero-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, rgba(220, 38, 38, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%);
-  border: 1px solid rgba(220, 38, 38, 0.3);
-  border-radius: 24px;
+.hero-logo-img {
+  max-height: 80px;
   margin-bottom: 2rem;
-}
-
-.hero-icon svg {
-  width: 40px;
-  height: 40px;
-  color: #dc2626;
+  object-fit: contain;
 }
 
 .hero-title {
@@ -454,14 +430,8 @@
     margin-bottom: 2rem;
   }
 
-  .login-logo {
-    width: 48px;
-    height: 48px;
-  }
-
-  .login-logo svg {
-    width: 24px;
-    height: 24px;
+  .login-logo-img {
+    max-height: 48px;
   }
 
   .form-input {
