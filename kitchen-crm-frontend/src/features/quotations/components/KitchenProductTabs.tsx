@@ -25,6 +25,9 @@ export interface KitchenProductTabsProps {
   cabinetsTaxPercentage: number;
   doorsTaxPercentage: number;
   lightingTaxPercentage: number;
+  // Miscellaneous (Other Expenses) margin & tax
+  miscellaneousMarginPercentage?: number;
+  miscellaneousTaxPercentage?: number;
   userRole: 'ROLE_SUPER_ADMIN' | 'ROLE_STAFF';
   // Callbacks for global margin/tax changes
   onAccessoriesTaxChange?: (value: number) => void;
@@ -48,6 +51,8 @@ export function KitchenProductTabs({
   cabinetsTaxPercentage,
   doorsTaxPercentage,
   lightingTaxPercentage,
+  miscellaneousMarginPercentage = 0,
+  miscellaneousTaxPercentage = 18,
   userRole,
   onAccessoriesTaxChange,
   onCabinetsTaxChange,
@@ -146,6 +151,8 @@ export function KitchenProductTabs({
                 doorsTax={doorsTaxPercentage}
                 lightingTax={lightingTaxPercentage}
                 otherExpenses={kitchen.otherExpenses || []}
+                miscellaneousMarginPercentage={miscellaneousMarginPercentage}
+                miscellaneousTaxPercentage={miscellaneousTaxPercentage}
                 onAccessoriesTaxChange={onAccessoriesTaxChange}
                 onCabinetsTaxChange={onCabinetsTaxChange}
                 onDoorsTaxChange={onDoorsTaxChange}
@@ -194,6 +201,8 @@ export function KitchenProductTabs({
                 cabinetsTaxPercentage={cabinetsTaxPercentage}
                 doorsTaxPercentage={doorsTaxPercentage}
                 lightingTaxPercentage={lightingTaxPercentage}
+                miscellaneousMarginPercentage={miscellaneousMarginPercentage}
+                miscellaneousTaxPercentage={miscellaneousTaxPercentage}
                 kitchenName={kitchen.kitchenName}
               />
             </div>

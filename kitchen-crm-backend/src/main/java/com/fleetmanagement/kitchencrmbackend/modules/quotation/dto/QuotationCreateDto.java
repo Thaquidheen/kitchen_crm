@@ -35,7 +35,11 @@ public class QuotationCreateDto {
     private BigDecimal cabinetsTaxPercentage = BigDecimal.valueOf(18.00);
     private BigDecimal doorsTaxPercentage = BigDecimal.valueOf(18.00);
     private BigDecimal lightingTaxPercentage = BigDecimal.valueOf(18.00);
-    
+
+    // Miscellaneous (Other Expenses) margin & tax
+    private BigDecimal miscellaneousMarginPercentage = BigDecimal.ZERO;
+    private BigDecimal miscellaneousTaxPercentage = BigDecimal.valueOf(18.00);
+
     private LocalDate validUntil;
     private String notes;
     private String termsConditions;

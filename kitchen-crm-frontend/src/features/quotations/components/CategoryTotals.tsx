@@ -25,6 +25,9 @@ export interface CategoryTotalsProps {
   doorsTaxPercentage: number;
   lightingTaxPercentage: number;
 
+  // Miscellaneous (Other Expenses) margin & tax
+  miscellaneousMarginPercentage?: number;
+  miscellaneousTaxPercentage?: number;
   // Optional kitchen name for context
   kitchenName?: string;
 }
@@ -51,6 +54,8 @@ export function CategoryTotals({
   doorsTaxPercentage,
   otherExpenses = [],
   lightingTaxPercentage,
+  miscellaneousMarginPercentage = 0,
+  miscellaneousTaxPercentage = 18,
   kitchenName,
 }: CategoryTotalsProps) {
   const calculateCategoryTotal = (
@@ -127,8 +132,12 @@ export function CategoryTotals({
     lightingTaxPercentage,
   ]);
 
-  const otherExpensesTotal = otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const grandTotal = categories.reduce((sum, cat) => sum + cat.breakdown.finalTotal, 0) + otherExpensesTotal;
+  const otherExpensesBase = otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const miscMargin = (otherExpensesBase * miscellaneousMarginPercentage) / 100;
+  const miscWithMargin = otherExpensesBase + miscMargin;
+  const miscTax = (miscWithMargin * miscellaneousTaxPercentage) / 100;
+  const otherExpensesFinal = miscWithMargin + miscTax;
+  const grandTotal = categories.reduce((sum, cat) => sum + cat.breakdown.finalTotal, 0) + otherExpensesFinal;
 
   return (
     <div className="space-y-3 sm:space-y-4">

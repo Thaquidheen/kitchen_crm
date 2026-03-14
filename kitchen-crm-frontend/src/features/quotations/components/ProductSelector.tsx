@@ -28,9 +28,21 @@ export interface ProductSelectorProps {
   };
   onProductsChange: (products: Partial<ProductSelectorProps['selectedProducts']>) => void;
   availableElevations?: QuotationElevation[];
+  miscellaneousMarginPercentage?: number;
+  miscellaneousTaxPercentage?: number;
+  onMiscellaneousMarginChange?: (value: number) => void;
+  onMiscellaneousTaxChange?: (value: number) => void;
 }
 
-export function ProductSelector({ selectedProducts, onProductsChange, availableElevations = [] }: ProductSelectorProps) {
+export function ProductSelector({
+  selectedProducts,
+  onProductsChange,
+  availableElevations = [],
+  miscellaneousMarginPercentage = 0,
+  miscellaneousTaxPercentage = 18,
+  onMiscellaneousMarginChange,
+  onMiscellaneousTaxChange,
+}: ProductSelectorProps) {
   const [search, setSearch] = useState('');
 
   const productTabs = useMemo(
@@ -315,6 +327,10 @@ export function ProductSelector({ selectedProducts, onProductsChange, availableE
                 <OtherExpensesTab
                   expenses={selectedProducts.otherExpenses || []}
                   onChange={(otherExpenses) => onProductsChange({ otherExpenses })}
+                  marginPercentage={miscellaneousMarginPercentage}
+                  taxPercentage={miscellaneousTaxPercentage}
+                  onMarginChange={onMiscellaneousMarginChange || (() => {})}
+                  onTaxChange={onMiscellaneousTaxChange || (() => {})}
                 />
               ),
             },

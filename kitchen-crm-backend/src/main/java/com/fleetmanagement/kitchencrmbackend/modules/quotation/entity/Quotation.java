@@ -83,6 +83,13 @@ public class Quotation extends Auditable {
     @Column(name = "lighting_tax_percentage", precision = 5, scale = 2)
     private BigDecimal lightingTaxPercentage = BigDecimal.valueOf(18.00);
 
+    // MISCELLANEOUS (OTHER EXPENSES) MARGIN & TAX
+    @Column(name = "miscellaneous_margin_percentage", precision = 5, scale = 2)
+    private BigDecimal miscellaneousMarginPercentage = BigDecimal.ZERO;
+
+    @Column(name = "miscellaneous_tax_percentage", precision = 5, scale = 2)
+    private BigDecimal miscellaneousTaxPercentage = BigDecimal.valueOf(18.00);
+
     @Column(name = "subtotal", precision = 12, scale = 2)
     private BigDecimal subtotal = BigDecimal.ZERO;
 

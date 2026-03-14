@@ -319,17 +319,25 @@ public class PricingServiceImpl implements PricingService {
                     .add(quotation.getDoorsFinalTotal())
                     .add(quotation.getLightingFinalTotal());
 
-            BigDecimal totalWithServices = totalCategoriesAmount
-                    .add(quotation.getTransportationPrice() != null ? quotation.getTransportationPrice() : BigDecimal.ZERO)
+            // Calculate other expenses base total
+            BigDecimal otherExpensesBase = (quotation.getTransportationPrice() != null ? quotation.getTransportationPrice() : BigDecimal.ZERO)
                     .add(quotation.getInstallationPrice() != null ? quotation.getInstallationPrice() : BigDecimal.ZERO);
 
             // Add custom expense amounts (non-default items)
             List<QuotationOtherExpense> quotationExpenses = otherExpenseRepository.findByQuotationIdAndKitchenIsNull(quotation.getId());
             for (QuotationOtherExpense expense : quotationExpenses) {
                 if (expense.getIsDefault() == null || !expense.getIsDefault()) {
-                    totalWithServices = totalWithServices.add(expense.getAmount() != null ? expense.getAmount() : BigDecimal.ZERO);
+                    otherExpensesBase = otherExpensesBase.add(expense.getAmount() != null ? expense.getAmount() : BigDecimal.ZERO);
                 }
             }
+
+            // Apply margin and tax to other expenses
+            BigDecimal miscMargin = calculateMarginAmount(otherExpensesBase, quotation.getMiscellaneousMarginPercentage());
+            BigDecimal miscWithMargin = otherExpensesBase.add(miscMargin);
+            BigDecimal miscTax = calculateTaxAmount(miscWithMargin, quotation.getMiscellaneousTaxPercentage());
+            BigDecimal otherExpensesFinal = miscWithMargin.add(miscTax);
+
+            BigDecimal totalWithServices = totalCategoriesAmount.add(otherExpensesFinal);
 
             BigDecimal totalMargin = quotation.getAccessoriesMarginAmount()
                     .add(quotation.getCabinetsMarginAmount())
@@ -547,17 +555,23 @@ public class PricingServiceImpl implements PricingService {
         kitchen.setTaxAmount(kitchenTax);
 
         // Other Expenses = Transportation + Installation + custom expenses (per-kitchen)
-        BigDecimal otherExpenses = (kitchen.getTransportationPrice() != null ? kitchen.getTransportationPrice() : BigDecimal.ZERO)
+        BigDecimal otherExpensesBase = (kitchen.getTransportationPrice() != null ? kitchen.getTransportationPrice() : BigDecimal.ZERO)
                 .add(kitchen.getInstallationPrice() != null ? kitchen.getInstallationPrice() : BigDecimal.ZERO);
 
         // Add custom expense amounts (non-default items from quotation_other_expenses table)
         List<QuotationOtherExpense> kitchenExpenses = otherExpenseRepository.findByKitchenId(kitchen.getId());
         for (QuotationOtherExpense expense : kitchenExpenses) {
             if (expense.getIsDefault() == null || !expense.getIsDefault()) {
-                otherExpenses = otherExpenses.add(expense.getAmount() != null ? expense.getAmount() : BigDecimal.ZERO);
+                otherExpensesBase = otherExpensesBase.add(expense.getAmount() != null ? expense.getAmount() : BigDecimal.ZERO);
             }
         }
 
-        kitchen.setTotalAmount(kitchenSubtotal.add(kitchenTax).add(otherExpenses));
+        // Apply margin and tax to other expenses
+        BigDecimal miscMargin = calculateMarginAmount(otherExpensesBase, quotation.getMiscellaneousMarginPercentage());
+        BigDecimal miscWithMargin = otherExpensesBase.add(miscMargin);
+        BigDecimal miscTax = calculateTaxAmount(miscWithMargin, quotation.getMiscellaneousTaxPercentage());
+        BigDecimal otherExpensesFinal = miscWithMargin.add(miscTax);
+
+        kitchen.setTotalAmount(kitchenSubtotal.add(kitchenTax).add(otherExpensesFinal));
     }
 }

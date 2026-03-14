@@ -161,6 +161,10 @@ public class QuotationServiceImpl implements QuotationService {
             quotation.setDoorsTaxPercentage(dto.getDoorsTaxPercentage() != null ? dto.getDoorsTaxPercentage() : BigDecimal.valueOf(18.0));
             quotation.setLightingTaxPercentage(dto.getLightingTaxPercentage() != null ? dto.getLightingTaxPercentage() : BigDecimal.valueOf(18.0));
 
+            // Miscellaneous (Other Expenses) margin & tax
+            quotation.setMiscellaneousMarginPercentage(dto.getMiscellaneousMarginPercentage() != null ? dto.getMiscellaneousMarginPercentage() : BigDecimal.ZERO);
+            quotation.setMiscellaneousTaxPercentage(dto.getMiscellaneousTaxPercentage() != null ? dto.getMiscellaneousTaxPercentage() : BigDecimal.valueOf(18.0));
+
             // Important Note & Payment Terms
             quotation.setImportantNote(dto.getImportantNote());
             quotation.setPaymentAcceptancePct(dto.getPaymentAcceptancePct() != null ? dto.getPaymentAcceptancePct() : BigDecimal.valueOf(60));
@@ -224,6 +228,8 @@ public class QuotationServiceImpl implements QuotationService {
         existingQuotation.setCabinetsTaxPercentage(quotationDto.getCabinetsTaxPercentage());
         existingQuotation.setDoorsTaxPercentage(quotationDto.getDoorsTaxPercentage());
         existingQuotation.setLightingTaxPercentage(quotationDto.getLightingTaxPercentage());
+        existingQuotation.setMiscellaneousMarginPercentage(quotationDto.getMiscellaneousMarginPercentage());
+        existingQuotation.setMiscellaneousTaxPercentage(quotationDto.getMiscellaneousTaxPercentage());
 
         // Important Note & Payment Terms
         existingQuotation.setImportantNote(quotationDto.getImportantNote());
@@ -1007,7 +1013,9 @@ public class QuotationServiceImpl implements QuotationService {
         dto.setCabinetsTaxPercentage(quotation.getCabinetsTaxPercentage());
         dto.setDoorsTaxPercentage(quotation.getDoorsTaxPercentage());
         dto.setLightingTaxPercentage(quotation.getLightingTaxPercentage());
-        
+        dto.setMiscellaneousMarginPercentage(quotation.getMiscellaneousMarginPercentage());
+        dto.setMiscellaneousTaxPercentage(quotation.getMiscellaneousTaxPercentage());
+
         dto.setSubtotal(quotation.getSubtotal());
         dto.setTaxAmount(quotation.getTaxAmount());
         dto.setTotalAmount(quotation.getTotalAmount());

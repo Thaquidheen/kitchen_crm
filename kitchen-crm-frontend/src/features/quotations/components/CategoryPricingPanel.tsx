@@ -176,6 +176,10 @@ export interface CategoryPricingPanelProps {
   // Other Expenses (Transportation, Installation, custom items)
   otherExpenses?: QuotationOtherExpense[];
 
+  // Miscellaneous (Other Expenses) margin & tax
+  miscellaneousMarginPercentage?: number;
+  miscellaneousTaxPercentage?: number;
+
   // User role for conditional rendering
   userRole?: 'ROLE_SUPER_ADMIN' | 'ROLE_STAFF';
 
@@ -205,16 +209,21 @@ export function CategoryPricingPanel({
   onDoorsTaxChange,
   onLightingTaxChange,
   otherExpenses = [],
+  miscellaneousMarginPercentage = 0,
+  miscellaneousTaxPercentage = 18,
   userRole = 'ROLE_SUPER_ADMIN',
   kitchenName,
 }: CategoryPricingPanelProps) {
 
   const showMargins = userRole === 'ROLE_SUPER_ADMIN';
 
-  const otherExpensesTotal = useMemo(
-    () => otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0),
-    [otherExpenses]
-  );
+  const otherExpensesTotal = useMemo(() => {
+    const base = otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const margin = (base * miscellaneousMarginPercentage) / 100;
+    const withMargin = base + margin;
+    const tax = (withMargin * miscellaneousTaxPercentage) / 100;
+    return withMargin + tax;
+  }, [otherExpenses, miscellaneousMarginPercentage, miscellaneousTaxPercentage]);
 
   const categorySubtotals = useMemo(() => {
     const accessoriesSubtotal = accessories.reduce((sum, item) => sum + (item.totalPrice ?? item.price ?? 0), 0);
@@ -345,7 +354,7 @@ export function CategoryPricingPanel({
               ))}
             </div>
             <div className="flex justify-between text-xs sm:text-sm pt-1 border-t border-background-700">
-              <span className="text-text-700 font-medium">Other Expenses Total</span>
+              <span className="text-text-700 font-medium">Other Expenses Total (incl. margin & tax)</span>
               <span className="font-semibold text-text-900">
                 ₹{otherExpensesTotal.toLocaleString('en-IN')}
               </span>

@@ -120,6 +120,8 @@ export function QuotationBuilderPage() {
     cabinetsTaxPercentage: 18,
     doorsTaxPercentage: 18,
     lightingTaxPercentage: 18,
+    miscellaneousMarginPercentage: 0,
+    miscellaneousTaxPercentage: 18,
     validUntil: '',
     notes: '',
     termsConditions: DEFAULT_TERMS_CONDITIONS,
@@ -246,6 +248,8 @@ export function QuotationBuilderPage() {
       cabinetsTaxPercentage: Number(existingQuotation.cabinetsTaxPercentage ?? 18),
       doorsTaxPercentage: Number(existingQuotation.doorsTaxPercentage ?? 18),
       lightingTaxPercentage: Number(existingQuotation.lightingTaxPercentage ?? 18),
+      miscellaneousMarginPercentage: Number(existingQuotation.miscellaneousMarginPercentage ?? 0),
+      miscellaneousTaxPercentage: Number(existingQuotation.miscellaneousTaxPercentage ?? 18),
       validUntil: existingQuotation.validUntil || '',
       notes: existingQuotation.notes || '',
       termsConditions: existingQuotation.termsConditions || DEFAULT_TERMS_CONDITIONS,
@@ -447,6 +451,8 @@ export function QuotationBuilderPage() {
       cabinetsTaxPercentage: formData.cabinetsTaxPercentage ?? 18,
       doorsTaxPercentage: formData.doorsTaxPercentage ?? 18,
       lightingTaxPercentage: formData.lightingTaxPercentage ?? 18,
+      miscellaneousMarginPercentage: formData.miscellaneousMarginPercentage ?? 0,
+      miscellaneousTaxPercentage: formData.miscellaneousTaxPercentage ?? 18,
       validUntil: formData.validUntil || undefined,
       notes: formData.notes || undefined,
       termsConditions: formData.termsConditions || undefined,
@@ -1276,6 +1282,8 @@ export function QuotationBuilderPage() {
                       cabinetsTaxPercentage={formData.cabinetsTaxPercentage ?? 18}
                       doorsTaxPercentage={formData.doorsTaxPercentage ?? 18}
                       lightingTaxPercentage={formData.lightingTaxPercentage ?? 18}
+                      miscellaneousMarginPercentage={formData.miscellaneousMarginPercentage ?? 0}
+                      miscellaneousTaxPercentage={formData.miscellaneousTaxPercentage ?? 18}
                       userRole={userRole}
                       onAccessoriesTaxChange={(val) => setFormData({ ...formData, accessoriesTaxPercentage: val })}
                       onCabinetsTaxChange={(val) => setFormData({ ...formData, cabinetsTaxPercentage: val })}
@@ -1298,6 +1306,10 @@ export function QuotationBuilderPage() {
                         otherExpenses: formData.otherExpenses || [],
                       }}
                       onProductsChange={(products) => setFormData({ ...formData, ...products })}
+                      miscellaneousMarginPercentage={formData.miscellaneousMarginPercentage ?? 0}
+                      miscellaneousTaxPercentage={formData.miscellaneousTaxPercentage ?? 18}
+                      onMiscellaneousMarginChange={(v) => setFormData({ ...formData, miscellaneousMarginPercentage: v })}
+                      onMiscellaneousTaxChange={(v) => setFormData({ ...formData, miscellaneousTaxPercentage: v })}
                     />
 
                     {/* Category Pricing Panel */}
@@ -1308,6 +1320,8 @@ export function QuotationBuilderPage() {
                         doors={formData.doors || []}
                         lighting={formData.lighting || []}
                         otherExpenses={formData.otherExpenses || []}
+                        miscellaneousMarginPercentage={formData.miscellaneousMarginPercentage ?? 0}
+                        miscellaneousTaxPercentage={formData.miscellaneousTaxPercentage ?? 18}
                         accessoriesMargin={formData.accessoriesMarginPercentage ?? 20}
                         cabinetsMargin={formData.cabinetsMarginPercentage ?? 20}
                         doorsMargin={formData.doorsMarginPercentage ?? 20}
@@ -1343,6 +1357,9 @@ export function QuotationBuilderPage() {
                         cabinetsTaxPercentage={formData.cabinetsTaxPercentage ?? 18}
                         doorsTaxPercentage={formData.doorsTaxPercentage ?? 18}
                         lightingTaxPercentage={formData.lightingTaxPercentage ?? 18}
+                        otherExpenses={formData.otherExpenses || []}
+                        miscellaneousMarginPercentage={formData.miscellaneousMarginPercentage ?? 0}
+                        miscellaneousTaxPercentage={formData.miscellaneousTaxPercentage ?? 18}
                       />
                     </div>
                   </>
@@ -1503,6 +1520,8 @@ export function QuotationBuilderPage() {
                   cabinetsTaxPercentage={formData.cabinetsTaxPercentage ?? 18}
                   doorsTaxPercentage={formData.doorsTaxPercentage ?? 18}
                   lightingTaxPercentage={formData.lightingTaxPercentage ?? 18}
+                  miscellaneousMarginPercentage={formData.miscellaneousMarginPercentage ?? 0}
+                  miscellaneousTaxPercentage={formData.miscellaneousTaxPercentage ?? 18}
                   kitchens={formData.kitchens}
                 />
 

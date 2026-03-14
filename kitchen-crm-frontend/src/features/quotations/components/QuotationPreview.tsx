@@ -34,6 +34,9 @@ export interface QuotationPreviewProps {
   cabinetsTaxPercentage: number;
   doorsTaxPercentage: number;
   lightingTaxPercentage: number;
+  // Miscellaneous (Other Expenses) margin & tax
+  miscellaneousMarginPercentage: number;
+  miscellaneousTaxPercentage: number;
   // Multi-kitchen support
   kitchens?: QuotationKitchenFormData[];
 }
@@ -55,6 +58,8 @@ export function QuotationPreview({
   cabinetsTaxPercentage,
   doorsTaxPercentage,
   lightingTaxPercentage,
+  miscellaneousMarginPercentage,
+  miscellaneousTaxPercentage,
   kitchens,
 }: QuotationPreviewProps) {
   // Check if this is a multi-kitchen quotation
@@ -97,11 +102,15 @@ export function QuotationPreview({
     // Sum up category final totals
     const categoriesFinalTotal = accessoriesTotal.finalTotal + cabinetsTotal.finalTotal + doorsTotal.finalTotal + lightingTotal.finalTotal;
 
-    // Grand total = sum of category final totals + all other expenses
-    const otherExpensesTotal = otherExpensesProp && otherExpensesProp.length > 0
+    // Other expenses with margin + tax
+    const otherExpensesBase = otherExpensesProp && otherExpensesProp.length > 0
       ? otherExpensesProp.reduce((sum, e) => sum + (e.amount || 0), 0)
       : transportationPrice + installationPrice;
-    const grandTotal = categoriesFinalTotal + otherExpensesTotal;
+    const miscMargin = (otherExpensesBase * miscellaneousMarginPercentage) / 100;
+    const miscWithMargin = otherExpensesBase + miscMargin;
+    const miscTax = (miscWithMargin * miscellaneousTaxPercentage) / 100;
+    const otherExpensesFinal = miscWithMargin + miscTax;
+    const grandTotal = categoriesFinalTotal + otherExpensesFinal;
 
     return {
       productsSubtotal,
@@ -131,6 +140,8 @@ export function QuotationPreview({
     doorsTaxPercentage,
     lightingMarginPercentage,
     lightingTaxPercentage,
+    miscellaneousMarginPercentage,
+    miscellaneousTaxPercentage,
   ]);
 
   const allProducts = useMemo(() => {
@@ -203,11 +214,15 @@ export function QuotationPreview({
         kCabinetsTotal.finalTotal +
         kDoorsTotal.finalTotal +
         kLightingTotal.finalTotal;
-      // Other Expenses = sum of all other expense items (per-kitchen)
-      const otherExpenses = (kitchen.otherExpenses || []).reduce(
+      // Other Expenses with margin + tax (per-kitchen)
+      const otherExpensesBase = (kitchen.otherExpenses || []).reduce(
         (sum, e) => sum + (e.amount || 0),
         0
       );
+      const kMiscMargin = (otherExpensesBase * miscellaneousMarginPercentage) / 100;
+      const kMiscWithMargin = otherExpensesBase + kMiscMargin;
+      const kMiscTax = (kMiscWithMargin * miscellaneousTaxPercentage) / 100;
+      const otherExpenses = kMiscWithMargin + kMiscTax;
       const kitchenTotal = kitchenSubtotal + otherExpenses;
 
       return {
@@ -223,7 +238,7 @@ export function QuotationPreview({
         },
       };
     });
-  }, [isMultiKitchen, kitchens, accessoriesMarginPercentage, cabinetsMarginPercentage, doorsMarginPercentage, lightingMarginPercentage, accessoriesTaxPercentage, cabinetsTaxPercentage, doorsTaxPercentage, lightingTaxPercentage]);
+  }, [isMultiKitchen, kitchens, accessoriesMarginPercentage, cabinetsMarginPercentage, doorsMarginPercentage, lightingMarginPercentage, accessoriesTaxPercentage, cabinetsTaxPercentage, doorsTaxPercentage, lightingTaxPercentage, miscellaneousMarginPercentage, miscellaneousTaxPercentage]);
 
   const grandTotal = useMemo(() => {
     if (isMultiKitchen && kitchenCalculations) {

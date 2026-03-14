@@ -340,19 +340,25 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         }
         params.put("KITCHEN_NAMES", kitchenNames);
 
-        // Other expenses total (for summary page)
+        // Other expenses total (for summary page) - with margin+tax applied
         boolean isMultiKitchen = quotation.getKitchens() != null && !quotation.getKitchens().isEmpty();
-        BigDecimal otherExpensesGrandTotal = BigDecimal.ZERO;
+        BigDecimal otherExpensesGrandBase = BigDecimal.ZERO;
         if (isMultiKitchen) {
             for (QuotationKitchenDto k : quotation.getKitchens()) {
                 if (k.getOtherExpenses() != null) {
                     for (QuotationOtherExpenseDto e : k.getOtherExpenses()) {
-                        if (e.getAmount() != null) otherExpensesGrandTotal = otherExpensesGrandTotal.add(e.getAmount());
+                        if (e.getAmount() != null) otherExpensesGrandBase = otherExpensesGrandBase.add(e.getAmount());
                     }
                 }
             }
         }
-        params.put("OTHER_EXPENSES_TOTAL", otherExpensesGrandTotal);
+        // Apply miscellaneous margin+tax to grand total
+        BigDecimal grandMiscMarginPct = quotation.getMiscellaneousMarginPercentage() != null ? quotation.getMiscellaneousMarginPercentage() : BigDecimal.ZERO;
+        BigDecimal grandMiscTaxPct = quotation.getMiscellaneousTaxPercentage() != null ? quotation.getMiscellaneousTaxPercentage() : BigDecimal.valueOf(18.0);
+        BigDecimal grandMiscMargin = otherExpensesGrandBase.multiply(grandMiscMarginPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal grandMiscWithMargin = otherExpensesGrandBase.add(grandMiscMargin);
+        BigDecimal grandMiscTax = grandMiscWithMargin.multiply(grandMiscTaxPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        params.put("OTHER_EXPENSES_TOTAL", grandMiscWithMargin.add(grandMiscTax));
         // Legacy params (kept for backward compat)
         params.put("TRANSPORTATION_PRICE", BigDecimal.ZERO);
         params.put("INSTALLATION_PRICE", BigDecimal.ZERO);
@@ -481,12 +487,19 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         map.put("accessories", kitchen.getAccessories() != null ? kitchen.getAccessories() : Collections.emptyList());
         map.put("lighting", kitchen.getLighting() != null ? kitchen.getLighting() : Collections.emptyList());
 
-        // Other expenses
+        // Other expenses - apply miscellaneous margin and tax
         List<QuotationOtherExpenseDto> otherExpensesList = kitchen.getOtherExpenses() != null ? kitchen.getOtherExpenses() : Collections.emptyList();
         map.put("otherExpenses", otherExpensesList);
-        BigDecimal otherExpensesTotal = otherExpensesList.stream()
+        BigDecimal otherExpensesBase = otherExpensesList.stream()
                 .map(e -> e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Apply margin and tax to miscellaneous total
+        BigDecimal miscMarginPct = quotation.getMiscellaneousMarginPercentage() != null ? quotation.getMiscellaneousMarginPercentage() : BigDecimal.ZERO;
+        BigDecimal miscTaxPct = quotation.getMiscellaneousTaxPercentage() != null ? quotation.getMiscellaneousTaxPercentage() : BigDecimal.valueOf(18.0);
+        BigDecimal miscMargin = otherExpensesBase.multiply(miscMarginPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal miscWithMargin = otherExpensesBase.add(miscMargin);
+        BigDecimal miscTax = miscWithMargin.multiply(miscTaxPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal otherExpensesTotal = miscWithMargin.add(miscTax);
         map.put("otherExpensesTotal", otherExpensesTotal);
 
         // Totals

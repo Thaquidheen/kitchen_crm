@@ -162,6 +162,9 @@ export interface Quotation {
   cabinetsTaxPercentage?: number;
   doorsTaxPercentage?: number;
   lightingTaxPercentage?: number;
+  // Miscellaneous (Other Expenses) margin & tax
+  miscellaneousMarginPercentage?: number;
+  miscellaneousTaxPercentage?: number;
   subtotal: number;
   marginAmount: number;
   taxAmount: number;
@@ -454,6 +457,17 @@ export interface QuotationFormData {
   paymentAcceptancePct?: number;
   paymentDeliveryPct?: number;
   paymentInstallationPct?: number;
+  // Category margin/tax percentages
+  accessoriesMarginPercentage?: number;
+  cabinetsMarginPercentage?: number;
+  doorsMarginPercentage?: number;
+  lightingMarginPercentage?: number;
+  accessoriesTaxPercentage?: number;
+  cabinetsTaxPercentage?: number;
+  doorsTaxPercentage?: number;
+  lightingTaxPercentage?: number;
+  miscellaneousMarginPercentage?: number;
+  miscellaneousTaxPercentage?: number;
 }
 
 // Quotation state
