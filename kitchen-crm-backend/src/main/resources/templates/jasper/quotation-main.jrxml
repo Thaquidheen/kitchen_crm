@@ -216,6 +216,15 @@
                 <subreportParameter name="VALID_UNTIL">
                     <subreportParameterExpression><![CDATA[$P{VALID_UNTIL}]]></subreportParameterExpression>
                 </subreportParameter>
+                <subreportParameter name="GRAND_TOTAL">
+                    <subreportParameterExpression><![CDATA[$P{GRAND_TOTAL}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="TOTAL_KITCHENS">
+                    <subreportParameterExpression><![CDATA[$P{TOTAL_KITCHENS}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="OTHER_EXPENSES_TOTAL">
+                    <subreportParameterExpression><![CDATA[$P{OTHER_EXPENSES_TOTAL}]]></subreportParameterExpression>
+                </subreportParameter>
                 <dataSourceExpression><![CDATA[$P{KITCHENS_DATA_SOURCE}]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "quotation-kitchen.jasper"]]></subreportExpression>
             </subreport>
@@ -263,68 +272,6 @@
             <break>
                 <reportElement x="0" y="0" width="595" height="1" uuid="ff000001-0000-0000-0000-000000000001"/>
             </break>
-
-            <!-- ===== Combined Kitchens Totals (only if > 1 kitchen) ===== -->
-            <staticText>
-                <reportElement positionType="Float" x="30" y="5" width="535" height="22" forecolor="#000000" uuid="cf000001-0000-0000-0000-000000000001">
-                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1]]></printWhenExpression>
-                </reportElement>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="14" isBold="true" isUnderline="true"/>
-                </textElement>
-                <text><![CDATA[Final Summary]]></text>
-            </staticText>
-
-            <!-- Kitchen totals subreport (only if > 1 kitchen) -->
-            <subreport>
-                <reportElement positionType="Float" x="30" y="5" width="535" height="30" uuid="cf000001-0000-0000-0000-000000000002">
-                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{KITCHEN_TOTALS_DATA} != null]]></printWhenExpression>
-                </reportElement>
-                <dataSourceExpression><![CDATA[(net.sf.jasperreports.engine.JRDataSource)$P{KITCHEN_TOTALS_DATA}]]></dataSourceExpression>
-                <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-kitchen-totals.jasper"]]></subreportExpression>
-            </subreport>
-
-            <!-- Miscellaneous row (only if > 1 kitchen and value > 0) -->
-            <frame>
-                <reportElement positionType="Float" x="30" y="5" width="535" height="25" backcolor="#FAF6F1" mode="Opaque" uuid="cf000002-0000-0000-0000-000000000001">
-                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1 && $P{OTHER_EXPENSES_TOTAL} != null && $P{OTHER_EXPENSES_TOTAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
-                </reportElement>
-                <staticText>
-                    <reportElement x="10" y="0" width="250" height="25" forecolor="#2C1810" uuid="cf000002-0000-0000-0000-000000000002"/>
-                    <textElement verticalAlignment="Middle">
-                        <font fontName="Serif" size="10"/>
-                    </textElement>
-                    <text><![CDATA[Miscellaneous]]></text>
-                </staticText>
-                <textField>
-                    <reportElement x="280" y="0" width="245" height="25" forecolor="#2C1810" uuid="cf000002-0000-0000-0000-000000000003"/>
-                    <textElement textAlignment="Left" verticalAlignment="Middle">
-                        <font fontName="Serif" size="10"/>
-                    </textElement>
-                    <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{OTHER_EXPENSES_TOTAL})]]></textFieldExpression>
-                </textField>
-            </frame>
-
-            <!-- Grand Total row (only if > 1 kitchen) -->
-            <frame>
-                <reportElement positionType="Float" x="30" y="5" width="535" height="30" backcolor="#000000" mode="Opaque" uuid="cf000001-0000-0000-0000-000000000003">
-                    <printWhenExpression><![CDATA[$P{TOTAL_KITCHENS} > 1]]></printWhenExpression>
-                </reportElement>
-                <staticText>
-                    <reportElement x="10" y="0" width="250" height="30" forecolor="#FFFFFF" uuid="cf000001-0000-0000-0000-000000000004"/>
-                    <textElement verticalAlignment="Middle">
-                        <font fontName="Serif" size="12" isBold="true"/>
-                    </textElement>
-                    <text><![CDATA[GRAND TOTAL]]></text>
-                </staticText>
-                <textField>
-                    <reportElement x="280" y="0" width="245" height="30" forecolor="#FFFFFF" uuid="cf000001-0000-0000-0000-000000000005"/>
-                    <textElement textAlignment="Left" verticalAlignment="Middle">
-                        <font fontName="Serif" size="12" isBold="true"/>
-                    </textElement>
-                    <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{GRAND_TOTAL})]]></textFieldExpression>
-                </textField>
-            </frame>
 
             <!-- ===== Terms & Conditions Subreport ===== -->
             <subreport>
