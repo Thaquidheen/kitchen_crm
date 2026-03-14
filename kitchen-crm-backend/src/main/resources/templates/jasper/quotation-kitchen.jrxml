@@ -223,7 +223,7 @@
         </band>
 
         <!-- ==================== KITCHEN TOTALS PAGE ==================== -->
-        <band height="590" splitType="Prevent">
+        <band height="525" splitType="Prevent">
             <!-- Kitchen Header (repeated) — black background -->
             <rectangle>
                 <reportElement x="0" y="10" width="595" height="40" backcolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567019"/>
@@ -375,70 +375,26 @@
                 <reportElement x="15" y="232" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670f3"/>
             </line>
 
-            <!-- Divider -->
-            <line>
-                <reportElement x="15" y="243" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567037"/>
-            </line>
-
-            <!-- Subtotal -->
-            <rectangle>
-                <reportElement x="15" y="244" width="565" height="25" backcolor="#FAF6F1" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670f4"/>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <staticText>
-                <reportElement x="20" y="250" width="350" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567038"/>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="9" isBold="true"/>
-                </textElement>
-                <text><![CDATA[SUBTOTAL]]></text>
-            </staticText>
-            <textField>
-                <reportElement x="370" y="250" width="185" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567039"/>
-                <textElement textAlignment="Left" verticalAlignment="Middle">
-                    <font fontName="Serif" size="9" isBold="true"/>
-                </textElement>
-                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($F{subtotal})]]></textFieldExpression>
-            </textField>
-            <line>
-                <reportElement x="15" y="274" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670d5"/>
-            </line>
-
-            <!-- GST -->
-            <staticText>
-                <reportElement x="20" y="275" width="350" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567043"/>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="9"/>
-                </textElement>
-                <text><![CDATA[GST]]></text>
-            </staticText>
-            <textField>
-                <reportElement x="370" y="275" width="185" height="25" forecolor="#2C1810" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567044"/>
-                <textElement textAlignment="Left" verticalAlignment="Middle">
-                    <font fontName="Serif" size="9"/>
-                </textElement>
-                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($F{taxAmount})]]></textFieldExpression>
-            </textField>
-
             <!-- Accent line above total -->
             <line>
-                <reportElement x="15" y="307" width="565" height="1" forecolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa6"/>
+                <reportElement x="15" y="245" width="565" height="1" forecolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567aa6"/>
                 <graphicElement><pen lineWidth="2"/></graphicElement>
             </line>
 
             <!-- Kitchen Total -->
             <rectangle>
-                <reportElement x="15" y="310" width="565" height="35" backcolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567045"/>
+                <reportElement x="15" y="248" width="565" height="35" backcolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567045"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="20" y="315" width="350" height="25" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567046"/>
+                <reportElement x="20" y="253" width="350" height="25" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567046"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="12" isBold="true"/>
                 </textElement>
                 <text><![CDATA[KITCHEN TOTAL]]></text>
             </staticText>
             <textField>
-                <reportElement x="370" y="315" width="185" height="25" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567047"/>
+                <reportElement x="370" y="253" width="185" height="25" forecolor="#FFFFFF" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567047"/>
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
