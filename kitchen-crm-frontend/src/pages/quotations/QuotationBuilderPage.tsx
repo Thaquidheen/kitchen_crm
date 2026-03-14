@@ -1593,6 +1593,8 @@ export function QuotationBuilderPage() {
                       cabinetsTaxPercentage={formData.cabinetsTaxPercentage}
                       doorsTaxPercentage={formData.doorsTaxPercentage}
                       lightingTaxPercentage={formData.lightingTaxPercentage}
+                      miscellaneousMarginPercentage={formData.miscellaneousMarginPercentage ?? 0}
+                      miscellaneousTaxPercentage={formData.miscellaneousTaxPercentage ?? 18}
                       onRemove={(category, index) => {
                         const kitchen = (formData.kitchens || [])[kitchenIndex];
                         const list = [...(kitchen?.[category] || [])];
@@ -1660,6 +1662,8 @@ export function QuotationBuilderPage() {
                 cabinetsTaxPercentage={formData.cabinetsTaxPercentage}
                 doorsTaxPercentage={formData.doorsTaxPercentage}
                 lightingTaxPercentage={formData.lightingTaxPercentage}
+                miscellaneousMarginPercentage={formData.miscellaneousMarginPercentage ?? 0}
+                miscellaneousTaxPercentage={formData.miscellaneousTaxPercentage ?? 18}
                 onRemove={(category, index) => {
                   const list = ((formData as any)[category] || []).slice();
                   const removed = list[index] as any;

@@ -76,6 +76,8 @@ export interface SelectedProductsListProps {
   cabinetsTaxPercentage?: number;
   doorsTaxPercentage?: number;
   lightingTaxPercentage?: number;
+  miscellaneousMarginPercentage?: number;
+  miscellaneousTaxPercentage?: number;
   onRemove?: (category: 'accessories' | 'cabinets' | 'doors' | 'lighting', index: number) => void;
   onRemoveOtherExpense?: (index: number) => void;
   onClearCategory?: (category: 'accessories' | 'cabinets' | 'doors' | 'lighting') => void;
@@ -109,6 +111,8 @@ export function SelectedProductsList({
   cabinetsTaxPercentage = 0,
   doorsTaxPercentage = 0,
   lightingTaxPercentage = 0,
+  miscellaneousMarginPercentage = 0,
+  miscellaneousTaxPercentage = 18,
   onRemove,
   onRemoveOtherExpense,
   onClearCategory,
@@ -237,7 +241,11 @@ export function SelectedProductsList({
     + calcCategoryFinal(cabinets, cabinetsMarginPercentage, cabinetsTaxPercentage)
     + calcCategoryFinal(doors, doorsMarginPercentage, doorsTaxPercentage)
     + calcCategoryFinal(lighting, lightingMarginPercentage, lightingTaxPercentage);
-  const otherExpensesTotal = otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const otherExpensesBase = otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const miscMargin = (otherExpensesBase * miscellaneousMarginPercentage) / 100;
+  const miscWithMargin = otherExpensesBase + miscMargin;
+  const miscTax = (miscWithMargin * miscellaneousTaxPercentage) / 100;
+  const otherExpensesTotal = miscWithMargin + miscTax;
   const grandTotal = productTotal + otherExpensesTotal;
 
   const toggleElevation = (elevationName: string) => {

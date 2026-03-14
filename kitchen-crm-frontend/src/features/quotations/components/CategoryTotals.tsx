@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
-import { Package, DoorClosed, Lightbulb, Wrench } from 'lucide-react';
+import { Package, DoorClosed, Lightbulb, Wrench, Receipt } from 'lucide-react';
 import type { QuotationOtherExpense } from '../types';
 
 export interface CategoryTotalsProps {
@@ -165,8 +165,26 @@ export function CategoryTotals({
                 </div>
 
                 {hasItems ? (
-                  <div className="space-y-2 text-xs sm:text-sm">
+                  <div className="space-y-1.5 text-xs sm:text-sm">
                     <div className="flex justify-between">
+                      <span className="text-text-700">Base Total</span>
+                      <span className="text-text-800">
+                        ₹{category.breakdown.baseTotal.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-700">Margin ({category.marginPercentage}%)</span>
+                      <span className="text-text-800">
+                        ₹{category.breakdown.marginAmount.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-700">Tax ({category.taxPercentage}%)</span>
+                      <span className="text-text-800">
+                        ₹{category.breakdown.taxAmount.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between pt-1.5 border-t border-background-600">
                       <span className="font-semibold text-text-800">Category Total</span>
                       <span className="font-bold text-text-900">
                         ₹{category.breakdown.finalTotal.toLocaleString('en-IN')}
@@ -179,6 +197,44 @@ export function CategoryTotals({
               </div>
             );
           })}
+          {/* Miscellaneous (Other Expenses) */}
+          {otherExpenses.length > 0 && otherExpensesBase > 0 && (
+            <div className="p-3 sm:p-4 rounded-lg bg-background-700 border border-background-600">
+              <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-text-600" />
+                <span className="font-semibold text-xs sm:text-sm text-text-900">Miscellaneous</span>
+                <span className="text-xs text-text-600 ml-auto">
+                  {otherExpenses.filter(e => e.amount > 0).length} item{otherExpenses.filter(e => e.amount > 0).length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="space-y-1.5 text-xs sm:text-sm">
+                <div className="flex justify-between">
+                  <span className="text-text-700">Base Total</span>
+                  <span className="text-text-800">
+                    ₹{otherExpensesBase.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-700">Margin ({miscellaneousMarginPercentage}%)</span>
+                  <span className="text-text-800">
+                    ₹{miscMargin.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-700">Tax ({miscellaneousTaxPercentage}%)</span>
+                  <span className="text-text-800">
+                    ₹{miscTax.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="flex justify-between pt-1.5 border-t border-background-600">
+                  <span className="font-semibold text-text-800">Miscellaneous Total</span>
+                  <span className="font-bold text-text-900">
+                    ₹{otherExpensesFinal.toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Grand Total */}
