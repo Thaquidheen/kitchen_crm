@@ -327,10 +327,6 @@ export function ProductSelector({
                 <OtherExpensesTab
                   expenses={selectedProducts.otherExpenses || []}
                   onChange={(otherExpenses) => onProductsChange({ otherExpenses })}
-                  marginPercentage={miscellaneousMarginPercentage}
-                  taxPercentage={miscellaneousTaxPercentage}
-                  onMarginChange={onMiscellaneousMarginChange || (() => {})}
-                  onTaxChange={onMiscellaneousTaxChange || (() => {})}
                 />
               ),
             },

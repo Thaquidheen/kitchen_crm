@@ -180,6 +180,10 @@ export interface CategoryPricingPanelProps {
   miscellaneousMarginPercentage?: number;
   miscellaneousTaxPercentage?: number;
 
+  // Callbacks for miscellaneous margin/tax changes
+  onMiscellaneousMarginChange?: (value: number) => void;
+  onMiscellaneousTaxChange?: (value: number) => void;
+
   // User role for conditional rendering
   userRole?: 'ROLE_SUPER_ADMIN' | 'ROLE_STAFF';
 
@@ -211,6 +215,8 @@ export function CategoryPricingPanel({
   otherExpenses = [],
   miscellaneousMarginPercentage = 0,
   miscellaneousTaxPercentage = 18,
+  onMiscellaneousMarginChange,
+  onMiscellaneousTaxChange,
   userRole = 'ROLE_SUPER_ADMIN',
   kitchenName,
 }: CategoryPricingPanelProps) {
@@ -336,29 +342,25 @@ export function CategoryPricingPanel({
           </div>
         </div>
 
-        {/* Other Expenses */}
+        {/* Miscellaneous (Other Expenses) */}
         {otherExpenses.length > 0 && (
-          <div className="border-t border-background-600 pt-3 sm:pt-4 space-y-3 sm:space-y-4">
-            <div className="flex items-center gap-2">
-              <Receipt className="h-4 w-4 text-text-600" />
-              <h4 className="text-xs sm:text-sm font-semibold text-text-800">Other Expenses</h4>
-            </div>
-            <div className="space-y-2">
-              {otherExpenses.filter(e => e.amount > 0).map((expense, index) => (
-                <div key={`expense-${index}`} className="flex justify-between text-xs sm:text-sm">
-                  <span className="text-text-700">{expense.name}</span>
-                  <span className="font-medium text-text-900">
-                    ₹{expense.amount.toLocaleString('en-IN')}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-between text-xs sm:text-sm pt-1 border-t border-background-700">
-              <span className="text-text-700 font-medium">Other Expenses Total (incl. margin & tax)</span>
-              <span className="font-semibold text-text-900">
-                ₹{otherExpensesTotal.toLocaleString('en-IN')}
-              </span>
-            </div>
+          <div className="space-y-3 sm:space-y-4">
+            <h4 className="text-xs sm:text-sm font-semibold text-text-800">Miscellaneous</h4>
+            <CategorySection
+              label="Other Expenses"
+              icon={<Receipt className="h-4 w-4 text-orange-500" />}
+              color="bg-orange-500/10"
+              subtotal={otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0)}
+              marginPercent={miscellaneousMarginPercentage}
+              taxPercent={miscellaneousTaxPercentage}
+              onMarginChange={onMiscellaneousMarginChange}
+              onTaxChange={onMiscellaneousTaxChange || (() => {})}
+              total={{
+                marginAmount: otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0) * miscellaneousMarginPercentage / 100,
+                finalTotal: otherExpensesTotal,
+              }}
+              showMargins={showMargins}
+            />
           </div>
         )}
 

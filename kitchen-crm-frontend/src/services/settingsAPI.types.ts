@@ -5,6 +5,7 @@ export interface MarginsData {
   cabinets: number;
   doors: number;
   lighting: number;
+  miscellaneous: number;
 }
 
 export interface ApiResponse<T> {

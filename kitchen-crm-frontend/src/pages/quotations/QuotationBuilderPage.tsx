@@ -150,6 +150,7 @@ export function QuotationBuilderPage() {
         cabinetsMarginPercentage: marginsResponse.data.cabinets,
         doorsMarginPercentage: marginsResponse.data.doors,
         lightingMarginPercentage: marginsResponse.data.lighting,
+        miscellaneousMarginPercentage: marginsResponse.data.miscellaneous ?? 0,
       }));
     }
   }, [marginsResponse, isEditMode]);
@@ -1340,6 +1341,8 @@ export function QuotationBuilderPage() {
                         onCabinetsMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, cabinetsMarginPercentage: val }) : undefined}
                         onDoorsMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, doorsMarginPercentage: val }) : undefined}
                         onLightingMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, lightingMarginPercentage: val }) : undefined}
+                        onMiscellaneousMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, miscellaneousMarginPercentage: val }) : undefined}
+                        onMiscellaneousTaxChange={(val) => setFormData({ ...formData, miscellaneousTaxPercentage: val })}
                         userRole={userRole}
                       />
                     </div>

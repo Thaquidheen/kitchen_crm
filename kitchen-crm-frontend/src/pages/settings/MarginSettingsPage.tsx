@@ -11,6 +11,7 @@ import {
   DoorClosed,
   Lightbulb,
   Wrench,
+  Receipt,
   AlertCircle,
   CheckCircle2,
   Info,
@@ -27,6 +28,7 @@ export const MarginSettingsPage: React.FC = () => {
     cabinets: 20,
     doors: 20,
     lighting: 20,
+    miscellaneous: 0,
   });
 
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -100,6 +102,14 @@ export const MarginSettingsPage: React.FC = () => {
       color: 'text-yellow-500',
       bgColor: 'bg-yellow-500/10',
     },
+    {
+      key: 'miscellaneous' as keyof MarginsData,
+      label: 'Miscellaneous',
+      icon: Receipt,
+      description: 'Transportation, installation, and other expenses',
+      color: 'text-orange-500',
+      bgColor: 'bg-orange-500/10',
+    },
   ];
 
   if (isLoading) {
@@ -149,7 +159,7 @@ export const MarginSettingsPage: React.FC = () => {
               <div className="text-right">
                 <div className="text-sm text-white-600 mb-1">Average Margin</div>
                 <div className="text-2xl font-bold text-white-900">
-                  {((formData.accessories + formData.cabinets + formData.doors + formData.lighting) / 4).toFixed(1)}%
+                  {((formData.accessories + formData.cabinets + formData.doors + formData.lighting + formData.miscellaneous) / 5).toFixed(1)}%
                 </div>
               </div>
               <TrendingUp className="w-8 h-8 text-red-600" />

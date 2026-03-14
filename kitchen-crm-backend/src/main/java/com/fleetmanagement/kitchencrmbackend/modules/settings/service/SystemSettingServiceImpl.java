@@ -66,6 +66,7 @@ public class SystemSettingServiceImpl implements SystemSettingService {
         margins.put("cabinets", getMarginPercentage("cabinets"));
         margins.put("doors", getMarginPercentage("doors"));
         margins.put("lighting", getMarginPercentage("lighting"));
+        margins.put("miscellaneous", getMarginPercentage("miscellaneous"));
         return margins;
     }
 

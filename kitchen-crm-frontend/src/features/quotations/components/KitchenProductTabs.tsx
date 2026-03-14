@@ -170,6 +170,8 @@ export function KitchenProductTabs({
                 onCabinetsMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? onCabinetsMarginChange : undefined}
                 onDoorsMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? onDoorsMarginChange : undefined}
                 onLightingMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? onLightingMarginChange : undefined}
+                onMiscellaneousMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? onMiscellaneousMarginChange : undefined}
+                onMiscellaneousTaxChange={onMiscellaneousTaxChange}
                 userRole={userRole}
                 kitchenName={kitchen.kitchenName}
               />
