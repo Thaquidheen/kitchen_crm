@@ -438,16 +438,18 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         }
 
         // Process images for each kitchen
+        BigDecimal miscMarginPct = quotation.getMiscellaneousMarginPercentage() != null ? quotation.getMiscellaneousMarginPercentage() : BigDecimal.ZERO;
+        BigDecimal miscTaxPct = quotation.getMiscellaneousTaxPercentage() != null ? quotation.getMiscellaneousTaxPercentage() : BigDecimal.valueOf(18.0);
         List<Map<String, Object>> kitchenData = new ArrayList<>();
         for (QuotationKitchenDto kitchen : kitchens) {
-            Map<String, Object> kitchenMap = convertKitchenToMap(kitchen);
+            Map<String, Object> kitchenMap = convertKitchenToMap(kitchen, miscMarginPct, miscTaxPct);
             kitchenData.add(kitchenMap);
         }
 
         return new JRBeanCollectionDataSource(kitchenData);
     }
 
-    private Map<String, Object> convertKitchenToMap(QuotationKitchenDto kitchen) {
+    private Map<String, Object> convertKitchenToMap(QuotationKitchenDto kitchen, BigDecimal miscMarginPercentage, BigDecimal miscTaxPercentage) {
         Map<String, Object> map = new HashMap<>();
 
         map.put("kitchenName", kitchen.getKitchenName() != null ? kitchen.getKitchenName() : "Kitchen");
@@ -494,11 +496,9 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
                 .map(e -> e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         // Apply margin and tax to miscellaneous total
-        BigDecimal miscMarginPct = quotation.getMiscellaneousMarginPercentage() != null ? quotation.getMiscellaneousMarginPercentage() : BigDecimal.ZERO;
-        BigDecimal miscTaxPct = quotation.getMiscellaneousTaxPercentage() != null ? quotation.getMiscellaneousTaxPercentage() : BigDecimal.valueOf(18.0);
-        BigDecimal miscMargin = otherExpensesBase.multiply(miscMarginPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal miscMargin = otherExpensesBase.multiply(miscMarginPercentage).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
         BigDecimal miscWithMargin = otherExpensesBase.add(miscMargin);
-        BigDecimal miscTax = miscWithMargin.multiply(miscTaxPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal miscTax = miscWithMargin.multiply(miscTaxPercentage).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
         BigDecimal otherExpensesTotal = miscWithMargin.add(miscTax);
         map.put("otherExpensesTotal", otherExpensesTotal);
 
