@@ -475,7 +475,7 @@ public class PricingServiceImpl implements PricingService {
         kitchen.setAccessoriesBaseTotal(accessoriesBase);
         kitchen.setAccessoriesMarginAmount(accessoriesMargin);
         kitchen.setAccessoriesTaxAmount(accessoriesTax);
-        kitchen.setAccessoriesFinalTotal(accessoriesWithMargin);
+        kitchen.setAccessoriesFinalTotal(accessoriesTotal);
 
         // 2. CABINETS CATEGORY CALCULATION
         // Cabinet pricing is flat (fixedPrice × quantity), not sqft-based
@@ -492,7 +492,7 @@ public class PricingServiceImpl implements PricingService {
         kitchen.setCabinetsBaseTotal(cabinetsBase);
         kitchen.setCabinetsMarginAmount(cabinetsMargin);
         kitchen.setCabinetsTaxAmount(cabinetsTax);
-        kitchen.setCabinetsFinalTotal(cabinetsWithMargin);
+        kitchen.setCabinetsFinalTotal(cabinetsTotal);
 
         // 3. DOORS CATEGORY CALCULATION
         List<QuotationDoor> doors = doorRepository.findByKitchenId(kitchen.getId());
@@ -514,7 +514,7 @@ public class PricingServiceImpl implements PricingService {
         kitchen.setDoorsBaseTotal(doorsBase);
         kitchen.setDoorsMarginAmount(doorsMargin);
         kitchen.setDoorsTaxAmount(doorsTax);
-        kitchen.setDoorsFinalTotal(doorsWithMargin);
+        kitchen.setDoorsFinalTotal(doorsTotal);
 
         // 4. LIGHTING CATEGORY CALCULATION
         List<QuotationLighting> lighting = lightingRepository.findByKitchenId(kitchen.getId());
@@ -530,7 +530,7 @@ public class PricingServiceImpl implements PricingService {
         kitchen.setLightingBaseTotal(lightingBase);
         kitchen.setLightingMarginAmount(lightingMargin);
         kitchen.setLightingTaxAmount(lightingTax);
-        kitchen.setLightingFinalTotal(lightingWithMargin);
+        kitchen.setLightingFinalTotal(lightingTotal);
 
         // Calculate kitchen subtotal (sum of category withMargin totals - before tax)
         BigDecimal kitchenSubtotal = accessoriesWithMargin
