@@ -38,6 +38,9 @@ export interface KitchenProductTabsProps {
   onCabinetsMarginChange?: (value: number) => void;
   onDoorsMarginChange?: (value: number) => void;
   onLightingMarginChange?: (value: number) => void;
+  // Miscellaneous margin/tax callbacks
+  onMiscellaneousMarginChange?: (value: number) => void;
+  onMiscellaneousTaxChange?: (value: number) => void;
 }
 
 export function KitchenProductTabs({
@@ -62,6 +65,8 @@ export function KitchenProductTabs({
   onCabinetsMarginChange,
   onDoorsMarginChange,
   onLightingMarginChange,
+  onMiscellaneousMarginChange,
+  onMiscellaneousTaxChange,
 }: KitchenProductTabsProps) {
   // Track which pricing panels are expanded per kitchen
   const [expandedPanels, setExpandedPanels] = useState<Record<number, { pricing: boolean; totals: boolean }>>({});
@@ -115,6 +120,10 @@ export function KitchenProductTabs({
             }}
             onProductsChange={(products) => handleKitchenProductsChange(index, products)}
             availableElevations={kitchen.elevations || []}
+            miscellaneousMarginPercentage={miscellaneousMarginPercentage}
+            miscellaneousTaxPercentage={miscellaneousTaxPercentage}
+            onMiscellaneousMarginChange={onMiscellaneousMarginChange}
+            onMiscellaneousTaxChange={onMiscellaneousTaxChange}
           />
         </div>
 

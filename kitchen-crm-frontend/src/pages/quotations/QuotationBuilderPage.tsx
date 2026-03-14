@@ -1293,6 +1293,8 @@ export function QuotationBuilderPage() {
                       onCabinetsMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, cabinetsMarginPercentage: val }) : undefined}
                       onDoorsMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, doorsMarginPercentage: val }) : undefined}
                       onLightingMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, lightingMarginPercentage: val }) : undefined}
+                      onMiscellaneousMarginChange={(val) => setFormData({ ...formData, miscellaneousMarginPercentage: val })}
+                      onMiscellaneousTaxChange={(val) => setFormData({ ...formData, miscellaneousTaxPercentage: val })}
                     />
                   </>
                 ) : (
