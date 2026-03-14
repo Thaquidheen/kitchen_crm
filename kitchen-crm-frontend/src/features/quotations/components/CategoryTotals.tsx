@@ -158,27 +158,6 @@ export function CategoryTotals({
                 {hasItems ? (
                   <div className="space-y-2 text-xs sm:text-sm">
                     <div className="flex justify-between">
-                      <span className="text-text-700">Base Total</span>
-                      <span className="font-medium text-text-900">
-                        ₹{category.breakdown.baseTotal.toLocaleString('en-IN')}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span className="text-text-700">Margin ({category.marginPercentage}%)</span>
-                      <span className="font-medium text-success">
-                        +₹{category.breakdown.marginAmount.toLocaleString('en-IN')}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span className="text-text-700">Tax ({category.taxPercentage}%)</span>
-                      <span className="font-medium text-warning">
-                        +₹{category.breakdown.taxAmount.toLocaleString('en-IN')}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between pt-2 border-t border-background-600">
                       <span className="font-semibold text-text-800">Category Total</span>
                       <span className="font-bold text-text-900">
                         ₹{category.breakdown.finalTotal.toLocaleString('en-IN')}

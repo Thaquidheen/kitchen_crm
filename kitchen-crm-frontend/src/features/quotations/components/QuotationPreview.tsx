@@ -488,38 +488,46 @@ export function QuotationPreview({
           </div>
 
           <div className="space-y-2 sm:space-y-3">
-            <div className="flex justify-between text-xs sm:text-sm">
-              <span className="text-text-700">Products Subtotal</span>
-              <span className="font-medium text-text-900">
-                ₹{calculations.productsSubtotal.toLocaleString('en-IN')}
-              </span>
-            </div>
+            {calculations.categoryTotals.cabinets.finalTotal > 0 && (
+              <div className="flex justify-between text-xs sm:text-sm">
+                <span className="text-text-700">Cabinets</span>
+                <span className="font-medium text-text-900">
+                  ₹{calculations.categoryTotals.cabinets.finalTotal.toLocaleString('en-IN')}
+                </span>
+              </div>
+            )}
 
-            <div className="flex justify-between text-xs sm:text-sm">
-              <span className="text-text-700">Total Margin Amount</span>
-              <span className="font-medium text-success">
-                +₹{calculations.totalMarginAmount.toLocaleString('en-IN')}
-              </span>
-            </div>
+            {calculations.categoryTotals.doors.finalTotal > 0 && (
+              <div className="flex justify-between text-xs sm:text-sm">
+                <span className="text-text-700">Doors</span>
+                <span className="font-medium text-text-900">
+                  ₹{calculations.categoryTotals.doors.finalTotal.toLocaleString('en-IN')}
+                </span>
+              </div>
+            )}
 
-            <div className="flex justify-between text-xs sm:text-sm">
-              <span className="text-text-700">Total Tax Amount</span>
-              <span className="font-medium text-warning">
-                +₹{calculations.totalTaxAmount.toLocaleString('en-IN')}
-              </span>
-            </div>
+            {calculations.categoryTotals.accessories.finalTotal > 0 && (
+              <div className="flex justify-between text-xs sm:text-sm">
+                <span className="text-text-700">Accessories</span>
+                <span className="font-medium text-text-900">
+                  ₹{calculations.categoryTotals.accessories.finalTotal.toLocaleString('en-IN')}
+                </span>
+              </div>
+            )}
 
-            <div className="flex justify-between text-xs sm:text-sm border-t border-background-700 pt-2">
-              <span className="text-text-800 font-medium">Subtotal (Categories)</span>
-              <span className="font-semibold text-text-900">
-                ₹{(calculations.productsSubtotal + calculations.totalMarginAmount + calculations.totalTaxAmount).toLocaleString('en-IN')}
-              </span>
-            </div>
+            {calculations.categoryTotals.lighting.finalTotal > 0 && (
+              <div className="flex justify-between text-xs sm:text-sm">
+                <span className="text-text-700">Lighting</span>
+                <span className="font-medium text-text-900">
+                  ₹{calculations.categoryTotals.lighting.finalTotal.toLocaleString('en-IN')}
+                </span>
+              </div>
+            )}
 
             {(otherExpensesProp && otherExpensesProp.length > 0 ? otherExpensesProp : [
               { name: 'Transportation', amount: transportationPrice },
               { name: 'Installation', amount: installationPrice },
-            ]).map((expense, idx) => (
+            ]).filter((expense) => (expense.amount || 0) > 0).map((expense, idx) => (
               <div key={idx} className="flex justify-between text-xs sm:text-sm">
                 <span className="text-text-700">{expense.name}</span>
                 <span className="font-medium text-text-900">
@@ -551,21 +559,29 @@ export function QuotationPreview({
         <div className="grid grid-cols-2 gap-2 sm:gap-4">
           <div className="text-center p-2 sm:p-3 bg-background-700 rounded-lg">
             <div className="text-xl sm:text-2xl font-bold text-text-900">
-              {accessories.length + cabinets.length + doors.length + lighting.length}
+              {isMultiKitchen && kitchenCalculations
+                ? kitchenCalculations.reduce((sum, k) => sum + (k.kitchen.accessories?.length || 0) + (k.kitchen.cabinets?.length || 0) + (k.kitchen.doors?.length || 0) + (k.kitchen.lighting?.length || 0), 0)
+                : accessories.length + cabinets.length + doors.length + lighting.length}
             </div>
             <div className="text-xs sm:text-sm text-text-600">Total Items</div>
           </div>
 
           <div className="text-center p-2 sm:p-3 bg-background-700 rounded-lg">
             <div className="text-xl sm:text-2xl font-bold text-success">
-              ₹{calculations.totalMarginAmount.toLocaleString('en-IN')}
+              ₹{(isMultiKitchen && kitchenCalculations
+                ? kitchenCalculations.reduce((sum, k) => sum + k.categoryTotals.accessories.marginAmount + k.categoryTotals.cabinets.marginAmount + k.categoryTotals.doors.marginAmount + k.categoryTotals.lighting.marginAmount, 0)
+                : calculations.totalMarginAmount
+              ).toLocaleString('en-IN')}
             </div>
             <div className="text-xs sm:text-sm text-text-600">Total Margin</div>
           </div>
 
           <div className="text-center p-2 sm:p-3 bg-background-700 rounded-lg">
             <div className="text-xl sm:text-2xl font-bold text-warning">
-              ₹{calculations.totalTaxAmount.toLocaleString('en-IN')}
+              ₹{(isMultiKitchen && kitchenCalculations
+                ? kitchenCalculations.reduce((sum, k) => sum + k.categoryTotals.accessories.taxAmount + k.categoryTotals.cabinets.taxAmount + k.categoryTotals.doors.taxAmount + k.categoryTotals.lighting.taxAmount, 0)
+                : calculations.totalTaxAmount
+              ).toLocaleString('en-IN')}
             </div>
             <div className="text-xs sm:text-sm text-text-600">Total Tax</div>
           </div>
