@@ -286,7 +286,14 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
                         −
                       </Button>
                       <span className="text-text-900 font-semibold w-6 text-center text-xs sm:text-sm">{qty}</span>
-                      <Button size="sm" variant="secondary" onClick={() => onIncrement && onIncrement(item.id, unitPrice, item)}>
+                      <Button size="sm" variant="secondary" onClick={() => {
+                        if (category === 'accessories') {
+                          setSelectedAccessory(item);
+                          setAccessoryModalOpen(true);
+                        } else {
+                          onIncrement && onIncrement(item.id, unitPrice, item);
+                        }
+                      }}>
                         +
                       </Button>
                     </div>
