@@ -29,6 +29,7 @@
     <parameter name="GRAND_TOTAL" class="java.math.BigDecimal"/>
     <parameter name="TOTAL_KITCHENS" class="java.lang.Integer"/>
     <parameter name="OTHER_EXPENSES_TOTAL" class="java.math.BigDecimal"/>
+    <parameter name="KITCHEN_SUMMARY_DATA" class="java.lang.Object"/>
 
     <!-- Fields from QuotationKitchenDto -->
     <field name="kitchenName" class="java.lang.String"/>
@@ -404,43 +405,20 @@
                 <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($F{totalAmount})]]></textFieldExpression>
             </textField>
 
-            <!-- ===== GRAND TOTAL (only on last kitchen, multi-kitchen only) ===== -->
-            <!-- Incl. Other Expenses note -->
-            <textField>
-                <reportElement x="20" y="295" width="350" height="18" forecolor="#777777" uuid="a1b2c3d4-0001-0000-0000-000000000001">
-                    <printWhenExpression><![CDATA[$V{REPORT_COUNT}.equals($P{TOTAL_KITCHENS}) && $P{TOTAL_KITCHENS} > 1 && $P{OTHER_EXPENSES_TOTAL} != null && $P{OTHER_EXPENSES_TOTAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+            <!-- ===== GRAND TOTAL SUMMARY (only on last kitchen, multi-kitchen only) ===== -->
+            <subreport>
+                <reportElement x="15" y="295" width="565" height="50" uuid="a1b2c3d4-0001-0000-0000-000000000001" positionType="Float">
+                    <printWhenExpression><![CDATA[$V{REPORT_COUNT}.equals($P{TOTAL_KITCHENS}) && $P{TOTAL_KITCHENS} > 1 && $P{KITCHEN_SUMMARY_DATA} != null]]></printWhenExpression>
                 </reportElement>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="8" isItalic="true"/>
-                </textElement>
-                <textFieldExpression><![CDATA["(Incl. Other Expenses: Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{OTHER_EXPENSES_TOTAL}) + ")"]]></textFieldExpression>
-            </textField>
-
-            <!-- Grand Total bar -->
-            <rectangle>
-                <reportElement x="15" y="320" width="565" height="35" backcolor="#000000" uuid="a1b2c3d4-0001-0000-0000-000000000002">
-                    <printWhenExpression><![CDATA[$V{REPORT_COUNT}.equals($P{TOTAL_KITCHENS}) && $P{TOTAL_KITCHENS} > 1]]></printWhenExpression>
-                </reportElement>
-                <graphicElement><pen lineWidth="0"/></graphicElement>
-            </rectangle>
-            <staticText>
-                <reportElement x="20" y="325" width="350" height="25" forecolor="#FFFFFF" uuid="a1b2c3d4-0001-0000-0000-000000000003">
-                    <printWhenExpression><![CDATA[$V{REPORT_COUNT}.equals($P{TOTAL_KITCHENS}) && $P{TOTAL_KITCHENS} > 1]]></printWhenExpression>
-                </reportElement>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="12" isBold="true"/>
-                </textElement>
-                <text><![CDATA[GRAND TOTAL]]></text>
-            </staticText>
-            <textField>
-                <reportElement x="370" y="325" width="185" height="25" forecolor="#FFFFFF" uuid="a1b2c3d4-0001-0000-0000-000000000004">
-                    <printWhenExpression><![CDATA[$V{REPORT_COUNT}.equals($P{TOTAL_KITCHENS}) && $P{TOTAL_KITCHENS} > 1]]></printWhenExpression>
-                </reportElement>
-                <textElement textAlignment="Left" verticalAlignment="Middle">
-                    <font fontName="Serif" size="14" isBold="true"/>
-                </textElement>
-                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{GRAND_TOTAL})]]></textFieldExpression>
-            </textField>
+                <subreportParameter name="GRAND_TOTAL">
+                    <subreportParameterExpression><![CDATA[$P{GRAND_TOTAL}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="OTHER_EXPENSES_TOTAL">
+                    <subreportParameterExpression><![CDATA[$P{OTHER_EXPENSES_TOTAL}]]></subreportParameterExpression>
+                </subreportParameter>
+                <dataSourceExpression><![CDATA[(net.sf.jasperreports.engine.JRDataSource)$P{KITCHEN_SUMMARY_DATA}]]></dataSourceExpression>
+                <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "quotation-grand-summary.jasper"]]></subreportExpression>
+            </subreport>
 
         </band>
     </detail>

@@ -46,6 +46,7 @@
     <parameter name="PAYMENT_DELIVERY_PCT" class="java.math.BigDecimal"/>
     <parameter name="PAYMENT_INSTALLATION_PCT" class="java.math.BigDecimal"/>
     <parameter name="KITCHEN_TOTALS_DATA" class="java.lang.Object"/>
+    <parameter name="KITCHEN_SUMMARY_DATA" class="java.lang.Object"/>
     <parameter name="TRANSPORTATION_PRICE" class="java.math.BigDecimal"/>
     <parameter name="INSTALLATION_PRICE" class="java.math.BigDecimal"/>
     <parameter name="OTHER_EXPENSES_TOTAL" class="java.math.BigDecimal"/>
@@ -224,6 +225,9 @@
                 </subreportParameter>
                 <subreportParameter name="OTHER_EXPENSES_TOTAL">
                     <subreportParameterExpression><![CDATA[$P{OTHER_EXPENSES_TOTAL}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="KITCHEN_SUMMARY_DATA">
+                    <subreportParameterExpression><![CDATA[$P{KITCHEN_SUMMARY_DATA}]]></subreportParameterExpression>
                 </subreportParameter>
                 <dataSourceExpression><![CDATA[$P{KITCHENS_DATA_SOURCE}]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "quotation-kitchen.jasper"]]></subreportExpression>

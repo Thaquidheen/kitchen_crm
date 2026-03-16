@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="quotation-grand-summary"
+              pageWidth="565"
+              pageHeight="400"
+              columnWidth="565"
+              leftMargin="0"
+              rightMargin="0"
+              topMargin="0"
+              bottomMargin="0"
+              uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50001">
+
+    <parameter name="GRAND_TOTAL" class="java.math.BigDecimal"/>
+    <parameter name="OTHER_EXPENSES_TOTAL" class="java.math.BigDecimal"/>
+
+    <field name="kitchenName" class="java.lang.String"/>
+    <field name="totalAmount" class="java.math.BigDecimal"/>
+
+    <columnHeader>
+        <band height="35">
+            <!-- Grand Total Summary title -->
+            <staticText>
+                <reportElement x="0" y="0" width="350" height="22" forecolor="#1A1A1A" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50002"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="11" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Grand Total Summary]]></text>
+            </staticText>
+            <!-- Separator line below title -->
+            <line>
+                <reportElement x="0" y="28" width="545" height="1" forecolor="#CCCCCC" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50003"/>
+                <graphicElement><pen lineWidth="0.5"/></graphicElement>
+            </line>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="22">
+            <!-- Kitchen name -->
+            <textField>
+                <reportElement x="5" y="0" width="350" height="20" forecolor="#333333" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50004"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{kitchenName}]]></textFieldExpression>
+            </textField>
+            <!-- Kitchen total -->
+            <textField>
+                <reportElement x="355" y="0" width="190" height="20" forecolor="#333333" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50005"/>
+                <textElement textAlignment="Left" verticalAlignment="Middle">
+                    <font fontName="Serif" size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($F{totalAmount})]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+
+    <summary>
+        <band height="70">
+            <!-- Separator line above grand total -->
+            <line>
+                <reportElement x="0" y="2" width="545" height="1" forecolor="#CCCCCC" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50006"/>
+                <graphicElement><pen lineWidth="0.5"/></graphicElement>
+            </line>
+            <!-- Incl. Other Expenses note (conditional) -->
+            <textField>
+                <reportElement x="5" y="8" width="350" height="18" forecolor="#777777" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50007">
+                    <printWhenExpression><![CDATA[$P{OTHER_EXPENSES_TOTAL} != null && $P{OTHER_EXPENSES_TOTAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+                </reportElement>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="8" isItalic="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["(Incl. Other Expenses: Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{OTHER_EXPENSES_TOTAL}) + ")"]]></textFieldExpression>
+            </textField>
+            <!-- Grand Total black bar -->
+            <rectangle>
+                <reportElement x="0" y="30" width="545" height="35" backcolor="#000000" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50008"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="5" y="35" width="350" height="25" forecolor="#FFFFFF" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50009"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="12" isBold="true"/>
+                </textElement>
+                <text><![CDATA[GRAND TOTAL]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="355" y="35" width="185" height="25" forecolor="#FFFFFF" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50010"/>
+                <textElement textAlignment="Left" verticalAlignment="Middle">
+                    <font fontName="Serif" size="14" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{GRAND_TOTAL})]]></textFieldExpression>
+            </textField>
+        </band>
+    </summary>
+
+</jasperReport>

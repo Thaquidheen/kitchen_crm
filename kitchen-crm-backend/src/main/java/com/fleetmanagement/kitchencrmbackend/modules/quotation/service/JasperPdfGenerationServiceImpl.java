@@ -217,7 +217,8 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
             "subreport-lighting.jrxml",
             "subreport-other-expenses.jrxml",
             "subreport-kitchen-totals.jrxml",
-            "subreport-terms.jrxml"
+            "subreport-terms.jrxml",
+            "quotation-grand-summary.jrxml"
         };
         for (String name : subreports) {
             Resource res = resourceLoader.getResource(JASPER_TEMPLATE_DIR + name);
@@ -421,8 +422,10 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
                 kitchenTotals.add(row);
             }
             params.put("KITCHEN_TOTALS_DATA", new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource(kitchenTotals));
+            params.put("KITCHEN_SUMMARY_DATA", new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource(kitchenTotals));
         } else {
             params.put("KITCHEN_TOTALS_DATA", null);
+            params.put("KITCHEN_SUMMARY_DATA", null);
         }
 
         return params;
