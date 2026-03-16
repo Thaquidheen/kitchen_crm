@@ -482,6 +482,7 @@ export function QuotationBuilderPage() {
         customDimensions: item.customDimensions,
         // Material, lighting, and accessories fields
         materialId: item.materialId,
+        materialName: item.materialName,
         materialRate: item.materialRate,
         lightingCost: item.lightingCost,
         accessoriesCost: item.accessoriesCost,

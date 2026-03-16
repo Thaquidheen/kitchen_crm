@@ -100,6 +100,9 @@ public class QuotationServiceImpl implements QuotationService {
     @Autowired
     private QuotationOtherExpenseRepository otherExpenseRepository;
 
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.product.repository.MaterialRepository materialRepository;
+
     @Override
     public ApiResponse<Page<QuotationSummaryDto>> getAllQuotations(Long customerId, Quotation.QuotationStatus status,
                                                                    String customerName, LocalDateTime fromDate,
@@ -1352,6 +1355,9 @@ public class QuotationServiceImpl implements QuotationService {
             // Set material, lighting, and accessories fields
             dto.setMaterialId(cabinet.getMaterialId());
             dto.setMaterialRate(cabinet.getMaterialRate());
+            if (cabinet.getMaterialId() != null) {
+                materialRepository.findById(cabinet.getMaterialId()).ifPresent(m -> dto.setMaterialName(m.getName()));
+            }
             dto.setLightingCost(cabinet.getLightingCost());
             dto.setAccessoriesCost(cabinet.getAccessoriesCost());
 
@@ -1560,6 +1566,9 @@ public class QuotationServiceImpl implements QuotationService {
             // Set material, lighting, and accessories fields
             dto.setMaterialId(cabinet.getMaterialId());
             dto.setMaterialRate(cabinet.getMaterialRate());
+            if (cabinet.getMaterialId() != null) {
+                materialRepository.findById(cabinet.getMaterialId()).ifPresent(m -> dto.setMaterialName(m.getName()));
+            }
             dto.setLightingCost(cabinet.getLightingCost());
             dto.setAccessoriesCost(cabinet.getAccessoriesCost());
 
