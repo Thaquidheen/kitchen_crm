@@ -177,6 +177,7 @@ export function QuotationBuilderPage() {
         cabinetTypeName: c.cabinetTypeName || c.cabinetType?.name || c.description || 'Cabinet',
         description: c.description || `${c.cabinetTypeName || c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.depthMm}×${c.heightMm}mm)`,
         materialId: c.materialId,
+        materialName: c.materialName,
         materialRate: c.materialRate,
         lightingCost: c.lightingCost,
         accessoriesCost: c.accessoriesCost,
@@ -550,6 +551,7 @@ export function QuotationBuilderPage() {
           customDimensions: item.customDimensions,
           // Material, lighting, and accessories fields
           materialId: item.materialId,
+          materialName: item.materialName,
           materialRate: item.materialRate,
           lightingCost: item.lightingCost,
           accessoriesCost: item.accessoriesCost,
