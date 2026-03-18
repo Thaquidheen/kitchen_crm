@@ -52,7 +52,7 @@
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Rs. " + java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN")).format($F{totalAmount}).replace("\u20B9", "")]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($F{totalAmount}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
             </textField>
         </band>
     </detail>
@@ -72,7 +72,7 @@
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="8" isItalic="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA["(Incl. Other Expenses: Rs. " + java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN")).format($P{OTHER_EXPENSES_TOTAL}).replace("\u20B9", "") + ")"]]></textFieldExpression>
+                <textFieldExpression><![CDATA["(Incl. Other Expenses: Rs. " + new java.text.DecimalFormat("0.00").format($P{OTHER_EXPENSES_TOTAL}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,") + ")"]]></textFieldExpression>
             </textField>
             <!-- Grand Total black bar -->
             <rectangle>
@@ -91,7 +91,7 @@
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Rs. " + java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN")).format($P{GRAND_TOTAL}).replace("\u20B9", "")]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($P{GRAND_TOTAL}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
             </textField>
         </band>
     </summary>

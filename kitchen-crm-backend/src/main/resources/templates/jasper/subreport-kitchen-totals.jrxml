@@ -30,7 +30,7 @@
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Rs. " + java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN")).format($F{totalAmount}).replace("\u20B9", "")]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($F{totalAmount}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
             </textField>
             <line>
                 <reportElement x="0" y="27" width="495" height="1" forecolor="#E8E0D5" uuid="cf100001-0000-0000-0000-000000000012"/>
@@ -43,7 +43,7 @@
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="8" isItalic="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA["(Incl. Other Expenses: Rs. " + java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN")).format($F{otherExpenses}).replace("\u20B9", "") + ")"]]></textFieldExpression>
+                <textFieldExpression><![CDATA["(Incl. Other Expenses: Rs. " + new java.text.DecimalFormat("0.00").format($F{otherExpenses}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,") + ")"]]></textFieldExpression>
             </textField>
         </band>
     </detail>

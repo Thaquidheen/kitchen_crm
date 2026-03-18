@@ -289,7 +289,7 @@
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Rs. " + java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN")).format($F{cabinetsFinalTotal}).replace("\u20B9", "")]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($F{cabinetsFinalTotal}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
             </textField>
             <line>
                 <reportElement x="15" y="132" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670d1"/>
@@ -312,7 +312,7 @@
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Rs. " + java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN")).format($F{doorsFinalTotal}).replace("\u20B9", "")]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($F{doorsFinalTotal}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
             </textField>
             <line>
                 <reportElement x="15" y="157" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670d2"/>
@@ -331,7 +331,7 @@
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Rs. " + java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN")).format($F{accessoriesFinalTotal}).replace("\u20B9", "")]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($F{accessoriesFinalTotal}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
             </textField>
             <line>
                 <reportElement x="15" y="182" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670d3"/>
@@ -354,7 +354,7 @@
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Rs. " + java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN")).format($F{lightingFinalTotal}).replace("\u20B9", "")]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($F{lightingFinalTotal}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
             </textField>
             <line>
                 <reportElement x="15" y="207" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670d4"/>
@@ -373,7 +373,7 @@
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="9"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Rs. " + java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN")).format($F{otherExpensesTotal}).replace("\u20B9", "")]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($F{otherExpensesTotal}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
             </textField>
             <line>
                 <reportElement x="15" y="232" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef12345670f3"/>
@@ -402,7 +402,7 @@
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Rs. " + java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN")).format($F{totalAmount}).replace("\u20B9", "")]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($F{totalAmount}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
             </textField>
 
             <!-- ===== GRAND TOTAL SUMMARY (only on last kitchen, multi-kitchen only) ===== -->
