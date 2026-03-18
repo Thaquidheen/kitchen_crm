@@ -70,7 +70,7 @@
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="8"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($F{amount})]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN")).format($F{amount}).replace("\u20B9", "")]]></textFieldExpression>
             </textField>
 
             <line>

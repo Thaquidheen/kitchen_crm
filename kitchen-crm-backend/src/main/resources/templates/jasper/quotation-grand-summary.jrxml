@@ -52,7 +52,7 @@
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($F{totalAmount})]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN")).format($F{totalAmount}).replace("\u20B9", "")]]></textFieldExpression>
             </textField>
         </band>
     </detail>
@@ -72,7 +72,7 @@
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="8" isItalic="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA["(Incl. Other Expenses: Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{OTHER_EXPENSES_TOTAL}) + ")"]]></textFieldExpression>
+                <textFieldExpression><![CDATA["(Incl. Other Expenses: Rs. " + java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN")).format($P{OTHER_EXPENSES_TOTAL}).replace("\u20B9", "") + ")"]]></textFieldExpression>
             </textField>
             <!-- Grand Total black bar -->
             <rectangle>
@@ -91,7 +91,7 @@
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("#,##,##0.00", new java.text.DecimalFormatSymbols(new java.util.Locale("en", "IN"))).format($P{GRAND_TOTAL})]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN")).format($P{GRAND_TOTAL}).replace("\u20B9", "")]]></textFieldExpression>
             </textField>
         </band>
     </summary>
