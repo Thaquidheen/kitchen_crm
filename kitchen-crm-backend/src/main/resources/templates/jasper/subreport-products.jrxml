@@ -113,7 +113,7 @@
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="8"/>
                 </textElement>
-                <textFieldExpression><![CDATA[$F{cabinetTypeName}]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$F{cabinetTypeName} + (($F{materialName} != null && !$F{materialName}.isEmpty()) ? " (" + $F{materialName} + ")" : "")]]></textFieldExpression>
             </textField>
             <textField textAdjust="StretchHeight" isBlankWhenNull="true">
                 <reportElement x="195" y="5" width="120" height="20" forecolor="#2C1810" uuid="f1f2f3f4-e5f6-7890-abcd-ef12345670d2"/>
