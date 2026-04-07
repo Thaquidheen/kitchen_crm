@@ -20,4 +20,5 @@ jobs:
             git pull origin main
             docker compose -p kitchen-crm-backend -f docker-compose.prod.yml up -d --no-deps --build backend
             docker compose -p kitchen-crm-backend -f docker-compose.prod.yml up -d --no-deps --build frontend
+            docker compose -p kitchen-crm-backend -f docker-compose.prod.yml up -d --no-deps --build nginx
             echo "Deployment complete!"
