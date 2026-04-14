@@ -27,6 +27,7 @@ export interface CabinetWithDimensions {
   materialId?: number;
   materialName?: string;
   materialRate?: number;
+  materialCalculationType?: string;
   // Lighting cost (Width mm × 2)
   lightingCost?: number;
   // Accessories cost (BLUM standard accessories)
@@ -37,6 +38,7 @@ export interface CabinetWithDimensions {
   innerPanelRate?: number;
   innerPanelMultiplier?: number;
   innerPanelCost?: number;
+  innerPanelQuantity?: number;
   // Pricing
   unitPrice?: number;
   totalPrice?: number;
@@ -89,6 +91,7 @@ export function AddCabinetModal({
   const [includeAccessories, setIncludeAccessories] = useState<boolean>(true);
   const [includeLighting, setIncludeLighting] = useState<boolean>(true);
   const [selectedInnerPanelId, setSelectedInnerPanelId] = useState<number | string>('');
+  const [innerPanelQty, setInnerPanelQty] = useState<number>(0);
   const [selectedElevationId, setSelectedElevationId] = useState<number | string>('');
 
   // Refs for Enter key navigation
@@ -122,6 +125,7 @@ export function AddCabinetModal({
         setIncludeAccessories((editData.accessoriesCost ?? 0) > 0);
         setIncludeLighting((editData.lightingCost ?? 0) > 0);
         setSelectedInnerPanelId(editData.innerPanelTypeId || '');
+        setInnerPanelQty(editData.innerPanelQuantity || 0);
         setSelectedElevationId(editData.elevationId || '');
         // Handle linked door
         if (editData.linkedDoor) {
@@ -143,6 +147,7 @@ export function AddCabinetModal({
         setIncludeAccessories(true);
         setIncludeLighting(true);
         setSelectedInnerPanelId('');
+        setInnerPanelQty(0);
         setSelectedElevationId(availableElevations.length > 0 ? availableElevations[0].id || '' : '');
       }
     }
@@ -162,11 +167,11 @@ export function AddCabinetModal({
     return (widthMm * heightMm) / 92903;
   };
 
-  // Inner panel cost: (W * D / 92903) × rate × multiplier
+  // Inner panel cost: (W * D / 92903) × rate × multiplier × quantity
   const calculateInnerPanelCost = () => {
-    if (!widthMm || !depthMm || !selectedInnerPanel) return 0;
+    if (!widthMm || !depthMm || !selectedInnerPanel || innerPanelQty <= 0) return 0;
     const floorArea = (widthMm * depthMm) / 92903;
-    return floorArea * selectedInnerPanel.ratePerSqft * selectedInnerPanel.multiplier;
+    return floorArea * selectedInnerPanel.ratePerSqft * selectedInnerPanel.multiplier * innerPanelQty;
   };
 
   // Get selected material
@@ -176,8 +181,10 @@ export function AddCabinetModal({
   // Get selected inner panel type
   const selectedInnerPanel = innerPanelTypes.find(ip => ip.id === Number(selectedInnerPanelId));
 
-  // Calculate surface area
-  const surfaceArea = calculateCabinetSurfaceArea();
+  // Calculate surface area based on material type
+  const surfaceArea = selectedMaterial?.calculationType === 'FACE_AREA'
+    ? calculateDoorFaceArea()   // PLY, WPC → front face only
+    : calculateCabinetSurfaceArea(); // SS 304, etc. → full box area
 
   // Calculate cabinet price: surfaceArea × materialRate
   const cabinetPrice = surfaceArea * materialRate;
@@ -226,6 +233,7 @@ export function AddCabinetModal({
       materialId: selectedMaterial?.id,
       materialName: selectedMaterial?.name,
       materialRate: materialRate,
+      materialCalculationType: selectedMaterial?.calculationType || 'BOX_AREA',
       lightingCost: includeLighting ? lightingCost : 0,
       accessoriesCost: includeAccessories ? accessoriesCost : 0,
       // Inner panel
@@ -234,6 +242,7 @@ export function AddCabinetModal({
       innerPanelRate: selectedInnerPanel?.ratePerSqft,
       innerPanelMultiplier: selectedInnerPanel?.multiplier,
       innerPanelCost: innerPanelCost,
+      innerPanelQuantity: innerPanelQty,
       // Set unit price (per unit) and total price for display
       unitPrice: perUnitTotal,
       totalPrice: totalCabinetPrice,
@@ -348,11 +357,15 @@ export function AddCabinetModal({
         )}
 
         {/* Inner Panel Type Selection */}
-        <div className="mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <Select
             label="Inner Panel Type"
             value={selectedInnerPanelId}
-            onChange={(e) => setSelectedInnerPanelId(e.target.value)}
+            onChange={(e) => {
+              setSelectedInnerPanelId(e.target.value);
+              if (e.target.value && innerPanelQty === 0) setInnerPanelQty(1);
+              if (!e.target.value) setInnerPanelQty(0);
+            }}
             placeholder="None (NIL)"
           >
             {innerPanelTypes.map((ip) => (
@@ -361,6 +374,17 @@ export function AddCabinetModal({
               </option>
             ))}
           </Select>
+          {selectedInnerPanelId && (
+            <Input
+              label="Panel Qty"
+              type="number"
+              value={innerPanelQty || ''}
+              onChange={(e) => setInnerPanelQty(Number(e.target.value) || 0)}
+              placeholder="Qty"
+              min={0}
+              max={10}
+            />
+          )}
         </div>
 
         {/* Accessories and Lighting Options */}
@@ -390,7 +414,9 @@ export function AddCabinetModal({
 
             {/* Surface Area */}
             <div className="flex justify-between text-xs sm:text-sm mb-2">
-              <span className="text-text-600">Cabinet SQFT:</span>
+              <span className="text-text-600">
+                {selectedMaterial?.calculationType === 'FACE_AREA' ? 'Face Area' : 'Cabinet SQFT'}:
+              </span>
               <span className="text-text-900 font-medium">{surfaceArea.toFixed(2)} sqft</span>
             </div>
 
@@ -419,7 +445,7 @@ export function AddCabinetModal({
             {/* Inner Panel */}
             {selectedInnerPanel && innerPanelCost > 0 && (
               <div className="flex justify-between text-xs sm:text-sm mb-2">
-                <span className="text-text-600">Inner Panel ({selectedInnerPanel.name}):</span>
+                <span className="text-text-600">Inner Panel ({selectedInnerPanel.name} x{innerPanelQty}):</span>
                 <span className="text-text-900 font-medium">₹{innerPanelCost.toFixed(2)}</span>
               </div>
             )}

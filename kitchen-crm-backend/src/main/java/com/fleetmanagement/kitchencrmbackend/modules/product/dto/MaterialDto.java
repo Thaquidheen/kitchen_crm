@@ -25,5 +25,6 @@ public class MaterialDto {
     private BigDecimal unitRatePerSqft;
 
     private String description;
+    private String calculationType = "BOX_AREA"; // BOX_AREA or FACE_AREA
     private Boolean active = true;
 }

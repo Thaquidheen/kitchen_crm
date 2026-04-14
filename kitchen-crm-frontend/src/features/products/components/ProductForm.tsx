@@ -101,23 +101,38 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
         {/* Price per Sqft (Materials only) */}
         {entityType === 'material' && (
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1">
-              Price per Sqft (Rs.) <span className="text-error">*</span>
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              className="w-full rounded-md border border-background-600 bg-background-900 text-text-900 p-2 text-sm sm:text-base focus:border-primary-600 focus:outline-none"
-              placeholder="Enter price per square foot"
-              {...register('unitRatePerSqft', { valueAsNumber: true })}
-              disabled={isLoading}
-            />
-            {errors.unitRatePerSqft && (
-              <p className="text-error text-xs sm:text-sm mt-1">{errors.unitRatePerSqft.message}</p>
-            )}
-          </div>
+          <>
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1">
+                Price per Sqft (Rs.) <span className="text-error">*</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                className="w-full rounded-md border border-background-600 bg-background-900 text-text-900 p-2 text-sm sm:text-base focus:border-primary-600 focus:outline-none"
+                placeholder="Enter price per square foot"
+                {...register('unitRatePerSqft', { valueAsNumber: true })}
+                disabled={isLoading}
+              />
+              {errors.unitRatePerSqft && (
+                <p className="text-error text-xs sm:text-sm mt-1">{errors.unitRatePerSqft.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1">
+                Area Calculation Type
+              </label>
+              <select
+                className="w-full rounded-md border border-background-600 bg-background-900 text-text-900 p-2 text-sm sm:text-base focus:border-primary-600 focus:outline-none"
+                {...register('calculationType')}
+                disabled={isLoading}
+              >
+                <option value="BOX_AREA">Box Area (Full cabinet surface - SS, etc.)</option>
+                <option value="FACE_AREA">Face Area (Front face only - PLY, WPC, etc.)</option>
+              </select>
+            </div>
+          </>
         )}
 
         {/* Description */}

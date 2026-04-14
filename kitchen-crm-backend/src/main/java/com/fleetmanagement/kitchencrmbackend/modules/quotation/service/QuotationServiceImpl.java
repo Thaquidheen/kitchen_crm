@@ -559,6 +559,7 @@ public class QuotationServiceImpl implements QuotationService {
                 // Set material, lighting, and accessories fields
                 cabinet.setMaterialId(cabinetDto.getMaterialId());
                 cabinet.setMaterialRate(cabinetDto.getMaterialRate());
+                cabinet.setMaterialCalculationType(cabinetDto.getMaterialCalculationType());
                 cabinet.setLightingCost(cabinetDto.getLightingCost());
                 cabinet.setAccessoriesCost(cabinetDto.getAccessoriesCost());
 
@@ -566,6 +567,7 @@ public class QuotationServiceImpl implements QuotationService {
                 cabinet.setInnerPanelTypeId(cabinetDto.getInnerPanelTypeId());
                 cabinet.setInnerPanelRate(cabinetDto.getInnerPanelRate());
                 cabinet.setInnerPanelMultiplier(cabinetDto.getInnerPanelMultiplier());
+                cabinet.setInnerPanelQuantity(cabinetDto.getInnerPanelQuantity());
 
                 // Set elevation fields
                 cabinet.setElevationId(cabinetDto.getElevationId());
@@ -784,6 +786,7 @@ public class QuotationServiceImpl implements QuotationService {
                 // Set material, lighting, and accessories fields
                 cabinet.setMaterialId(cabinetDto.getMaterialId());
                 cabinet.setMaterialRate(cabinetDto.getMaterialRate());
+                cabinet.setMaterialCalculationType(cabinetDto.getMaterialCalculationType());
                 cabinet.setLightingCost(cabinetDto.getLightingCost());
                 cabinet.setAccessoriesCost(cabinetDto.getAccessoriesCost());
 
@@ -791,6 +794,7 @@ public class QuotationServiceImpl implements QuotationService {
                 cabinet.setInnerPanelTypeId(cabinetDto.getInnerPanelTypeId());
                 cabinet.setInnerPanelRate(cabinetDto.getInnerPanelRate());
                 cabinet.setInnerPanelMultiplier(cabinetDto.getInnerPanelMultiplier());
+                cabinet.setInnerPanelQuantity(cabinetDto.getInnerPanelQuantity());
 
                 // Set elevation fields
                 cabinet.setElevationId(cabinetDto.getElevationId());
@@ -918,12 +922,14 @@ public class QuotationServiceImpl implements QuotationService {
             // Copy material, lighting, and accessories fields
             copy.setMaterialId(original.getMaterialId());
             copy.setMaterialRate(original.getMaterialRate());
+            copy.setMaterialCalculationType(original.getMaterialCalculationType());
             copy.setLightingCost(original.getLightingCost());
             copy.setAccessoriesCost(original.getAccessoriesCost());
             // Copy inner panel fields
             copy.setInnerPanelTypeId(original.getInnerPanelTypeId());
             copy.setInnerPanelRate(original.getInnerPanelRate());
             copy.setInnerPanelMultiplier(original.getInnerPanelMultiplier());
+            copy.setInnerPanelQuantity(original.getInnerPanelQuantity());
             copy.setInnerPanelCost(original.getInnerPanelCost());
             cabinetRepository.save(copy);
         }
@@ -1373,6 +1379,7 @@ public class QuotationServiceImpl implements QuotationService {
             // Set material, lighting, and accessories fields
             dto.setMaterialId(cabinet.getMaterialId());
             dto.setMaterialRate(cabinet.getMaterialRate());
+            dto.setMaterialCalculationType(cabinet.getMaterialCalculationType());
             if (cabinet.getMaterialId() != null) {
                 materialRepository.findById(cabinet.getMaterialId()).ifPresent(m -> dto.setMaterialName(m.getName()));
             }
@@ -1383,6 +1390,7 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setInnerPanelTypeId(cabinet.getInnerPanelTypeId());
             dto.setInnerPanelRate(cabinet.getInnerPanelRate());
             dto.setInnerPanelMultiplier(cabinet.getInnerPanelMultiplier());
+            dto.setInnerPanelQuantity(cabinet.getInnerPanelQuantity());
             dto.setInnerPanelCost(cabinet.getInnerPanelCost());
             if (cabinet.getInnerPanelTypeId() != null) {
                 innerPanelTypeRepository.findById(cabinet.getInnerPanelTypeId()).ifPresent(ip -> dto.setInnerPanelTypeName(ip.getName()));
@@ -1593,6 +1601,7 @@ public class QuotationServiceImpl implements QuotationService {
             // Set material, lighting, and accessories fields
             dto.setMaterialId(cabinet.getMaterialId());
             dto.setMaterialRate(cabinet.getMaterialRate());
+            dto.setMaterialCalculationType(cabinet.getMaterialCalculationType());
             if (cabinet.getMaterialId() != null) {
                 materialRepository.findById(cabinet.getMaterialId()).ifPresent(m -> dto.setMaterialName(m.getName()));
             }
@@ -1603,6 +1612,7 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setInnerPanelTypeId(cabinet.getInnerPanelTypeId());
             dto.setInnerPanelRate(cabinet.getInnerPanelRate());
             dto.setInnerPanelMultiplier(cabinet.getInnerPanelMultiplier());
+            dto.setInnerPanelQuantity(cabinet.getInnerPanelQuantity());
             dto.setInnerPanelCost(cabinet.getInnerPanelCost());
             if (cabinet.getInnerPanelTypeId() != null) {
                 innerPanelTypeRepository.findById(cabinet.getInnerPanelTypeId()).ifPresent(ip -> dto.setInnerPanelTypeName(ip.getName()));

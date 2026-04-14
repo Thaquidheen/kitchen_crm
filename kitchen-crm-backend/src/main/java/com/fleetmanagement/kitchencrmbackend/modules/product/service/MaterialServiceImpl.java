@@ -73,6 +73,7 @@ public class MaterialServiceImpl implements MaterialService {
         existingMaterial.setName(materialDto.getName());
         existingMaterial.setUnitRatePerSqft(materialDto.getUnitRatePerSqft());
         existingMaterial.setDescription(materialDto.getDescription());
+        existingMaterial.setCalculationType(materialDto.getCalculationType() != null ? materialDto.getCalculationType() : "BOX_AREA");
         existingMaterial.setActive(materialDto.getActive());
 
         Material updatedMaterial = materialRepository.save(existingMaterial);
@@ -96,13 +97,14 @@ public class MaterialServiceImpl implements MaterialService {
     }
 
     private MaterialDto convertToDto(Material material) {
-        return new MaterialDto(
-                material.getId(),
-                material.getName(),
-                material.getUnitRatePerSqft(),
-                material.getDescription(),
-                material.getActive()
-        );
+        MaterialDto dto = new MaterialDto();
+        dto.setId(material.getId());
+        dto.setName(material.getName());
+        dto.setUnitRatePerSqft(material.getUnitRatePerSqft());
+        dto.setDescription(material.getDescription());
+        dto.setCalculationType(material.getCalculationType());
+        dto.setActive(material.getActive());
+        return dto;
     }
 
     private Material convertToEntity(MaterialDto dto) {
@@ -110,6 +112,7 @@ public class MaterialServiceImpl implements MaterialService {
         material.setName(dto.getName());
         material.setUnitRatePerSqft(dto.getUnitRatePerSqft());
         material.setDescription(dto.getDescription());
+        material.setCalculationType(dto.getCalculationType() != null ? dto.getCalculationType() : "BOX_AREA");
         material.setActive(dto.getActive() != null ? dto.getActive() : true);
         return material;
     }

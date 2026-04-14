@@ -150,6 +150,9 @@ export const MaterialManager: React.FC = () => {
                   {material.unitRatePerSqft !== undefined && (
                     <p className="text-xs sm:text-sm text-primary-400 font-medium mt-1">
                       Rs. {material.unitRatePerSqft.toFixed(2)}/sqft
+                      <span className="text-text-500 ml-1">
+                        ({material.calculationType === 'FACE_AREA' ? 'Face Area' : 'Box Area'})
+                      </span>
                     </p>
                   )}
                 </div>

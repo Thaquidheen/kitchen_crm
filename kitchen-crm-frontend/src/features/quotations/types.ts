@@ -57,6 +57,7 @@ export interface QuotationCabinet extends QuotationLineItem {
   // Material selection for sqft-based pricing
   materialId?: number;
   materialRate?: number;
+  materialCalculationType?: string; // BOX_AREA or FACE_AREA
   // Lighting cost (Width mm × 2)
   lightingCost?: number;
   // Accessories cost (BLUM standard accessories)
@@ -67,6 +68,7 @@ export interface QuotationCabinet extends QuotationLineItem {
   innerPanelRate?: number;
   innerPanelMultiplier?: number;
   innerPanelCost?: number;
+  innerPanelQuantity?: number;
   // Elevation reference
   elevationId?: number;
   elevationName?: string;

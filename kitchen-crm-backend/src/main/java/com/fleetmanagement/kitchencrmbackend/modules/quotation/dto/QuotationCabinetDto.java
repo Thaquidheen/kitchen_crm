@@ -39,6 +39,7 @@ public class QuotationCabinetDto {
     // Material selection for sqft-based pricing
     private Long materialId;
     private BigDecimal materialRate;
+    private String materialCalculationType; // BOX_AREA or FACE_AREA
 
     // Lighting cost = Width (mm) x 2
     private BigDecimal lightingCost;
@@ -52,6 +53,7 @@ public class QuotationCabinetDto {
     private BigDecimal innerPanelRate;
     private BigDecimal innerPanelMultiplier;
     private BigDecimal innerPanelCost;
+    private Integer innerPanelQuantity;
 
     // Elevation reference
     private Long elevationId;

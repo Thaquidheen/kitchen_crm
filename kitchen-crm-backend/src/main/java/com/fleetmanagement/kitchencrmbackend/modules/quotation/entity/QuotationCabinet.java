@@ -69,6 +69,10 @@ public class QuotationCabinet extends Auditable {
     @Column(name = "material_rate", precision = 10, scale = 2)
     private BigDecimal materialRate;
 
+    // BOX_AREA = full cabinet surface, FACE_AREA = front face only (W×H)
+    @Column(name = "material_calculation_type", length = 20)
+    private String materialCalculationType;
+
     // Lighting cost = Width (mm) x 2
     @Column(name = "lighting_cost", precision = 10, scale = 2)
     private BigDecimal lightingCost;
@@ -89,6 +93,9 @@ public class QuotationCabinet extends Auditable {
 
     @Column(name = "inner_panel_cost", precision = 10, scale = 2)
     private BigDecimal innerPanelCost;
+
+    @Column(name = "inner_panel_quantity")
+    private Integer innerPanelQuantity;
 
     // Linked door type (optional — set when "Add matching door" is checked)
     @ManyToOne(fetch = FetchType.LAZY)

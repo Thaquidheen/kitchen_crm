@@ -277,8 +277,8 @@ export function SelectedProductsList({
             {category === 'cabinets' && item.materialName && (
               <span className="text-text-500 ml-1">- {item.materialName}</span>
             )}
-            {category === 'cabinets' && (item as any).innerPanelTypeName && (
-              <span className="text-text-500 ml-1">- {(item as any).innerPanelTypeName}</span>
+            {category === 'cabinets' && (item as any).innerPanelTypeName && (item as any).innerPanelQuantity > 0 && (
+              <span className="text-text-500 ml-1">- {(item as any).innerPanelTypeName} x{(item as any).innerPanelQuantity}</span>
             )}
             {item.quantity && item.quantity > 1 && (
               <span className="text-text-600 ml-1">× {item.quantity}</span>

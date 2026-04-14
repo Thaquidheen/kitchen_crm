@@ -29,6 +29,10 @@ public class Material extends Auditable {
 
     private String description;
 
+    // BOX_AREA = full cabinet surface area, FACE_AREA = front face only (W×H)
+    @Column(name = "calculation_type", nullable = false)
+    private String calculationType = "BOX_AREA";
+
     @Column(nullable = false)
     private Boolean active = true;
 }

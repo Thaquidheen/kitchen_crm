@@ -19,6 +19,7 @@ export interface Category extends BaseEntity {}
 export interface Brand extends BaseEntity {}
 export interface Material extends BaseEntity {
   unitRatePerSqft: number;
+  calculationType: 'BOX_AREA' | 'FACE_AREA';
 }
 
 export interface InnerPanelType extends BaseEntity {

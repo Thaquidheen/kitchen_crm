@@ -218,12 +218,19 @@ public class PricingServiceImpl implements PricingService {
     }
     @Override
     public void calculateCabinetLineTotal(QuotationCabinet cabinet, BigDecimal marginPercentage, BigDecimal taxPercentage) {
-        // Calculate surface area from dimensions using Excel formula
-        BigDecimal surfaceArea = calculateCabinetSurfaceArea(
-            cabinet.getWidthMm(),
-            cabinet.getHeightMm(),
-            cabinet.getDepthMm()
-        );
+        // Calculate surface area based on material calculation type
+        BigDecimal surfaceArea;
+        if ("FACE_AREA".equals(cabinet.getMaterialCalculationType())) {
+            // PLY, WPC etc. — only front face: (W × H) / 92903
+            surfaceArea = calculateDoorFaceArea(cabinet.getWidthMm(), cabinet.getHeightMm());
+        } else {
+            // SS 304, SS 202 etc. — full box area: (2WD + WH + 2DH) / 92903
+            surfaceArea = calculateCabinetSurfaceArea(
+                cabinet.getWidthMm(),
+                cabinet.getHeightMm(),
+                cabinet.getDepthMm()
+            );
+        }
 
         // Store calculated square footage
         cabinet.setCalculatedSqft(surfaceArea);
@@ -240,11 +247,14 @@ public class PricingServiceImpl implements PricingService {
         // Get accessories cost (fixed BLUM accessories)
         BigDecimal accessoriesCost = cabinet.getAccessoriesCost() != null ? cabinet.getAccessoriesCost() : BigDecimal.ZERO;
 
-        // Calculate inner panel cost: (W × D / 92903) × rate × multiplier
+        // Calculate inner panel cost: (W × D / 92903) × rate × multiplier × quantity
         BigDecimal innerPanelCost = calculateInnerPanelCost(
             cabinet.getWidthMm(), cabinet.getDepthMm(),
             cabinet.getInnerPanelRate(), cabinet.getInnerPanelMultiplier()
         );
+        // Multiply by inner panel quantity
+        int ipQuantity = cabinet.getInnerPanelQuantity() != null ? cabinet.getInnerPanelQuantity() : (innerPanelCost.compareTo(BigDecimal.ZERO) > 0 ? 1 : 0);
+        innerPanelCost = innerPanelCost.multiply(BigDecimal.valueOf(ipQuantity));
         cabinet.setInnerPanelCost(innerPanelCost);
 
         // Calculate per-unit total: cabinetPrice + lightingCost + accessoriesCost + innerPanelCost
