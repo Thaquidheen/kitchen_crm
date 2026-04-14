@@ -149,6 +149,12 @@ export const API_ENDPOINTS = {
     ACTIVE: '/materials/active',
   },
 
+  INNER_PANELS: {
+    BASE: '/inner-panels',
+    BY_ID: (id: number) => `/inner-panels/${id}`,
+    ACTIVE: '/inner-panels/active',
+  },
+
   CABINETS: {
     BASE: '/cabinets',
     BY_ID: (id: number) => `/cabinets/${id}`,

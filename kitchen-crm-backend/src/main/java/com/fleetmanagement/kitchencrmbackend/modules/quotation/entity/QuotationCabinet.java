@@ -77,6 +77,19 @@ public class QuotationCabinet extends Auditable {
     @Column(name = "accessories_cost", precision = 10, scale = 2)
     private BigDecimal accessoriesCost;
 
+    // Inner panel fields
+    @Column(name = "inner_panel_type_id")
+    private Long innerPanelTypeId;
+
+    @Column(name = "inner_panel_rate", precision = 10, scale = 2)
+    private BigDecimal innerPanelRate;
+
+    @Column(name = "inner_panel_multiplier", precision = 5, scale = 2)
+    private BigDecimal innerPanelMultiplier;
+
+    @Column(name = "inner_panel_cost", precision = 10, scale = 2)
+    private BigDecimal innerPanelCost;
+
     // Linked door type (optional — set when "Add matching door" is checked)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "linked_door_type_id")

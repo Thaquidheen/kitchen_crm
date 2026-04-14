@@ -30,43 +30,60 @@ public class PricingServiceImpl implements PricingService {
     @Autowired
     private QuotationOtherExpenseRepository otherExpenseRepository;
 
+    // Conversion constant: 92903 mm² = 1 sqft (304.8mm per foot, 304.8² = 92903.04)
+    private static final BigDecimal MM2_PER_SQFT = BigDecimal.valueOf(92903);
+
     /**
      * Calculate cabinet surface area using Excel formula
-     * Conversion: 304mm = 1 foot
-     * Surface Area = [((W/304)+(H/304))×2×(D/304)] + [(W/304)×(H/304)]
+     * Surface Area = [2*(W*D + W*H + D*H) - W*H] / 92903
+     * Which equals: [2*W*D + W*H + 2*D*H] / 92903 (box area minus door face)
      */
     private BigDecimal calculateCabinetSurfaceArea(Integer widthMm, Integer heightMm, Integer depthMm) {
         if (widthMm == null || heightMm == null || depthMm == null) {
             return BigDecimal.ZERO;
         }
+
+        BigDecimal w = BigDecimal.valueOf(widthMm);
+        BigDecimal h = BigDecimal.valueOf(heightMm);
+        BigDecimal d = BigDecimal.valueOf(depthMm);
         
-        BigDecimal width = BigDecimal.valueOf(widthMm).divide(BigDecimal.valueOf(304), 4, RoundingMode.HALF_UP);
-        BigDecimal height = BigDecimal.valueOf(heightMm).divide(BigDecimal.valueOf(304), 4, RoundingMode.HALF_UP);
-        BigDecimal depth = BigDecimal.valueOf(depthMm).divide(BigDecimal.valueOf(304), 4, RoundingMode.HALF_UP);
-        
-        // [((W/304)+(H/304))×2×(D/304)]
-        BigDecimal sidePanels = width.add(height).multiply(BigDecimal.valueOf(2)).multiply(depth);
-        
-        // [(W/304)×(H/304)]
-        BigDecimal backPanel = width.multiply(height);
-        
-        return sidePanels.add(backPanel);
+        // 2*W*D + 2*D*H + W*H (box surface area minus door face)
+        BigDecimal wd = w.multiply(d);
+        BigDecimal dh = d.multiply(h);
+        BigDecimal wh = w.multiply(h);
+        BigDecimal totalMm2 = wd.multiply(BigDecimal.valueOf(2))
+                .add(dh.multiply(BigDecimal.valueOf(2)))
+                .add(wh);
+
+        return totalMm2.divide(MM2_PER_SQFT, 4, RoundingMode.HALF_UP);
     }
 
     /**
      * Calculate door face area using Excel formula
-     * Conversion: 304mm = 1 foot
-     * Door Area = (W/304) × (H/304)
+     * Door Area = (W * H) / 92903
      */
     private BigDecimal calculateDoorFaceArea(Integer widthMm, Integer heightMm) {
         if (widthMm == null || heightMm == null) {
             return BigDecimal.ZERO;
         }
-        
-        BigDecimal width = BigDecimal.valueOf(widthMm).divide(BigDecimal.valueOf(304), 4, RoundingMode.HALF_UP);
-        BigDecimal height = BigDecimal.valueOf(heightMm).divide(BigDecimal.valueOf(304), 4, RoundingMode.HALF_UP);
-        
-        return width.multiply(height);
+
+        BigDecimal wh = BigDecimal.valueOf(widthMm).multiply(BigDecimal.valueOf(heightMm));
+        return wh.divide(MM2_PER_SQFT, 4, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Calculate inner panel cost using Excel formula
+     * Inner Panel Cost = (W * D / 92903) × ratePerSqft × multiplier
+     */
+    private BigDecimal calculateInnerPanelCost(Integer widthMm, Integer depthMm,
+                                                BigDecimal ratePerSqft, BigDecimal multiplier) {
+        if (widthMm == null || depthMm == null || ratePerSqft == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal floorArea = BigDecimal.valueOf(widthMm).multiply(BigDecimal.valueOf(depthMm))
+                .divide(MM2_PER_SQFT, 4, RoundingMode.HALF_UP);
+        BigDecimal mult = multiplier != null ? multiplier : BigDecimal.ONE;
+        return floorArea.multiply(ratePerSqft).multiply(mult);
     }
 
     @Override
@@ -223,8 +240,15 @@ public class PricingServiceImpl implements PricingService {
         // Get accessories cost (fixed BLUM accessories)
         BigDecimal accessoriesCost = cabinet.getAccessoriesCost() != null ? cabinet.getAccessoriesCost() : BigDecimal.ZERO;
 
-        // Calculate per-unit total: cabinetPrice + lightingCost + accessoriesCost
-        BigDecimal perUnitTotal = cabinetPrice.add(lightingCost).add(accessoriesCost);
+        // Calculate inner panel cost: (W × D / 92903) × rate × multiplier
+        BigDecimal innerPanelCost = calculateInnerPanelCost(
+            cabinet.getWidthMm(), cabinet.getDepthMm(),
+            cabinet.getInnerPanelRate(), cabinet.getInnerPanelMultiplier()
+        );
+        cabinet.setInnerPanelCost(innerPanelCost);
+
+        // Calculate per-unit total: cabinetPrice + lightingCost + accessoriesCost + innerPanelCost
+        BigDecimal perUnitTotal = cabinetPrice.add(lightingCost).add(accessoriesCost).add(innerPanelCost);
 
         // Calculate base amount: perUnitTotal × quantity
         BigDecimal baseAmount = perUnitTotal

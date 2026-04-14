@@ -262,6 +262,7 @@ export const baseApi = createApi({
     'Categories',
     'Brands',
     'Materials',
+    'InnerPanels',
     'Accessories',
     'Cabinets',
     'Doors',

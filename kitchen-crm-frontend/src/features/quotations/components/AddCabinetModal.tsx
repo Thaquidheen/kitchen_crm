@@ -9,9 +9,9 @@ import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import { Select } from '../../../components/ui/Select';
-import type { CabinetType, DoorType, Material } from '../../products/types';
+import type { CabinetType, DoorType, Material, InnerPanelType } from '../../products/types';
 import type { QuotationElevation } from '../types';
-import { useGetActiveMaterialsQuery } from '../../products/productsAPI';
+import { useGetActiveMaterialsQuery, useGetActiveInnerPanelTypesQuery } from '../../products/productsAPI';
 
 export interface CabinetWithDimensions {
   cabinetTypeId: number;
@@ -31,6 +31,12 @@ export interface CabinetWithDimensions {
   lightingCost?: number;
   // Accessories cost (BLUM standard accessories)
   accessoriesCost?: number;
+  // Inner panel
+  innerPanelTypeId?: number;
+  innerPanelTypeName?: string;
+  innerPanelRate?: number;
+  innerPanelMultiplier?: number;
+  innerPanelCost?: number;
   // Pricing
   unitPrice?: number;
   totalPrice?: number;
@@ -78,10 +84,11 @@ export function AddCabinetModal({
   const [addDoor, setAddDoor] = useState<boolean>(false);
   const [selectedDoorId, setSelectedDoorId] = useState<number | string>('');
 
-  // New state for material, lighting, accessories, and elevation
+  // New state for material, lighting, accessories, inner panel, and elevation
   const [selectedMaterialId, setSelectedMaterialId] = useState<number | string>('');
   const [includeAccessories, setIncludeAccessories] = useState<boolean>(true);
   const [includeLighting, setIncludeLighting] = useState<boolean>(true);
+  const [selectedInnerPanelId, setSelectedInnerPanelId] = useState<number | string>('');
   const [selectedElevationId, setSelectedElevationId] = useState<number | string>('');
 
   // Refs for Enter key navigation
@@ -98,8 +105,9 @@ export function AddCabinetModal({
     }
   };
 
-  // Fetch active materials
+  // Fetch active materials and inner panel types
   const { data: materials = [], isLoading: materialsLoading } = useGetActiveMaterialsQuery();
+  const { data: innerPanelTypes = [] } = useGetActiveInnerPanelTypesQuery();
 
   // Reset form when modal opens, or populate with edit data
   useEffect(() => {
@@ -113,6 +121,7 @@ export function AddCabinetModal({
         setSelectedMaterialId(editData.materialId || '');
         setIncludeAccessories((editData.accessoriesCost ?? 0) > 0);
         setIncludeLighting((editData.lightingCost ?? 0) > 0);
+        setSelectedInnerPanelId(editData.innerPanelTypeId || '');
         setSelectedElevationId(editData.elevationId || '');
         // Handle linked door
         if (editData.linkedDoor) {
@@ -133,30 +142,39 @@ export function AddCabinetModal({
         setSelectedMaterialId('');
         setIncludeAccessories(true);
         setIncludeLighting(true);
+        setSelectedInnerPanelId('');
         setSelectedElevationId(availableElevations.length > 0 ? availableElevations[0].id || '' : '');
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // Excel formula: Cabinet surface area = [((W/304)+(H/304))×2×(D/304)] + [(W/304)×(H/304)]
+  // Excel formula: Cabinet surface area = [2*(W*D + W*H + D*H) - W*H] / 92903
+  // = [2*W*D + W*H + 2*D*H] / 92903 (box area minus door face)
   const calculateCabinetSurfaceArea = () => {
     if (!widthMm || !heightMm || !depthMm) return 0;
-    const w = widthMm / 304;
-    const h = heightMm / 304;
-    const d = depthMm / 304;
-    return ((w + h) * 2 * d) + (w * h);
+    return (2 * widthMm * depthMm + widthMm * heightMm + 2 * depthMm * heightMm) / 92903;
   };
 
-  // Excel formula: Door face area = (W/304) × (H/304)
+  // Excel formula: Door face area = (W * H) / 92903
   const calculateDoorFaceArea = () => {
     if (!widthMm || !heightMm) return 0;
-    return (widthMm / 304) * (heightMm / 304);
+    return (widthMm * heightMm) / 92903;
+  };
+
+  // Inner panel cost: (W * D / 92903) × rate × multiplier
+  const calculateInnerPanelCost = () => {
+    if (!widthMm || !depthMm || !selectedInnerPanel) return 0;
+    const floorArea = (widthMm * depthMm) / 92903;
+    return floorArea * selectedInnerPanel.ratePerSqft * selectedInnerPanel.multiplier;
   };
 
   // Get selected material
   const selectedMaterial = materials.find(m => m.id === Number(selectedMaterialId));
   const materialRate = selectedMaterial?.unitRatePerSqft || 0;
+
+  // Get selected inner panel type
+  const selectedInnerPanel = innerPanelTypes.find(ip => ip.id === Number(selectedInnerPanelId));
 
   // Calculate surface area
   const surfaceArea = calculateCabinetSurfaceArea();
@@ -170,8 +188,11 @@ export function AddCabinetModal({
   // Accessories cost (cabinet's fixed price)
   const accessoriesCost = includeAccessories ? (cabinet.fixedPrice || 0) : 0;
 
+  // Inner panel cost
+  const innerPanelCost = calculateInnerPanelCost();
+
   // Per-unit total
-  const perUnitTotal = cabinetPrice + lightingCost + accessoriesCost;
+  const perUnitTotal = cabinetPrice + lightingCost + accessoriesCost + innerPanelCost;
 
   // Total cabinet price (with quantity)
   const totalCabinetPrice = perUnitTotal * quantity;
@@ -207,6 +228,12 @@ export function AddCabinetModal({
       materialRate: materialRate,
       lightingCost: includeLighting ? lightingCost : 0,
       accessoriesCost: includeAccessories ? accessoriesCost : 0,
+      // Inner panel
+      innerPanelTypeId: selectedInnerPanel?.id,
+      innerPanelTypeName: selectedInnerPanel?.name,
+      innerPanelRate: selectedInnerPanel?.ratePerSqft,
+      innerPanelMultiplier: selectedInnerPanel?.multiplier,
+      innerPanelCost: innerPanelCost,
       // Set unit price (per unit) and total price for display
       unitPrice: perUnitTotal,
       totalPrice: totalCabinetPrice,
@@ -320,6 +347,22 @@ export function AddCabinetModal({
           </div>
         )}
 
+        {/* Inner Panel Type Selection */}
+        <div className="mb-4">
+          <Select
+            label="Inner Panel Type"
+            value={selectedInnerPanelId}
+            onChange={(e) => setSelectedInnerPanelId(e.target.value)}
+            placeholder="None (NIL)"
+          >
+            {innerPanelTypes.map((ip) => (
+              <option key={ip.id} value={ip.id}>
+                {ip.name} - ₹{ip.ratePerSqft?.toLocaleString('en-IN')}/sqft {ip.multiplier !== 1 ? `x${ip.multiplier}` : ''}
+              </option>
+            ))}
+          </Select>
+        </div>
+
         {/* Accessories and Lighting Options */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="flex items-center">
@@ -370,6 +413,14 @@ export function AddCabinetModal({
               <div className="flex justify-between text-xs sm:text-sm mb-2">
                 <span className="text-text-600">Fixed Price:</span>
                 <span className="text-text-900 font-medium">₹{accessoriesCost.toLocaleString('en-IN')}</span>
+              </div>
+            )}
+
+            {/* Inner Panel */}
+            {selectedInnerPanel && innerPanelCost > 0 && (
+              <div className="flex justify-between text-xs sm:text-sm mb-2">
+                <span className="text-text-600">Inner Panel ({selectedInnerPanel.name}):</span>
+                <span className="text-text-900 font-medium">₹{innerPanelCost.toFixed(2)}</span>
               </div>
             )}
 

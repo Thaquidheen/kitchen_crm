@@ -103,6 +103,9 @@ public class QuotationServiceImpl implements QuotationService {
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.product.repository.MaterialRepository materialRepository;
 
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.product.repository.InnerPanelTypeRepository innerPanelTypeRepository;
+
     @Override
     public ApiResponse<Page<QuotationSummaryDto>> getAllQuotations(Long customerId, Quotation.QuotationStatus status,
                                                                    String customerName, LocalDateTime fromDate,
@@ -559,6 +562,11 @@ public class QuotationServiceImpl implements QuotationService {
                 cabinet.setLightingCost(cabinetDto.getLightingCost());
                 cabinet.setAccessoriesCost(cabinetDto.getAccessoriesCost());
 
+                // Set inner panel fields
+                cabinet.setInnerPanelTypeId(cabinetDto.getInnerPanelTypeId());
+                cabinet.setInnerPanelRate(cabinetDto.getInnerPanelRate());
+                cabinet.setInnerPanelMultiplier(cabinetDto.getInnerPanelMultiplier());
+
                 // Set elevation fields
                 cabinet.setElevationId(cabinetDto.getElevationId());
                 cabinet.setElevationName(cabinetDto.getElevationName());
@@ -779,6 +787,11 @@ public class QuotationServiceImpl implements QuotationService {
                 cabinet.setLightingCost(cabinetDto.getLightingCost());
                 cabinet.setAccessoriesCost(cabinetDto.getAccessoriesCost());
 
+                // Set inner panel fields
+                cabinet.setInnerPanelTypeId(cabinetDto.getInnerPanelTypeId());
+                cabinet.setInnerPanelRate(cabinetDto.getInnerPanelRate());
+                cabinet.setInnerPanelMultiplier(cabinetDto.getInnerPanelMultiplier());
+
                 // Set elevation fields
                 cabinet.setElevationId(cabinetDto.getElevationId());
                 cabinet.setElevationName(cabinetDto.getElevationName());
@@ -907,6 +920,11 @@ public class QuotationServiceImpl implements QuotationService {
             copy.setMaterialRate(original.getMaterialRate());
             copy.setLightingCost(original.getLightingCost());
             copy.setAccessoriesCost(original.getAccessoriesCost());
+            // Copy inner panel fields
+            copy.setInnerPanelTypeId(original.getInnerPanelTypeId());
+            copy.setInnerPanelRate(original.getInnerPanelRate());
+            copy.setInnerPanelMultiplier(original.getInnerPanelMultiplier());
+            copy.setInnerPanelCost(original.getInnerPanelCost());
             cabinetRepository.save(copy);
         }
 
@@ -1361,6 +1379,15 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setLightingCost(cabinet.getLightingCost());
             dto.setAccessoriesCost(cabinet.getAccessoriesCost());
 
+            // Set inner panel fields
+            dto.setInnerPanelTypeId(cabinet.getInnerPanelTypeId());
+            dto.setInnerPanelRate(cabinet.getInnerPanelRate());
+            dto.setInnerPanelMultiplier(cabinet.getInnerPanelMultiplier());
+            dto.setInnerPanelCost(cabinet.getInnerPanelCost());
+            if (cabinet.getInnerPanelTypeId() != null) {
+                innerPanelTypeRepository.findById(cabinet.getInnerPanelTypeId()).ifPresent(ip -> dto.setInnerPanelTypeName(ip.getName()));
+            }
+
             // Set kitchen ID if associated
             if (cabinet.getKitchen() != null) {
                 dto.setKitchenId(cabinet.getKitchen().getId());
@@ -1571,6 +1598,15 @@ public class QuotationServiceImpl implements QuotationService {
             }
             dto.setLightingCost(cabinet.getLightingCost());
             dto.setAccessoriesCost(cabinet.getAccessoriesCost());
+
+            // Set inner panel fields
+            dto.setInnerPanelTypeId(cabinet.getInnerPanelTypeId());
+            dto.setInnerPanelRate(cabinet.getInnerPanelRate());
+            dto.setInnerPanelMultiplier(cabinet.getInnerPanelMultiplier());
+            dto.setInnerPanelCost(cabinet.getInnerPanelCost());
+            if (cabinet.getInnerPanelTypeId() != null) {
+                innerPanelTypeRepository.findById(cabinet.getInnerPanelTypeId()).ifPresent(ip -> dto.setInnerPanelTypeName(ip.getName()));
+            }
 
             // Set elevation fields
             dto.setElevationId(cabinet.getElevationId());

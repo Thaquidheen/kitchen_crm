@@ -9,7 +9,7 @@ import type { ListParams } from './types';
 
 export interface ProductsState {
   listParams: ListParams;
-  tab: 'categories' | 'brands' | 'materials' | 'cabinets' | 'doors' | 'accessories' | 'lighting';
+  tab: 'categories' | 'brands' | 'materials' | 'inner_panels' | 'cabinets' | 'doors' | 'accessories' | 'lighting';
 }
 
 const initialState: ProductsState = {

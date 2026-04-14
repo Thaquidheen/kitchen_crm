@@ -46,6 +46,13 @@ public class QuotationCabinetDto {
     // Accessories cost (BLUM standard accessories)
     private BigDecimal accessoriesCost;
 
+    // Inner panel fields
+    private Long innerPanelTypeId;
+    private String innerPanelTypeName;
+    private BigDecimal innerPanelRate;
+    private BigDecimal innerPanelMultiplier;
+    private BigDecimal innerPanelCost;
+
     // Elevation reference
     private Long elevationId;
     private String elevationName;

@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { Box, Layers, Package, Wrench, Archive, DoorOpen, Lightbulb } from 'lucide-react';
+import { Box, Layers, Package, Wrench, Archive, DoorOpen, Lightbulb, PanelTop } from 'lucide-react';
 import { CategoryManager } from '../../features/products/components/CategoryManager';
 import { BrandManager } from '../../features/products/components/BrandManager';
 import { MaterialManager } from '../../features/products/components/MaterialManager';
+import { InnerPanelManager } from '../../features/products/components/InnerPanelManager';
 import { AccessoryManager } from '../../features/products/components/AccessoryManager';
 import { CabinetsManager } from '../../features/products/components/CabinetsManager';
 import { DoorsManager } from '../../features/products/components/DoorsManager';
 import { LightingManager } from '../../features/products/components/LightingManager';
 
-type TabType = 'categories' | 'brands' | 'materials' | 'accessories' | 'cabinets' | 'doors' | 'lighting';
+type TabType = 'categories' | 'brands' | 'materials' | 'inner_panels' | 'accessories' | 'cabinets' | 'doors' | 'lighting';
 
 const ProductsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('categories');
@@ -17,6 +18,7 @@ const ProductsPage: React.FC = () => {
     { id: 'categories', label: 'Categories', icon: Layers },
     { id: 'brands', label: 'Brands', icon: Package },
     { id: 'materials', label: 'Materials', icon: Box },
+    { id: 'inner_panels', label: 'Inner Panels', icon: PanelTop },
     { id: 'accessories', label: 'Accessories', icon: Wrench },
     { id: 'cabinets', label: 'Cabinets', icon: Archive },
     { id: 'doors', label: 'Doors', icon: DoorOpen },
@@ -31,6 +33,8 @@ const ProductsPage: React.FC = () => {
         return <BrandManager />;
       case 'materials':
         return <MaterialManager />;
+      case 'inner_panels':
+        return <InnerPanelManager />;
       case 'accessories':
         return <AccessoryManager />;
       case 'cabinets':

@@ -61,6 +61,12 @@ export interface QuotationCabinet extends QuotationLineItem {
   lightingCost?: number;
   // Accessories cost (BLUM standard accessories)
   accessoriesCost?: number;
+  // Inner panel fields
+  innerPanelTypeId?: number;
+  innerPanelTypeName?: string;
+  innerPanelRate?: number;
+  innerPanelMultiplier?: number;
+  innerPanelCost?: number;
   // Elevation reference
   elevationId?: number;
   elevationName?: string;

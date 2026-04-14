@@ -9,6 +9,7 @@ import type {
   Category,
   Brand,
   Material,
+  InnerPanelType,
   Cabinet,
   Door,
   Accessory,
@@ -151,6 +152,45 @@ export const productsAPI = baseApi.injectEndpoints({
         method: 'DELETE',
       }),
       invalidatesTags: [{ type: 'Materials' }],
+    }),
+
+    // Inner Panel Types - Read
+    getInnerPanelTypes: builder.query<InnerPanelType[], void>({
+      query: () => API_ENDPOINTS.INNER_PANELS.BASE,
+      transformResponse: (response: ApiResponse<InnerPanelType[]>) => response.data ?? [],
+      providesTags: [{ type: 'InnerPanels' }],
+    }),
+    getActiveInnerPanelTypes: builder.query<InnerPanelType[], void>({
+      query: () => API_ENDPOINTS.INNER_PANELS.ACTIVE,
+      transformResponse: (response: ApiResponse<InnerPanelType[]>) => response.data ?? [],
+      providesTags: [{ type: 'InnerPanels' }],
+    }),
+
+    // Inner Panel Types - Mutations
+    createInnerPanelType: builder.mutation<InnerPanelType, Omit<InnerPanelType, 'id'>>({
+      query: (body) => ({
+        url: API_ENDPOINTS.INNER_PANELS.BASE,
+        method: 'POST',
+        body,
+      }),
+      transformResponse: (response: ApiResponse<InnerPanelType>) => response.data as InnerPanelType,
+      invalidatesTags: [{ type: 'InnerPanels' }],
+    }),
+    updateInnerPanelType: builder.mutation<InnerPanelType, InnerPanelType>({
+      query: ({ id, ...rest }) => ({
+        url: API_ENDPOINTS.INNER_PANELS.BY_ID(id),
+        method: 'PUT',
+        body: { id, ...rest },
+      }),
+      transformResponse: (response: ApiResponse<InnerPanelType>) => response.data as InnerPanelType,
+      invalidatesTags: (_result, _error, arg) => [{ type: 'InnerPanels', id: arg.id }, { type: 'InnerPanels' }],
+    }),
+    deleteInnerPanelType: builder.mutation<ApiResponse<string>, number>({
+      query: (id) => ({
+        url: API_ENDPOINTS.INNER_PANELS.BY_ID(id),
+        method: 'DELETE',
+      }),
+      invalidatesTags: [{ type: 'InnerPanels' }],
     }),
 
     // Cabinets - Read
@@ -357,6 +397,12 @@ export const {
   useCreateMaterialMutation,
   useUpdateMaterialMutation,
   useDeleteMaterialMutation,
+  // Inner Panel Types
+  useGetInnerPanelTypesQuery,
+  useGetActiveInnerPanelTypesQuery,
+  useCreateInnerPanelTypeMutation,
+  useUpdateInnerPanelTypeMutation,
+  useDeleteInnerPanelTypeMutation,
   // Cabinets
   useGetCabinetsQuery,
   useGetCabinetByIdQuery,

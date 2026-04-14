@@ -21,6 +21,11 @@ export interface Material extends BaseEntity {
   unitRatePerSqft: number;
 }
 
+export interface InnerPanelType extends BaseEntity {
+  ratePerSqft: number;
+  multiplier: number;
+}
+
 export interface CabinetType {
   id: number;
   name: string;
