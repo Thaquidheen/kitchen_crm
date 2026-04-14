@@ -150,6 +150,12 @@ export function ProductSelector({
         materialRate: item.materialRate,
         lightingCost: item.lightingCost,
         accessoriesCost: item.accessoriesCost,
+        // Inner panel fields
+        innerPanelTypeId: item.innerPanelTypeId,
+        innerPanelTypeName: item.innerPanelTypeName,
+        innerPanelRate: item.innerPanelRate,
+        innerPanelMultiplier: item.innerPanelMultiplier,
+        innerPanelCost: item.innerPanelCost,
         // Elevation fields
         elevationId: item.elevationId,
         elevationName: item.elevationName,
