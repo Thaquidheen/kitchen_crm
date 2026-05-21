@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -31,6 +32,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     private RefreshTokenRepository refreshTokenRepository;
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public RefreshToken createRefreshToken(User user, String deviceInfo, String ipAddress) {
         // Enforce maximum active sessions
         long activeTokens = refreshTokenRepository.countActiveTokensByUser(user);
@@ -52,6 +54,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public RefreshToken rotateRefreshToken(RefreshToken oldToken, String deviceInfo, String ipAddress) {
         // Create new token
         String newTokenString = UUID.randomUUID().toString();

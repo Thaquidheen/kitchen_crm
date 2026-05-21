@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -113,8 +114,8 @@ public class AuthServiceImpl implements AuthService {
                     .build();
 
             return ApiResponse.success("Login successful", loginResponse);
-        } catch (Exception e) {
-            logger.error("Authentication failed for user: {}", loginRequest.getEmail(), e);
+        } catch (AuthenticationException e) {
+            logger.warn("Authentication failed for user {}: {}", loginRequest.getEmail(), e.getMessage());
             return ApiResponse.error("Invalid email or password");
         }
     }
