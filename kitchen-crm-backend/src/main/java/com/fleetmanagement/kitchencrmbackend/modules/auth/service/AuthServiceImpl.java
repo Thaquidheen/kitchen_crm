@@ -27,6 +27,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
@@ -77,6 +78,7 @@ public class AuthServiceImpl implements AuthService {
     private static final int RESET_TOKEN_EXPIRY_MINUTES = 30;
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ApiResponse<LoginResponse> authenticateUser(LoginRequest loginRequest, String deviceInfo, String ipAddress) {
         try {
             Authentication authentication = authenticationManager.authenticate(
@@ -121,6 +123,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ApiResponse<LoginResponse> refreshAccessToken(String refreshTokenString, String deviceInfo, String ipAddress) {
         try {
             // Validate refresh token
