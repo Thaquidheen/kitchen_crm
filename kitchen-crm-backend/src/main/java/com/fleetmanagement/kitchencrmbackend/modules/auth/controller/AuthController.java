@@ -8,7 +8,6 @@ import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.ResetPasswordReque
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.SignupRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.service.AuthService;
 import com.fleetmanagement.kitchencrmbackend.security.JwtTokenProvider;
-import com.fleetmanagement.kitchencrmbackend.security.RateLimitingService;
 import com.fleetmanagement.kitchencrmbackend.security.TokenBlacklistService;
 import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
@@ -29,9 +28,6 @@ public class AuthController {
     AuthService authService;
 
     @Autowired
-    RateLimitingService rateLimitingService;
-
-    @Autowired
     TokenBlacklistService tokenBlacklistService;
 
     @Autowired
@@ -43,11 +39,6 @@ public class AuthController {
             HttpServletRequest request) {
 
         String clientIp = getClientIp(request);
-
-        if (!rateLimitingService.isAllowed(clientIp)) {
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                    .body(ApiResponse.error("Too many login attempts. Please try again in 15 minutes."));
-        }
 
         String deviceInfo = request.getHeader("User-Agent");
         ApiResponse<LoginResponse> response = authService.authenticateUser(loginRequest, deviceInfo, clientIp);
@@ -71,12 +62,6 @@ public class AuthController {
 
         String clientIp = getClientIp(request);
         String deviceInfo = request.getHeader("User-Agent");
-
-        // Rate limit refresh requests
-        if (!rateLimitingService.isAllowed("refresh:" + clientIp)) {
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                    .body(ApiResponse.error("Too many refresh attempts. Please try again later."));
-        }
 
         ApiResponse<LoginResponse> response = authService.refreshAccessToken(
                 refreshRequest.getRefreshToken(),
@@ -120,14 +105,6 @@ public class AuthController {
     public ResponseEntity<ApiResponse<String>> forgotPassword(
             @Valid @RequestBody ForgotPasswordRequest request,
             HttpServletRequest httpRequest) {
-
-        String clientIp = getClientIp(httpRequest);
-
-        // Rate limit forgot password requests
-        if (!rateLimitingService.isAllowed("forgot-password:" + clientIp)) {
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                    .body(ApiResponse.error("Too many requests. Please try again later."));
-        }
 
         ApiResponse<String> response = authService.forgotPassword(request);
         return ResponseEntity.ok(response);
