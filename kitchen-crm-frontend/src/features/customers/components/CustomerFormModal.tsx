@@ -38,7 +38,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
       <Modal.Body>
         <CustomerForm
           customerId={customerId}
-          showStatusSelector={Boolean(customerId)}
+          showStatusSelector
           onSuccess={handleSuccess}
           onCancel={handleCancel}
         />

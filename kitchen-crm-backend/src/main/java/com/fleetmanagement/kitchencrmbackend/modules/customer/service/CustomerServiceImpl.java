@@ -286,7 +286,7 @@ public class CustomerServiceImpl implements CustomerService {
         customer.setEmail(dto.getEmail());
         customer.setAddress(dto.getAddress());
         customer.setKitchenTypes(dto.getKitchenTypes());
-        customer.setStatus(Customer.CustomerStatus.LEAD);
+        customer.setStatus(dto.getStatus() != null ? dto.getStatus() : Customer.CustomerStatus.LEAD);
         return customer;
     }
 }

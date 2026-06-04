@@ -169,10 +169,14 @@ export const CustomerDetail: React.FC<CustomerDetailProps> = ({ customer }) => {
               className="px-3 py-1.5 rounded-md border border-background-600 bg-background-800 text-text-900 text-sm"
               disabled={isUpdatingStatus}
             >
-              <option value="LEAD">LEAD</option>
-              <option value="POTENTIAL">POTENTIAL</option>
-              <option value="PLANNING">PLANNING</option>
-              <option value="CONFIRMED">CONFIRMED</option>
+              <option value="LEAD">Lead</option>
+              <option value="POTENTIAL">Potential</option>
+              <option value="DESIGN_STAGE">Design Stage</option>
+              <option value="QUOTE_GIVEN">Quote Given</option>
+              <option value="FOLLOW_UP">Follow Up</option>
+              <option value="NEGOTIATIONS">Negotiations</option>
+              <option value="CONFIRMED">Confirmed</option>
+              <option value="LOST">Lost</option>
             </select>
           </div>
         </div>

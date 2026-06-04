@@ -183,6 +183,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           contact: values.contact || undefined,
           address: values.address || undefined,
           kitchenTypes: values.kitchenTypes || undefined,
+          status: values.status,
           ...leadFields,
         };
         const res = await createCustomer(createPayload).unwrap();

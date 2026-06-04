@@ -55,6 +55,7 @@ export interface CustomerCreate {
   contact?: string;
   address?: string;
   kitchenTypes?: string;
+  status?: CustomerStatus;
   // Lead tracking fields
   leadSourceType?: LeadSourceType;
   architectId?: number;

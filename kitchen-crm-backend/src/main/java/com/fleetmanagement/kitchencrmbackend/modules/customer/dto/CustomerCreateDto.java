@@ -24,6 +24,9 @@ public class CustomerCreateDto {
     private String address;
     private String kitchenTypes;
 
+    // Initial status (defaults to LEAD if not provided)
+    private Customer.CustomerStatus status;
+
     // Lead tracking fields
     private Customer.LeadSourceType leadSourceType;
     private Long architectId;
