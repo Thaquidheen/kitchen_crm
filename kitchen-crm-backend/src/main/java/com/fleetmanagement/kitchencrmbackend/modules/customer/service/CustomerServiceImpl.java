@@ -8,8 +8,10 @@ import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -32,9 +34,15 @@ public class CustomerServiceImpl implements CustomerService {
     private ArchitectRepository architectRepository;
 
     @Override
-    public ApiResponse<Page<CustomerDto>> getAllCustomers(String name, String email,
-                                                          Customer.CustomerStatus status, Pageable pageable) {
-        Page<Customer> customers = customerRepository.findByFilters(name, email, status, pageable);
+    public ApiResponse<Page<CustomerDto>> getAllCustomers(String search, String name, String email,
+                                                          Customer.CustomerStatus status,
+                                                          Customer.LeadSourceType leadSourceType,
+                                                          String address, String kitchenTypes,
+                                                          LocalDateTime createdFrom, LocalDateTime createdTo,
+                                                          Pageable pageable) {
+        Specification<Customer> spec = CustomerSpecifications.withFilters(
+                search, name, email, status, leadSourceType, address, kitchenTypes, createdFrom, createdTo);
+        Page<Customer> customers = customerRepository.findAll(spec, pageable);
         Page<CustomerDto> customerDtos = customers.map(this::convertToDto);
         return ApiResponse.success(customerDtos);
     }
@@ -56,24 +64,15 @@ public class CustomerServiceImpl implements CustomerService {
         }
 
         Customer customer = convertToEntity(customerCreateDto);
-        
-        // Handle lead tracking
-        if (customerCreateDto.getArchitectId() != null) {
-            architectRepository.findById(customerCreateDto.getArchitectId()).ifPresent(architect -> {
-                customer.setArchitect(architect);
-                customer.setLeadSourceType(Customer.LeadSourceType.ARCHITECT);
-                customer.setManualLeadName(null);
-                customer.setManualLeadContact(null);
-            });
-        } else if (customerCreateDto.getManualLeadName() != null && !customerCreateDto.getManualLeadName().trim().isEmpty()) {
-            customer.setLeadSourceType(Customer.LeadSourceType.MANUAL);
-            customer.setManualLeadName(customerCreateDto.getManualLeadName());
-            customer.setManualLeadContact(customerCreateDto.getManualLeadContact());
-            customer.setArchitect(null);
-        } else {
-            customer.setLeadSourceType(Customer.LeadSourceType.NONE);
-        }
-        
+
+        // Handle lead source + referrer details
+        applyLeadSource(customer,
+                customerCreateDto.getLeadSourceType(),
+                customerCreateDto.getArchitectId(),
+                customerCreateDto.getReferralName(), customerCreateDto.getReferralContact(),
+                customerCreateDto.getReferralLocation(), customerCreateDto.getReferralDesignation(),
+                customerCreateDto.getManualLeadName(), customerCreateDto.getManualLeadContact());
+
         Customer savedCustomer = customerRepository.save(customer);
 
         // Create initial pipeline entry
@@ -114,26 +113,19 @@ public class CustomerServiceImpl implements CustomerService {
         existingCustomer.setAddress(customerDto.getAddress());
         existingCustomer.setKitchenTypes(customerDto.getKitchenTypes());
 
-        // Handle lead tracking updates
-        if (customerDto.getArchitectId() != null) {
-            architectRepository.findById(customerDto.getArchitectId()).ifPresent(architect -> {
-                existingCustomer.setArchitect(architect);
-                existingCustomer.setLeadSourceType(Customer.LeadSourceType.ARCHITECT);
-                existingCustomer.setManualLeadName(null);
-                existingCustomer.setManualLeadContact(null);
-            });
-        } else if (customerDto.getManualLeadName() != null && !customerDto.getManualLeadName().trim().isEmpty()) {
-            existingCustomer.setLeadSourceType(Customer.LeadSourceType.MANUAL);
-            existingCustomer.setManualLeadName(customerDto.getManualLeadName());
-            existingCustomer.setManualLeadContact(customerDto.getManualLeadContact());
-            existingCustomer.setArchitect(null);
-        } else if (customerDto.getLeadSourceType() != null) {
-            existingCustomer.setLeadSourceType(customerDto.getLeadSourceType());
-            if (customerDto.getLeadSourceType() == Customer.LeadSourceType.NONE) {
-                existingCustomer.setArchitect(null);
-                existingCustomer.setManualLeadName(null);
-                existingCustomer.setManualLeadContact(null);
-            }
+        // Handle lead source + referrer details. Only touch lead source if the payload
+        // actually specifies it, so partial updates don't wipe an existing source.
+        boolean leadSourceProvided = customerDto.getLeadSourceType() != null
+                || customerDto.getArchitectId() != null
+                || StringUtils.hasText(customerDto.getManualLeadName())
+                || StringUtils.hasText(customerDto.getReferralName());
+        if (leadSourceProvided) {
+            applyLeadSource(existingCustomer,
+                    customerDto.getLeadSourceType(),
+                    customerDto.getArchitectId(),
+                    customerDto.getReferralName(), customerDto.getReferralContact(),
+                    customerDto.getReferralLocation(), customerDto.getReferralDesignation(),
+                    customerDto.getManualLeadName(), customerDto.getManualLeadContact());
         }
 
         Customer updatedCustomer = customerRepository.save(existingCustomer);
@@ -221,8 +213,70 @@ public class CustomerServiceImpl implements CustomerService {
         dto.setLeadSourceType(customer.getLeadSourceType());
         dto.setManualLeadName(customer.getManualLeadName());
         dto.setManualLeadContact(customer.getManualLeadContact());
-        
+        dto.setReferralName(customer.getReferralName());
+        dto.setReferralContact(customer.getReferralContact());
+        dto.setReferralLocation(customer.getReferralLocation());
+        dto.setReferralDesignation(customer.getReferralDesignation());
+
         return dto;
+    }
+
+    /**
+     * Applies the chosen lead source to the customer, populating only the fields
+     * relevant to that source and clearing the rest. If {@code type} is null it is
+     * inferred for backward compatibility with older clients.
+     */
+    private void applyLeadSource(Customer customer,
+                                 Customer.LeadSourceType type,
+                                 Long architectId,
+                                 String referralName, String referralContact,
+                                 String referralLocation, String referralDesignation,
+                                 String manualLeadName, String manualLeadContact) {
+        if (type == null) {
+            if (architectId != null) {
+                type = Customer.LeadSourceType.ARCHITECT;
+            } else if (StringUtils.hasText(manualLeadName)) {
+                type = Customer.LeadSourceType.MANUAL_REFERRAL;
+                // Carry legacy manual fields into the new referral fields.
+                if (referralName == null) referralName = manualLeadName;
+                if (referralContact == null) referralContact = manualLeadContact;
+            } else {
+                type = Customer.LeadSourceType.NONE;
+            }
+        }
+
+        // Reset all source-specific fields, then set only those relevant to the type.
+        customer.setArchitect(null);
+        customer.setManualLeadName(null);
+        customer.setManualLeadContact(null);
+        customer.setReferralName(null);
+        customer.setReferralContact(null);
+        customer.setReferralLocation(null);
+        customer.setReferralDesignation(null);
+
+        switch (type) {
+            case ARCHITECT -> {
+                if (architectId != null) {
+                    architectRepository.findById(architectId).ifPresent(customer::setArchitect);
+                }
+            }
+            case BUILDER_REFERRAL, MANUAL_REFERRAL -> {
+                customer.setReferralName(referralName);
+                customer.setReferralContact(referralContact);
+                customer.setReferralLocation(referralLocation);
+                customer.setReferralDesignation(referralDesignation);
+            }
+            case MANUAL -> {
+                // Legacy "Enter Lead Manually"
+                customer.setManualLeadName(manualLeadName);
+                customer.setManualLeadContact(manualLeadContact);
+            }
+            default -> {
+                // NONE, ONLINE, WALK_IN, SCOUTING: no extra fields
+            }
+        }
+
+        customer.setLeadSourceType(type);
     }
 
     private Customer convertToEntity(CustomerCreateDto dto) {

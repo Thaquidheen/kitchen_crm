@@ -28,6 +28,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import type { Customer, CustomerStatus, CustomerListParams } from '../types';
+import { formatLeadSource, referralDetailLines } from '../leadSource';
 
 interface CustomerListProps {
   filters: CustomerListParams;
@@ -198,6 +199,7 @@ export function CustomerList({
                     )}
                   </button>
                 </th>
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-text-900 font-semibold text-sm">Lead Source</th>
                 <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-text-900 font-semibold text-sm">Kitchen Types</th>
                 <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-text-900 font-semibold text-sm">
                   <button
@@ -224,13 +226,14 @@ export function CustomerList({
                     <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-20 sm:w-24" /></td>
                     <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-6 bg-background-600 rounded w-16 sm:w-20" /></td>
                     <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-24 sm:w-28" /></td>
+                    <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-24 sm:w-28" /></td>
                     <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-16 sm:w-20" /></td>
                     <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-12 sm:w-16" /></td>
                   </tr>
                 ))
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 sm:py-12 text-center text-text-600 text-sm">
+                  <td colSpan={9} className="px-4 py-8 sm:py-12 text-center text-text-600 text-sm">
                     No customers found
                   </td>
                 </tr>
@@ -261,6 +264,16 @@ export function CustomerList({
                     <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-800 text-xs sm:text-sm">{customer.contact || '-'}</td>
                     <td className="px-2 sm:px-4 py-3 sm:py-4">
                       <StatusBadge status={customer.status} variant={getStatusVariant(customer.status)} />
+                    </td>
+                    <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-800 text-xs sm:text-sm">
+                      {(() => {
+                        const details = referralDetailLines(customer);
+                        return (
+                          <span title={details.length ? details.join('\n') : undefined}>
+                            {formatLeadSource(customer)}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-800">
                       {customer.kitchenTypes ? (

@@ -6,10 +6,16 @@ import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 public interface CustomerService {
-    ApiResponse<Page<CustomerDto>> getAllCustomers(String name, String email, Customer.CustomerStatus status, Pageable pageable);
+    ApiResponse<Page<CustomerDto>> getAllCustomers(String search, String name, String email,
+                                                   Customer.CustomerStatus status,
+                                                   Customer.LeadSourceType leadSourceType,
+                                                   String address, String kitchenTypes,
+                                                   LocalDateTime createdFrom, LocalDateTime createdTo,
+                                                   Pageable pageable);
     ApiResponse<CustomerDto> getCustomerById(Long id);
     ApiResponse<CustomerDto> createCustomer(CustomerCreateDto customerCreateDto, String createdBy);
     ApiResponse<CustomerDto> updateCustomer(Long id, CustomerDto customerDto, String updatedBy);

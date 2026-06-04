@@ -8,8 +8,10 @@ import {
   Calendar,
   Info,
   CheckCircle,
+  UserCheck,
 } from 'lucide-react';
 import type { Customer, CustomerStatus } from '../types';
+import { leadSourceLabel, isReferralSource } from '../leadSource';
 
 export interface CustomerOverviewTabProps {
   customer: Customer;
@@ -130,6 +132,28 @@ export const CustomerOverviewTab: React.FC<CustomerOverviewTabProps> = ({ custom
           value={customer.kitchenTypes || 'Not specified'}
           isArray={false}
         />
+      </div>
+
+      {/* Lead Source */}
+      <div>
+        <h2 className="text-lg font-semibold text-text-900 mb-4 flex items-center gap-2">
+          <UserCheck className="w-5 h-5" />
+          Lead Source
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <InfoCard icon={UserCheck} label="Source" value={leadSourceLabel(customer.leadSourceType)} />
+          {customer.leadSourceType === 'ARCHITECT' && (
+            <InfoCard icon={User} label="Architect" value={customer.architectName} />
+          )}
+          {isReferralSource(customer.leadSourceType) && (
+            <>
+              <InfoCard icon={User} label="Referrer Name" value={customer.referralName} />
+              <InfoCard icon={Phone} label="Referrer Number" value={customer.referralContact} />
+              <InfoCard icon={MapPin} label="Referrer Location" value={customer.referralLocation} />
+              <InfoCard icon={Tag} label="Referrer Designation" value={customer.referralDesignation} />
+            </>
+          )}
+        </div>
       </div>
 
       {/* Timestamps */}

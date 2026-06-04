@@ -15,7 +15,16 @@ export type CustomerStatus =
   | 'CONFIRMED'
   | 'LOST';
 
-export type LeadSourceType = 'NONE' | 'ARCHITECT' | 'MANUAL' | 'ONLINE';
+// 'MANUAL' is legacy (replaced by 'MANUAL_REFERRAL'); kept so old records still type-check.
+export type LeadSourceType =
+  | 'NONE'
+  | 'ARCHITECT'
+  | 'MANUAL'
+  | 'ONLINE'
+  | 'WALK_IN'
+  | 'SCOUTING'
+  | 'BUILDER_REFERRAL'
+  | 'MANUAL_REFERRAL';
 
 export interface Customer {
   id: number;
@@ -31,6 +40,11 @@ export interface Customer {
   leadSourceType?: LeadSourceType;
   manualLeadName?: string;
   manualLeadContact?: string;
+  // Referrer details (Builder Referral / Manual Referral)
+  referralName?: string;
+  referralContact?: string;
+  referralLocation?: string;
+  referralDesignation?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -42,9 +56,15 @@ export interface CustomerCreate {
   address?: string;
   kitchenTypes?: string;
   // Lead tracking fields
+  leadSourceType?: LeadSourceType;
   architectId?: number;
   manualLeadName?: string;
   manualLeadContact?: string;
+  // Referrer details (Builder Referral / Manual Referral)
+  referralName?: string;
+  referralContact?: string;
+  referralLocation?: string;
+  referralDesignation?: string;
 }
 
 export type CustomerUpdate = Partial<Omit<Customer, 'id'>> & { id: number };
@@ -54,9 +74,16 @@ export interface CustomerListParams {
   size?: number;
   sortBy?: string;
   sortDir?: 'asc' | 'desc';
+  // Free-text search across name/email/phone/address/kitchen-types/referrer
+  search?: string;
   name?: string;
   email?: string;
   status?: CustomerStatus;
+  leadSourceType?: LeadSourceType;
+  address?: string;
+  kitchenTypes?: string;
+  createdFrom?: string; // YYYY-MM-DD
+  createdTo?: string;   // YYYY-MM-DD
 }
 
 export interface CustomerStatistics {

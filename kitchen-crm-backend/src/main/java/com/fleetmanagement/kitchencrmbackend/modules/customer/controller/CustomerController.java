@@ -11,10 +11,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Map;
 
 @RestController
@@ -27,9 +31,15 @@ public class CustomerController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<CustomerDto>>> getAllCustomers(
+            @RequestParam(required = false) String search,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
             @RequestParam(required = false) Customer.CustomerStatus status,
+            @RequestParam(required = false) Customer.LeadSourceType leadSourceType,
+            @RequestParam(required = false) String address,
+            @RequestParam(required = false) String kitchenTypes,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdTo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -39,7 +49,12 @@ public class CustomerController {
                 Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        return ResponseEntity.ok(customerService.getAllCustomers(name, email, status, pageable));
+        LocalDateTime createdFromDt = createdFrom != null ? createdFrom.atStartOfDay() : null;
+        LocalDateTime createdToDt = createdTo != null ? createdTo.atTime(LocalTime.MAX) : null;
+
+        return ResponseEntity.ok(customerService.getAllCustomers(
+                search, name, email, status, leadSourceType, address, kitchenTypes,
+                createdFromDt, createdToDt, pageable));
     }
 
     @GetMapping("/statistics")

@@ -7,6 +7,7 @@ import { useCreateCustomerMutation, useUpdateCustomerMutation, useGetCustomerByI
 import { useGetAllArchitectsQuery } from '../../architects/architectsAPI';
 import { Button } from '@/components/ui/Button';
 import type { Customer, CustomerCreate, CustomerStatus } from '../../customers/types';
+import { SELECTABLE_LEAD_SOURCES, isReferralSource } from '../../customers/leadSource';
 
 const customerSchema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -20,23 +21,26 @@ const customerSchema = z.object({
   kitchenTypes: z.string().optional().or(z.literal('')),
   status: z.enum(['LEAD', 'POTENTIAL', 'DESIGN_STAGE', 'QUOTE_GIVEN', 'FOLLOW_UP', 'NEGOTIATIONS', 'CONFIRMED', 'LOST']).optional(),
   // Lead tracking fields
-  leadSourceType: z.enum(['NONE', 'ARCHITECT', 'MANUAL', 'ONLINE']).optional(),
+  leadSourceType: z.enum(['NONE', 'ARCHITECT', 'MANUAL', 'ONLINE', 'WALK_IN', 'SCOUTING', 'BUILDER_REFERRAL', 'MANUAL_REFERRAL']).optional(),
   architectId: z.number().optional(),
   manualLeadName: z.string().optional().or(z.literal('')),
   manualLeadContact: z.string().optional().or(z.literal('')),
+  // Referrer details (optional)
+  referralName: z.string().optional().or(z.literal('')),
+  referralContact: z.string().optional().or(z.literal('')),
+  referralLocation: z.string().optional().or(z.literal('')),
+  referralDesignation: z.string().optional().or(z.literal('')),
 }).refine(
   (data) => {
+    // Architect is the only source that requires a selection; referral fields are optional.
     if (data.leadSourceType === 'ARCHITECT') {
       return data.architectId !== undefined && data.architectId !== null;
-    }
-    if (data.leadSourceType === 'MANUAL') {
-      return data.manualLeadName && data.manualLeadName.trim().length > 0;
     }
     return true;
   },
   {
-    message: 'Please select an architect or enter lead details',
-    path: ['leadSourceType'],
+    message: 'Please select an architect',
+    path: ['architectId'],
   }
 );
 
@@ -79,6 +83,10 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
       architectId: existingCustomer?.architectId,
       manualLeadName: existingCustomer?.manualLeadName ?? '',
       manualLeadContact: existingCustomer?.manualLeadContact ?? '',
+      referralName: existingCustomer?.referralName ?? '',
+      referralContact: existingCustomer?.referralContact ?? '',
+      referralLocation: existingCustomer?.referralLocation ?? '',
+      referralDesignation: existingCustomer?.referralDesignation ?? '',
     }),
     [existingCustomer]
   );
@@ -98,17 +106,28 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
 
   const leadSourceType = watch('leadSourceType');
 
-  // Clear fields when lead source type changes
+  // Clear fields not relevant to the chosen lead source
   useEffect(() => {
+    const clearReferral = () => {
+      setValue('referralName', '');
+      setValue('referralContact', '');
+      setValue('referralLocation', '');
+      setValue('referralDesignation', '');
+    };
     if (leadSourceType === 'ARCHITECT') {
       setValue('manualLeadName', '');
       setValue('manualLeadContact', '');
-    } else if (leadSourceType === 'MANUAL') {
-      setValue('architectId', undefined);
-    } else if (leadSourceType === 'NONE' || leadSourceType === 'ONLINE') {
+      clearReferral();
+    } else if (isReferralSource(leadSourceType)) {
       setValue('architectId', undefined);
       setValue('manualLeadName', '');
       setValue('manualLeadContact', '');
+    } else {
+      // NONE, ONLINE, WALK_IN, SCOUTING
+      setValue('architectId', undefined);
+      setValue('manualLeadName', '');
+      setValue('manualLeadContact', '');
+      clearReferral();
     }
   }, [leadSourceType, setValue]);
 
@@ -133,19 +152,26 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
 
   const onSubmit = async (values: CustomerFormValues) => {
     try {
+      const isReferral = isReferralSource(values.leadSourceType);
+      const leadFields = {
+        leadSourceType: values.leadSourceType,
+        architectId: values.leadSourceType === 'ARCHITECT' ? values.architectId : undefined,
+        referralName: isReferral ? (values.referralName || undefined) : undefined,
+        referralContact: isReferral ? (values.referralContact || undefined) : undefined,
+        referralLocation: isReferral ? (values.referralLocation || undefined) : undefined,
+        referralDesignation: isReferral ? (values.referralDesignation || undefined) : undefined,
+      };
+
       if (isEdit) {
-        const payload = { 
-          id: customerId as number, 
+        const payload = {
+          id: customerId as number,
           name: values.name,
           email: values.email || undefined,
           contact: values.contact || undefined,
           address: values.address || undefined,
           kitchenTypes: values.kitchenTypes || undefined,
           status: values.status,
-          leadSourceType: values.leadSourceType,
-          architectId: values.leadSourceType === 'ARCHITECT' ? values.architectId : undefined,
-          manualLeadName: values.leadSourceType === 'MANUAL' ? (values.manualLeadName || undefined) : undefined,
-          manualLeadContact: values.leadSourceType === 'MANUAL' ? (values.manualLeadContact || undefined) : undefined,
+          ...leadFields,
         } as Customer;
         const res = await updateCustomer(payload).unwrap();
         toast.success('Customer updated');
@@ -157,9 +183,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           contact: values.contact || undefined,
           address: values.address || undefined,
           kitchenTypes: values.kitchenTypes || undefined,
-          architectId: values.leadSourceType === 'ARCHITECT' ? values.architectId : undefined,
-          manualLeadName: values.leadSourceType === 'MANUAL' ? (values.manualLeadName || undefined) : undefined,
-          manualLeadContact: values.leadSourceType === 'MANUAL' ? (values.manualLeadContact || undefined) : undefined,
+          ...leadFields,
         };
         const res = await createCustomer(createPayload).unwrap();
         toast.success('Customer created');
@@ -255,46 +279,18 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
         <label className="block text-sm font-medium mb-2">Lead Source</label>
         
         <div className="space-y-2 mb-3">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              value="NONE"
-              {...register('leadSourceType')}
-              disabled={disabled}
-              className="cursor-pointer"
-            />
-            <span>No Lead</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              value="ARCHITECT"
-              {...register('leadSourceType')}
-              disabled={disabled}
-              className="cursor-pointer"
-            />
-            <span>Select Architect</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              value="MANUAL"
-              {...register('leadSourceType')}
-              disabled={disabled}
-              className="cursor-pointer"
-            />
-            <span>Enter Lead Manually</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              value="ONLINE"
-              {...register('leadSourceType')}
-              disabled={disabled}
-              className="cursor-pointer"
-            />
-            <span>Online Lead</span>
-          </label>
+          {SELECTABLE_LEAD_SOURCES.map((source) => (
+            <label key={source.value} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                value={source.value}
+                {...register('leadSourceType')}
+                disabled={disabled}
+                className="cursor-pointer"
+              />
+              <span>{source.label}</span>
+            </label>
+          ))}
         </div>
 
         {/* Architect Selection */}
@@ -322,35 +318,55 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           </div>
         )}
 
-        {/* Manual Lead Entry */}
-        {leadSourceType === 'MANUAL' && (
-          <>
+        {/* Referrer details (Builder Referral / Manual Referral) */}
+        {isReferralSource(leadSourceType) && (
+          <div className="space-y-3">
+            <p className="text-gray-400 text-xs">Referrer details (all optional)</p>
             <div>
-              <label className="block text-sm font-medium mb-1">Lead Name</label>
+              <label className="block text-sm font-medium mb-1">Referrer Name</label>
               <input
                 type="text"
                 className="w-full rounded-md border border-gray-600 bg-white text-black p-2 !text-black"
                 style={{ color: '#000000' }}
-                placeholder="Lead name"
-                {...register('manualLeadName')}
+                placeholder="Name"
+                {...register('referralName')}
                 disabled={disabled}
               />
-              {errors.manualLeadName && (
-                <p className="text-red-500 text-sm mt-1">{errors.manualLeadName.message}</p>
-              )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Lead Contact Number</label>
+              <label className="block text-sm font-medium mb-1">Referrer Number</label>
               <input
                 type="text"
                 className="w-full rounded-md border border-gray-600 bg-white text-black p-2 !text-black"
                 style={{ color: '#000000' }}
-                placeholder="Contact number"
-                {...register('manualLeadContact')}
+                placeholder="Phone number"
+                {...register('referralContact')}
                 disabled={disabled}
               />
             </div>
-          </>
+            <div>
+              <label className="block text-sm font-medium mb-1">Referrer Location</label>
+              <input
+                type="text"
+                className="w-full rounded-md border border-gray-600 bg-white text-black p-2 !text-black"
+                style={{ color: '#000000' }}
+                placeholder="Location"
+                {...register('referralLocation')}
+                disabled={disabled}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Referrer Designation</label>
+              <input
+                type="text"
+                className="w-full rounded-md border border-gray-600 bg-white text-black p-2 !text-black"
+                style={{ color: '#000000' }}
+                placeholder="Designation"
+                {...register('referralDesignation')}
+                disabled={disabled}
+              />
+            </div>
+          </div>
         )}
         {errors.leadSourceType && (
           <p className="text-red-500 text-sm mt-1">{errors.leadSourceType.message}</p>

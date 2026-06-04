@@ -1,5 +1,6 @@
 package com.fleetmanagement.kitchencrmbackend.modules.customer.dto;
 
+import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -24,7 +25,14 @@ public class CustomerCreateDto {
     private String kitchenTypes;
 
     // Lead tracking fields
+    private Customer.LeadSourceType leadSourceType;
     private Long architectId;
     private String manualLeadName;
     private String manualLeadContact;
+
+    // Referrer details (Builder Referral / Manual Referral)
+    private String referralName;
+    private String referralContact;
+    private String referralLocation;
+    private String referralDesignation;
 }

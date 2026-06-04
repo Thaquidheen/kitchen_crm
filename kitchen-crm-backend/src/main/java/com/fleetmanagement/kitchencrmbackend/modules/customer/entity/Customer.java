@@ -51,11 +51,25 @@ public class Customer extends Auditable {
     @Column(name = "manual_lead_contact")
     private String manualLeadContact;
 
+    // Referrer details (used when leadSourceType is BUILDER_REFERRAL or MANUAL_REFERRAL)
+    @Column(name = "referral_name")
+    private String referralName;
+
+    @Column(name = "referral_contact")
+    private String referralContact;
+
+    @Column(name = "referral_location")
+    private String referralLocation;
+
+    @Column(name = "referral_designation")
+    private String referralDesignation;
+
     public enum CustomerStatus {
         LEAD, POTENTIAL, DESIGN_STAGE, QUOTE_GIVEN, FOLLOW_UP, NEGOTIATIONS, CONFIRMED, LOST
     }
 
     public enum LeadSourceType {
-        NONE, ARCHITECT, MANUAL, ONLINE
+        // MANUAL is legacy (replaced by MANUAL_REFERRAL); kept so old rows still deserialize.
+        NONE, ARCHITECT, MANUAL, ONLINE, WALK_IN, SCOUTING, BUILDER_REFERRAL, MANUAL_REFERRAL
     }
 }
