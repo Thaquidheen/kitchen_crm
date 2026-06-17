@@ -225,11 +225,30 @@ export function QuotationPreview({
       const otherExpenses = kMiscWithMargin + kMiscTax;
       const kitchenTotal = kitchenSubtotal + otherExpenses;
 
+      // Per-kitchen margin/tax (products only — matches the aggregate "Total Margin" in Quick Stats,
+      // which sums the four category margins). Shown separately for each kitchen in the Review step.
+      const kitchenMarginAmount =
+        kAccessoriesTotal.marginAmount +
+        kCabinetsTotal.marginAmount +
+        kDoorsTotal.marginAmount +
+        kLightingTotal.marginAmount;
+      const kitchenTaxAmount =
+        kAccessoriesTotal.taxAmount +
+        kCabinetsTotal.taxAmount +
+        kDoorsTotal.taxAmount +
+        kLightingTotal.taxAmount;
+      // Products subtotal before margin & tax (for context in the breakdown).
+      const kitchenProductsBase =
+        kAccessoriesSubtotal + kCabinetsSubtotal + kDoorsSubtotal + kLightingSubtotal;
+
       return {
         kitchen,
         subtotal: kitchenSubtotal,
         otherExpenses,
         total: kitchenTotal,
+        marginAmount: kitchenMarginAmount,
+        taxAmount: kitchenTaxAmount,
+        productsBase: kitchenProductsBase,
         categoryTotals: {
           accessories: kAccessoriesTotal,
           cabinets: kCabinetsTotal,
@@ -403,6 +422,25 @@ export function QuotationPreview({
               {/* Kitchen Totals */}
               <div className="border-t border-background-600 pt-3 sm:pt-4">
                 <div className="space-y-2 text-xs sm:text-sm">
+                  {/* Per-kitchen pricing breakdown (margin shown separately for each kitchen) */}
+                  <div className="flex justify-between">
+                    <span className="text-text-700">Subtotal (before margin &amp; tax)</span>
+                    <span className="font-medium text-text-900">
+                      ₹{kitchenCalc.productsBase.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-text-700">Margin</span>
+                    <span className="font-medium text-success">
+                      ₹{kitchenCalc.marginAmount.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-text-700">Tax</span>
+                    <span className="font-medium text-warning">
+                      ₹{kitchenCalc.taxAmount.toLocaleString('en-IN')}
+                    </span>
+                  </div>
                   {kitchenCalc.otherExpenses > 0 && (
                     <>
                       <div className="flex justify-between">
