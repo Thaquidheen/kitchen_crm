@@ -29,6 +29,7 @@
     <parameter name="GRAND_TOTAL" class="java.math.BigDecimal"/>
     <parameter name="TOTAL_KITCHENS" class="java.lang.Integer"/>
     <parameter name="OTHER_EXPENSES_TOTAL" class="java.math.BigDecimal"/>
+    <parameter name="COMMON_TRANSPORTATION" class="java.math.BigDecimal"/>
     <parameter name="KITCHEN_SUMMARY_DATA" class="java.lang.Object"/>
 
     <!-- Fields from QuotationKitchenDto -->
@@ -415,6 +416,9 @@
                 </subreportParameter>
                 <subreportParameter name="OTHER_EXPENSES_TOTAL">
                     <subreportParameterExpression><![CDATA[$P{OTHER_EXPENSES_TOTAL}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="COMMON_TRANSPORTATION">
+                    <subreportParameterExpression><![CDATA[$P{COMMON_TRANSPORTATION}]]></subreportParameterExpression>
                 </subreportParameter>
                 <dataSourceExpression><![CDATA[(net.sf.jasperreports.engine.JRDataSource)$P{KITCHEN_SUMMARY_DATA}]]></dataSourceExpression>
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "quotation-grand-summary.jasper"]]></subreportExpression>

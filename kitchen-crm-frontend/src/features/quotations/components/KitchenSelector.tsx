@@ -48,8 +48,9 @@ export function KitchenSelector({ kitchens, onKitchensChange, suggestedKitchenTy
       cabinets: [],
       doors: [],
       lighting: [],
+      // Transportation is a single common charge entered once at the quotation level
+      // (see QuotationBuilderPage), so it is NOT a per-kitchen default. Installation stays per-kitchen.
       otherExpenses: [
-        { name: 'Transportation', amount: 0, isDefault: true },
         { name: 'Installation', amount: 0, isDefault: true },
       ],
     };

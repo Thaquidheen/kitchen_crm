@@ -364,6 +364,17 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         params.put("TRANSPORTATION_PRICE", BigDecimal.ZERO);
         params.put("INSTALLATION_PRICE", BigDecimal.ZERO);
 
+        // Common transportation (multi-kitchen): a single charge for the whole quotation,
+        // with miscellaneous margin/tax applied (matches PricingServiceImpl). Shown as one
+        // line in the grand summary; installation remains per-kitchen.
+        BigDecimal commonTransportBase = (isMultiKitchen && quotation.getTransportationPrice() != null)
+                ? quotation.getTransportationPrice() : BigDecimal.ZERO;
+        BigDecimal commonTransportMargin = commonTransportBase.multiply(grandMiscMarginPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal commonTransportWithMargin = commonTransportBase.add(commonTransportMargin);
+        BigDecimal commonTransportTax = commonTransportWithMargin.multiply(grandMiscTaxPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal commonTransportFinal = commonTransportWithMargin.add(commonTransportTax);
+        params.put("COMMON_TRANSPORTATION", commonTransportFinal);
+
         // Grand total
         BigDecimal grandTotal = calculateGrandTotal(quotation);
         params.put("GRAND_TOTAL", grandTotal);
@@ -545,10 +556,21 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
     private BigDecimal calculateGrandTotal(QuotationDto quotation) {
         BigDecimal total;
         if (quotation.getKitchens() != null && !quotation.getKitchens().isEmpty()) {
-            // Multi-kitchen: kitchen totals already include per-kitchen transportation/installation
+            // Multi-kitchen: kitchen totals already include per-kitchen installation.
             total = quotation.getKitchens().stream()
                 .map(k -> k.getTotalAmount() != null ? k.getTotalAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+            // Add the single common transportation charge once (with miscellaneous margin/tax).
+            BigDecimal transportBase = quotation.getTransportationPrice() != null
+                ? quotation.getTransportationPrice() : BigDecimal.ZERO;
+            BigDecimal miscMarginPct = quotation.getMiscellaneousMarginPercentage() != null
+                ? quotation.getMiscellaneousMarginPercentage() : BigDecimal.ZERO;
+            BigDecimal miscTaxPct = quotation.getMiscellaneousTaxPercentage() != null
+                ? quotation.getMiscellaneousTaxPercentage() : BigDecimal.valueOf(18.0);
+            BigDecimal transportMargin = transportBase.multiply(miscMarginPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            BigDecimal transportWithMargin = transportBase.add(transportMargin);
+            BigDecimal transportTax = transportWithMargin.multiply(miscTaxPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            total = total.add(transportWithMargin.add(transportTax));
         } else if (quotation.getTotalAmount() != null) {
             total = quotation.getTotalAmount();
         } else {

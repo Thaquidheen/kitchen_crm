@@ -224,22 +224,49 @@ export function QuotationBuilderPage() {
 
     const globalPaired = pairCabinetsAndDoors(existingQuotation.cabinets || [], existingQuotation.doors || []);
 
-    // Build otherExpenses from backend data
-    const buildOtherExpenses = (transportPrice: number, installPrice: number, backendExpenses?: any[]): QuotationOtherExpense[] => {
+    // Build otherExpenses from backend data.
+    // forKitchen=true: transportation is a quotation-level common charge, never per-kitchen,
+    // so it is excluded and an Installation default is ensured.
+    const buildOtherExpenses = (
+      transportPrice: number,
+      installPrice: number,
+      backendExpenses?: any[],
+      forKitchen: boolean = false
+    ): QuotationOtherExpense[] => {
       if (backendExpenses && backendExpenses.length > 0) {
-        return backendExpenses.map((e: any) => ({
+        let mapped: QuotationOtherExpense[] = backendExpenses.map((e: any) => ({
           id: e.id,
           name: e.name,
           amount: Number(e.amount || 0),
           isDefault: e.isDefault ?? false,
         }));
+        if (forKitchen) {
+          mapped = mapped.filter((e) => e.name !== 'Transportation');
+          if (!mapped.some((e) => e.name === 'Installation')) {
+            mapped.unshift({ name: 'Installation', amount: installPrice, isDefault: true });
+          }
+        }
+        return mapped;
       }
-      // Fallback: build from transportationPrice/installationPrice
+      // Fallback: build from scalar prices
+      if (forKitchen) {
+        return [{ name: 'Installation', amount: installPrice, isDefault: true }];
+      }
       return [
         { name: 'Transportation', amount: transportPrice, isDefault: true },
         { name: 'Installation', amount: installPrice, isDefault: true },
       ];
     };
+
+    // Common (quotation-level) transportation seed. Prefer the quotation-level value; if it is 0
+    // (e.g. legacy multi-kitchen data where transportation was stored per kitchen), fall back to the
+    // largest per-kitchen transportation so the value is not silently lost on load.
+    const commonTransportSeed = Number(existingQuotation.transportationPrice || 0) > 0
+      ? Number(existingQuotation.transportationPrice)
+      : (existingQuotation.kitchens || []).reduce(
+          (max: number, k: any) => Math.max(max, Number(k.transportationPrice || 0)),
+          0
+        );
 
     // Map API quotation to builder form shape
     setFormData({
@@ -341,9 +368,10 @@ export function QuotationBuilderPage() {
           };
         }),
         otherExpenses: buildOtherExpenses(
-          Number(k.transportationPrice || 0),
+          0,
           Number(k.installationPrice || 0),
-          k.otherExpenses
+          k.otherExpenses,
+          true
         ),
       })),
       lighting: (existingQuotation.lighting || []).map((l: any) => {
@@ -365,7 +393,7 @@ export function QuotationBuilderPage() {
         };
       }),
       otherExpenses: buildOtherExpenses(
-        Number(existingQuotation.transportationPrice || 0),
+        commonTransportSeed,
         Number(existingQuotation.installationPrice || 0),
         existingQuotation.otherExpenses
       ),
@@ -440,6 +468,10 @@ export function QuotationBuilderPage() {
   // Helper function to convert form data to API request format
   const convertFormDataToRequest = (isDraft: boolean): CreateQuotationRequest => {
     const hasKitchens = (formData.kitchens?.length || 0) > 0;
+    // Transportation is a single COMMON charge for the whole quotation only when there are 2+
+    // kitchens. With a single kitchen it is carried on that kitchen (same as legacy), and with no
+    // kitchens it stays at the quotation level (legacy).
+    const isMultiKitchen = (formData.kitchens?.length || 0) >= 2;
     // Extract transportation/installation from otherExpenses for backward compat
     const globalExpenses = formData.otherExpenses || [];
     const transportFromExpenses = globalExpenses.find(e => e.name === 'Transportation')?.amount || 0;
@@ -447,7 +479,9 @@ export function QuotationBuilderPage() {
     return {
       customerId: formData.customerId || 0,
       projectName: formData.projectName || undefined,
-      transportationPrice: hasKitchens ? 0 : transportFromExpenses,
+      // Common transportation lives at the quotation level only for multi-kitchen (2+). For a single
+      // kitchen it is sent on the kitchen (below); for no kitchens it is the legacy quotation value.
+      transportationPrice: isMultiKitchen ? transportFromExpenses : (hasKitchens ? 0 : transportFromExpenses),
       installationPrice: hasKitchens ? 0 : installFromExpenses,
       marginPercentage: formData.marginPercentage || 0, // Global (backward compatibility)
       taxPercentage: formData.taxPercentage || 0, // Global (backward compatibility)
@@ -527,8 +561,10 @@ export function QuotationBuilderPage() {
       otherExpenses: hasKitchens ? [] : (formData.otherExpenses || []).filter(e => e.amount > 0 || e.isDefault),
       kitchens: (formData.kitchens || []).map((kitchen: QuotationKitchenFormData) => {
         const kitchenExpenses = kitchen.otherExpenses || [];
-        const kitchenTransport = kitchenExpenses.find(e => e.name === 'Transportation')?.amount || 0;
         const kitchenInstall = kitchenExpenses.find(e => e.name === 'Installation')?.amount || 0;
+        // Multi-kitchen (2+): transportation is common at the quotation level, so it is 0 per kitchen.
+        // Single kitchen: the common transportation value is carried on the kitchen.
+        const kitchenTransport = isMultiKitchen ? 0 : transportFromExpenses;
         return {
         kitchenName: kitchen.kitchenName,
         kitchenOrder: kitchen.kitchenOrder,
@@ -600,7 +636,17 @@ export function QuotationBuilderPage() {
           totalPrice: item.totalPrice || item.price || 0,
           description: item.name || item.description || 'Lighting Item',
         })),
-        otherExpenses: kitchenExpenses.filter(e => e.amount > 0 || e.isDefault),
+        otherExpenses: (() => {
+          const base = kitchenExpenses
+            .filter(e => e.name !== 'Transportation')
+            .filter(e => e.amount > 0 || e.isDefault);
+          // Single kitchen: surface the common transportation as a line item so it appears in the
+          // kitchen's MISCELLANEOUS section of the PDF (multi-kitchen shows it in the grand summary).
+          if (!isMultiKitchen && kitchenTransport > 0) {
+            return [{ name: 'Transportation', amount: kitchenTransport, isDefault: true }, ...base];
+          }
+          return base;
+        })(),
       };
       }),
     };
@@ -1298,6 +1344,36 @@ export function QuotationBuilderPage() {
                 {/* Check if kitchens exist - if yes, show KitchenProductTabs, otherwise show global product selection */}
                 {formData.kitchens && formData.kitchens.length > 0 ? (
                   <>
+                    {/* Common transportation — one charge for the whole quotation (installation stays per-kitchen) */}
+                    <Card className="p-4 sm:p-5 bg-background-800 border-background-600">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                          <h3 className="text-sm sm:text-base font-semibold text-text-900">Transportation (common)</h3>
+                          <p className="text-xs text-text-600 mt-0.5">
+                            Charged once for the whole quotation, regardless of the number of kitchens. Installation is entered per kitchen below.
+                          </p>
+                        </div>
+                        <div className="w-full sm:w-48">
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            value={(formData.otherExpenses || []).find(e => e.name === 'Transportation')?.amount || ''}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              const num = raw === '' ? 0 : parseFloat(raw);
+                              if (isNaN(num)) return;
+                              const amount = Math.max(0, num);
+                              const list = [...(formData.otherExpenses || [])];
+                              const idx = list.findIndex(item => item.name === 'Transportation');
+                              if (idx >= 0) list[idx] = { ...list[idx], amount };
+                              else list.unshift({ name: 'Transportation', amount, isDefault: true });
+                              setFormData({ ...formData, otherExpenses: list });
+                            }}
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                    </Card>
                     <KitchenProductTabs
                       kitchens={formData.kitchens}
                       onKitchensChange={(kitchens) => setFormData({ ...formData, kitchens })}
@@ -1540,7 +1616,7 @@ export function QuotationBuilderPage() {
                   cabinets={formData.cabinets || []}
                   doors={formData.doors || []}
                   lighting={formData.lighting || []}
-                  transportationPrice={formData.kitchens && formData.kitchens.length > 0 ? 0 : ((formData.otherExpenses || []).find(e => e.name === 'Transportation')?.amount || 0)}
+                  transportationPrice={(formData.otherExpenses || []).find(e => e.name === 'Transportation')?.amount || 0}
                   installationPrice={formData.kitchens && formData.kitchens.length > 0 ? 0 : ((formData.otherExpenses || []).find(e => e.name === 'Installation')?.amount || 0)}
                   otherExpenses={formData.kitchens && formData.kitchens.length > 0 ? undefined : (formData.otherExpenses || [])}
                   accessoriesMarginPercentage={formData.accessoriesMarginPercentage ?? 20}

@@ -14,6 +14,7 @@
 
     <parameter name="GRAND_TOTAL" class="java.math.BigDecimal"/>
     <parameter name="OTHER_EXPENSES_TOTAL" class="java.math.BigDecimal"/>
+    <parameter name="COMMON_TRANSPORTATION" class="java.math.BigDecimal"/>
 
     <field name="kitchenName" class="java.lang.String"/>
     <field name="totalAmount" class="java.math.BigDecimal"/>
@@ -58,36 +59,55 @@
     </detail>
 
     <summary>
-        <band height="70">
+        <band height="92">
             <!-- Separator line above grand total -->
             <line>
                 <reportElement x="0" y="2" width="545" height="1" forecolor="#CCCCCC" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50006"/>
                 <graphicElement><pen lineWidth="0.5"/></graphicElement>
             </line>
+            <!-- Transportation (common) line — single charge for the whole quotation (conditional) -->
+            <staticText>
+                <reportElement x="5" y="8" width="350" height="20" forecolor="#333333" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50011">
+                    <printWhenExpression><![CDATA[$P{COMMON_TRANSPORTATION} != null && $P{COMMON_TRANSPORTATION}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+                </reportElement>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="10"/>
+                </textElement>
+                <text><![CDATA[Transportation (common)]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="355" y="8" width="190" height="20" forecolor="#333333" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50012">
+                    <printWhenExpression><![CDATA[$P{COMMON_TRANSPORTATION} != null && $P{COMMON_TRANSPORTATION}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Left" verticalAlignment="Middle">
+                    <font fontName="Serif" size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($P{COMMON_TRANSPORTATION}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
+            </textField>
             <!-- Incl. Other Expenses note (conditional) -->
             <textField>
-                <reportElement x="5" y="8" width="350" height="18" forecolor="#777777" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50007">
+                <reportElement x="5" y="30" width="350" height="16" forecolor="#777777" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50007">
                     <printWhenExpression><![CDATA[$P{OTHER_EXPENSES_TOTAL} != null && $P{OTHER_EXPENSES_TOTAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
                 </reportElement>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="8" isItalic="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA["(Incl. Other Expenses: Rs. " + new java.text.DecimalFormat("0.00").format($P{OTHER_EXPENSES_TOTAL}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,") + ")"]]></textFieldExpression>
+                <textFieldExpression><![CDATA["(Incl. per-kitchen Other Expenses: Rs. " + new java.text.DecimalFormat("0.00").format($P{OTHER_EXPENSES_TOTAL}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,") + ")"]]></textFieldExpression>
             </textField>
             <!-- Grand Total black bar -->
             <rectangle>
-                <reportElement x="0" y="30" width="545" height="35" backcolor="#000000" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50008"/>
+                <reportElement x="0" y="52" width="545" height="35" backcolor="#000000" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50008"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="5" y="35" width="350" height="25" forecolor="#FFFFFF" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50009"/>
+                <reportElement x="5" y="57" width="350" height="25" forecolor="#FFFFFF" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50009"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="12" isBold="true"/>
                 </textElement>
                 <text><![CDATA[GRAND TOTAL]]></text>
             </staticText>
             <textField>
-                <reportElement x="355" y="35" width="185" height="25" forecolor="#FFFFFF" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50010"/>
+                <reportElement x="355" y="57" width="185" height="25" forecolor="#FFFFFF" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50010"/>
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>

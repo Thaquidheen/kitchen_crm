@@ -299,10 +299,19 @@ public class PricingServiceImpl implements PricingService {
                 totalTax = totalTax.add(kitchen.getTaxAmount());
             }
             
-            // Transportation/installation are now per-kitchen (included in kitchen.totalAmount)
-            // No quotation-level transportation/installation addition needed for multi-kitchen mode
-            
-            // Set quotation totals
+            // Installation is per-kitchen (included in kitchen.totalAmount).
+            // Transportation is a single COMMON charge for the whole quotation (one delivery trip),
+            // stored on the quotation and added exactly once here (with miscellaneous margin/tax).
+            BigDecimal commonTransportBase = quotation.getTransportationPrice() != null
+                    ? quotation.getTransportationPrice() : BigDecimal.ZERO;
+            BigDecimal transportMargin = calculateMarginAmount(commonTransportBase, quotation.getMiscellaneousMarginPercentage());
+            BigDecimal transportWithMargin = commonTransportBase.add(transportMargin);
+            BigDecimal transportTax = calculateTaxAmount(transportWithMargin, quotation.getMiscellaneousTaxPercentage());
+            BigDecimal transportFinal = transportWithMargin.add(transportTax);
+            grandTotal = grandTotal.add(transportFinal);
+
+            // Set quotation totals (common transportation base+margin+tax folds into subtotal,
+            // consistent with how per-kitchen miscellaneous expenses are handled)
             quotation.setSubtotal(grandTotal.subtract(totalMargin).subtract(totalTax));
             quotation.setMarginAmount(totalMargin);
             quotation.setTaxAmount(totalTax);
@@ -588,7 +597,11 @@ public class PricingServiceImpl implements PricingService {
         kitchen.setMarginAmount(kitchenMargin);
         kitchen.setTaxAmount(kitchenTax);
 
-        // Other Expenses = Transportation + Installation + custom expenses (per-kitchen)
+        // Other Expenses = Transportation + Installation + custom expenses (per-kitchen).
+        // For multi-kitchen (2+) quotations the frontend sends kitchen transportation = 0 because
+        // transportation is a single common charge added once at the quotation level
+        // (see calculateQuotationTotals). For a single-kitchen quotation, transportation is carried
+        // on the kitchen here, exactly as before.
         BigDecimal otherExpensesBase = (kitchen.getTransportationPrice() != null ? kitchen.getTransportationPrice() : BigDecimal.ZERO)
                 .add(kitchen.getInstallationPrice() != null ? kitchen.getInstallationPrice() : BigDecimal.ZERO);
 

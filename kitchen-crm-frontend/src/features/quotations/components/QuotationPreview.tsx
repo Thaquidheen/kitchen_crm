@@ -214,11 +214,11 @@ export function QuotationPreview({
         kCabinetsTotal.finalTotal +
         kDoorsTotal.finalTotal +
         kLightingTotal.finalTotal;
-      // Other Expenses with margin + tax (per-kitchen)
-      const otherExpensesBase = (kitchen.otherExpenses || []).reduce(
-        (sum, e) => sum + (e.amount || 0),
-        0
-      );
+      // Other Expenses with margin + tax (per-kitchen). Transportation is excluded here — it is a
+      // single common charge added once at the quotation level (see grandTotal below).
+      const otherExpensesBase = (kitchen.otherExpenses || [])
+        .filter((e) => e.name !== 'Transportation')
+        .reduce((sum, e) => sum + (e.amount || 0), 0);
       const kMiscMargin = (otherExpensesBase * miscellaneousMarginPercentage) / 100;
       const kMiscWithMargin = otherExpensesBase + kMiscMargin;
       const kMiscTax = (kMiscWithMargin * miscellaneousTaxPercentage) / 100;
@@ -240,13 +240,24 @@ export function QuotationPreview({
     });
   }, [isMultiKitchen, kitchens, accessoriesMarginPercentage, cabinetsMarginPercentage, doorsMarginPercentage, lightingMarginPercentage, accessoriesTaxPercentage, cabinetsTaxPercentage, doorsTaxPercentage, lightingTaxPercentage, miscellaneousMarginPercentage, miscellaneousTaxPercentage]);
 
+  // Common transportation: a single charge for the whole quotation (multi-kitchen),
+  // with miscellaneous margin/tax applied — matches the backend pricing.
+  const commonTransportFinal = useMemo(() => {
+    const base = transportationPrice || 0;
+    const margin = (base * miscellaneousMarginPercentage) / 100;
+    const withMargin = base + margin;
+    const tax = (withMargin * miscellaneousTaxPercentage) / 100;
+    return withMargin + tax;
+  }, [transportationPrice, miscellaneousMarginPercentage, miscellaneousTaxPercentage]);
+
   const grandTotal = useMemo(() => {
     if (isMultiKitchen && kitchenCalculations) {
       const kitchensTotal = kitchenCalculations.reduce((sum, k) => sum + k.total, 0);
-      return kitchensTotal + transportationPrice + installationPrice;
+      // Installation is already inside each kitchen's total; add common transportation once.
+      return kitchensTotal + commonTransportFinal;
     }
     return calculations.grandTotal;
-  }, [isMultiKitchen, kitchenCalculations, transportationPrice, installationPrice, calculations.grandTotal]);
+  }, [isMultiKitchen, kitchenCalculations, commonTransportFinal, calculations.grandTotal]);
 
   return (
     <div className="space-y-4 sm:space-y-6 bg-background-900 p-4 sm:p-6 rounded-lg">
@@ -438,6 +449,14 @@ export function QuotationPreview({
                   </span>
                 </div>
               ))}
+              {commonTransportFinal > 0 && (
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-text-700">Transportation (common)</span>
+                  <span className="font-medium text-text-900">
+                    ₹{commonTransportFinal.toLocaleString('en-IN')}
+                  </span>
+                </div>
+              )}
               <div className="border-t-2 border-primary-700 pt-2 sm:pt-3 mt-2 sm:mt-3">
                 <div className="flex justify-between items-center">
                   <span className="text-base sm:text-xl font-bold text-text-900">Grand Total</span>
