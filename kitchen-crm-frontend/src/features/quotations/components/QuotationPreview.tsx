@@ -37,6 +37,9 @@ export interface QuotationPreviewProps {
   // Miscellaneous (Other Expenses) margin & tax
   miscellaneousMarginPercentage: number;
   miscellaneousTaxPercentage: number;
+  // MRP (list price) — single common margin & tax applied to the full base sum
+  mrpMarginPercentage: number;
+  mrpTaxPercentage: number;
   // Multi-kitchen support
   kitchens?: QuotationKitchenFormData[];
 }
@@ -60,6 +63,8 @@ export function QuotationPreview({
   lightingTaxPercentage,
   miscellaneousMarginPercentage,
   miscellaneousTaxPercentage,
+  mrpMarginPercentage,
+  mrpTaxPercentage,
   kitchens,
 }: QuotationPreviewProps) {
   // Check if this is a multi-kitchen quotation
@@ -114,6 +119,7 @@ export function QuotationPreview({
 
     return {
       productsSubtotal,
+      otherExpensesBase,
       totalMarginAmount,
       totalTaxAmount,
       grandTotal,
@@ -245,6 +251,7 @@ export function QuotationPreview({
         kitchen,
         subtotal: kitchenSubtotal,
         otherExpenses,
+        otherExpensesBase,
         total: kitchenTotal,
         marginAmount: kitchenMarginAmount,
         taxAmount: kitchenTaxAmount,
@@ -277,6 +284,25 @@ export function QuotationPreview({
     }
     return calculations.grandTotal;
   }, [isMultiKitchen, kitchenCalculations, commonTransportFinal, calculations.grandTotal]);
+
+  // MRP (list price): one common margin + tax applied to the full BASE sum of products
+  // (pre per-category margin/tax) + installation + custom other-expenses + common transportation.
+  // Single figure for the whole quotation (common across kitchens). Shown alongside the Offer
+  // Price (= grandTotal). Note: grandTotal IS the "Offer Price".
+  const mrpFinal = useMemo(() => {
+    let mrpBase: number;
+    if (isMultiKitchen && kitchenCalculations) {
+      const productsBase = kitchenCalculations.reduce((sum, k) => sum + k.productsBase, 0);
+      // otherExpensesBase per kitchen already excludes transportation (installation + custom);
+      // add the single common transportation base once.
+      const otherBase = kitchenCalculations.reduce((sum, k) => sum + k.otherExpensesBase, 0);
+      mrpBase = productsBase + otherBase + (transportationPrice || 0);
+    } else {
+      mrpBase = calculations.productsSubtotal + calculations.otherExpensesBase;
+    }
+    const withMargin = mrpBase + (mrpBase * (mrpMarginPercentage || 0)) / 100;
+    return withMargin + (withMargin * (mrpTaxPercentage || 0)) / 100;
+  }, [isMultiKitchen, kitchenCalculations, transportationPrice, calculations.productsSubtotal, calculations.otherExpensesBase, mrpMarginPercentage, mrpTaxPercentage]);
 
   return (
     <div className="space-y-4 sm:space-y-6 bg-background-900 p-4 sm:p-6 rounded-lg">
@@ -495,9 +521,17 @@ export function QuotationPreview({
                   </span>
                 </div>
               )}
-              <div className="border-t-2 border-primary-700 pt-2 sm:pt-3 mt-2 sm:mt-3">
+              <div className="border-t-2 border-primary-700 pt-2 sm:pt-3 mt-2 sm:mt-3 space-y-1">
+                {mrpFinal > grandTotal && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs sm:text-sm text-text-600">MRP</span>
+                    <span className="text-sm sm:text-base text-text-500 line-through">
+                      ₹{mrpFinal.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
-                  <span className="text-base sm:text-xl font-bold text-text-900">Grand Total</span>
+                  <span className="text-base sm:text-xl font-bold text-text-900">Offer Price</span>
                   <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary-600">
                     ₹{grandTotal.toLocaleString('en-IN')}
                   </span>
@@ -608,10 +642,18 @@ export function QuotationPreview({
               </div>
             ))}
 
-            {/* Grand Total */}
-            <div className="border-t-2 border-primary-700 pt-2 sm:pt-3 mt-2 sm:mt-3">
+            {/* MRP + Offer Price */}
+            <div className="border-t-2 border-primary-700 pt-2 sm:pt-3 mt-2 sm:mt-3 space-y-1">
+              {mrpFinal > calculations.grandTotal && (
+                <div className="flex justify-between items-center">
+                  <span className="text-xs sm:text-sm text-text-600">MRP</span>
+                  <span className="text-sm sm:text-base text-text-500 line-through">
+                    ₹{mrpFinal.toLocaleString('en-IN')}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between items-center">
-                <span className="text-base sm:text-lg font-bold text-text-900">Grand Total</span>
+                <span className="text-base sm:text-lg font-bold text-text-900">Offer Price</span>
                 <span className="text-xl sm:text-2xl font-bold text-primary-600">
                   ₹{calculations.grandTotal.toLocaleString('en-IN')}
                 </span>

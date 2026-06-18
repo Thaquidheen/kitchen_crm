@@ -51,6 +51,7 @@
     <parameter name="INSTALLATION_PRICE" class="java.math.BigDecimal"/>
     <parameter name="OTHER_EXPENSES_TOTAL" class="java.math.BigDecimal"/>
     <parameter name="COMMON_TRANSPORTATION" class="java.math.BigDecimal"/>
+    <parameter name="MRP_FINAL" class="java.math.BigDecimal"/>
     <parameter name="NOTES" class="java.lang.String"/>
     <parameter name="TERMS_DATA_SOURCE" class="net.sf.jasperreports.engine.JRDataSource"/>
     <!-- Background — dark on page 1 (behind kitchen image), cream on pages 2+ -->
@@ -229,6 +230,9 @@
                 </subreportParameter>
                 <subreportParameter name="COMMON_TRANSPORTATION">
                     <subreportParameterExpression><![CDATA[$P{COMMON_TRANSPORTATION}]]></subreportParameterExpression>
+                </subreportParameter>
+                <subreportParameter name="MRP_FINAL">
+                    <subreportParameterExpression><![CDATA[$P{MRP_FINAL}]]></subreportParameterExpression>
                 </subreportParameter>
                 <subreportParameter name="KITCHEN_SUMMARY_DATA">
                     <subreportParameterExpression><![CDATA[$P{KITCHEN_SUMMARY_DATA}]]></subreportParameterExpression>

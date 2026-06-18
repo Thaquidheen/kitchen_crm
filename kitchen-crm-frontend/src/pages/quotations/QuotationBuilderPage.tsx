@@ -1606,6 +1606,44 @@ export function QuotationBuilderPage() {
                         Total: {(formData.paymentAcceptancePct ?? 60) + (formData.paymentDeliveryPct ?? 30) + (formData.paymentInstallationPct ?? 10)}%
                       </p>
                     </div>
+
+                    {/* MRP (list price) — single common margin & tax applied to the full base sum.
+                        Shown as the struck-through MRP next to the Offer Price (super-admin only). */}
+                    {userRole === 'ROLE_SUPER_ADMIN' && (
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-text-700 mb-2">
+                          MRP (List Price) — common margin &amp; tax
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-text-600 mb-1">MRP Margin %</label>
+                            <Input
+                              type="text"
+                              inputMode="decimal"
+                              value={formData.marginPercentage ?? 20}
+                              onChange={(e) =>
+                                setFormData({ ...formData, marginPercentage: parseFloat(e.target.value) || 0 })
+                              }
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-text-600 mb-1">MRP Tax %</label>
+                            <Input
+                              type="text"
+                              inputMode="decimal"
+                              value={formData.taxPercentage ?? 18}
+                              onChange={(e) =>
+                                setFormData({ ...formData, taxPercentage: parseFloat(e.target.value) || 0 })
+                              }
+                            />
+                          </div>
+                        </div>
+                        <p className="text-xs text-text-500 mt-1">
+                          MRP = all item base prices + installation + other expenses + transportation, with this single
+                          margin &amp; tax. Shown struck-through above the Offer Price.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </Card>
 
@@ -1629,6 +1667,8 @@ export function QuotationBuilderPage() {
                   lightingTaxPercentage={formData.lightingTaxPercentage ?? 18}
                   miscellaneousMarginPercentage={formData.miscellaneousMarginPercentage ?? 0}
                   miscellaneousTaxPercentage={formData.miscellaneousTaxPercentage ?? 18}
+                  mrpMarginPercentage={formData.marginPercentage ?? 20}
+                  mrpTaxPercentage={formData.taxPercentage ?? 18}
                   kitchens={formData.kitchens}
                 />
 

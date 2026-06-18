@@ -375,6 +375,43 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         BigDecimal commonTransportFinal = commonTransportWithMargin.add(commonTransportTax);
         params.put("COMMON_TRANSPORTATION", commonTransportFinal);
 
+        // MRP (list price): sum of all BASE prices (products + installation + custom other-expenses
+        // + common transportation, i.e. before per-category margin/tax), then ONE common margin% and
+        // tax% applied. A single figure for the whole quotation (common across kitchens). Shown
+        // struck-through above the Offer Price (= grand total). Reuses the dormant quotation-level
+        // marginPercentage/taxPercentage as the common MRP margin/tax.
+        BigDecimal mrpCategoryBase =
+                (quotation.getAccessoriesBaseTotal() != null ? quotation.getAccessoriesBaseTotal() : BigDecimal.ZERO)
+                .add(quotation.getCabinetsBaseTotal() != null ? quotation.getCabinetsBaseTotal() : BigDecimal.ZERO)
+                .add(quotation.getDoorsBaseTotal() != null ? quotation.getDoorsBaseTotal() : BigDecimal.ZERO)
+                .add(quotation.getLightingBaseTotal() != null ? quotation.getLightingBaseTotal() : BigDecimal.ZERO);
+        BigDecimal mrpServicesBase;
+        if (isMultiKitchen) {
+            // otherExpensesGrandBase = each kitchen's other-expenses (installation + custom; for 2+
+            // kitchens this excludes transportation, for a single kitchen it includes it). Add the
+            // common quotation-level transportation once (0 for a single kitchen, where it is already
+            // inside that kitchen's other-expenses).
+            mrpServicesBase = otherExpensesGrandBase.add(
+                    quotation.getTransportationPrice() != null ? quotation.getTransportationPrice() : BigDecimal.ZERO);
+        } else {
+            // No kitchens (legacy): quotation-level other-expenses already include transportation + installation.
+            BigDecimal q = BigDecimal.ZERO;
+            if (quotation.getOtherExpenses() != null) {
+                for (QuotationOtherExpenseDto e : quotation.getOtherExpenses()) {
+                    if (e.getAmount() != null) q = q.add(e.getAmount());
+                }
+            }
+            mrpServicesBase = q;
+        }
+        BigDecimal mrpBase = mrpCategoryBase.add(mrpServicesBase);
+        BigDecimal mrpMarginPct = quotation.getMarginPercentage() != null ? quotation.getMarginPercentage() : BigDecimal.ZERO;
+        BigDecimal mrpTaxPct = quotation.getTaxPercentage() != null ? quotation.getTaxPercentage() : BigDecimal.ZERO;
+        BigDecimal mrpMargin = mrpBase.multiply(mrpMarginPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal mrpWithMargin = mrpBase.add(mrpMargin);
+        BigDecimal mrpTax = mrpWithMargin.multiply(mrpTaxPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal mrpFinal = mrpWithMargin.add(mrpTax);
+        params.put("MRP_FINAL", mrpFinal);
+
         // Grand total
         BigDecimal grandTotal = calculateGrandTotal(quotation);
         params.put("GRAND_TOTAL", grandTotal);

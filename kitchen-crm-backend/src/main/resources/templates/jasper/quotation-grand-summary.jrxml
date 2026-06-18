@@ -15,6 +15,7 @@
     <parameter name="GRAND_TOTAL" class="java.math.BigDecimal"/>
     <parameter name="OTHER_EXPENSES_TOTAL" class="java.math.BigDecimal"/>
     <parameter name="COMMON_TRANSPORTATION" class="java.math.BigDecimal"/>
+    <parameter name="MRP_FINAL" class="java.math.BigDecimal"/>
 
     <field name="kitchenName" class="java.lang.String"/>
     <field name="totalAmount" class="java.math.BigDecimal"/>
@@ -59,7 +60,7 @@
     </detail>
 
     <summary>
-        <band height="92">
+        <band height="106">
             <!-- Separator line above grand total -->
             <line>
                 <reportElement x="0" y="2" width="545" height="1" forecolor="#CCCCCC" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50006"/>
@@ -86,7 +87,7 @@
             </textField>
             <!-- Incl. Other Expenses note (conditional) -->
             <textField>
-                <reportElement x="5" y="30" width="350" height="16" forecolor="#777777" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50007">
+                <reportElement x="5" y="28" width="350" height="14" forecolor="#777777" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50007">
                     <printWhenExpression><![CDATA[$P{OTHER_EXPENSES_TOTAL} != null && $P{OTHER_EXPENSES_TOTAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
                 </reportElement>
                 <textElement verticalAlignment="Middle">
@@ -94,20 +95,39 @@
                 </textElement>
                 <textFieldExpression><![CDATA["(Incl. per-kitchen Other Expenses: Rs. " + new java.text.DecimalFormat("0.00").format($P{OTHER_EXPENSES_TOTAL}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,") + ")"]]></textFieldExpression>
             </textField>
-            <!-- Grand Total black bar -->
+            <!-- MRP (list price), struck-through, shown above the Offer Price (only when > Offer) -->
+            <staticText>
+                <reportElement x="5" y="44" width="200" height="20" forecolor="#888888" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50013">
+                    <printWhenExpression><![CDATA[$P{MRP_FINAL} != null && $P{GRAND_TOTAL} != null && $P{MRP_FINAL}.compareTo($P{GRAND_TOTAL}) > 0]]></printWhenExpression>
+                </reportElement>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="10"/>
+                </textElement>
+                <text><![CDATA[MRP]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="355" y="44" width="190" height="20" forecolor="#888888" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50014">
+                    <printWhenExpression><![CDATA[$P{MRP_FINAL} != null && $P{GRAND_TOTAL} != null && $P{MRP_FINAL}.compareTo($P{GRAND_TOTAL}) > 0]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Left" verticalAlignment="Middle">
+                    <font fontName="Serif" size="11" isStrikeThrough="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($P{MRP_FINAL}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
+            </textField>
+            <!-- Offer Price black bar (the current grand total) -->
             <rectangle>
-                <reportElement x="0" y="52" width="545" height="35" backcolor="#000000" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50008"/>
+                <reportElement x="0" y="68" width="545" height="35" backcolor="#000000" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50008"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="5" y="57" width="350" height="25" forecolor="#FFFFFF" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50009"/>
+                <reportElement x="5" y="73" width="350" height="25" forecolor="#FFFFFF" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50009"/>
                 <textElement verticalAlignment="Middle">
                     <font fontName="Serif" size="12" isBold="true"/>
                 </textElement>
-                <text><![CDATA[GRAND TOTAL]]></text>
+                <text><![CDATA[OFFER PRICE]]></text>
             </staticText>
             <textField>
-                <reportElement x="355" y="57" width="185" height="25" forecolor="#FFFFFF" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50010"/>
+                <reportElement x="355" y="73" width="185" height="25" forecolor="#FFFFFF" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50010"/>
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="14" isBold="true"/>
                 </textElement>
