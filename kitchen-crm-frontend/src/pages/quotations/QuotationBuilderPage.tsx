@@ -87,6 +87,14 @@ export function QuotationBuilderPage() {
   } | null>(null);
   const [showLinkedDoorRemoveDialog, setShowLinkedDoorRemoveDialog] = useState(false);
   const [showRemoveItemDialog, setShowRemoveItemDialog] = useState(false);
+  // "Clear All" confirmation (whole category or all other expenses, kitchen or global)
+  const [pendingClear, setPendingClear] = useState<{
+    scope: 'category' | 'otherExpenses';
+    category?: string;
+    kitchenIndex?: number;
+    label: string;
+  } | null>(null);
+  const [showClearDialog, setShowClearDialog] = useState(false);
 
   // Edit door modal state
   const [editDoorModalOpen, setEditDoorModalOpen] = useState(false);
@@ -926,6 +934,48 @@ export function QuotationBuilderPage() {
     }
 
     cancelRemoval();
+  };
+
+  // Close the "Clear All" confirmation without clearing anything.
+  const cancelClear = () => {
+    setPendingClear(null);
+    setShowClearDialog(false);
+  };
+
+  // Perform the pending "Clear All" (whole category or all other expenses, kitchen or global).
+  const performClear = () => {
+    if (!pendingClear) return;
+    const { scope, category, kitchenIndex } = pendingClear;
+
+    if (kitchenIndex !== undefined) {
+      const updatedKitchens = [...(formData.kitchens || [])];
+      const k: any = { ...updatedKitchens[kitchenIndex] };
+      if (scope === 'otherExpenses') {
+        k.otherExpenses = [];
+      } else if (category) {
+        if (category === 'cabinets') {
+          const pairIds = new Set((k.cabinets || []).map((c: any) => c._tempPairId).filter(Boolean));
+          k.doors = (k.doors || []).filter((d: any) => !d._tempPairId || !pairIds.has(d._tempPairId));
+        }
+        k[category] = [];
+      }
+      updatedKitchens[kitchenIndex] = k;
+      setFormData({ ...formData, kitchens: updatedKitchens });
+    } else {
+      const next: any = { ...formData };
+      if (scope === 'otherExpenses') {
+        next.otherExpenses = [];
+      } else if (category) {
+        if (category === 'cabinets') {
+          const pairIds = new Set((next.cabinets || []).map((c: any) => c._tempPairId).filter(Boolean));
+          next.doors = (next.doors || []).filter((d: any) => !d._tempPairId || !pairIds.has(d._tempPairId));
+        }
+        next[category] = [];
+      }
+      setFormData(next);
+    }
+
+    cancelClear();
   };
 
   // Handle edit door from SelectedProductsList (kitchen-specific)
@@ -1783,21 +1833,12 @@ export function QuotationBuilderPage() {
                         setShowRemoveItemDialog(true);
                       }}
                       onClearCategory={(category) => {
-                        const updatedKitchens = [...(formData.kitchens || [])];
-                        const k = { ...updatedKitchens[kitchenIndex] };
-                        if (category === 'cabinets') {
-                          // Also remove linked doors
-                          const pairIds = new Set((k.cabinets || []).map((c: any) => c._tempPairId).filter(Boolean));
-                          k.doors = (k.doors || []).filter((d: any) => !d._tempPairId || !pairIds.has(d._tempPairId));
-                        }
-                        (k as any)[category] = [];
-                        updatedKitchens[kitchenIndex] = k;
-                        setFormData({ ...formData, kitchens: updatedKitchens });
+                        setPendingClear({ scope: 'category', category, kitchenIndex, label: `all ${category}` });
+                        setShowClearDialog(true);
                       }}
                       onClearOtherExpenses={() => {
-                        const updatedKitchens = [...(formData.kitchens || [])];
-                        updatedKitchens[kitchenIndex] = { ...updatedKitchens[kitchenIndex], otherExpenses: [] };
-                        setFormData({ ...formData, kitchens: updatedKitchens });
+                        setPendingClear({ scope: 'otherExpenses', kitchenIndex, label: 'all other expenses' });
+                        setShowClearDialog(true);
                       }}
                       onEditCabinet={(cabinetIndex) => handleEditCabinetInKitchen(kitchenIndex, cabinetIndex)}
                       onEditDoor={(doorIndex) => handleEditDoorInKitchen(kitchenIndex, doorIndex)}
@@ -1842,16 +1883,12 @@ export function QuotationBuilderPage() {
                   setShowRemoveItemDialog(true);
                 }}
                 onClearCategory={(category) => {
-                  const next: any = { ...formData };
-                  if (category === 'cabinets') {
-                    const pairIds = new Set((next.cabinets || []).map((c: any) => c._tempPairId).filter(Boolean));
-                    next.doors = (next.doors || []).filter((d: any) => !d._tempPairId || !pairIds.has(d._tempPairId));
-                  }
-                  next[category] = [];
-                  setFormData(next);
+                  setPendingClear({ scope: 'category', category, label: `all ${category}` });
+                  setShowClearDialog(true);
                 }}
                 onClearOtherExpenses={() => {
-                  setFormData({ ...formData, otherExpenses: [] });
+                  setPendingClear({ scope: 'otherExpenses', label: 'all other expenses' });
+                  setShowClearDialog(true);
                 }}
                 onEditCabinet={handleEditCabinetGlobal}
                 onEditDoor={handleEditDoorGlobal}
@@ -1907,6 +1944,18 @@ export function QuotationBuilderPage() {
         confirmText="Yes, Remove"
         cancelText="Cancel"
         type="warning"
+      />
+
+      {/* Clear All confirmation (whole category / all other expenses) */}
+      <ConfirmDialog
+        isOpen={showClearDialog}
+        onClose={cancelClear}
+        onConfirm={performClear}
+        title="Clear All?"
+        message={`Remove ${pendingClear?.label ?? 'all items'} from this quotation? This cannot be undone.`}
+        confirmText="Yes, Clear All"
+        cancelText="Cancel"
+        type="danger"
       />
 
       {/* Linked Door Removal Confirmation Dialog.
