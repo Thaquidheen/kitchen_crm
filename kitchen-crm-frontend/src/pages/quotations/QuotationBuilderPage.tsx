@@ -76,14 +76,17 @@ export function QuotationBuilderPage() {
   const [editingCabinetIndex, setEditingCabinetIndex] = useState<number | null>(null);
   const [editingKitchenIndex, setEditingKitchenIndex] = useState<number | null>(null);
 
-  // Linked door removal confirmation dialog state
-  const [pendingCabinetRemoval, setPendingCabinetRemoval] = useState<{
-    category: string;
+  // Item removal confirmation dialog state (products + other expenses, kitchen or global)
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    scope: 'product' | 'otherExpense';
+    category?: string;
     index: number;
-    pairId: any;
+    pairId?: any;
     kitchenIndex?: number;
+    itemName: string;
   } | null>(null);
   const [showLinkedDoorRemoveDialog, setShowLinkedDoorRemoveDialog] = useState(false);
+  const [showRemoveItemDialog, setShowRemoveItemDialog] = useState(false);
 
   // Edit door modal state
   const [editDoorModalOpen, setEditDoorModalOpen] = useState(false);
@@ -873,36 +876,56 @@ export function QuotationBuilderPage() {
     setEditingKitchenIndex(null);
   };
 
-  // Handle cabinet removal with linked door confirmation
-  const performCabinetRemoval = (removeDoorToo: boolean) => {
-    if (!pendingCabinetRemoval) return;
-    const { category, index, pairId, kitchenIndex } = pendingCabinetRemoval;
+  // Close any removal confirmation without removing anything.
+  const cancelRemoval = () => {
+    setPendingRemoval(null);
+    setShowLinkedDoorRemoveDialog(false);
+    setShowRemoveItemDialog(false);
+  };
+
+  // Perform the pending removal (product or other-expense, kitchen or global).
+  // removeDoorToo additionally removes a cabinet's linked door.
+  const performRemoval = (removeDoorToo: boolean = false) => {
+    if (!pendingRemoval) return;
+    const { scope, category, index, pairId, kitchenIndex } = pendingRemoval;
 
     if (kitchenIndex !== undefined) {
       // Kitchen-specific removal
       const updatedKitchens = [...(formData.kitchens || [])];
-      const kitchen = { ...updatedKitchens[kitchenIndex] };
-      const list = [...(kitchen[category as keyof typeof kitchen] as any[] || [])];
-      list.splice(index, 1);
-      updatedKitchens[kitchenIndex] = { ...kitchen, [category]: list };
-      if (removeDoorToo && pairId && Array.isArray(kitchen.doors)) {
-        updatedKitchens[kitchenIndex].doors = kitchen.doors.filter((d: any) => d._tempPairId !== pairId);
+      const kitchen: any = { ...updatedKitchens[kitchenIndex] };
+      if (scope === 'otherExpense') {
+        const expenses = [...(kitchen.otherExpenses || [])];
+        expenses.splice(index, 1);
+        kitchen.otherExpenses = expenses;
+      } else if (category) {
+        const list = [...((kitchen[category] as any[]) || [])];
+        list.splice(index, 1);
+        kitchen[category] = list;
+        if (removeDoorToo && pairId && Array.isArray(kitchen.doors)) {
+          kitchen.doors = kitchen.doors.filter((d: any) => d._tempPairId !== pairId);
+        }
       }
+      updatedKitchens[kitchenIndex] = kitchen;
       setFormData({ ...formData, kitchens: updatedKitchens });
     } else {
       // Global removal
       const next: any = { ...formData };
-      const list = (next[category] || []).slice();
-      list.splice(index, 1);
-      next[category] = list;
-      if (removeDoorToo && pairId && Array.isArray(next.doors)) {
-        next.doors = next.doors.filter((d: any) => d._tempPairId !== pairId);
+      if (scope === 'otherExpense') {
+        const expenses = [...(next.otherExpenses || [])];
+        expenses.splice(index, 1);
+        next.otherExpenses = expenses;
+      } else if (category) {
+        const list = (next[category] || []).slice();
+        list.splice(index, 1);
+        next[category] = list;
+        if (removeDoorToo && pairId && Array.isArray(next.doors)) {
+          next.doors = next.doors.filter((d: any) => d._tempPairId !== pairId);
+        }
       }
       setFormData(next);
     }
 
-    setPendingCabinetRemoval(null);
-    setShowLinkedDoorRemoveDialog(false);
+    cancelRemoval();
   };
 
   // Handle edit door from SelectedProductsList (kitchen-specific)
@@ -1742,30 +1765,22 @@ export function QuotationBuilderPage() {
                       miscellaneousTaxPercentage={formData.miscellaneousTaxPercentage ?? 18}
                       onRemove={(category, index) => {
                         const kitchen = (formData.kitchens || [])[kitchenIndex];
-                        const list = [...(kitchen?.[category] || [])];
-                        const removed = list[index] as any;
+                        const removed = ((kitchen?.[category] as any[]) || [])[index] as any;
                         const pairId = removed?._tempPairId;
-
+                        const itemName = removed?.name || removed?.description || 'this item';
+                        setPendingRemoval({ scope: 'product', category, index, kitchenIndex, pairId, itemName });
                         if (category === 'cabinets' && pairId) {
-                          // Cabinet has linked door — ask user
-                          setPendingCabinetRemoval({ category, index, pairId, kitchenIndex });
                           setShowLinkedDoorRemoveDialog(true);
-                          return;
+                        } else {
+                          setShowRemoveItemDialog(true);
                         }
-
-                        // No linked door — remove directly
-                        const updatedKitchens = [...(formData.kitchens || [])];
-                        list.splice(index, 1);
-                        updatedKitchens[kitchenIndex] = { ...kitchen, [category]: list };
-                        setFormData({ ...formData, kitchens: updatedKitchens });
                       }}
                       onRemoveOtherExpense={(expenseIndex) => {
-                        const updatedKitchens = [...(formData.kitchens || [])];
-                        const kitchen = updatedKitchens[kitchenIndex];
-                        const expenses = [...(kitchen.otherExpenses || [])];
-                        expenses.splice(expenseIndex, 1);
-                        updatedKitchens[kitchenIndex] = { ...kitchen, otherExpenses: expenses };
-                        setFormData({ ...formData, kitchens: updatedKitchens });
+                        const kitchen = (formData.kitchens || [])[kitchenIndex];
+                        const removed = (kitchen?.otherExpenses || [])[expenseIndex] as any;
+                        const itemName = removed?.name || 'this item';
+                        setPendingRemoval({ scope: 'otherExpense', index: expenseIndex, kitchenIndex, itemName });
+                        setShowRemoveItemDialog(true);
                       }}
                       onClearCategory={(category) => {
                         const updatedKitchens = [...(formData.kitchens || [])];
@@ -1810,27 +1825,21 @@ export function QuotationBuilderPage() {
                 miscellaneousMarginPercentage={formData.miscellaneousMarginPercentage ?? 0}
                 miscellaneousTaxPercentage={formData.miscellaneousTaxPercentage ?? 18}
                 onRemove={(category, index) => {
-                  const list = ((formData as any)[category] || []).slice();
-                  const removed = list[index] as any;
+                  const removed = (((formData as any)[category]) || [])[index] as any;
                   const pairId = removed?._tempPairId;
-
+                  const itemName = removed?.name || removed?.description || 'this item';
+                  setPendingRemoval({ scope: 'product', category, index, pairId, itemName });
                   if (category === 'cabinets' && pairId) {
-                    // Cabinet has linked door — ask user
-                    setPendingCabinetRemoval({ category, index, pairId });
                     setShowLinkedDoorRemoveDialog(true);
-                    return;
+                  } else {
+                    setShowRemoveItemDialog(true);
                   }
-
-                  // No linked door — remove directly
-                  const next: any = { ...formData };
-                  list.splice(index, 1);
-                  next[category] = list;
-                  setFormData(next);
                 }}
                 onRemoveOtherExpense={(expenseIndex) => {
-                  const expenses = [...(formData.otherExpenses || [])];
-                  expenses.splice(expenseIndex, 1);
-                  setFormData({ ...formData, otherExpenses: expenses });
+                  const removed = (formData.otherExpenses || [])[expenseIndex] as any;
+                  const itemName = removed?.name || 'this item';
+                  setPendingRemoval({ scope: 'otherExpense', index: expenseIndex, itemName });
+                  setShowRemoveItemDialog(true);
                 }}
                 onClearCategory={(category) => {
                   const next: any = { ...formData };
@@ -1888,13 +1897,29 @@ export function QuotationBuilderPage() {
         />
       )}
 
-      {/* Linked Door Removal Confirmation Dialog */}
+      {/* Generic item removal confirmation */}
+      <ConfirmDialog
+        isOpen={showRemoveItemDialog}
+        onClose={cancelRemoval}
+        onConfirm={() => performRemoval(false)}
+        title="Remove Item?"
+        message={`Remove "${pendingRemoval?.itemName ?? 'this item'}" from this quotation?`}
+        confirmText="Yes, Remove"
+        cancelText="Cancel"
+        type="warning"
+      />
+
+      {/* Linked Door Removal Confirmation Dialog.
+          X / backdrop / Esc (onClose) cancels and removes nothing;
+          "No, Keep Door" (onCancel) removes the cabinet but keeps the door;
+          "Yes, Remove Door Too" (onConfirm) removes both. */}
       <ConfirmDialog
         isOpen={showLinkedDoorRemoveDialog}
-        onClose={() => performCabinetRemoval(false)}
-        onConfirm={() => performCabinetRemoval(true)}
+        onClose={cancelRemoval}
+        onCancel={() => performRemoval(false)}
+        onConfirm={() => performRemoval(true)}
         title="Remove Linked Door?"
-        message="This cabinet has a linked door. Do you want to remove the linked door as well?"
+        message={`"${pendingRemoval?.itemName ?? 'This cabinet'}" has a linked door. Do you want to remove the linked door as well?`}
         confirmText="Yes, Remove Door Too"
         cancelText="No, Keep Door"
         type="warning"

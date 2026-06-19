@@ -13,6 +13,13 @@ export interface ConfirmDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  /**
+   * Optional handler for the footer cancel button. When provided, the cancel
+   * button performs this action while the X / backdrop / Esc still call onClose.
+   * This lets a 3-choice dialog distinguish a secondary action (cancel button)
+   * from dismissing the dialog (X). Defaults to onClose when omitted.
+   */
+  onCancel?: () => void;
   title: string;
   message: string;
   confirmText?: string;
@@ -32,6 +39,7 @@ export const ConfirmDialog = ({
   isOpen,
   onClose,
   onConfirm,
+  onCancel,
   title,
   message,
   confirmText = 'Confirm',
@@ -43,6 +51,7 @@ export const ConfirmDialog = ({
   const handleConfirm = () => {
     onConfirm();
   };
+  const handleCancel = onCancel ?? onClose;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
@@ -53,7 +62,7 @@ export const ConfirmDialog = ({
         </div>
       </ModalBody>
       <ModalFooter>
-        <Button variant="ghost" onClick={onClose} disabled={isLoading}>
+        <Button variant="ghost" onClick={handleCancel} disabled={isLoading}>
           {cancelText}
         </Button>
         <Button
