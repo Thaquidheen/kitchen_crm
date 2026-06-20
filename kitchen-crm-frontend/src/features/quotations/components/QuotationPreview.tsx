@@ -522,10 +522,10 @@ export function QuotationPreview({
                 </div>
               )}
               <div className="border-t-2 border-primary-700 pt-2 sm:pt-3 mt-2 sm:mt-3 space-y-1">
-                {mrpFinal > grandTotal && (
+                {mrpFinal > 0 && (
                   <div className="flex justify-between items-center">
                     <span className="text-xs sm:text-sm text-text-600">MRP</span>
-                    <span className="text-sm sm:text-base text-text-500 line-through">
+                    <span className={`text-sm sm:text-base ${mrpFinal > grandTotal ? 'text-text-500 line-through' : 'text-text-700'}`}>
                       ₹{mrpFinal.toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -644,10 +644,10 @@ export function QuotationPreview({
 
             {/* MRP + Offer Price */}
             <div className="border-t-2 border-primary-700 pt-2 sm:pt-3 mt-2 sm:mt-3 space-y-1">
-              {mrpFinal > calculations.grandTotal && (
+              {mrpFinal > 0 && (
                 <div className="flex justify-between items-center">
                   <span className="text-xs sm:text-sm text-text-600">MRP</span>
-                  <span className="text-sm sm:text-base text-text-500 line-through">
+                  <span className={`text-sm sm:text-base ${mrpFinal > calculations.grandTotal ? 'text-text-500 line-through' : 'text-text-700'}`}>
                     ₹{mrpFinal.toLocaleString('en-IN')}
                   </span>
                 </div>

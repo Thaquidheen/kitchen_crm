@@ -57,6 +57,8 @@ public class QuotationDto {
     private BigDecimal marginAmount = BigDecimal.ZERO;
     private BigDecimal taxAmount = BigDecimal.ZERO;
     private BigDecimal totalAmount = BigDecimal.ZERO;
+    // MRP ("list price"): base prices + single common margin/tax. totalAmount is the Offer Price.
+    private BigDecimal mrpFinal = BigDecimal.ZERO;
 
     private Quotation.QuotationStatus status;
     private LocalDate validUntil;

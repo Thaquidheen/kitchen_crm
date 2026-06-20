@@ -122,7 +122,15 @@ export function QuotationDetailPage() {
         <div className="mt-4 sm:mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-text-700">
           <div>
             <div className="font-semibold text-text-800 mb-2">Details</div>
-            <div className="text-sm sm:text-base">Amount: ₹{data.totalAmount?.toLocaleString('en-IN') ?? '-'}</div>
+            {(data.mrpFinal ?? 0) > 0 && (
+              <div className="text-sm sm:text-base flex items-center gap-2">
+                <span>MRP:</span>
+                <span className={(data.mrpFinal ?? 0) > (data.totalAmount ?? 0) ? 'line-through text-text-500' : 'text-text-700'}>
+                  ₹{data.mrpFinal?.toLocaleString('en-IN')}
+                </span>
+              </div>
+            )}
+            <div className="text-sm sm:text-base font-semibold">Offer Price: ₹{data.totalAmount?.toLocaleString('en-IN') ?? '-'}</div>
             <div className="text-sm sm:text-base">Updated: {(data.updatedAt || data.createdAt) ? new Date(data.updatedAt || data.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</div>
           </div>
           <div>

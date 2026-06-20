@@ -1129,6 +1129,11 @@ public class QuotationServiceImpl implements QuotationService {
         // Load kitchens
         dto.setKitchens(loadKitchens(quotation.getId()));
 
+        // MRP (list price) — computed once here with the entity's (always-available) margin/tax so it
+        // is correct for every role; totalAmount is the Offer Price. Shown on the detail page and PDF.
+        dto.setMrpFinal(QuotationMrpCalculator.computeMrpFinal(
+                dto, quotation.getMarginPercentage(), quotation.getTaxPercentage()));
+
         return dto;
     }
 

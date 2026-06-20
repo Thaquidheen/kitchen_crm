@@ -177,7 +177,9 @@ export interface Quotation {
   marginAmount: number;
   taxAmount: number;
   totalAmount: number;
-  
+  // MRP ("list price"): base prices + single common margin/tax. totalAmount is the Offer Price.
+  mrpFinal?: number;
+
   // Category totals
   accessoriesBaseTotal: number;
   accessoriesMarginAmount: number;

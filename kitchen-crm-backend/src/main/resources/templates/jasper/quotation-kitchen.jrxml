@@ -410,7 +410,7 @@
             <!-- ===== GRAND TOTAL SUMMARY (only on last kitchen, multi-kitchen only) ===== -->
             <subreport>
                 <reportElement x="15" y="295" width="565" height="50" uuid="a1b2c3d4-0001-0000-0000-000000000001" positionType="Float">
-                    <printWhenExpression><![CDATA[$V{REPORT_COUNT}.equals($P{TOTAL_KITCHENS}) && $P{TOTAL_KITCHENS} > 1 && $P{KITCHEN_SUMMARY_DATA} != null]]></printWhenExpression>
+                    <printWhenExpression><![CDATA[$V{REPORT_COUNT}.equals($P{TOTAL_KITCHENS}) && $P{TOTAL_KITCHENS} >= 1 && $P{KITCHEN_SUMMARY_DATA} != null]]></printWhenExpression>
                 </reportElement>
                 <subreportParameter name="GRAND_TOTAL">
                     <subreportParameterExpression><![CDATA[$P{GRAND_TOTAL}]]></subreportParameterExpression>
