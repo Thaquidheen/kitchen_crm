@@ -37,9 +37,17 @@ export interface QuotationPreviewProps {
   // Miscellaneous (Other Expenses) margin & tax
   miscellaneousMarginPercentage: number;
   miscellaneousTaxPercentage: number;
-  // MRP (list price) — single common margin & tax applied to the full base sum
-  mrpMarginPercentage: number;
-  mrpTaxPercentage: number;
+  // MRP (list price) — per-category margin & tax (mirrors the offer per-category rates)
+  accessoriesMrpMarginPercentage: number;
+  cabinetsMrpMarginPercentage: number;
+  doorsMrpMarginPercentage: number;
+  lightingMrpMarginPercentage: number;
+  accessoriesMrpTaxPercentage: number;
+  cabinetsMrpTaxPercentage: number;
+  doorsMrpTaxPercentage: number;
+  lightingMrpTaxPercentage: number;
+  miscellaneousMrpMarginPercentage: number;
+  miscellaneousMrpTaxPercentage: number;
   // Multi-kitchen support
   kitchens?: QuotationKitchenFormData[];
 }
@@ -63,8 +71,16 @@ export function QuotationPreview({
   lightingTaxPercentage,
   miscellaneousMarginPercentage,
   miscellaneousTaxPercentage,
-  mrpMarginPercentage,
-  mrpTaxPercentage,
+  accessoriesMrpMarginPercentage,
+  cabinetsMrpMarginPercentage,
+  doorsMrpMarginPercentage,
+  lightingMrpMarginPercentage,
+  accessoriesMrpTaxPercentage,
+  cabinetsMrpTaxPercentage,
+  doorsMrpTaxPercentage,
+  lightingMrpTaxPercentage,
+  miscellaneousMrpMarginPercentage,
+  miscellaneousMrpTaxPercentage,
   kitchens,
 }: QuotationPreviewProps) {
   // Check if this is a multi-kitchen quotation
@@ -290,19 +306,35 @@ export function QuotationPreview({
   // Single figure for the whole quotation (common across kitchens). Shown alongside the Offer
   // Price (= grandTotal). Note: grandTotal IS the "Offer Price".
   const mrpFinal = useMemo(() => {
-    let mrpBase: number;
+    const applyMT = (base: number, m: number, t: number) => {
+      const withMargin = base + (base * (m || 0)) / 100;
+      return withMargin + (withMargin * (t || 0)) / 100;
+    };
+    let accBase: number, cabBase: number, doorBase: number, lightBase: number, miscBase: number;
     if (isMultiKitchen && kitchenCalculations) {
-      const productsBase = kitchenCalculations.reduce((sum, k) => sum + k.productsBase, 0);
-      // otherExpensesBase per kitchen already excludes transportation (installation + custom);
+      accBase = kitchenCalculations.reduce((s, k) => s + k.categoryTotals.accessories.subtotal, 0);
+      cabBase = kitchenCalculations.reduce((s, k) => s + k.categoryTotals.cabinets.subtotal, 0);
+      doorBase = kitchenCalculations.reduce((s, k) => s + k.categoryTotals.doors.subtotal, 0);
+      lightBase = kitchenCalculations.reduce((s, k) => s + k.categoryTotals.lighting.subtotal, 0);
+      // otherExpensesBase per kitchen excludes transportation (installation + custom);
       // add the single common transportation base once.
-      const otherBase = kitchenCalculations.reduce((sum, k) => sum + k.otherExpensesBase, 0);
-      mrpBase = productsBase + otherBase + (transportationPrice || 0);
+      miscBase = kitchenCalculations.reduce((s, k) => s + k.otherExpensesBase, 0) + (transportationPrice || 0);
     } else {
-      mrpBase = calculations.productsSubtotal + calculations.otherExpensesBase;
+      accBase = calculations.categoryTotals.accessories.subtotal;
+      cabBase = calculations.categoryTotals.cabinets.subtotal;
+      doorBase = calculations.categoryTotals.doors.subtotal;
+      lightBase = calculations.categoryTotals.lighting.subtotal;
+      miscBase = calculations.otherExpensesBase;
     }
-    const withMargin = mrpBase + (mrpBase * (mrpMarginPercentage || 0)) / 100;
-    return withMargin + (withMargin * (mrpTaxPercentage || 0)) / 100;
-  }, [isMultiKitchen, kitchenCalculations, transportationPrice, calculations.productsSubtotal, calculations.otherExpensesBase, mrpMarginPercentage, mrpTaxPercentage]);
+    return applyMT(accBase, accessoriesMrpMarginPercentage, accessoriesMrpTaxPercentage)
+      + applyMT(cabBase, cabinetsMrpMarginPercentage, cabinetsMrpTaxPercentage)
+      + applyMT(doorBase, doorsMrpMarginPercentage, doorsMrpTaxPercentage)
+      + applyMT(lightBase, lightingMrpMarginPercentage, lightingMrpTaxPercentage)
+      + applyMT(miscBase, miscellaneousMrpMarginPercentage, miscellaneousMrpTaxPercentage);
+  }, [isMultiKitchen, kitchenCalculations, transportationPrice, calculations,
+      accessoriesMrpMarginPercentage, cabinetsMrpMarginPercentage, doorsMrpMarginPercentage, lightingMrpMarginPercentage,
+      accessoriesMrpTaxPercentage, cabinetsMrpTaxPercentage, doorsMrpTaxPercentage, lightingMrpTaxPercentage,
+      miscellaneousMrpMarginPercentage, miscellaneousMrpTaxPercentage]);
 
   return (
     <div className="space-y-4 sm:space-y-6 bg-background-900 p-4 sm:p-6 rounded-lg">

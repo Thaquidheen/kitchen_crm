@@ -45,6 +45,14 @@ public class QuotationKitchenDto {
     private BigDecimal taxAmount = BigDecimal.ZERO;
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
+    // Per-category MRP (list price) totals for this kitchen (for the PDF MRP split-up)
+    private BigDecimal accessoriesMrpTotal = BigDecimal.ZERO;
+    private BigDecimal cabinetsMrpTotal = BigDecimal.ZERO;
+    private BigDecimal doorsMrpTotal = BigDecimal.ZERO;
+    private BigDecimal lightingMrpTotal = BigDecimal.ZERO;
+    private BigDecimal miscMrpTotal = BigDecimal.ZERO;
+    private BigDecimal mrpTotal = BigDecimal.ZERO;
+
     private BigDecimal transportationPrice = BigDecimal.ZERO;
     private BigDecimal installationPrice = BigDecimal.ZERO;
 

@@ -40,6 +40,20 @@ public class QuotationCreateDto {
     private BigDecimal miscellaneousMarginPercentage = BigDecimal.ZERO;
     private BigDecimal miscellaneousTaxPercentage = BigDecimal.valueOf(18.00);
 
+    // Per-category MRP (list price) margin percentages
+    private BigDecimal accessoriesMrpMarginPercentage = BigDecimal.valueOf(20.00);
+    private BigDecimal cabinetsMrpMarginPercentage = BigDecimal.valueOf(20.00);
+    private BigDecimal doorsMrpMarginPercentage = BigDecimal.valueOf(20.00);
+    private BigDecimal lightingMrpMarginPercentage = BigDecimal.valueOf(20.00);
+    // Per-category MRP (list price) tax percentages
+    private BigDecimal accessoriesMrpTaxPercentage = BigDecimal.valueOf(18.00);
+    private BigDecimal cabinetsMrpTaxPercentage = BigDecimal.valueOf(18.00);
+    private BigDecimal doorsMrpTaxPercentage = BigDecimal.valueOf(18.00);
+    private BigDecimal lightingMrpTaxPercentage = BigDecimal.valueOf(18.00);
+    // Miscellaneous (services) MRP margin & tax
+    private BigDecimal miscellaneousMrpMarginPercentage = BigDecimal.ZERO;
+    private BigDecimal miscellaneousMrpTaxPercentage = BigDecimal.valueOf(18.00);
+
     private LocalDate validUntil;
     private String notes;
     private String termsConditions;

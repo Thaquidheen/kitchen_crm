@@ -171,6 +171,18 @@ public class QuotationServiceImpl implements QuotationService {
             quotation.setMiscellaneousMarginPercentage(dto.getMiscellaneousMarginPercentage() != null ? dto.getMiscellaneousMarginPercentage() : BigDecimal.ZERO);
             quotation.setMiscellaneousTaxPercentage(dto.getMiscellaneousTaxPercentage() != null ? dto.getMiscellaneousTaxPercentage() : BigDecimal.valueOf(18.0));
 
+            // Per-category MRP (list price) margin & tax — default to the matching offer value when not provided
+            quotation.setAccessoriesMrpMarginPercentage(dto.getAccessoriesMrpMarginPercentage() != null ? dto.getAccessoriesMrpMarginPercentage() : quotation.getAccessoriesMarginPercentage());
+            quotation.setCabinetsMrpMarginPercentage(dto.getCabinetsMrpMarginPercentage() != null ? dto.getCabinetsMrpMarginPercentage() : quotation.getCabinetsMarginPercentage());
+            quotation.setDoorsMrpMarginPercentage(dto.getDoorsMrpMarginPercentage() != null ? dto.getDoorsMrpMarginPercentage() : quotation.getDoorsMarginPercentage());
+            quotation.setLightingMrpMarginPercentage(dto.getLightingMrpMarginPercentage() != null ? dto.getLightingMrpMarginPercentage() : quotation.getLightingMarginPercentage());
+            quotation.setAccessoriesMrpTaxPercentage(dto.getAccessoriesMrpTaxPercentage() != null ? dto.getAccessoriesMrpTaxPercentage() : quotation.getAccessoriesTaxPercentage());
+            quotation.setCabinetsMrpTaxPercentage(dto.getCabinetsMrpTaxPercentage() != null ? dto.getCabinetsMrpTaxPercentage() : quotation.getCabinetsTaxPercentage());
+            quotation.setDoorsMrpTaxPercentage(dto.getDoorsMrpTaxPercentage() != null ? dto.getDoorsMrpTaxPercentage() : quotation.getDoorsTaxPercentage());
+            quotation.setLightingMrpTaxPercentage(dto.getLightingMrpTaxPercentage() != null ? dto.getLightingMrpTaxPercentage() : quotation.getLightingTaxPercentage());
+            quotation.setMiscellaneousMrpMarginPercentage(dto.getMiscellaneousMrpMarginPercentage() != null ? dto.getMiscellaneousMrpMarginPercentage() : quotation.getMiscellaneousMarginPercentage());
+            quotation.setMiscellaneousMrpTaxPercentage(dto.getMiscellaneousMrpTaxPercentage() != null ? dto.getMiscellaneousMrpTaxPercentage() : quotation.getMiscellaneousTaxPercentage());
+
             // Important Note & Payment Terms
             quotation.setImportantNote(dto.getImportantNote());
             quotation.setPaymentAcceptancePct(dto.getPaymentAcceptancePct() != null ? dto.getPaymentAcceptancePct() : BigDecimal.valueOf(60));
@@ -236,6 +248,18 @@ public class QuotationServiceImpl implements QuotationService {
         existingQuotation.setLightingTaxPercentage(quotationDto.getLightingTaxPercentage());
         existingQuotation.setMiscellaneousMarginPercentage(quotationDto.getMiscellaneousMarginPercentage());
         existingQuotation.setMiscellaneousTaxPercentage(quotationDto.getMiscellaneousTaxPercentage());
+
+        // Per-category MRP (list price) margin & tax — fall back to the matching offer value when not supplied
+        existingQuotation.setAccessoriesMrpMarginPercentage(quotationDto.getAccessoriesMrpMarginPercentage() != null ? quotationDto.getAccessoriesMrpMarginPercentage() : existingQuotation.getAccessoriesMarginPercentage());
+        existingQuotation.setCabinetsMrpMarginPercentage(quotationDto.getCabinetsMrpMarginPercentage() != null ? quotationDto.getCabinetsMrpMarginPercentage() : existingQuotation.getCabinetsMarginPercentage());
+        existingQuotation.setDoorsMrpMarginPercentage(quotationDto.getDoorsMrpMarginPercentage() != null ? quotationDto.getDoorsMrpMarginPercentage() : existingQuotation.getDoorsMarginPercentage());
+        existingQuotation.setLightingMrpMarginPercentage(quotationDto.getLightingMrpMarginPercentage() != null ? quotationDto.getLightingMrpMarginPercentage() : existingQuotation.getLightingMarginPercentage());
+        existingQuotation.setAccessoriesMrpTaxPercentage(quotationDto.getAccessoriesMrpTaxPercentage() != null ? quotationDto.getAccessoriesMrpTaxPercentage() : existingQuotation.getAccessoriesTaxPercentage());
+        existingQuotation.setCabinetsMrpTaxPercentage(quotationDto.getCabinetsMrpTaxPercentage() != null ? quotationDto.getCabinetsMrpTaxPercentage() : existingQuotation.getCabinetsTaxPercentage());
+        existingQuotation.setDoorsMrpTaxPercentage(quotationDto.getDoorsMrpTaxPercentage() != null ? quotationDto.getDoorsMrpTaxPercentage() : existingQuotation.getDoorsTaxPercentage());
+        existingQuotation.setLightingMrpTaxPercentage(quotationDto.getLightingMrpTaxPercentage() != null ? quotationDto.getLightingMrpTaxPercentage() : existingQuotation.getLightingTaxPercentage());
+        existingQuotation.setMiscellaneousMrpMarginPercentage(quotationDto.getMiscellaneousMrpMarginPercentage() != null ? quotationDto.getMiscellaneousMrpMarginPercentage() : existingQuotation.getMiscellaneousMarginPercentage());
+        existingQuotation.setMiscellaneousMrpTaxPercentage(quotationDto.getMiscellaneousMrpTaxPercentage() != null ? quotationDto.getMiscellaneousMrpTaxPercentage() : existingQuotation.getMiscellaneousTaxPercentage());
 
         // Important Note & Payment Terms
         existingQuotation.setImportantNote(quotationDto.getImportantNote());
@@ -1043,6 +1067,18 @@ public class QuotationServiceImpl implements QuotationService {
         dto.setMiscellaneousMarginPercentage(quotation.getMiscellaneousMarginPercentage());
         dto.setMiscellaneousTaxPercentage(quotation.getMiscellaneousTaxPercentage());
 
+        // Per-category MRP (list price) margin & tax percentages (for editing)
+        dto.setAccessoriesMrpMarginPercentage(quotation.getAccessoriesMrpMarginPercentage());
+        dto.setCabinetsMrpMarginPercentage(quotation.getCabinetsMrpMarginPercentage());
+        dto.setDoorsMrpMarginPercentage(quotation.getDoorsMrpMarginPercentage());
+        dto.setLightingMrpMarginPercentage(quotation.getLightingMrpMarginPercentage());
+        dto.setAccessoriesMrpTaxPercentage(quotation.getAccessoriesMrpTaxPercentage());
+        dto.setCabinetsMrpTaxPercentage(quotation.getCabinetsMrpTaxPercentage());
+        dto.setDoorsMrpTaxPercentage(quotation.getDoorsMrpTaxPercentage());
+        dto.setLightingMrpTaxPercentage(quotation.getLightingMrpTaxPercentage());
+        dto.setMiscellaneousMrpMarginPercentage(quotation.getMiscellaneousMrpMarginPercentage());
+        dto.setMiscellaneousMrpTaxPercentage(quotation.getMiscellaneousMrpTaxPercentage());
+
         dto.setSubtotal(quotation.getSubtotal());
         dto.setTaxAmount(quotation.getTaxAmount());
         dto.setTotalAmount(quotation.getTotalAmount());
@@ -1129,10 +1165,28 @@ public class QuotationServiceImpl implements QuotationService {
         // Load kitchens
         dto.setKitchens(loadKitchens(quotation.getId()));
 
-        // MRP (list price) — computed once here with the entity's (always-available) margin/tax so it
-        // is correct for every role; totalAmount is the Offer Price. Shown on the detail page and PDF.
-        dto.setMrpFinal(QuotationMrpCalculator.computeMrpFinal(
-                dto, quotation.getMarginPercentage(), quotation.getTaxPercentage()));
+        // MRP (list price) — per-category breakdown computed once here with the entity's
+        // (always-available) per-category MRP margin/tax so it is correct for every role.
+        // totalAmount is the Offer Price; the per-category MRP totals feed the PDF MRP split-up.
+        QuotationMrpCalculator.MrpRates mrpRates = QuotationMrpCalculator.MrpRates.from(quotation);
+        if (dto.getKitchens() != null) {
+            for (QuotationKitchenDto kdto : dto.getKitchens()) {
+                QuotationMrpCalculator.MrpBreakdown kb = QuotationMrpCalculator.computeKitchenMrp(kdto, mrpRates);
+                kdto.setAccessoriesMrpTotal(kb.accessories);
+                kdto.setCabinetsMrpTotal(kb.cabinets);
+                kdto.setDoorsMrpTotal(kb.doors);
+                kdto.setLightingMrpTotal(kb.lighting);
+                kdto.setMiscMrpTotal(kb.misc);
+                kdto.setMrpTotal(kb.total);
+            }
+        }
+        QuotationMrpCalculator.MrpBreakdown mrp = QuotationMrpCalculator.computeQuotationMrp(dto, mrpRates);
+        dto.setAccessoriesMrpTotal(mrp.accessories);
+        dto.setCabinetsMrpTotal(mrp.cabinets);
+        dto.setDoorsMrpTotal(mrp.doors);
+        dto.setLightingMrpTotal(mrp.lighting);
+        dto.setMiscMrpTotal(mrp.misc);
+        dto.setMrpFinal(mrp.total);
 
         return dto;
     }

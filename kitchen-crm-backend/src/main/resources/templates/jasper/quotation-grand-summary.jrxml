@@ -19,6 +19,7 @@
 
     <field name="kitchenName" class="java.lang.String"/>
     <field name="totalAmount" class="java.math.BigDecimal"/>
+    <field name="mrpTotal" class="java.math.BigDecimal"/>
 
     <columnHeader>
         <band height="35">
@@ -48,13 +49,13 @@
                 </textElement>
                 <textFieldExpression><![CDATA[$F{kitchenName}]]></textFieldExpression>
             </textField>
-            <!-- Kitchen total -->
+            <!-- Kitchen MRP total -->
             <textField>
                 <reportElement x="355" y="0" width="190" height="20" forecolor="#333333" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50005"/>
                 <textElement textAlignment="Left" verticalAlignment="Middle">
                     <font fontName="Serif" size="10"/>
                 </textElement>
-                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($F{totalAmount}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
+                <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($F{mrpTotal}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
             </textField>
         </band>
     </detail>
@@ -85,32 +86,22 @@
                 </textElement>
                 <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($P{COMMON_TRANSPORTATION}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
             </textField>
-            <!-- Incl. Other Expenses note (conditional) -->
-            <textField>
-                <reportElement x="5" y="28" width="350" height="14" forecolor="#777777" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50007">
-                    <printWhenExpression><![CDATA[$P{OTHER_EXPENSES_TOTAL} != null && $P{OTHER_EXPENSES_TOTAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
-                </reportElement>
-                <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="8" isItalic="true"/>
-                </textElement>
-                <textFieldExpression><![CDATA["(Incl. per-kitchen Other Expenses: Rs. " + new java.text.DecimalFormat("0.00").format($P{OTHER_EXPENSES_TOTAL}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,") + ")"]]></textFieldExpression>
-            </textField>
-            <!-- MRP (list price), struck-through, shown above the Offer Price (only when > Offer) -->
+            <!-- MRP TOTAL (the MRP-based grand total of the split-up above) -->
             <staticText>
-                <reportElement x="5" y="44" width="200" height="20" forecolor="#888888" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50013">
+                <reportElement x="5" y="34" width="200" height="20" forecolor="#333333" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50013">
                     <printWhenExpression><![CDATA[$P{MRP_FINAL} != null && $P{MRP_FINAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
                 </reportElement>
                 <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="10"/>
+                    <font fontName="Serif" size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[MRP]]></text>
+                <text><![CDATA[MRP TOTAL]]></text>
             </staticText>
             <textField>
-                <reportElement x="355" y="44" width="190" height="20" forecolor="#888888" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50014">
+                <reportElement x="355" y="34" width="190" height="20" forecolor="#333333" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50014">
                     <printWhenExpression><![CDATA[$P{MRP_FINAL} != null && $P{MRP_FINAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
                 </reportElement>
                 <textElement textAlignment="Left" verticalAlignment="Middle">
-                    <font fontName="Serif" size="11" isStrikeThrough="true"/>
+                    <font fontName="Serif" size="11" isBold="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($P{MRP_FINAL}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
             </textField>

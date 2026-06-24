@@ -90,6 +90,39 @@ public class Quotation extends Auditable {
     @Column(name = "miscellaneous_tax_percentage", precision = 5, scale = 2)
     private BigDecimal miscellaneousTaxPercentage = BigDecimal.valueOf(18.00);
 
+    // PER-CATEGORY MRP (LIST PRICE) MARGIN PERCENTAGES
+    @Column(name = "accessories_mrp_margin_percentage", precision = 5, scale = 2)
+    private BigDecimal accessoriesMrpMarginPercentage = BigDecimal.valueOf(20.00);
+
+    @Column(name = "cabinets_mrp_margin_percentage", precision = 5, scale = 2)
+    private BigDecimal cabinetsMrpMarginPercentage = BigDecimal.valueOf(20.00);
+
+    @Column(name = "doors_mrp_margin_percentage", precision = 5, scale = 2)
+    private BigDecimal doorsMrpMarginPercentage = BigDecimal.valueOf(20.00);
+
+    @Column(name = "lighting_mrp_margin_percentage", precision = 5, scale = 2)
+    private BigDecimal lightingMrpMarginPercentage = BigDecimal.valueOf(20.00);
+
+    // PER-CATEGORY MRP (LIST PRICE) TAX PERCENTAGES
+    @Column(name = "accessories_mrp_tax_percentage", precision = 5, scale = 2)
+    private BigDecimal accessoriesMrpTaxPercentage = BigDecimal.valueOf(18.00);
+
+    @Column(name = "cabinets_mrp_tax_percentage", precision = 5, scale = 2)
+    private BigDecimal cabinetsMrpTaxPercentage = BigDecimal.valueOf(18.00);
+
+    @Column(name = "doors_mrp_tax_percentage", precision = 5, scale = 2)
+    private BigDecimal doorsMrpTaxPercentage = BigDecimal.valueOf(18.00);
+
+    @Column(name = "lighting_mrp_tax_percentage", precision = 5, scale = 2)
+    private BigDecimal lightingMrpTaxPercentage = BigDecimal.valueOf(18.00);
+
+    // MISCELLANEOUS (SERVICES) MRP MARGIN & TAX
+    @Column(name = "miscellaneous_mrp_margin_percentage", precision = 5, scale = 2)
+    private BigDecimal miscellaneousMrpMarginPercentage = BigDecimal.ZERO;
+
+    @Column(name = "miscellaneous_mrp_tax_percentage", precision = 5, scale = 2)
+    private BigDecimal miscellaneousMrpTaxPercentage = BigDecimal.valueOf(18.00);
+
     @Column(name = "subtotal", precision = 12, scale = 2)
     private BigDecimal subtotal = BigDecimal.ZERO;
 

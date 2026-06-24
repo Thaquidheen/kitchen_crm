@@ -3,19 +3,21 @@ package com.fleetmanagement.kitchencrmbackend.modules.quotation.service;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.dto.QuotationDto;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.dto.QuotationKitchenDto;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.dto.QuotationOtherExpenseDto;
+import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 
 /**
- * Computes the MRP ("list price") for a quotation: the sum of all BASE prices
- * (accessories + cabinets + doors + lighting + installation + custom other-expenses +
- * common transportation, before per-category margin/tax) with ONE common margin% and
- * tax% applied. A single figure for the whole quotation (common across kitchens).
+ * Computes the MRP ("list price") for a quotation using PER-CATEGORY MRP margin% / tax%
+ * (mirroring the per-category Offer pricing). Each product category and the miscellaneous
+ * (services) group has its own MRP margin/tax. The result is a breakdown so the PDF can show
+ * an MRP-based per-category split-up; mrpGrandTotal is the MRP figure shown on screen/saved.
  *
- * Single source of truth shared by the quotation DTO mapping (QuotationServiceImpl) and
- * PDF generation (JasperPdfGenerationServiceImpl) so the saved-quotation view and the PDF
- * always show the same MRP value.
+ * Single source of truth shared by the quotation DTO mapping (QuotationServiceImpl) and PDF
+ * generation (JasperPdfGenerationServiceImpl). Rates are taken from the entity (always available)
+ * because the DTO may hide margin percentages from non-admin roles.
  */
 public final class QuotationMrpCalculator {
 
@@ -25,58 +27,104 @@ public final class QuotationMrpCalculator {
         return v != null ? v : BigDecimal.ZERO;
     }
 
-    /** Uses the DTO's own marginPercentage/taxPercentage. */
-    public static BigDecimal computeMrpFinal(QuotationDto quotation) {
-        if (quotation == null) {
-            return BigDecimal.ZERO;
+    private static BigDecimal applyMarginTax(BigDecimal base, BigDecimal marginPct, BigDecimal taxPct) {
+        BigDecimal b = nz(base);
+        BigDecimal withMargin = b.add(b.multiply(nz(marginPct)).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
+        return withMargin.add(withMargin.multiply(nz(taxPct)).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
+    }
+
+    /** The 10 per-category + miscellaneous MRP margin/tax percentages. */
+    public static final class MrpRates {
+        public final BigDecimal accMargin, cabMargin, doorMargin, lightMargin;
+        public final BigDecimal accTax, cabTax, doorTax, lightTax;
+        public final BigDecimal miscMargin, miscTax;
+
+        public MrpRates(BigDecimal accMargin, BigDecimal cabMargin, BigDecimal doorMargin, BigDecimal lightMargin,
+                        BigDecimal accTax, BigDecimal cabTax, BigDecimal doorTax, BigDecimal lightTax,
+                        BigDecimal miscMargin, BigDecimal miscTax) {
+            this.accMargin = accMargin; this.cabMargin = cabMargin; this.doorMargin = doorMargin; this.lightMargin = lightMargin;
+            this.accTax = accTax; this.cabTax = cabTax; this.doorTax = doorTax; this.lightTax = lightTax;
+            this.miscMargin = miscMargin; this.miscTax = miscTax;
         }
-        return computeMrpFinal(quotation, quotation.getMarginPercentage(), quotation.getTaxPercentage());
+
+        public static MrpRates from(Quotation q) {
+            return new MrpRates(
+                q.getAccessoriesMrpMarginPercentage(), q.getCabinetsMrpMarginPercentage(),
+                q.getDoorsMrpMarginPercentage(), q.getLightingMrpMarginPercentage(),
+                q.getAccessoriesMrpTaxPercentage(), q.getCabinetsMrpTaxPercentage(),
+                q.getDoorsMrpTaxPercentage(), q.getLightingMrpTaxPercentage(),
+                q.getMiscellaneousMrpMarginPercentage(), q.getMiscellaneousMrpTaxPercentage());
+        }
+    }
+
+    /** Per-category MRP totals plus the grand total. */
+    public static final class MrpBreakdown {
+        public final BigDecimal accessories, cabinets, doors, lighting, misc, total;
+
+        public MrpBreakdown(BigDecimal accessories, BigDecimal cabinets, BigDecimal doors,
+                            BigDecimal lighting, BigDecimal misc) {
+            this.accessories = accessories; this.cabinets = cabinets; this.doors = doors;
+            this.lighting = lighting; this.misc = misc;
+            this.total = accessories.add(cabinets).add(doors).add(lighting).add(misc);
+        }
+    }
+
+    private static BigDecimal sumOtherExpenses(List<QuotationOtherExpenseDto> items) {
+        BigDecimal sum = BigDecimal.ZERO;
+        if (items != null) {
+            for (QuotationOtherExpenseDto e : items) {
+                sum = sum.add(nz(e.getAmount()));
+            }
+        }
+        return sum;
     }
 
     /**
-     * Uses explicit margin/tax — needed when the DTO hides marginPercentage from non-admin roles,
-     * so callers can pass the real (entity) values to keep the MRP correct for everyone.
+     * MRP breakdown for a single kitchen: per-category base x per-category MRP margin/tax, plus the
+     * kitchen's own other-expenses (installation + custom; for a single kitchen this also includes
+     * its transportation). The common (multi-kitchen) transportation is added at the quotation level.
      */
-    public static BigDecimal computeMrpFinal(QuotationDto quotation, BigDecimal marginPct, BigDecimal taxPct) {
-        if (quotation == null) {
+    public static MrpBreakdown computeKitchenMrp(QuotationKitchenDto k, MrpRates r) {
+        BigDecimal acc = applyMarginTax(k.getAccessoriesBaseTotal(), r.accMargin, r.accTax);
+        BigDecimal cab = applyMarginTax(k.getCabinetsBaseTotal(), r.cabMargin, r.cabTax);
+        BigDecimal door = applyMarginTax(k.getDoorsBaseTotal(), r.doorMargin, r.doorTax);
+        BigDecimal light = applyMarginTax(k.getLightingBaseTotal(), r.lightMargin, r.lightTax);
+        BigDecimal misc = applyMarginTax(sumOtherExpenses(k.getOtherExpenses()), r.miscMargin, r.miscTax);
+        return new MrpBreakdown(acc, cab, door, light, misc);
+    }
+
+    /** Quotation-level MRP breakdown (sum across kitchens + common transportation, or legacy single). */
+    public static MrpBreakdown computeQuotationMrp(QuotationDto q, MrpRates r) {
+        boolean isMultiKitchen = q.getKitchens() != null && !q.getKitchens().isEmpty();
+        if (isMultiKitchen) {
+            BigDecimal acc = BigDecimal.ZERO, cab = BigDecimal.ZERO, door = BigDecimal.ZERO,
+                       light = BigDecimal.ZERO, misc = BigDecimal.ZERO;
+            for (QuotationKitchenDto k : q.getKitchens()) {
+                MrpBreakdown kb = computeKitchenMrp(k, r);
+                acc = acc.add(kb.accessories);
+                cab = cab.add(kb.cabinets);
+                door = door.add(kb.doors);
+                light = light.add(kb.lighting);
+                misc = misc.add(kb.misc);
+            }
+            // Common transportation (quotation-level) priced with the miscellaneous MRP margin/tax.
+            misc = misc.add(applyMarginTax(q.getTransportationPrice(), r.miscMargin, r.miscTax));
+            return new MrpBreakdown(acc, cab, door, light, misc);
+        }
+        // No kitchens (legacy): quotation-level base totals + quotation-level other-expenses.
+        BigDecimal acc = applyMarginTax(q.getAccessoriesBaseTotal(), r.accMargin, r.accTax);
+        BigDecimal cab = applyMarginTax(q.getCabinetsBaseTotal(), r.cabMargin, r.cabTax);
+        BigDecimal door = applyMarginTax(q.getDoorsBaseTotal(), r.doorMargin, r.doorTax);
+        BigDecimal light = applyMarginTax(q.getLightingBaseTotal(), r.lightMargin, r.lightTax);
+        BigDecimal misc = applyMarginTax(sumOtherExpenses(q.getOtherExpenses()), r.miscMargin, r.miscTax);
+        return new MrpBreakdown(acc, cab, door, light, misc);
+    }
+
+    /** Convenience: the MRP grand total for the quotation. */
+    public static BigDecimal computeMrpFinal(QuotationDto q, MrpRates r) {
+        if (q == null) {
             return BigDecimal.ZERO;
         }
-
-        boolean isMultiKitchen = quotation.getKitchens() != null && !quotation.getKitchens().isEmpty();
-
-        BigDecimal categoryBase = nz(quotation.getAccessoriesBaseTotal())
-                .add(nz(quotation.getCabinetsBaseTotal()))
-                .add(nz(quotation.getDoorsBaseTotal()))
-                .add(nz(quotation.getLightingBaseTotal()));
-
-        BigDecimal servicesBase = BigDecimal.ZERO;
-        if (isMultiKitchen) {
-            // Each kitchen's other-expenses (installation + custom; for 2+ kitchens this
-            // excludes transportation, for a single kitchen it includes it).
-            for (QuotationKitchenDto k : quotation.getKitchens()) {
-                if (k.getOtherExpenses() != null) {
-                    for (QuotationOtherExpenseDto e : k.getOtherExpenses()) {
-                        servicesBase = servicesBase.add(nz(e.getAmount()));
-                    }
-                }
-            }
-            // Add the single common transportation once (0 for a single kitchen, where it is
-            // already inside that kitchen's other-expenses).
-            servicesBase = servicesBase.add(nz(quotation.getTransportationPrice()));
-        } else {
-            // No kitchens (legacy): quotation-level other-expenses already include
-            // transportation + installation.
-            if (quotation.getOtherExpenses() != null) {
-                for (QuotationOtherExpenseDto e : quotation.getOtherExpenses()) {
-                    servicesBase = servicesBase.add(nz(e.getAmount()));
-                }
-            }
-        }
-
-        BigDecimal base = categoryBase.add(servicesBase);
-        BigDecimal m = nz(marginPct);
-        BigDecimal t = nz(taxPct);
-        BigDecimal withMargin = base.add(base.multiply(m).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
-        return withMargin.add(withMargin.multiply(t).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
+        return computeQuotationMrp(q, r).total;
     }
 }

@@ -173,6 +173,17 @@ export interface Quotation {
   // Miscellaneous (Other Expenses) margin & tax
   miscellaneousMarginPercentage?: number;
   miscellaneousTaxPercentage?: number;
+  // Per-category MRP (list price) margin & tax
+  accessoriesMrpMarginPercentage?: number;
+  cabinetsMrpMarginPercentage?: number;
+  doorsMrpMarginPercentage?: number;
+  lightingMrpMarginPercentage?: number;
+  accessoriesMrpTaxPercentage?: number;
+  cabinetsMrpTaxPercentage?: number;
+  doorsMrpTaxPercentage?: number;
+  lightingMrpTaxPercentage?: number;
+  miscellaneousMrpMarginPercentage?: number;
+  miscellaneousMrpTaxPercentage?: number;
   subtotal: number;
   marginAmount: number;
   taxAmount: number;
@@ -268,6 +279,28 @@ export interface CreateQuotationRequest {
   installationPrice?: number;
   marginPercentage?: number;
   taxPercentage?: number;
+  // Per-category offer margin/tax
+  accessoriesMarginPercentage?: number;
+  cabinetsMarginPercentage?: number;
+  doorsMarginPercentage?: number;
+  lightingMarginPercentage?: number;
+  accessoriesTaxPercentage?: number;
+  cabinetsTaxPercentage?: number;
+  doorsTaxPercentage?: number;
+  lightingTaxPercentage?: number;
+  miscellaneousMarginPercentage?: number;
+  miscellaneousTaxPercentage?: number;
+  // Per-category MRP (list price) margin/tax
+  accessoriesMrpMarginPercentage?: number;
+  cabinetsMrpMarginPercentage?: number;
+  doorsMrpMarginPercentage?: number;
+  lightingMrpMarginPercentage?: number;
+  accessoriesMrpTaxPercentage?: number;
+  cabinetsMrpTaxPercentage?: number;
+  doorsMrpTaxPercentage?: number;
+  lightingMrpTaxPercentage?: number;
+  miscellaneousMrpMarginPercentage?: number;
+  miscellaneousMrpTaxPercentage?: number;
   validUntil?: string;
   notes?: string;
   termsConditions?: string;
@@ -478,6 +511,17 @@ export interface QuotationFormData {
   lightingTaxPercentage?: number;
   miscellaneousMarginPercentage?: number;
   miscellaneousTaxPercentage?: number;
+  // Per-category MRP (list price) margin/tax percentages
+  accessoriesMrpMarginPercentage?: number;
+  cabinetsMrpMarginPercentage?: number;
+  doorsMrpMarginPercentage?: number;
+  lightingMrpMarginPercentage?: number;
+  accessoriesMrpTaxPercentage?: number;
+  cabinetsMrpTaxPercentage?: number;
+  doorsMrpTaxPercentage?: number;
+  lightingMrpTaxPercentage?: number;
+  miscellaneousMrpMarginPercentage?: number;
+  miscellaneousMrpTaxPercentage?: number;
 }
 
 // Quotation state

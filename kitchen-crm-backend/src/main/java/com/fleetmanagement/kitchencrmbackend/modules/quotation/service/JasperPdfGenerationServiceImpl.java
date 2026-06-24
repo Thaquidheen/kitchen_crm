@@ -364,14 +364,16 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         params.put("TRANSPORTATION_PRICE", BigDecimal.ZERO);
         params.put("INSTALLATION_PRICE", BigDecimal.ZERO);
 
-        // Common transportation (multi-kitchen): a single charge for the whole quotation,
-        // with miscellaneous margin/tax applied (matches PricingServiceImpl). Shown as one
-        // line in the grand summary; installation remains per-kitchen.
+        // Common transportation (multi-kitchen): a single charge for the whole quotation. The grand
+        // summary is MRP-based, so price it with the miscellaneous MRP margin/tax (matches
+        // QuotationMrpCalculator) so the per-kitchen MRP totals + this line reconcile to the MRP total.
+        BigDecimal grandMrpMiscMarginPct = quotation.getMiscellaneousMrpMarginPercentage() != null ? quotation.getMiscellaneousMrpMarginPercentage() : BigDecimal.ZERO;
+        BigDecimal grandMrpMiscTaxPct = quotation.getMiscellaneousMrpTaxPercentage() != null ? quotation.getMiscellaneousMrpTaxPercentage() : BigDecimal.valueOf(18.0);
         BigDecimal commonTransportBase = (isMultiKitchen && quotation.getTransportationPrice() != null)
                 ? quotation.getTransportationPrice() : BigDecimal.ZERO;
-        BigDecimal commonTransportMargin = commonTransportBase.multiply(grandMiscMarginPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal commonTransportMargin = commonTransportBase.multiply(grandMrpMiscMarginPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
         BigDecimal commonTransportWithMargin = commonTransportBase.add(commonTransportMargin);
-        BigDecimal commonTransportTax = commonTransportWithMargin.multiply(grandMiscTaxPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal commonTransportTax = commonTransportWithMargin.multiply(grandMrpMiscTaxPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
         BigDecimal commonTransportFinal = commonTransportWithMargin.add(commonTransportTax);
         params.put("COMMON_TRANSPORTATION", commonTransportFinal);
 
@@ -429,6 +431,7 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
                 Map<String, Object> row = new HashMap<>();
                 row.put("kitchenName", k.getKitchenName() != null ? k.getKitchenName() : "Kitchen");
                 row.put("totalAmount", k.getTotalAmount() != null ? k.getTotalAmount() : BigDecimal.ZERO);
+                row.put("mrpTotal", k.getMrpTotal() != null ? k.getMrpTotal() : BigDecimal.ZERO);
                 BigDecimal otherExpenses = BigDecimal.ZERO;
                 if (k.getOtherExpenses() != null) {
                     otherExpenses = k.getOtherExpenses().stream()
@@ -532,6 +535,14 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         map.put("taxAmount", kitchen.getTaxAmount() != null ? kitchen.getTaxAmount() : BigDecimal.ZERO);
         map.put("totalAmount", kitchen.getTotalAmount() != null ? kitchen.getTotalAmount() : BigDecimal.ZERO);
 
+        // Per-category MRP (list price) totals — the MRP split-up shown in the PDF
+        map.put("cabinetsMrpTotal", kitchen.getCabinetsMrpTotal() != null ? kitchen.getCabinetsMrpTotal() : BigDecimal.ZERO);
+        map.put("doorsMrpTotal", kitchen.getDoorsMrpTotal() != null ? kitchen.getDoorsMrpTotal() : BigDecimal.ZERO);
+        map.put("accessoriesMrpTotal", kitchen.getAccessoriesMrpTotal() != null ? kitchen.getAccessoriesMrpTotal() : BigDecimal.ZERO);
+        map.put("lightingMrpTotal", kitchen.getLightingMrpTotal() != null ? kitchen.getLightingMrpTotal() : BigDecimal.ZERO);
+        map.put("miscMrpTotal", kitchen.getMiscMrpTotal() != null ? kitchen.getMiscMrpTotal() : BigDecimal.ZERO);
+        map.put("mrpTotal", kitchen.getMrpTotal() != null ? kitchen.getMrpTotal() : BigDecimal.ZERO);
+
         return map;
     }
 
@@ -555,6 +566,14 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         kitchen.setMarginAmount(quotation.getMarginAmount());
         kitchen.setTaxAmount(quotation.getTaxAmount());
         kitchen.setTotalAmount(quotation.getTotalAmount());
+
+        // Copy per-category MRP totals from quotation level (computed in convertToDto)
+        kitchen.setCabinetsMrpTotal(quotation.getCabinetsMrpTotal());
+        kitchen.setDoorsMrpTotal(quotation.getDoorsMrpTotal());
+        kitchen.setAccessoriesMrpTotal(quotation.getAccessoriesMrpTotal());
+        kitchen.setLightingMrpTotal(quotation.getLightingMrpTotal());
+        kitchen.setMiscMrpTotal(quotation.getMiscMrpTotal());
+        kitchen.setMrpTotal(quotation.getMrpFinal());
 
         return kitchen;
     }

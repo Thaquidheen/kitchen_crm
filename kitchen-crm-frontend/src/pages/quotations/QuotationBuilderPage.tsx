@@ -133,6 +133,17 @@ export function QuotationBuilderPage() {
     lightingTaxPercentage: 18,
     miscellaneousMarginPercentage: 0,
     miscellaneousTaxPercentage: 18,
+    // Per-category MRP (list price) rates (default to the offer values)
+    accessoriesMrpMarginPercentage: 20,
+    cabinetsMrpMarginPercentage: 20,
+    doorsMrpMarginPercentage: 20,
+    lightingMrpMarginPercentage: 20,
+    accessoriesMrpTaxPercentage: 18,
+    cabinetsMrpTaxPercentage: 18,
+    doorsMrpTaxPercentage: 18,
+    lightingMrpTaxPercentage: 18,
+    miscellaneousMrpMarginPercentage: 0,
+    miscellaneousMrpTaxPercentage: 18,
     validUntil: '',
     notes: '',
     termsConditions: DEFAULT_TERMS_CONDITIONS,
@@ -297,6 +308,17 @@ export function QuotationBuilderPage() {
       lightingTaxPercentage: Number(existingQuotation.lightingTaxPercentage ?? 18),
       miscellaneousMarginPercentage: Number(existingQuotation.miscellaneousMarginPercentage ?? 0),
       miscellaneousTaxPercentage: Number(existingQuotation.miscellaneousTaxPercentage ?? 18),
+      // Per-category MRP (list price) rates — fall back to the matching offer value
+      accessoriesMrpMarginPercentage: Number(existingQuotation.accessoriesMrpMarginPercentage ?? existingQuotation.accessoriesMarginPercentage ?? 20),
+      cabinetsMrpMarginPercentage: Number(existingQuotation.cabinetsMrpMarginPercentage ?? existingQuotation.cabinetsMarginPercentage ?? 20),
+      doorsMrpMarginPercentage: Number(existingQuotation.doorsMrpMarginPercentage ?? existingQuotation.doorsMarginPercentage ?? 20),
+      lightingMrpMarginPercentage: Number(existingQuotation.lightingMrpMarginPercentage ?? existingQuotation.lightingMarginPercentage ?? 20),
+      accessoriesMrpTaxPercentage: Number(existingQuotation.accessoriesMrpTaxPercentage ?? existingQuotation.accessoriesTaxPercentage ?? 18),
+      cabinetsMrpTaxPercentage: Number(existingQuotation.cabinetsMrpTaxPercentage ?? existingQuotation.cabinetsTaxPercentage ?? 18),
+      doorsMrpTaxPercentage: Number(existingQuotation.doorsMrpTaxPercentage ?? existingQuotation.doorsTaxPercentage ?? 18),
+      lightingMrpTaxPercentage: Number(existingQuotation.lightingMrpTaxPercentage ?? existingQuotation.lightingTaxPercentage ?? 18),
+      miscellaneousMrpMarginPercentage: Number(existingQuotation.miscellaneousMrpMarginPercentage ?? existingQuotation.miscellaneousMarginPercentage ?? 0),
+      miscellaneousMrpTaxPercentage: Number(existingQuotation.miscellaneousMrpTaxPercentage ?? existingQuotation.miscellaneousTaxPercentage ?? 18),
       validUntil: existingQuotation.validUntil || '',
       notes: existingQuotation.notes || '',
       termsConditions: existingQuotation.termsConditions || DEFAULT_TERMS_CONDITIONS,
@@ -507,6 +529,17 @@ export function QuotationBuilderPage() {
       lightingTaxPercentage: formData.lightingTaxPercentage ?? 18,
       miscellaneousMarginPercentage: formData.miscellaneousMarginPercentage ?? 0,
       miscellaneousTaxPercentage: formData.miscellaneousTaxPercentage ?? 18,
+      // Per-category MRP (list price) rates
+      accessoriesMrpMarginPercentage: formData.accessoriesMrpMarginPercentage ?? 20,
+      cabinetsMrpMarginPercentage: formData.cabinetsMrpMarginPercentage ?? 20,
+      doorsMrpMarginPercentage: formData.doorsMrpMarginPercentage ?? 20,
+      lightingMrpMarginPercentage: formData.lightingMrpMarginPercentage ?? 20,
+      accessoriesMrpTaxPercentage: formData.accessoriesMrpTaxPercentage ?? 18,
+      cabinetsMrpTaxPercentage: formData.cabinetsMrpTaxPercentage ?? 18,
+      doorsMrpTaxPercentage: formData.doorsMrpTaxPercentage ?? 18,
+      lightingMrpTaxPercentage: formData.lightingMrpTaxPercentage ?? 18,
+      miscellaneousMrpMarginPercentage: formData.miscellaneousMrpMarginPercentage ?? 0,
+      miscellaneousMrpTaxPercentage: formData.miscellaneousMrpTaxPercentage ?? 18,
       validUntil: formData.validUntil || undefined,
       notes: formData.notes || undefined,
       termsConditions: formData.termsConditions || undefined,
@@ -1679,46 +1712,62 @@ export function QuotationBuilderPage() {
                         Total: {(formData.paymentAcceptancePct ?? 60) + (formData.paymentDeliveryPct ?? 30) + (formData.paymentInstallationPct ?? 10)}%
                       </p>
                     </div>
-
-                    {/* MRP (list price) — single common margin & tax applied to the full base sum.
-                        Shown as the struck-through MRP next to the Offer Price (super-admin only). */}
-                    {userRole === 'ROLE_SUPER_ADMIN' && (
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-text-700 mb-2">
-                          MRP (List Price) — common margin &amp; tax
-                        </label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs text-text-600 mb-1">MRP Margin %</label>
-                            <Input
-                              type="text"
-                              inputMode="decimal"
-                              value={formData.marginPercentage ?? 20}
-                              onChange={(e) =>
-                                setFormData({ ...formData, marginPercentage: parseFloat(e.target.value) || 0 })
-                              }
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-text-600 mb-1">MRP Tax %</label>
-                            <Input
-                              type="text"
-                              inputMode="decimal"
-                              value={formData.taxPercentage ?? 18}
-                              onChange={(e) =>
-                                setFormData({ ...formData, taxPercentage: parseFloat(e.target.value) || 0 })
-                              }
-                            />
-                          </div>
-                        </div>
-                        <p className="text-xs text-text-500 mt-1">
-                          MRP = all item base prices + installation + other expenses + transportation, with this single
-                          margin &amp; tax. Shown struck-through above the Offer Price.
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </Card>
+
+                {/* MRP (List Price) — per-category pricing, mirrors the offer "Pricing by Category".
+                    A single quotation-level set of MRP margins/taxes (super-admin only). */}
+                {userRole === 'ROLE_SUPER_ADMIN' && (() => {
+                  const ks = formData.kitchens || [];
+                  const hasK = ks.length > 0;
+                  const isMulti = ks.length >= 2;
+                  const acc = hasK ? ks.flatMap((k) => k.accessories || []) : (formData.accessories || []);
+                  const cab = hasK ? ks.flatMap((k) => k.cabinets || []) : (formData.cabinets || []);
+                  const dor = hasK ? ks.flatMap((k) => k.doors || []) : (formData.doors || []);
+                  const lit = hasK ? ks.flatMap((k) => k.lighting || []) : (formData.lighting || []);
+                  let oe: QuotationOtherExpense[];
+                  if (hasK) {
+                    const perK = ks.flatMap((k) => (k.otherExpenses || []).filter((e) => e.name !== 'Transportation'));
+                    const transport = (formData.otherExpenses || []).find((e) => e.name === 'Transportation');
+                    oe = isMulti && transport && (transport.amount || 0) > 0 ? [...perK, transport] : perK;
+                  } else {
+                    oe = formData.otherExpenses || [];
+                  }
+                  return (
+                    <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
+                      <h3 className="text-base sm:text-lg font-semibold text-text-900 mb-1">Pricing by Category — MRP (List Price)</h3>
+                      <p className="text-xs text-text-500 mb-4">Set the per-category margin &amp; tax used for the MRP. The Offer Price uses the rates above.</p>
+                      <CategoryPricingPanel
+                        accessories={acc}
+                        cabinets={cab}
+                        doors={dor}
+                        lighting={lit}
+                        accessoriesMargin={formData.accessoriesMrpMarginPercentage ?? 20}
+                        cabinetsMargin={formData.cabinetsMrpMarginPercentage ?? 20}
+                        doorsMargin={formData.doorsMrpMarginPercentage ?? 20}
+                        lightingMargin={formData.lightingMrpMarginPercentage ?? 20}
+                        accessoriesTax={formData.accessoriesMrpTaxPercentage ?? 18}
+                        cabinetsTax={formData.cabinetsMrpTaxPercentage ?? 18}
+                        doorsTax={formData.doorsMrpTaxPercentage ?? 18}
+                        lightingTax={formData.lightingMrpTaxPercentage ?? 18}
+                        onAccessoriesMarginChange={(v) => setFormData({ ...formData, accessoriesMrpMarginPercentage: v })}
+                        onCabinetsMarginChange={(v) => setFormData({ ...formData, cabinetsMrpMarginPercentage: v })}
+                        onDoorsMarginChange={(v) => setFormData({ ...formData, doorsMrpMarginPercentage: v })}
+                        onLightingMarginChange={(v) => setFormData({ ...formData, lightingMrpMarginPercentage: v })}
+                        onAccessoriesTaxChange={(v) => setFormData({ ...formData, accessoriesMrpTaxPercentage: v })}
+                        onCabinetsTaxChange={(v) => setFormData({ ...formData, cabinetsMrpTaxPercentage: v })}
+                        onDoorsTaxChange={(v) => setFormData({ ...formData, doorsMrpTaxPercentage: v })}
+                        onLightingTaxChange={(v) => setFormData({ ...formData, lightingMrpTaxPercentage: v })}
+                        otherExpenses={oe}
+                        miscellaneousMarginPercentage={formData.miscellaneousMrpMarginPercentage ?? 0}
+                        miscellaneousTaxPercentage={formData.miscellaneousMrpTaxPercentage ?? 18}
+                        onMiscellaneousMarginChange={(v) => setFormData({ ...formData, miscellaneousMrpMarginPercentage: v })}
+                        onMiscellaneousTaxChange={(v) => setFormData({ ...formData, miscellaneousMrpTaxPercentage: v })}
+                        userRole={userRole}
+                      />
+                    </Card>
+                  );
+                })()}
 
                 {/* Preview */}
                 <QuotationPreview
@@ -1740,8 +1789,16 @@ export function QuotationBuilderPage() {
                   lightingTaxPercentage={formData.lightingTaxPercentage ?? 18}
                   miscellaneousMarginPercentage={formData.miscellaneousMarginPercentage ?? 0}
                   miscellaneousTaxPercentage={formData.miscellaneousTaxPercentage ?? 18}
-                  mrpMarginPercentage={formData.marginPercentage ?? 20}
-                  mrpTaxPercentage={formData.taxPercentage ?? 18}
+                  accessoriesMrpMarginPercentage={formData.accessoriesMrpMarginPercentage ?? 20}
+                  cabinetsMrpMarginPercentage={formData.cabinetsMrpMarginPercentage ?? 20}
+                  doorsMrpMarginPercentage={formData.doorsMrpMarginPercentage ?? 20}
+                  lightingMrpMarginPercentage={formData.lightingMrpMarginPercentage ?? 20}
+                  accessoriesMrpTaxPercentage={formData.accessoriesMrpTaxPercentage ?? 18}
+                  cabinetsMrpTaxPercentage={formData.cabinetsMrpTaxPercentage ?? 18}
+                  doorsMrpTaxPercentage={formData.doorsMrpTaxPercentage ?? 18}
+                  lightingMrpTaxPercentage={formData.lightingMrpTaxPercentage ?? 18}
+                  miscellaneousMrpMarginPercentage={formData.miscellaneousMrpMarginPercentage ?? 0}
+                  miscellaneousMrpTaxPercentage={formData.miscellaneousMrpTaxPercentage ?? 18}
                   kitchens={formData.kitchens}
                 />
 

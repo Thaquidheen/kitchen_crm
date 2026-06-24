@@ -53,12 +53,33 @@ public class QuotationDto {
     private BigDecimal miscellaneousMarginPercentage = BigDecimal.ZERO;
     private BigDecimal miscellaneousTaxPercentage = BigDecimal.valueOf(18.00);
 
+    // Per-category MRP (list price) margin percentages
+    private BigDecimal accessoriesMrpMarginPercentage = BigDecimal.valueOf(20.00);
+    private BigDecimal cabinetsMrpMarginPercentage = BigDecimal.valueOf(20.00);
+    private BigDecimal doorsMrpMarginPercentage = BigDecimal.valueOf(20.00);
+    private BigDecimal lightingMrpMarginPercentage = BigDecimal.valueOf(20.00);
+    // Per-category MRP (list price) tax percentages
+    private BigDecimal accessoriesMrpTaxPercentage = BigDecimal.valueOf(18.00);
+    private BigDecimal cabinetsMrpTaxPercentage = BigDecimal.valueOf(18.00);
+    private BigDecimal doorsMrpTaxPercentage = BigDecimal.valueOf(18.00);
+    private BigDecimal lightingMrpTaxPercentage = BigDecimal.valueOf(18.00);
+    // Miscellaneous (services) MRP margin & tax
+    private BigDecimal miscellaneousMrpMarginPercentage = BigDecimal.ZERO;
+    private BigDecimal miscellaneousMrpTaxPercentage = BigDecimal.valueOf(18.00);
+
     private BigDecimal subtotal = BigDecimal.ZERO;
     private BigDecimal marginAmount = BigDecimal.ZERO;
     private BigDecimal taxAmount = BigDecimal.ZERO;
     private BigDecimal totalAmount = BigDecimal.ZERO;
-    // MRP ("list price"): base prices + single common margin/tax. totalAmount is the Offer Price.
+    // MRP ("list price"): per-category base prices with per-category MRP margin/tax.
+    // totalAmount is the Offer Price; mrpFinal is the MRP grand total.
     private BigDecimal mrpFinal = BigDecimal.ZERO;
+    // Per-category MRP totals (for the PDF MRP split-up)
+    private BigDecimal accessoriesMrpTotal = BigDecimal.ZERO;
+    private BigDecimal cabinetsMrpTotal = BigDecimal.ZERO;
+    private BigDecimal doorsMrpTotal = BigDecimal.ZERO;
+    private BigDecimal lightingMrpTotal = BigDecimal.ZERO;
+    private BigDecimal miscMrpTotal = BigDecimal.ZERO;
 
     private Quotation.QuotationStatus status;
     private LocalDate validUntil;
