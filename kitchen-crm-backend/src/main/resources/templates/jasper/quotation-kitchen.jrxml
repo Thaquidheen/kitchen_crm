@@ -39,6 +39,7 @@
     <field name="planImages" class="java.util.List"/>
     <field name="cabinets" class="java.util.List"/>
     <field name="doors" class="java.util.List"/>
+    <field name="hasStandaloneDoors" class="java.lang.Boolean"/>
     <field name="accessories" class="java.util.List"/>
     <field name="lighting" class="java.util.List"/>
     <field name="cabinetsFinalTotal" class="java.math.BigDecimal"/>
@@ -209,6 +210,31 @@
                 <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-lighting.jasper"]]></subreportExpression>
             </subreport>
 
+        </band>
+
+        <!-- ==================== DOORS SECTION (standalone doors, no cabinet) ==================== -->
+        <band height="100" splitType="Stretch">
+            <printWhenExpression><![CDATA[Boolean.TRUE.equals($F{hasStandaloneDoors})]]></printWhenExpression>
+            <rectangle>
+                <reportElement positionType="Float" x="15" y="10" width="4" height="18" backcolor="#8B0000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567ab1"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement positionType="Float" style="SectionTitle" x="27" y="10" width="538" height="25" forecolor="#000000" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567ab2"/>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Serif" size="14" isBold="true"/>
+                </textElement>
+                <text><![CDATA[DOORS]]></text>
+            </staticText>
+            <line>
+                <reportElement positionType="Float" x="15" y="35" width="565" height="1" forecolor="#E8E0D5" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567ab3"/>
+            </line>
+
+            <subreport>
+                <reportElement positionType="Float" x="0" y="40" width="595" height="40" uuid="c1c2c3d4-e5f6-7890-abcd-ef1234567ab4"/>
+                <dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($F{doors})]]></dataSourceExpression>
+                <subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "subreport-doors.jasper"]]></subreportExpression>
+            </subreport>
         </band>
 
         <!-- ==================== OTHER EXPENSES (MISCELLANEOUS) SECTION ==================== -->

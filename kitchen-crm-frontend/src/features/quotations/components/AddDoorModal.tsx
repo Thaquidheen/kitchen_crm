@@ -69,10 +69,12 @@ export function AddDoorModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // Excel formula: Door face area = (W/304) × (H/304)
+  // Door face area = (W × H) / 92903  (92903 mm² = 1 sqft; 304.8mm per foot).
+  // Must match the backend (PricingServiceImpl.MM2_PER_SQFT) and AddCabinetModal so the
+  // review total equals the saved/PDF total.
   const calculateDoorFaceArea = () => {
     if (!widthMm || !heightMm) return 0;
-    return (widthMm / 304) * (heightMm / 304);
+    return (widthMm * heightMm) / 92903;
   };
 
   const faceArea = calculateDoorFaceArea();
@@ -91,6 +93,16 @@ export function AddDoorModal({
     onAdd({
       doorTypeId: door.id,
       doorType: door,
+      // Display + pricing fields so the door survives editing (otherwise it shows "Item N" / ₹0).
+      // Mirrors AddCabinetModal and the ProductSelector door enrichment.
+      doorTypeName: door.name,
+      brandName: door.brandName,
+      material: door.material,
+      unitPrice: door.companyPrice || 0,
+      totalPrice: doorPrice, // faceArea × companyPrice × quantity
+      calculatedSqft: faceArea,
+      customDimensions: true,
+      description: `${door.name} (${widthMm}×${heightMm}mm)`,
       widthMm,
       heightMm,
       quantity,
@@ -98,7 +110,7 @@ export function AddDoorModal({
       // Elevation
       elevationId: selectedElevation?.id,
       elevationName: selectedElevation?.name,
-    });
+    } as any);
     onClose();
   };
 

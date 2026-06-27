@@ -81,9 +81,10 @@ export function QuotationBuilderPage() {
     scope: 'product' | 'otherExpense';
     category?: string;
     index: number;
-    pairId?: any;
     kitchenIndex?: number;
     itemName: string;
+    linkedDoorIndex?: number;
+    linkedDoorName?: string;
   } | null>(null);
   const [showLinkedDoorRemoveDialog, setShowLinkedDoorRemoveDialog] = useState(false);
   const [showRemoveItemDialog, setShowRemoveItemDialog] = useState(false);
@@ -217,8 +218,9 @@ export function QuotationBuilderPage() {
         } : undefined,
       }));
       const doors = rawDoors.map((d: any) => {
-        // Door unitPrice is per-sqft rate, so totalPrice must use face area
-        const faceArea = d.widthMm && d.heightMm ? (d.widthMm / 304) * (d.heightMm / 304) : 1;
+        // Door unitPrice is per-sqft rate, so totalPrice must use face area = (W × H) / 92903
+        // (92903 mm² = 1 sqft). Must match the backend so the review total equals the saved/PDF total.
+        const faceArea = d.widthMm && d.heightMm ? (d.widthMm * d.heightMm) / 92903 : 1;
         return {
           doorTypeId: d.doorTypeId || d.id,
           widthMm: d.widthMm,
@@ -928,7 +930,7 @@ export function QuotationBuilderPage() {
   // removeDoorToo additionally removes a cabinet's linked door.
   const performRemoval = (removeDoorToo: boolean = false) => {
     if (!pendingRemoval) return;
-    const { scope, category, index, pairId, kitchenIndex } = pendingRemoval;
+    const { scope, category, index, kitchenIndex, linkedDoorIndex } = pendingRemoval;
 
     if (kitchenIndex !== undefined) {
       // Kitchen-specific removal
@@ -942,8 +944,10 @@ export function QuotationBuilderPage() {
         const list = [...((kitchen[category] as any[]) || [])];
         list.splice(index, 1);
         kitchen[category] = list;
-        if (removeDoorToo && pairId && Array.isArray(kitchen.doors)) {
-          kitchen.doors = kitchen.doors.filter((d: any) => d._tempPairId !== pairId);
+        if (removeDoorToo && linkedDoorIndex !== undefined && Array.isArray(kitchen.doors)) {
+          const doors = [...kitchen.doors];
+          if (linkedDoorIndex >= 0 && linkedDoorIndex < doors.length) doors.splice(linkedDoorIndex, 1);
+          kitchen.doors = doors;
         }
       }
       updatedKitchens[kitchenIndex] = kitchen;
@@ -959,8 +963,10 @@ export function QuotationBuilderPage() {
         const list = (next[category] || []).slice();
         list.splice(index, 1);
         next[category] = list;
-        if (removeDoorToo && pairId && Array.isArray(next.doors)) {
-          next.doors = next.doors.filter((d: any) => d._tempPairId !== pairId);
+        if (removeDoorToo && linkedDoorIndex !== undefined && Array.isArray(next.doors)) {
+          const doors = [...next.doors];
+          if (linkedDoorIndex >= 0 && linkedDoorIndex < doors.length) doors.splice(linkedDoorIndex, 1);
+          next.doors = doors;
         }
       }
       setFormData(next);
@@ -1039,18 +1045,18 @@ export function QuotationBuilderPage() {
     if (editingDoorIndex === null) return;
 
     if (editingDoorKitchenIndex !== null) {
-      // Update in kitchen-specific list
+      // Update in kitchen-specific list (merge to preserve id / _tempPairId)
       const updatedKitchens = [...(formData.kitchens || [])];
       const kitchen = { ...updatedKitchens[editingDoorKitchenIndex] };
       const doors = [...(kitchen.doors || [])];
-      doors[editingDoorIndex] = data;
+      doors[editingDoorIndex] = { ...(doors[editingDoorIndex] as any), ...data };
       kitchen.doors = doors;
       updatedKitchens[editingDoorKitchenIndex] = kitchen;
       setFormData({ ...formData, kitchens: updatedKitchens });
     } else {
-      // Update in global list
+      // Update in global list (merge to preserve id / _tempPairId)
       const doors = [...(formData.doors || [])];
-      doors[editingDoorIndex] = data;
+      doors[editingDoorIndex] = { ...(doors[editingDoorIndex] as any), ...data };
       setFormData({ ...formData, doors });
     }
 
@@ -1873,10 +1879,26 @@ export function QuotationBuilderPage() {
                       onRemove={(category, index) => {
                         const kitchen = (formData.kitchens || [])[kitchenIndex];
                         const removed = ((kitchen?.[category] as any[]) || [])[index] as any;
-                        const pairId = removed?._tempPairId;
-                        const itemName = removed?.name || removed?.description || 'this item';
-                        setPendingRemoval({ scope: 'product', category, index, kitchenIndex, pairId, itemName });
-                        if (category === 'cabinets' && pairId) {
+                        const itemName = removed?.name || removed?.cabinetTypeName || removed?.description || 'this item';
+                        // For a cabinet, locate its linked door (by pair id, else by linked door type id)
+                        // so we can name it in the prompt and reliably remove the exact row.
+                        let linkedDoorIndex: number | undefined;
+                        let linkedDoorName: string | undefined;
+                        if (category === 'cabinets') {
+                          const doors = (kitchen?.doors as any[]) || [];
+                          let di = removed?._tempPairId != null
+                            ? doors.findIndex((d: any) => d._tempPairId === removed._tempPairId)
+                            : -1;
+                          if (di < 0 && removed?.linkedDoorTypeId != null) {
+                            di = doors.findIndex((d: any) => d.doorTypeId === removed.linkedDoorTypeId);
+                          }
+                          if (di >= 0) {
+                            linkedDoorIndex = di;
+                            linkedDoorName = doors[di]?.doorTypeName || doors[di]?.description;
+                          }
+                        }
+                        setPendingRemoval({ scope: 'product', category, index, kitchenIndex, itemName, linkedDoorIndex, linkedDoorName });
+                        if (category === 'cabinets' && linkedDoorIndex !== undefined) {
                           setShowLinkedDoorRemoveDialog(true);
                         } else {
                           setShowRemoveItemDialog(true);
@@ -1924,10 +1946,24 @@ export function QuotationBuilderPage() {
                 miscellaneousTaxPercentage={formData.miscellaneousTaxPercentage ?? 18}
                 onRemove={(category, index) => {
                   const removed = (((formData as any)[category]) || [])[index] as any;
-                  const pairId = removed?._tempPairId;
-                  const itemName = removed?.name || removed?.description || 'this item';
-                  setPendingRemoval({ scope: 'product', category, index, pairId, itemName });
-                  if (category === 'cabinets' && pairId) {
+                  const itemName = removed?.name || removed?.cabinetTypeName || removed?.description || 'this item';
+                  let linkedDoorIndex: number | undefined;
+                  let linkedDoorName: string | undefined;
+                  if (category === 'cabinets') {
+                    const doors = ((formData as any).doors as any[]) || [];
+                    let di = removed?._tempPairId != null
+                      ? doors.findIndex((d: any) => d._tempPairId === removed._tempPairId)
+                      : -1;
+                    if (di < 0 && removed?.linkedDoorTypeId != null) {
+                      di = doors.findIndex((d: any) => d.doorTypeId === removed.linkedDoorTypeId);
+                    }
+                    if (di >= 0) {
+                      linkedDoorIndex = di;
+                      linkedDoorName = doors[di]?.doorTypeName || doors[di]?.description;
+                    }
+                  }
+                  setPendingRemoval({ scope: 'product', category, index, itemName, linkedDoorIndex, linkedDoorName });
+                  if (category === 'cabinets' && linkedDoorIndex !== undefined) {
                     setShowLinkedDoorRemoveDialog(true);
                   } else {
                     setShowRemoveItemDialog(true);
@@ -2025,7 +2061,11 @@ export function QuotationBuilderPage() {
         onCancel={() => performRemoval(false)}
         onConfirm={() => performRemoval(true)}
         title="Remove Linked Door?"
-        message={`"${pendingRemoval?.itemName ?? 'This cabinet'}" has a linked door. Do you want to remove the linked door as well?`}
+        message={
+          pendingRemoval?.linkedDoorName
+            ? `"${pendingRemoval?.itemName ?? 'This cabinet'}" has a linked door: "${pendingRemoval.linkedDoorName}". Do you want to remove this door as well?`
+            : `"${pendingRemoval?.itemName ?? 'This cabinet'}" has a linked door. Do you want to remove the linked door as well?`
+        }
         confirmText="Yes, Remove Door Too"
         cancelText="No, Keep Door"
         type="warning"

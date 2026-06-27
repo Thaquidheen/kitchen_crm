@@ -213,6 +213,7 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
             "subreport-scope.jrxml",
             "subreport-images.jrxml",
             "subreport-products.jrxml",
+            "subreport-doors.jrxml",
             "subreport-accessories.jrxml",
             "subreport-lighting.jrxml",
             "subreport-other-expenses.jrxml",
@@ -444,8 +445,25 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
             params.put("KITCHEN_TOTALS_DATA", new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource(kitchenTotals));
             params.put("KITCHEN_SUMMARY_DATA", new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource(kitchenTotals));
         } else {
-            params.put("KITCHEN_TOTALS_DATA", null);
-            params.put("KITCHEN_SUMMARY_DATA", null);
+            // Legacy quotation (no kitchens array): build a single summary row from the quotation-level
+            // (virtual kitchen) totals so the MRP / Offer Price grand summary also shows for
+            // single-kitchen PDFs, matching the multi-kitchen layout.
+            List<Map<String, Object>> kitchenTotals = new ArrayList<>();
+            Map<String, Object> row = new HashMap<>();
+            row.put("kitchenName", quotation.getProjectName() != null && !quotation.getProjectName().isEmpty()
+                    ? quotation.getProjectName() : "Kitchen");
+            row.put("totalAmount", quotation.getTotalAmount() != null ? quotation.getTotalAmount() : BigDecimal.ZERO);
+            row.put("mrpTotal", quotation.getMrpFinal() != null ? quotation.getMrpFinal() : BigDecimal.ZERO);
+            BigDecimal legacyOtherExpenses = BigDecimal.ZERO;
+            if (quotation.getOtherExpenses() != null) {
+                legacyOtherExpenses = quotation.getOtherExpenses().stream()
+                        .map(e -> e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+            }
+            row.put("otherExpenses", legacyOtherExpenses);
+            kitchenTotals.add(row);
+            params.put("KITCHEN_TOTALS_DATA", new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource(kitchenTotals));
+            params.put("KITCHEN_SUMMARY_DATA", new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource(kitchenTotals));
         }
 
         return params;
@@ -508,7 +526,28 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
 
         // Products
         map.put("cabinets", kitchen.getCabinets() != null ? kitchen.getCabinets() : Collections.emptyList());
-        map.put("doors", kitchen.getDoors() != null ? kitchen.getDoors() : Collections.emptyList());
+
+        // Doors: list only STANDALONE doors (added on their own, without a cabinet). A cabinet's
+        // linked door is already shown in the cabinet's DOOR TYPE column, and each cabinet with a
+        // linkedDoorTypeId consumes one matching door row (mirroring the builder's pairing), so
+        // listing it again here would duplicate it. The DOORS TOTAL still covers every door.
+        List<QuotationDoorDto> standaloneDoors = kitchen.getDoors() != null
+                ? new ArrayList<>(kitchen.getDoors())
+                : new ArrayList<>();
+        if (kitchen.getCabinets() != null) {
+            for (QuotationCabinetDto cab : kitchen.getCabinets()) {
+                Long linkedDoorTypeId = cab.getLinkedDoorTypeId();
+                if (linkedDoorTypeId == null) continue;
+                for (int i = 0; i < standaloneDoors.size(); i++) {
+                    if (linkedDoorTypeId.equals(standaloneDoors.get(i).getDoorTypeId())) {
+                        standaloneDoors.remove(i);
+                        break;
+                    }
+                }
+            }
+        }
+        map.put("doors", standaloneDoors);
+        map.put("hasStandaloneDoors", !standaloneDoors.isEmpty());
         map.put("accessories", kitchen.getAccessories() != null ? kitchen.getAccessories() : Collections.emptyList());
         map.put("lighting", kitchen.getLighting() != null ? kitchen.getLighting() : Collections.emptyList());
 
@@ -597,21 +636,13 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
             BigDecimal transportTax = transportWithMargin.multiply(miscTaxPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
             total = total.add(transportWithMargin.add(transportTax));
         } else if (quotation.getTotalAmount() != null) {
+            // Single/legacy: totalAmount already includes the products (with per-category margin/tax)
+            // AND the other expenses (transportation / installation / custom) with the miscellaneous
+            // margin/tax applied — see PricingServiceImpl.setTotalAmount. Adding the other expenses
+            // again here double-counts them (and inflated the payment-schedule split in the terms page).
             total = quotation.getTotalAmount();
         } else {
             total = BigDecimal.ZERO;
-        }
-        // Add quotation-level other expenses (only for single-kitchen mode)
-        if (quotation.getKitchens() == null || quotation.getKitchens().isEmpty()) {
-            if (quotation.getOtherExpenses() != null) {
-                for (QuotationOtherExpenseDto e : quotation.getOtherExpenses()) {
-                    if (e.getAmount() != null) total = total.add(e.getAmount());
-                }
-            } else {
-                // Fallback to legacy fields
-                if (quotation.getTransportationPrice() != null) total = total.add(quotation.getTransportationPrice());
-                if (quotation.getInstallationPrice() != null) total = total.add(quotation.getInstallationPrice());
-            }
         }
         return total;
     }

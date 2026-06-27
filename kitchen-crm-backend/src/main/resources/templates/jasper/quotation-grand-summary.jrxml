@@ -86,18 +86,30 @@
                 </textElement>
                 <textFieldExpression><![CDATA["Rs. " + new java.text.DecimalFormat("0.00").format($P{COMMON_TRANSPORTATION}).replaceAll("(\\d)(?=(\\d\\d)+\\d\\.)", "$1,")]]></textFieldExpression>
             </textField>
-            <!-- MRP TOTAL (the MRP-based grand total of the split-up above) -->
+            <!-- MRP TOTAL (the MRP-based grand total of the split-up above) — highlighted cream box -->
+            <rectangle>
+                <reportElement x="0" y="30" width="545" height="28" backcolor="#EDE3D1" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e5001a">
+                    <printWhenExpression><![CDATA[$P{MRP_FINAL} != null && $P{MRP_FINAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+                </reportElement>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <rectangle>
+                <reportElement x="0" y="30" width="5" height="28" backcolor="#8B0000" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e5001b">
+                    <printWhenExpression><![CDATA[$P{MRP_FINAL} != null && $P{MRP_FINAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
+                </reportElement>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
             <staticText>
-                <reportElement x="5" y="34" width="200" height="20" forecolor="#333333" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50013">
+                <reportElement x="15" y="32" width="200" height="24" forecolor="#8B0000" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50013">
                     <printWhenExpression><![CDATA[$P{MRP_FINAL} != null && $P{MRP_FINAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
                 </reportElement>
                 <textElement verticalAlignment="Middle">
-                    <font fontName="Serif" size="10" isBold="true"/>
+                    <font fontName="Serif" size="11" isBold="true"/>
                 </textElement>
                 <text><![CDATA[MRP TOTAL]]></text>
             </staticText>
             <textField>
-                <reportElement x="355" y="34" width="190" height="20" forecolor="#333333" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50014">
+                <reportElement x="355" y="32" width="185" height="24" forecolor="#8B0000" uuid="a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e50014">
                     <printWhenExpression><![CDATA[$P{MRP_FINAL} != null && $P{MRP_FINAL}.compareTo(java.math.BigDecimal.ZERO) > 0]]></printWhenExpression>
                 </reportElement>
                 <textElement textAlignment="Left" verticalAlignment="Middle">
