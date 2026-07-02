@@ -234,13 +234,21 @@ export function QuotationBuilderPage() {
           description: d.description || `${d.doorType?.name || 'Door'} (${d.widthMm}×${d.heightMm}mm)`,
         };
       });
-      // Establish _tempPairId links between cabinets and their linked doors
+      // Establish _tempPairId links between cabinets and their linked doors.
+      // A linked door is always sized to its cabinet, so prefer a door of the same type AND the
+      // cabinet's dimensions; only fall back to the first unpaired door of that type. This avoids
+      // grabbing a STANDALONE door of the same type (which would then get shrunk to the cabinet
+      // size when the cabinet is edited). Only pair the cabinet when a door is actually matched.
       cabinets.forEach((cab: any) => {
-        if (cab.linkedDoorTypeId) {
+        if (!cab.linkedDoorTypeId) return;
+        const match =
+          doors.find((d: any) => d.doorTypeId === cab.linkedDoorTypeId && !(d as any)._tempPairId
+            && d.widthMm === cab.widthMm && d.heightMm === cab.heightMm) ||
+          doors.find((d: any) => d.doorTypeId === cab.linkedDoorTypeId && !(d as any)._tempPairId);
+        if (match) {
           const pairId = Date.now() + Math.random();
           cab._tempPairId = pairId;
-          const match = doors.find((d: any) => d.doorTypeId === cab.linkedDoorTypeId && !(d as any)._tempPairId);
-          if (match) (match as any)._tempPairId = pairId;
+          (match as any)._tempPairId = pairId;
         }
       });
       return { cabinets, doors };
