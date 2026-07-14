@@ -89,7 +89,7 @@ export function AddCabinetModal({
   // New state for material, lighting, accessories, inner panel, and elevation
   const [selectedMaterialId, setSelectedMaterialId] = useState<number | string>('');
   const [includeAccessories, setIncludeAccessories] = useState<boolean>(true);
-  const [includeLighting, setIncludeLighting] = useState<boolean>(true);
+  const [includeLighting, setIncludeLighting] = useState<boolean>(false);
   const [selectedInnerPanelId, setSelectedInnerPanelId] = useState<number | string>('');
   const [innerPanelQty, setInnerPanelQty] = useState<number>(0);
   const [selectedElevationId, setSelectedElevationId] = useState<number | string>('');
@@ -145,7 +145,7 @@ export function AddCabinetModal({
         setSelectedDoorId('');
         setSelectedMaterialId('');
         setIncludeAccessories(true);
-        setIncludeLighting(true);
+        setIncludeLighting(false);
         setSelectedInnerPanelId('');
         setInnerPanelQty(0);
         setSelectedElevationId(availableElevations.length > 0 ? availableElevations[0].id || '' : '');
