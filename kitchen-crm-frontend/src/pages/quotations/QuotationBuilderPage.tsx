@@ -329,7 +329,22 @@ export function QuotationBuilderPage() {
       lightingMrpTaxPercentage: Number(existingQuotation.lightingMrpTaxPercentage ?? existingQuotation.lightingTaxPercentage ?? 18),
       miscellaneousMrpMarginPercentage: Number(existingQuotation.miscellaneousMrpMarginPercentage ?? existingQuotation.miscellaneousMarginPercentage ?? 0),
       miscellaneousMrpTaxPercentage: Number(existingQuotation.miscellaneousMrpTaxPercentage ?? existingQuotation.miscellaneousTaxPercentage ?? 18),
-      validUntil: existingQuotation.validUntil || '',
+      // If the saved validity date has already passed (quotes are valid 30 days), re-issue
+      // with a fresh 30-day validity so editing an old quotation isn't blocked by the
+      // "Validity date must be in the future" check. The user can still change the date.
+      validUntil: (() => {
+        const saved = existingQuotation.validUntil || '';
+        if (!saved) return '';
+        const savedDate = new Date(saved);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (savedDate < today) {
+          const fresh = new Date();
+          fresh.setDate(fresh.getDate() + 30);
+          return fresh.toISOString().split('T')[0];
+        }
+        return saved;
+      })(),
       notes: existingQuotation.notes || '',
       termsConditions: existingQuotation.termsConditions || DEFAULT_TERMS_CONDITIONS,
       warrantyAndService: existingQuotation.warrantyAndService || DEFAULT_WARRANTY_SERVICE,
