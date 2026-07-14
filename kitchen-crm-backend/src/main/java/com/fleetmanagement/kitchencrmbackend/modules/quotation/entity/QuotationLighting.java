@@ -70,7 +70,7 @@ public class QuotationLighting extends Auditable {
     private String connectorType;
 
     public enum LightingItemType {
-        LIGHT_PROFILE, DRIVER, CONNECTOR, SENSOR
+        LIGHT_PROFILE, DRIVER, CONNECTOR, SENSOR, CUSTOM
     }
 
     // Calculate base total price (without margin/tax)

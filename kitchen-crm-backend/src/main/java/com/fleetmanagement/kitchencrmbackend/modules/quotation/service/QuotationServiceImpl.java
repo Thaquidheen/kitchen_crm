@@ -671,6 +671,7 @@ public class QuotationServiceImpl implements QuotationService {
 
                 // IMPORTANT: Populate lighting item details for proper name display
                 populateLightingItemDetails(lighting, lightingDto.getItemType(), lightingDto.getItemId());
+                applyLightingItemNameFallback(lighting, lightingDto);
 
                 pricingService.calculateLightingLineTotal(lighting, quotation.getLightingMarginPercentage(), quotation.getLightingTaxPercentage());
                 lightingRepository.save(lighting);
@@ -687,6 +688,19 @@ public class QuotationServiceImpl implements QuotationService {
                 expense.setIsDefault(expenseDto.getIsDefault() != null ? expenseDto.getIsDefault() : false);
                 otherExpenseRepository.save(expense);
             }
+        }
+    }
+
+    // item_name is NOT NULL. populateLightingItemDetails only sets it when the master item
+    // (light profile / driver / connector / sensor) still exists, so a lighting line whose
+    // master was deleted — or a CUSTOM item — would otherwise fail the whole save with a
+    // DataIntegrityViolation. Keep the name the client sent instead.
+    private void applyLightingItemNameFallback(QuotationLighting lighting, QuotationLightingDto lightingDto) {
+        if (lighting.getItemName() == null || lighting.getItemName().isBlank()) {
+            String fallback = lightingDto.getItemName();
+            if (fallback == null || fallback.isBlank()) fallback = lightingDto.getDescription();
+            if (fallback == null || fallback.isBlank()) fallback = "Lighting Item";
+            lighting.setItemName(fallback);
         }
     }
 
@@ -885,6 +899,7 @@ public class QuotationServiceImpl implements QuotationService {
 
                 // Populate lighting item details for proper name display
                 populateLightingItemDetails(lighting, lightingDto.getItemType(), lightingDto.getItemId());
+                applyLightingItemNameFallback(lighting, lightingDto);
 
                 pricingService.calculateLightingLineTotal(lighting, quotation.getLightingMarginPercentage(), quotation.getLightingTaxPercentage());
                 lightingRepository.save(lighting);
