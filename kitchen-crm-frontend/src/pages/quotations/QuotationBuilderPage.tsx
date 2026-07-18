@@ -1304,20 +1304,20 @@ export function QuotationBuilderPage() {
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             {isEditMode && (
-              <Button variant="secondary" size="sm" onClick={handleSaveAsNew} className="w-full sm:w-auto">
+              <Button variant="secondary" size="sm" onClick={handleSaveAsNew} disabled={isCreating || isUpdating} className="w-full sm:w-auto">
                 <FilePlus className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Save as New</span>
                 <span className="sm:hidden">New</span>
               </Button>
             )}
-            <Button variant="secondary" size="sm" onClick={handleSaveDraft} className="w-full sm:w-auto">
+            <Button variant="secondary" size="sm" onClick={handleSaveDraft} disabled={isCreating || isUpdating} className="w-full sm:w-auto">
               <Save className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Save Draft</span>
+              <span className="hidden sm:inline">{isCreating || isUpdating ? 'Saving...' : 'Save Draft'}</span>
               <span className="sm:hidden">Draft</span>
             </Button>
-            <Button variant="primary" size="sm" onClick={handleSubmit} className="w-full sm:w-auto">
+            <Button variant="primary" size="sm" onClick={handleSubmit} disabled={isCreating || isUpdating} className="w-full sm:w-auto">
               <Send className="h-4 w-4 mr-2" />
-              Submit
+              {isCreating || isUpdating ? 'Saving...' : 'Submit'}
             </Button>
           </div>
         </div>
