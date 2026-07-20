@@ -69,6 +69,35 @@ public class QuotationController {
         return ResponseEntity.ok(quotationService.getQuotationStatistics());
     }
 
+    // ==================== Folder organization ====================
+
+    @GetMapping("/folders")
+    public ResponseEntity<ApiResponse<Page<QuotationFolderSummaryDto>>> getQuotationFolders(
+            @RequestParam(required = false) String customerName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        return ResponseEntity.ok(quotationService.getQuotationFolders(customerName, pageable));
+    }
+
+    @GetMapping("/folders/{folderId}/versions")
+    public ResponseEntity<ApiResponse<java.util.List<QuotationSummaryDto>>> getFolderVersions(
+            @PathVariable Long folderId) {
+        return ResponseEntity.ok(quotationService.getFolderVersions(folderId));
+    }
+
+    @PutMapping("/folders/{folderId}")
+    public ResponseEntity<ApiResponse<String>> renameFolder(
+            @PathVariable Long folderId,
+            @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(quotationService.renameFolder(folderId, body.get("name")));
+    }
+
+    @DeleteMapping("/folders/{folderId}")
+    public ResponseEntity<ApiResponse<String>> deleteFolder(@PathVariable Long folderId) {
+        return ResponseEntity.ok(quotationService.deleteFolder(folderId));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<QuotationDto>> getQuotationById(
             @PathVariable Long id,

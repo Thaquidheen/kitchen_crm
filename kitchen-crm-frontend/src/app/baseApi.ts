@@ -390,6 +390,47 @@ export const baseApi = createApi({
       invalidatesTags: ['Quotations'],
     }),
 
+    // ==================== QUOTATION FOLDER ENDPOINTS ====================
+
+    // Folders (one per quotation, holding all its versions)
+    getQuotationFolders: builder.query<any, { customerName?: string; page?: number; size?: number }>({
+      query: (params) => {
+        const search = new URLSearchParams();
+        if (params.customerName) search.append('customerName', params.customerName);
+        if (params.page !== undefined) search.append('page', params.page.toString());
+        if (params.size !== undefined) search.append('size', params.size.toString());
+        return { url: '/quotations/folders', params: Object.fromEntries(search) };
+      },
+      transformResponse: (response: any) => response?.data ?? { content: [], totalElements: 0, totalPages: 0 },
+      providesTags: ['Quotations'],
+    }),
+
+    // Versions inside a folder (newest version first)
+    getFolderVersions: builder.query<any, number>({
+      query: (folderId) => `/quotations/folders/${folderId}/versions`,
+      transformResponse: (response: any) => response?.data ?? [],
+      providesTags: ['Quotations'],
+    }),
+
+    // Rename a folder
+    renameQuotationFolder: builder.mutation<any, { id: number; name: string }>({
+      query: ({ id, name }) => ({
+        url: `/quotations/folders/${id}`,
+        method: 'PUT',
+        body: { name },
+      }),
+      invalidatesTags: ['Quotations'],
+    }),
+
+    // Delete a folder and ALL versions inside it
+    deleteQuotationFolder: builder.mutation<any, number>({
+      query: (id) => ({
+        url: `/quotations/folders/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Quotations'],
+    }),
+
     // Download quotation PDF
     downloadQuotationPDF: builder.mutation<Blob, number>({
       query: (id) => ({
@@ -455,6 +496,10 @@ export const {
   useDeleteQuotationMutation,
   useUpdateQuotationStatusMutation,
   useDuplicateQuotationMutation,
+  useGetQuotationFoldersQuery,
+  useGetFolderVersionsQuery,
+  useRenameQuotationFolderMutation,
+  useDeleteQuotationFolderMutation,
   useDownloadQuotationPDFMutation,
   useDownloadQuotationBillPDFMutation,
   useGetCustomerAvailablePlanImagesQuery,

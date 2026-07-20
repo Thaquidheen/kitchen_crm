@@ -38,6 +38,9 @@ public class QuotationServiceImpl implements QuotationService {
     private QuotationRepository quotationRepository;
 
     @Autowired
+    private QuotationFolderRepository folderRepository;
+
+    @Autowired
     private QuotationAccessoryRepository accessoryRepository;
 
     @Autowired
@@ -140,6 +143,36 @@ public class QuotationServiceImpl implements QuotationService {
             Quotation quotation = new Quotation();
             quotation.setCustomer(customer);
             quotation.setProjectName(dto.getProjectName());
+
+            // Folder / version assignment. "Save as New" (sourceQuotationId set) joins the source's
+            // folder as the next version; a brand-new quotation gets its own new folder as V1.
+            QuotationFolder folder = null;
+            int versionNumber = 1;
+            if (dto.getSourceQuotationId() != null) {
+                Quotation source = quotationRepository.findById(dto.getSourceQuotationId()).orElse(null);
+                if (source != null) {
+                    folder = source.getFolder();
+                    if (folder == null) {
+                        // Source predates folders: create one and adopt the source as V1
+                        folder = new QuotationFolder();
+                        folder.setCustomer(source.getCustomer());
+                        folder.setName(buildFolderName(source.getCustomer().getName(), source.getProjectName()));
+                        folder = folderRepository.save(folder);
+                        source.setFolder(folder);
+                        if (source.getVersionNumber() == null) source.setVersionNumber(1);
+                        quotationRepository.save(source);
+                    }
+                    versionNumber = quotationRepository.findMaxVersionNumberInFolder(folder.getId()) + 1;
+                }
+            }
+            if (folder == null) {
+                folder = new QuotationFolder();
+                folder.setCustomer(customer);
+                folder.setName(buildFolderName(customer.getName(), dto.getProjectName()));
+                folder = folderRepository.save(folder);
+            }
+            quotation.setFolder(folder);
+            quotation.setVersionNumber(versionNumber);
             quotation.setValidUntil(LocalDate.now().plusDays(30));
             quotation.setNotes(dto.getNotes());
             quotation.setTermsConditions(dto.getTermsConditions());
@@ -390,7 +423,13 @@ public class QuotationServiceImpl implements QuotationService {
         }
 
         deleteExistingLineItems(id);
+        QuotationFolder folder = quotation.getFolder();
         quotationRepository.delete(quotation);
+        quotationRepository.flush();
+        // Remove the folder when its last version is deleted
+        if (folder != null && quotationRepository.countByFolderId(folder.getId()) == 0) {
+            folderRepository.delete(folder);
+        }
         return ApiResponse.success("Quotation deleted successfully");
     }
 
@@ -431,6 +470,13 @@ public class QuotationServiceImpl implements QuotationService {
         newQuotation.setWarrantyAndService(originalQuotation.getWarrantyAndService());
         newQuotation.setCreatedBy(createdBy);
         newQuotation.setStatus(Quotation.QuotationStatus.DRAFT);
+
+        // A duplicate is the next version in the original's folder
+        QuotationFolder folder = originalQuotation.getFolder();
+        if (folder != null) {
+            newQuotation.setFolder(folder);
+            newQuotation.setVersionNumber(quotationRepository.findMaxVersionNumberInFolder(folder.getId()) + 1);
+        }
 
         Quotation savedQuotation = quotationRepository.save(newQuotation);
 
@@ -689,6 +735,96 @@ public class QuotationServiceImpl implements QuotationService {
                 otherExpenseRepository.save(expense);
             }
         }
+    }
+
+    // ==================== Quotation folders (version grouping) ====================
+
+    private String buildFolderName(String customerName, String projectName) {
+        String base = customerName != null ? customerName : "Quotation";
+        if (projectName != null && !projectName.isBlank()) {
+            return base + " - " + projectName;
+        }
+        return base;
+    }
+
+    @Override
+    public ApiResponse<Page<QuotationFolderSummaryDto>> getQuotationFolders(String customerName, Pageable pageable) {
+        Page<QuotationFolder> folders = folderRepository.findByFilters(
+                customerName != null && !customerName.isBlank() ? customerName : null, pageable);
+
+        List<Long> folderIds = folders.getContent().stream().map(QuotationFolder::getId).toList();
+        Map<Long, List<Quotation>> byFolder = new HashMap<>();
+        if (!folderIds.isEmpty()) {
+            for (Quotation q : quotationRepository.findByFolderIdIn(folderIds)) {
+                byFolder.computeIfAbsent(q.getFolder().getId(), k -> new java.util.ArrayList<>()).add(q);
+            }
+        }
+
+        Page<QuotationFolderSummaryDto> dtoPage = folders.map(f -> {
+            QuotationFolderSummaryDto dto = new QuotationFolderSummaryDto();
+            dto.setId(f.getId());
+            dto.setName(f.getName());
+            dto.setCustomerId(f.getCustomer().getId());
+            dto.setCustomerName(f.getCustomer().getName());
+            List<Quotation> versions = byFolder.getOrDefault(f.getId(), List.of());
+            dto.setVersionCount(versions.size());
+            versions.stream()
+                    .max(java.util.Comparator.comparing(q -> q.getVersionNumber() != null ? q.getVersionNumber() : 0))
+                    .ifPresent(latest -> {
+                        dto.setLatestQuotationId(latest.getId());
+                        dto.setLatestQuotationNumber(latest.getQuotationNumber());
+                        dto.setLatestVersionNumber(latest.getVersionNumber());
+                        dto.setLatestTotalAmount(latest.getTotalAmount());
+                        dto.setLatestStatus(latest.getStatus());
+                        dto.setLatestCreatedAt(latest.getCreatedAt());
+                    });
+            return dto;
+        });
+        return ApiResponse.success(dtoPage);
+    }
+
+    @Override
+    public ApiResponse<List<QuotationSummaryDto>> getFolderVersions(Long folderId) {
+        if (!folderRepository.existsById(folderId)) {
+            return ApiResponse.error("Folder not found");
+        }
+        List<QuotationSummaryDto> versions = quotationRepository.findByFolderIdOrderByVersionNumberDesc(folderId)
+                .stream().map(this::convertToSummaryDto).toList();
+        return ApiResponse.success(versions);
+    }
+
+    @Override
+    public ApiResponse<String> renameFolder(Long folderId, String name) {
+        QuotationFolder folder = folderRepository.findById(folderId).orElse(null);
+        if (folder == null) {
+            return ApiResponse.error("Folder not found");
+        }
+        if (name == null || name.isBlank()) {
+            return ApiResponse.error("Folder name cannot be empty");
+        }
+        folder.setName(name.trim());
+        folderRepository.save(folder);
+        return ApiResponse.success("Folder renamed successfully");
+    }
+
+    @Override
+    public ApiResponse<String> deleteFolder(Long folderId) {
+        QuotationFolder folder = folderRepository.findById(folderId).orElse(null);
+        if (folder == null) {
+            return ApiResponse.error("Folder not found");
+        }
+        List<Quotation> versions = quotationRepository.findByFolderIdOrderByVersionNumberDesc(folderId);
+        boolean hasApproved = versions.stream().anyMatch(q -> q.getStatus() == Quotation.QuotationStatus.APPROVED);
+        if (hasApproved) {
+            return ApiResponse.error("Cannot delete folder: it contains an approved quotation");
+        }
+        for (Quotation q : versions) {
+            deleteExistingLineItems(q.getId());
+            quotationRepository.delete(q);
+        }
+        quotationRepository.flush();
+        folderRepository.delete(folder);
+        return ApiResponse.success("Folder and all its versions deleted successfully");
     }
 
     // item_name is NOT NULL. populateLightingItemDetails only sets it when the master item
@@ -1065,6 +1201,11 @@ public class QuotationServiceImpl implements QuotationService {
         dto.setCustomerName(quotation.getCustomer().getName());
         dto.setCustomerAddress(quotation.getCustomer().getAddress());
         dto.setQuotationNumber(quotation.getQuotationNumber());
+        if (quotation.getFolder() != null) {
+            dto.setFolderId(quotation.getFolder().getId());
+            dto.setFolderName(quotation.getFolder().getName());
+        }
+        dto.setVersionNumber(quotation.getVersionNumber());
         dto.setProjectName(quotation.getProjectName());
         dto.setTransportationPrice(quotation.getTransportationPrice());
         dto.setInstallationPrice(quotation.getInstallationPrice());
@@ -1216,7 +1357,9 @@ public class QuotationServiceImpl implements QuotationService {
                 quotation.getStatus(),
                 quotation.getValidUntil(),
                 quotation.getUpdatedAt() != null ? quotation.getUpdatedAt() : quotation.getCreatedAt(),
-                quotation.getCreatedBy()
+                quotation.getCreatedBy(),
+                quotation.getFolder() != null ? quotation.getFolder().getId() : null,
+                quotation.getVersionNumber()
         );
     }
 

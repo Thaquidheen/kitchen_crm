@@ -269,12 +269,32 @@ export interface QuotationSummary {
   signerName?: string;
   signerEmail?: string;
   signerPhone?: string;
+  // Folder / version info
+  folderId?: number;
+  versionNumber?: number;
+}
+
+// Folder grouping all versions of a quotation
+export interface QuotationFolderSummary {
+  id: number;
+  name: string;
+  customerId: number;
+  customerName: string;
+  versionCount: number;
+  latestQuotationId?: number;
+  latestQuotationNumber?: string;
+  latestVersionNumber?: number;
+  latestTotalAmount?: number;
+  latestStatus?: QuotationStatus;
+  latestCreatedAt?: string;
 }
 
 // Create quotation request
 export interface CreateQuotationRequest {
   customerId: number;
   projectName?: string;
+  // "Save as New": the quotation this one is a new version of (joins its folder)
+  sourceQuotationId?: number;
   transportationPrice?: number;
   installationPrice?: number;
   marginPercentage?: number;

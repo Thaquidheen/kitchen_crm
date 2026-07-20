@@ -1231,9 +1231,11 @@ export function QuotationBuilderPage() {
       return;
     }
     try {
-      const requestData = convertFormDataToRequest(false);
-      await createQuotation(requestData).unwrap();
-      toast.success('New quotation created successfully');
+      // Pass the source quotation id so the new quotation joins its folder as the next version
+      const requestData = { ...convertFormDataToRequest(false), sourceQuotationId: id ? Number(id) : undefined };
+      const created = await createQuotation(requestData).unwrap();
+      const newVersion = created?.data?.versionNumber ?? created?.versionNumber;
+      toast.success(newVersion ? `Saved as version V${newVersion}` : 'New quotation created successfully');
       initialFormDataRef.current = JSON.stringify(formData);
       setIsDirty(false);
       skipNavigationBlockRef.current = true;

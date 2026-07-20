@@ -42,6 +42,14 @@ public class Quotation extends Auditable {
     @Column(name = "quotation_number", unique = true, nullable = false)
     private String quotationNumber;
 
+    // Folder grouping all versions of this quotation; versionNumber is its position inside the folder.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "folder_id")
+    private QuotationFolder folder;
+
+    @Column(name = "version_number")
+    private Integer versionNumber = 1;
+
     @Column(name = "project_name")
     private String projectName;
 

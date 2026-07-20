@@ -22,6 +22,12 @@ public interface QuotationService {
     ApiResponse<QuotationDto> duplicateQuotation(Long id, String createdBy, String userRole);
     ApiResponse<Map<String, Object>> getQuotationStatistics();
 
+    // Folder organization (versions grouped per folder)
+    ApiResponse<Page<QuotationFolderSummaryDto>> getQuotationFolders(String customerName, Pageable pageable);
+    ApiResponse<java.util.List<QuotationSummaryDto>> getFolderVersions(Long folderId);
+    ApiResponse<String> renameFolder(Long folderId, String name);
+    ApiResponse<String> deleteFolder(Long folderId);
+
     // Signature Integration Methods
     ApiResponse<String> linkSignedDocument(Long quotationId, SignedDocument signedDocument);
     ApiResponse<String> updateQuotationAfterSignature(Long quotationId, Long signedDocumentId, LocalDateTime signedAt);

@@ -28,6 +28,11 @@ public class QuotationDto {
     private String quotationNumber;
     private String projectName;
 
+    // Folder / version info (read-only, set by the backend)
+    private Long folderId;
+    private String folderName;
+    private Integer versionNumber;
+
     @PositiveOrZero(message = "Transportation price must be zero or positive")
     private BigDecimal transportationPrice = BigDecimal.ZERO;
 

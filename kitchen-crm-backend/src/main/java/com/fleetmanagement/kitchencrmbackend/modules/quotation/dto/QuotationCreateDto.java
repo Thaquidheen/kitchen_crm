@@ -19,6 +19,11 @@ public class QuotationCreateDto {
     private Long customerId;
 
     private String projectName;
+
+    // "Save as New": id of the quotation this one is a new version of — the new quotation
+    // joins the source's folder as the next version. Null for a brand-new quotation.
+    private Long sourceQuotationId;
+
     private BigDecimal transportationPrice = BigDecimal.ZERO;
     private BigDecimal installationPrice = BigDecimal.ZERO;
     private BigDecimal marginPercentage = BigDecimal.ZERO;

@@ -64,4 +64,12 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
     @Modifying
     @Query("UPDATE Quotation q SET q.project = null WHERE q.project.id = :projectId")
     void unlinkFromProject(@Param("projectId") Long projectId);
+
+    // Folder / version queries
+    List<Quotation> findByFolderIdIn(List<Long> folderIds);
+    List<Quotation> findByFolderIdOrderByVersionNumberDesc(Long folderId);
+    Long countByFolderId(Long folderId);
+
+    @Query("SELECT COALESCE(MAX(q.versionNumber), 0) FROM Quotation q WHERE q.folder.id = :folderId")
+    Integer findMaxVersionNumberInFolder(@Param("folderId") Long folderId);
 }
