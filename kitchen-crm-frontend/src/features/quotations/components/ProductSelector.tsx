@@ -221,22 +221,38 @@ export function ProductSelector({
       };
       next[category] = [...(next[category] || []), doorItem];
     }
-    // Handle accessories from modal (with elevation data)
+    // Handle accessories from modal (with elevation data).
+    // Merge into an existing row for the same accessory on the same elevation instead of
+    // appending a duplicate row (e.g. "C GOLA × 3" + "C GOLA" -> "C GOLA × 4").
     else if (category === 'accessories' && item.accessoryId) {
-      const accessoryItem: QuotationAccessory = {
-        id: item.id,
-        accessoryId: item.accessoryId,
-        description: item.name || item.description,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice,
-        price: item.price || item.unitPrice,
-        brandName: item.brandName || item.raw?.brandName,
-        // Elevation fields
-        elevationId: item.elevationId,
-        elevationName: item.elevationName,
-      };
-      next[category] = [...(next[category] || []), accessoryItem];
+      const list = [...(next[category] || [])];
+      const addQty = item.quantity || 1;
+      const existingIndex = list.findIndex((x: any) =>
+        (x.accessoryId ?? x.id) === item.accessoryId &&
+        (x.elevationId ?? null) === (item.elevationId ?? null)
+      );
+      if (existingIndex >= 0) {
+        const current: any = list[existingIndex];
+        const quantity = (current.quantity || 1) + addQty;
+        const unitPrice = Number(current.price ?? current.unitPrice ?? item.unitPrice ?? 0);
+        list[existingIndex] = { ...current, quantity, totalPrice: unitPrice * quantity };
+      } else {
+        const accessoryItem: QuotationAccessory = {
+          id: item.id,
+          accessoryId: item.accessoryId,
+          description: item.name || item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+          price: item.price || item.unitPrice,
+          brandName: item.brandName || item.raw?.brandName,
+          // Elevation fields
+          elevationId: item.elevationId,
+          elevationName: item.elevationName,
+        };
+        list.push(accessoryItem);
+      }
+      next[category] = list;
     }
     // Handle lighting with quantity aggregation (no elevation)
     else {

@@ -54,6 +54,45 @@ import { useParams } from 'react-router-dom';
 
 type BuilderStep = 'customer' | 'kitchens' | 'products' | 'review';
 
+// Map a saved accessory row into the builder's shape, preserving identity (accessoryId)
+// and elevation so later adds of the same accessory merge instead of duplicating.
+function mapLoadedAccessory(a: any) {
+  return {
+    id: a.accessoryId || a.id,
+    accessoryId: a.accessoryId || a.id,
+    quantity: a.quantity,
+    unitPrice: Number(a.unitPrice || 0),
+    // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
+    totalPrice: Number(a.unitPrice || 0) * (a.quantity || 1),
+    name: a.description || a.accessoryName || 'Accessory',
+    description: a.description || a.accessoryName || 'Accessory',
+    price: Number(a.unitPrice || 0),
+    brandName: a.brandName,
+    elevationId: a.elevationId,
+    elevationName: a.elevationName,
+  };
+}
+
+// Heal quotations that already contain split rows for the same accessory (same accessory,
+// same elevation, same unit price) by merging them into one row with the summed quantity.
+function mergeDuplicateAccessories(list: any[]): any[] {
+  const merged: any[] = [];
+  for (const item of list) {
+    const existing = merged.find((x) =>
+      (x.accessoryId ?? x.id) === (item.accessoryId ?? item.id) &&
+      (x.elevationId ?? null) === (item.elevationId ?? null) &&
+      Number(x.unitPrice || 0) === Number(item.unitPrice || 0)
+    );
+    if (existing) {
+      existing.quantity = (existing.quantity || 1) + (item.quantity || 1);
+      existing.totalPrice = Number(existing.unitPrice || 0) * existing.quantity;
+    } else {
+      merged.push({ ...item });
+    }
+  }
+  return merged;
+}
+
 export function QuotationBuilderPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -352,17 +391,7 @@ export function QuotationBuilderPage() {
       paymentAcceptancePct: Number(existingQuotation.paymentAcceptancePct || 60),
       paymentDeliveryPct: Number(existingQuotation.paymentDeliveryPct || 30),
       paymentInstallationPct: Number(existingQuotation.paymentInstallationPct || 10),
-      accessories: (existingQuotation.accessories || []).map((a: any) => ({
-        id: a.accessoryId || a.id,
-        quantity: a.quantity,
-        unitPrice: Number(a.unitPrice || 0),
-        // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
-        totalPrice: Number(a.unitPrice || 0) * (a.quantity || 1),
-        name: a.description || a.accessoryName || 'Accessory',
-        description: a.description || a.accessoryName || 'Accessory',
-        price: Number(a.unitPrice || 0),
-        brandName: a.brandName,
-      })),
+      accessories: mergeDuplicateAccessories((existingQuotation.accessories || []).map(mapLoadedAccessory)),
       cabinets: globalPaired.cabinets,
       doors: globalPaired.doors,
       kitchens: (existingQuotation.kitchens || []).map((k: any) => ({
@@ -396,17 +425,7 @@ export function QuotationBuilderPage() {
           customerPlanImageId: pi.customerPlanImageId,
           designPhaseFileId: pi.designPhaseFileId,
         })),
-        accessories: (k.accessories || []).map((a: any) => ({
-          id: a.accessoryId || a.id,
-          quantity: a.quantity,
-          unitPrice: Number(a.unitPrice || 0),
-          // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
-          totalPrice: Number(a.unitPrice || 0) * (a.quantity || 1),
-          name: a.description || a.accessoryName || 'Accessory',
-          description: a.description || a.accessoryName || 'Accessory',
-          price: Number(a.unitPrice || 0),
-          brandName: a.brandName,
-        })),
+        accessories: mergeDuplicateAccessories((k.accessories || []).map(mapLoadedAccessory)),
         ...(() => {
           const paired = pairCabinetsAndDoors(k.cabinets || [], k.doors || []);
           return { cabinets: paired.cabinets, doors: paired.doors };
@@ -579,6 +598,8 @@ export function QuotationBuilderPage() {
         unitPrice: item.price || 0,
         totalPrice: item.totalPrice || item.price || 0,
         description: item.name,
+        elevationId: item.elevationId,
+        elevationName: item.elevationName,
       })) as QuotationAccessory[],
       cabinets: (formData.cabinets || []).map((item: any) => ({
         cabinetTypeId: item.cabinetTypeId || item.id,
@@ -657,6 +678,8 @@ export function QuotationBuilderPage() {
           unitPrice: item.price || item.unitPrice || 0,
           totalPrice: item.totalPrice || item.price || 0,
           description: item.name,
+          elevationId: item.elevationId,
+          elevationName: item.elevationName,
         })),
         cabinets: kitchen.cabinets.map((item: any) => ({
           cabinetTypeId: item.cabinetTypeId || item.id,
