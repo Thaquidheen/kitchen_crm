@@ -226,12 +226,15 @@ public class QuotationServiceImpl implements QuotationService {
             Quotation savedQuotation = quotationRepository.save(quotation);
 
             // Save kitchens first (if any)
-            if (dto.getKitchens() != null && !dto.getKitchens().isEmpty()) {
+            boolean hasKitchens = dto.getKitchens() != null && !dto.getKitchens().isEmpty();
+            if (hasKitchens) {
                 saveKitchens(savedQuotation, dto.getKitchens());
+            } else {
+                // Legacy (no kitchens): products live at the quotation level. When kitchens
+                // exist, every product is inside a kitchen — saving the top-level lists too
+                // would store a second, kitchen-less copy of each item (row bloat on every save).
+                saveLineItems(savedQuotation, dto, userRole);
             }
-
-            // Save line items (with kitchen associations)
-            saveLineItems(savedQuotation, dto, userRole);
 
             // FIXED: Use PricingService instead of local method
             // This will calculate both category totals AND overall totals
@@ -353,14 +356,21 @@ public class QuotationServiceImpl implements QuotationService {
             saveKitchens(existingQuotation, kitchenCreateDtos);
         }
 
-        QuotationCreateDto createDto = new QuotationCreateDto();
-        createDto.setAccessories(quotationDto.getAccessories());
-        createDto.setCabinets(quotationDto.getCabinets());
-        createDto.setDoors(quotationDto.getDoors());
-        createDto.setLighting(quotationDto.getLighting());
-        createDto.setOtherExpenses(quotationDto.getOtherExpenses());
+        // Legacy (no kitchens) only: products live at the quotation level. When kitchens exist,
+        // all products are saved inside the kitchens above — saving the top-level lists too
+        // stored a second, kitchen-less copy of every item on each save (row bloat: thousands
+        // of junk rows per quotation, making every load/save slower).
+        boolean hasKitchensUpdate = quotationDto.getKitchens() != null && !quotationDto.getKitchens().isEmpty();
+        if (!hasKitchensUpdate) {
+            QuotationCreateDto createDto = new QuotationCreateDto();
+            createDto.setAccessories(quotationDto.getAccessories());
+            createDto.setCabinets(quotationDto.getCabinets());
+            createDto.setDoors(quotationDto.getDoors());
+            createDto.setLighting(quotationDto.getLighting());
+            createDto.setOtherExpenses(quotationDto.getOtherExpenses());
 
-        saveLineItems(existingQuotation, createDto, userRole);
+            saveLineItems(existingQuotation, createDto, userRole);
+        }
 
         // FIXED: Use PricingService instead of local method
         // This will calculate both category totals AND overall totals

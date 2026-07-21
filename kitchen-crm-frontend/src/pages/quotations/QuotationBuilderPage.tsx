@@ -592,7 +592,11 @@ export function QuotationBuilderPage() {
       paymentAcceptancePct: formData.paymentAcceptancePct ?? 60,
       paymentDeliveryPct: formData.paymentDeliveryPct ?? 30,
       paymentInstallationPct: formData.paymentInstallationPct ?? 10,
-      accessories: (formData.accessories || []).map((item: any) => ({
+      // When kitchens exist, ALL products live inside the kitchens. Sending the (loaded)
+      // top-level lists too made the backend store a second, kitchen-less copy of every
+      // item on each save — quotations ballooned to thousands of junk rows and every
+      // load/save got slower ("becomes still lag"). Same rule as otherExpenses below.
+      accessories: hasKitchens ? [] : (formData.accessories || []).map((item: any) => ({
         accessoryId: item.id,
         quantity: item.quantity || 1,
         unitPrice: item.price || 0,
@@ -601,7 +605,7 @@ export function QuotationBuilderPage() {
         elevationId: item.elevationId,
         elevationName: item.elevationName,
       })) as QuotationAccessory[],
-      cabinets: (formData.cabinets || []).map((item: any) => ({
+      cabinets: hasKitchens ? [] : (formData.cabinets || []).map((item: any) => ({
         cabinetTypeId: item.cabinetTypeId || item.id,
         quantity: item.quantity || 1,
         unitPrice: item.unitPrice || item.price || 0,
@@ -629,7 +633,7 @@ export function QuotationBuilderPage() {
         // Linked door type
         linkedDoorTypeId: item.linkedDoor?.doorTypeId || null,
       })) as QuotationCabinet[],
-      doors: (formData.doors || []).map((item: any) => ({
+      doors: hasKitchens ? [] : (formData.doors || []).map((item: any) => ({
         doorTypeId: item.doorTypeId || item.id,
         quantity: item.quantity || 1,
         unitPrice: item.unitPrice || item.price || 0,
@@ -640,7 +644,7 @@ export function QuotationBuilderPage() {
         calculatedSqft: item.calculatedSqft,
         customDimensions: item.customDimensions,
       })) as QuotationDoor[],
-      lighting: (formData.lighting || []).map((item: any) => ({
+      lighting: hasKitchens ? [] : (formData.lighting || []).map((item: any) => ({
         itemType: (item.itemType || 'LIGHT_PROFILE') as any,
         itemId: item.id || 0,
         quantity: item.quantity || 1,
