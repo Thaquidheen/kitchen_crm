@@ -227,10 +227,15 @@ export function ProductSelector({
     else if (category === 'accessories' && item.accessoryId) {
       const list = [...(next[category] || [])];
       const addQty = item.quantity || 1;
-      const existingIndex = list.findIndex((x: any) =>
-        (x.accessoryId ?? x.id) === item.accessoryId &&
-        (x.elevationId ?? null) === (item.elevationId ?? null)
-      );
+      // Merge with an existing row of the same accessory. Elevation only separates rows
+      // when BOTH sides explicitly chose different elevations; a row without an elevation
+      // (e.g. loaded from an older save) merges with any add of the same accessory.
+      const newElev = item.elevationId ?? null;
+      const existingIndex = list.findIndex((x: any) => {
+        if ((x.accessoryId ?? x.id) !== item.accessoryId) return false;
+        const curElev = x.elevationId ?? null;
+        return curElev === newElev || curElev === null || newElev === null;
+      });
       if (existingIndex >= 0) {
         const current: any = list[existingIndex];
         const quantity = (current.quantity || 1) + addQty;

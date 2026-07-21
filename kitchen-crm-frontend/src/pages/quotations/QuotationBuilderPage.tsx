@@ -78,14 +78,21 @@ function mapLoadedAccessory(a: any) {
 function mergeDuplicateAccessories(list: any[]): any[] {
   const merged: any[] = [];
   for (const item of list) {
-    const existing = merged.find((x) =>
-      (x.accessoryId ?? x.id) === (item.accessoryId ?? item.id) &&
-      (x.elevationId ?? null) === (item.elevationId ?? null) &&
-      Number(x.unitPrice || 0) === Number(item.unitPrice || 0)
-    );
+    const itemElev = item.elevationId ?? null;
+    const existing = merged.find((x) => {
+      if ((x.accessoryId ?? x.id) !== (item.accessoryId ?? item.id)) return false;
+      if (Number(x.unitPrice || 0) !== Number(item.unitPrice || 0)) return false;
+      const curElev = x.elevationId ?? null;
+      // Same rule as the add flow: only two explicitly different elevations stay separate
+      return curElev === itemElev || curElev === null || itemElev === null;
+    });
     if (existing) {
       existing.quantity = (existing.quantity || 1) + (item.quantity || 1);
       existing.totalPrice = Number(existing.unitPrice || 0) * existing.quantity;
+      if ((existing.elevationId ?? null) === null && itemElev !== null) {
+        existing.elevationId = item.elevationId;
+        existing.elevationName = item.elevationName;
+      }
     } else {
       merged.push({ ...item });
     }

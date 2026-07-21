@@ -52,8 +52,9 @@ export function AddAccessoryModal({
   useEffect(() => {
     if (isOpen) {
       setQuantityStr('1');
-      // Pre-select first elevation if available
-      setSelectedElevationId(availableElevations.length > 0 ? availableElevations[0].id || '' : '');
+      // Default to "No Elevation": auto-selecting the first elevation made casual adds
+      // carry an elevation while older rows had none, splitting the sidebar rows.
+      setSelectedElevationId('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
@@ -64,9 +65,9 @@ export function AddAccessoryModal({
   // Get selected elevation
   const selectedElevation = availableElevations.find(e => e.id === Number(selectedElevationId));
 
-  // Validation - elevation is required only if elevations are available
+  // Validation - elevation is optional (defaults to "No Elevation")
   const isValid = quantity > 0;
-  const isElevationValid = availableElevations.length === 0 || selectedElevationId;
+  const isElevationValid = true;
 
   const handleAdd = () => {
     if (!isValid || !isElevationValid) return;
@@ -117,11 +118,12 @@ export function AddAccessoryModal({
         {availableElevations.length > 0 && (
           <div className="mb-4">
             <Select
-              label="Elevation *"
+              label="Elevation"
               value={selectedElevationId}
               onChange={(e) => setSelectedElevationId(e.target.value)}
               placeholder="Select Elevation"
             >
+              <option value="">No Elevation</option>
               {availableElevations.map((elevation) => (
                 <option key={elevation.id || elevation.name} value={elevation.id}>
                   {elevation.name}
