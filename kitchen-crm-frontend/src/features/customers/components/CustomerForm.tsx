@@ -19,6 +19,10 @@ const customerSchema = z.object({
   contact: z.string().optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),
   kitchenTypes: z.string().optional().or(z.literal('')),
+  sqft: z.string().optional().or(z.literal('')),
+  place: z.string().optional().or(z.literal('')),
+  contactPerson: z.string().optional().or(z.literal('')),
+  followUpNotes: z.string().optional().or(z.literal('')),
   status: z.enum(['LEAD', 'POTENTIAL', 'DESIGN_STAGE', 'QUOTE_GIVEN', 'FOLLOW_UP', 'NEGOTIATIONS', 'CONFIRMED', 'LOST']).optional(),
   // Lead tracking fields
   leadSourceType: z.enum(['NONE', 'ARCHITECT', 'MANUAL', 'ONLINE', 'WALK_IN', 'SCOUTING', 'BUILDER_REFERRAL', 'MANUAL_REFERRAL']).optional(),
@@ -78,6 +82,10 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
       contact: existingCustomer?.contact ?? '',
       address: existingCustomer?.address ?? '',
       kitchenTypes: existingCustomer?.kitchenTypes ?? '',
+      sqft: existingCustomer?.sqft ?? '',
+      place: existingCustomer?.place ?? '',
+      contactPerson: existingCustomer?.contactPerson ?? '',
+      followUpNotes: existingCustomer?.followUpNotes ?? '',
       status: existingCustomer?.status ?? 'LEAD',
       leadSourceType: existingCustomer?.leadSourceType ?? 'NONE',
       architectId: existingCustomer?.architectId,
@@ -170,6 +178,10 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           contact: values.contact || undefined,
           address: values.address || undefined,
           kitchenTypes: values.kitchenTypes || undefined,
+          sqft: values.sqft || undefined,
+          place: values.place || undefined,
+          contactPerson: values.contactPerson || undefined,
+          followUpNotes: values.followUpNotes || undefined,
           status: values.status,
           ...leadFields,
         } as Customer;
@@ -183,6 +195,10 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           contact: values.contact || undefined,
           address: values.address || undefined,
           kitchenTypes: values.kitchenTypes || undefined,
+          sqft: values.sqft || undefined,
+          place: values.place || undefined,
+          contactPerson: values.contactPerson || undefined,
+          followUpNotes: values.followUpNotes || undefined,
           status: values.status,
           ...leadFields,
         };
@@ -248,6 +264,32 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
         />
       </div>
 
+      {/* SQFT */}
+      <div>
+        <label className="block text-sm font-medium mb-1">SQFT</label>
+        <input
+          type="text"
+          className="w-full rounded-md border border-gray-600 bg-white text-black p-2 !text-black"
+          style={{ color: '#000000' }}
+          placeholder="e.g., 1200"
+          {...register('sqft')}
+          disabled={disabled}
+        />
+      </div>
+
+      {/* Place */}
+      <div>
+        <label className="block text-sm font-medium mb-1">Place</label>
+        <input
+          type="text"
+          className="w-full rounded-md border border-gray-600 bg-white text-black p-2 !text-black"
+          style={{ color: '#000000' }}
+          placeholder="Town / City"
+          {...register('place')}
+          disabled={disabled}
+        />
+      </div>
+
       {/* Address */}
       <div>
         <label className="block text-sm font-medium mb-1">Address</label>
@@ -257,6 +299,19 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           rows={3}
           placeholder="Street, City, ..."
           {...register('address')}
+          disabled={disabled}
+        />
+      </div>
+
+      {/* Contacting Person and Designation */}
+      <div>
+        <label className="block text-sm font-medium mb-1">Contacting Person &amp; Designation</label>
+        <input
+          type="text"
+          className="w-full rounded-md border border-gray-600 bg-white text-black p-2 !text-black"
+          style={{ color: '#000000' }}
+          placeholder="e.g., Mr. Ramesh - Site Engineer"
+          {...register('contactPerson')}
           disabled={disabled}
         />
       </div>
@@ -372,6 +427,19 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
         {errors.leadSourceType && (
           <p className="text-red-500 text-sm mt-1">{errors.leadSourceType.message}</p>
         )}
+      </div>
+
+      {/* Follow Up Notes */}
+      <div>
+        <label className="block text-sm font-medium mb-1">Follow Up Notes</label>
+        <textarea
+          className="w-full rounded-md border border-gray-600 bg-white text-black p-2 !text-black"
+          style={{ color: '#000000' }}
+          rows={3}
+          placeholder="Last call, next follow-up date, remarks..."
+          {...register('followUpNotes')}
+          disabled={disabled}
+        />
       </div>
 
       {/* Status (only if shown) */}

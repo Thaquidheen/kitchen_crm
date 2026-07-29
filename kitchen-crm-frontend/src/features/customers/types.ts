@@ -33,6 +33,11 @@ export interface Customer {
   contact?: string;
   address?: string;
   kitchenTypes?: string;
+  // Sales-tracker fields
+  sqft?: string;
+  place?: string;
+  contactPerson?: string;
+  followUpNotes?: string;
   status: CustomerStatus;
   // Lead tracking fields
   architectId?: number;
@@ -55,6 +60,11 @@ export interface CustomerCreate {
   contact?: string;
   address?: string;
   kitchenTypes?: string;
+  // Sales-tracker fields
+  sqft?: string;
+  place?: string;
+  contactPerson?: string;
+  followUpNotes?: string;
   status?: CustomerStatus;
   // Lead tracking fields
   leadSourceType?: LeadSourceType;

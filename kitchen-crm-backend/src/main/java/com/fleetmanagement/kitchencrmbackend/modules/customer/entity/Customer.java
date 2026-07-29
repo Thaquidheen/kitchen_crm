@@ -33,6 +33,19 @@ public class Customer extends Auditable {
     @Column(name = "kitchen_types")
     private String kitchenTypes;
 
+    // Sales-tracker fields (Excel: SQFT / PLACE / CONTACTING PERSON AND DESIGNATION / FOLLOW UP NOTES)
+    @Column(name = "sqft")
+    private String sqft;
+
+    @Column(name = "place")
+    private String place;
+
+    @Column(name = "contact_person")
+    private String contactPerson;
+
+    @Column(name = "follow_up_notes", columnDefinition = "TEXT")
+    private String followUpNotes;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CustomerStatus status = CustomerStatus.LEAD;

@@ -24,6 +24,12 @@ public class CustomerCreateDto {
     private String address;
     private String kitchenTypes;
 
+    // Sales-tracker fields
+    private String sqft;
+    private String place;
+    private String contactPerson;
+    private String followUpNotes;
+
     // Initial status (defaults to LEAD if not provided)
     private Customer.CustomerStatus status;
 

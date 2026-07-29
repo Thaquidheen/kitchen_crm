@@ -112,6 +112,10 @@ public class CustomerServiceImpl implements CustomerService {
         existingCustomer.setEmail(customerDto.getEmail());
         existingCustomer.setAddress(customerDto.getAddress());
         existingCustomer.setKitchenTypes(customerDto.getKitchenTypes());
+        existingCustomer.setSqft(customerDto.getSqft());
+        existingCustomer.setPlace(customerDto.getPlace());
+        existingCustomer.setContactPerson(customerDto.getContactPerson());
+        existingCustomer.setFollowUpNotes(customerDto.getFollowUpNotes());
 
         // Handle lead source + referrer details. Only touch lead source if the payload
         // actually specifies it, so partial updates don't wipe an existing source.
@@ -201,6 +205,10 @@ public class CustomerServiceImpl implements CustomerService {
         dto.setEmail(customer.getEmail());
         dto.setAddress(customer.getAddress());
         dto.setKitchenTypes(customer.getKitchenTypes());
+        dto.setSqft(customer.getSqft());
+        dto.setPlace(customer.getPlace());
+        dto.setContactPerson(customer.getContactPerson());
+        dto.setFollowUpNotes(customer.getFollowUpNotes());
         dto.setStatus(customer.getStatus());
         dto.setCreatedAt(customer.getCreatedAt());
         dto.setUpdatedAt(customer.getUpdatedAt());
@@ -286,6 +294,10 @@ public class CustomerServiceImpl implements CustomerService {
         customer.setEmail(dto.getEmail());
         customer.setAddress(dto.getAddress());
         customer.setKitchenTypes(dto.getKitchenTypes());
+        customer.setSqft(dto.getSqft());
+        customer.setPlace(dto.getPlace());
+        customer.setContactPerson(dto.getContactPerson());
+        customer.setFollowUpNotes(dto.getFollowUpNotes());
         customer.setStatus(dto.getStatus() != null ? dto.getStatus() : Customer.CustomerStatus.LEAD);
         return customer;
     }
