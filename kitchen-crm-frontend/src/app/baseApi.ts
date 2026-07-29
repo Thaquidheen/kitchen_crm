@@ -277,6 +277,7 @@ export const baseApi = createApi({
     'WarrantyCard',
     'WarrantyComponents',
     'Staff',
+    'Reminders',
   ],
   endpoints: (builder) => ({
     // ==================== QUOTATION ENDPOINTS ====================
@@ -431,6 +432,47 @@ export const baseApi = createApi({
       invalidatesTags: ['Quotations'],
     }),
 
+    // ==================== CUSTOMER REMINDER ENDPOINTS ====================
+
+    getCustomerReminders: builder.query<any, number>({
+      query: (customerId) => `/reminders/customer/${customerId}`,
+      transformResponse: (response: any) => response?.data ?? [],
+      providesTags: ['Reminders'],
+    }),
+
+    getOpenReminders: builder.query<any, void>({
+      query: () => '/reminders/open',
+      transformResponse: (response: any) => response?.data ?? [],
+      providesTags: ['Reminders'],
+    }),
+
+    // Header bell feed: currently-due reminders + count
+    getReminderNotifications: builder.query<any, void>({
+      query: () => '/reminders/notifications',
+      transformResponse: (response: any) => response?.data ?? { count: 0, reminders: [] },
+      providesTags: ['Reminders'],
+    }),
+
+    createReminder: builder.mutation<any, { customerId: number; title: string; notes?: string; remindAt: string }>({
+      query: (body) => ({ url: '/reminders', method: 'POST', body }),
+      invalidatesTags: ['Reminders'],
+    }),
+
+    updateReminder: builder.mutation<any, { id: number; title?: string; notes?: string; remindAt?: string }>({
+      query: ({ id, ...body }) => ({ url: `/reminders/${id}`, method: 'PUT', body }),
+      invalidatesTags: ['Reminders'],
+    }),
+
+    markReminderDone: builder.mutation<any, number>({
+      query: (id) => ({ url: `/reminders/${id}/done`, method: 'PATCH' }),
+      invalidatesTags: ['Reminders'],
+    }),
+
+    deleteReminder: builder.mutation<any, number>({
+      query: (id) => ({ url: `/reminders/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Reminders'],
+    }),
+
     // Download quotation PDF
     downloadQuotationPDF: builder.mutation<Blob, number>({
       query: (id) => ({
@@ -500,6 +542,13 @@ export const {
   useGetFolderVersionsQuery,
   useRenameQuotationFolderMutation,
   useDeleteQuotationFolderMutation,
+  useGetCustomerRemindersQuery,
+  useGetOpenRemindersQuery,
+  useGetReminderNotificationsQuery,
+  useCreateReminderMutation,
+  useUpdateReminderMutation,
+  useMarkReminderDoneMutation,
+  useDeleteReminderMutation,
   useDownloadQuotationPDFMutation,
   useDownloadQuotationBillPDFMutation,
   useGetCustomerAvailablePlanImagesQuery,

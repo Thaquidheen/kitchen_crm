@@ -5,10 +5,11 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Search, Settings, LogOut, User, Menu } from 'lucide-react';
+import { Bell, Search, Settings, LogOut, User, Menu, AlarmClock, Check } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { logout } from '../../features/auth/authSlice';
 import { useLogoutMutation } from '../../features/auth/authApi';
+import { useGetReminderNotificationsQuery, useMarkReminderDoneMutation } from '../../app/baseApi';
 import { ROUTES } from '../../routes/routes.config';
 import { Dropdown } from '../ui';
 import toast from 'react-hot-toast';
@@ -22,8 +23,17 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
-  const [notificationCount] = useState(3);
   const [logoutApi] = useLogoutMutation();
+  const [bellOpen, setBellOpen] = useState(false);
+
+  // Due customer reminders feed the bell; refreshed every 60s
+  const { data: notifData } = useGetReminderNotificationsQuery(undefined, {
+    pollingInterval: 60000,
+    skip: !user,
+  });
+  const [markReminderDone] = useMarkReminderDoneMutation();
+  const dueReminders: any[] = notifData?.reminders ?? [];
+  const notificationCount = notifData?.count ?? 0;
 
   const handleLogout = async () => {
     try {
@@ -83,15 +93,71 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
 
       {/* Right Section */}
       <div className="flex items-center gap-2 sm:gap-4">
-        {/* Notifications */}
-        <button className="relative p-1.5 sm:p-2 hover:bg-background-700 rounded-lg transition-colors text-text-700 hover:text-text-900">
-          <Bell size={18} className="sm:w-5 sm:h-5" />
-          {notificationCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary-700 text-text-900 text-xs font-semibold rounded-full flex items-center justify-center">
-              {notificationCount}
-            </span>
+        {/* Notifications (due customer reminders) */}
+        <div className="relative">
+          <button
+            onClick={() => setBellOpen((o) => !o)}
+            className="relative p-1.5 sm:p-2 hover:bg-background-700 rounded-lg transition-colors text-text-700 hover:text-text-900"
+            aria-label="Notifications"
+          >
+            <Bell size={18} className="sm:w-5 sm:h-5" />
+            {notificationCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary-700 text-text-900 text-xs font-semibold rounded-full flex items-center justify-center">
+                {notificationCount}
+              </span>
+            )}
+          </button>
+
+          {bellOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setBellOpen(false)} />
+              <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-background-800 border border-background-600 rounded-lg shadow-xl z-50">
+                <div className="px-4 py-2.5 border-b border-background-600 flex items-center gap-2">
+                  <AlarmClock size={15} className="text-primary-600" />
+                  <span className="text-sm font-semibold text-text-900">Reminders due</span>
+                </div>
+                {dueReminders.length === 0 ? (
+                  <p className="px-4 py-6 text-sm text-text-600 text-center">No reminders due. All caught up!</p>
+                ) : (
+                  <div className="divide-y divide-background-600">
+                    {dueReminders.map((r) => (
+                      <div key={r.id} className="px-4 py-3 hover:bg-background-700 transition-colors">
+                        <button
+                          className="text-left w-full"
+                          onClick={() => {
+                            setBellOpen(false);
+                            navigate(`/customers/${r.customerId}`);
+                          }}
+                        >
+                          <p className="text-sm text-text-900 font-medium">{r.title}</p>
+                          <p className="text-xs text-text-600 mt-0.5">
+                            {r.customerName} ·{' '}
+                            {new Date(r.remindAt).toLocaleString('en-IN', {
+                              day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+                            })}
+                          </p>
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await markReminderDone(r.id).unwrap();
+                              toast.success('Reminder marked done');
+                            } catch {
+                              toast.error('Failed to mark done');
+                            }
+                          }}
+                          className="mt-1.5 inline-flex items-center gap-1 text-xs text-success hover:underline"
+                        >
+                          <Check size={12} /> Mark done
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           )}
-        </button>
+        </div>
 
         {/* User Menu */}
         <Dropdown

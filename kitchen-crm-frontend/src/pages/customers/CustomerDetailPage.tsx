@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useGetCustomerByIdQuery } from '../../features/customers/customersAPI';
 import { CustomerDetail } from '../../features/customers/components/CustomerDetail';
+import { CustomerReminders } from '../../features/customers/components/CustomerReminders';
 
 const CustomerDetailPage: React.FC = () => {
   const navigate = useNavigate();
@@ -66,6 +67,9 @@ const CustomerDetailPage: React.FC = () => {
 
       {/* Customer Detail Component */}
       <CustomerDetail customer={customer} />
+
+      {/* Reminders for this customer */}
+      <CustomerReminders customerId={customer.id} />
     </div>
   );
 };
