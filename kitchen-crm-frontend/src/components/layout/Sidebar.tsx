@@ -1,9 +1,10 @@
 /**
  * Sidebar Component
- * Collapsible navigation sidebar with menu items
+ * HOCH ERP shell: grouped navigation with uppercase section labels,
+ * collapsible to an icon rail. Active item gets a soft accent fill.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppSelector } from '../../app/hooks';
 import {
@@ -20,11 +21,10 @@ import {
   ChevronRight,
   Store,
   Building2,
+  IdCard,
 } from 'lucide-react';
 import clsx from 'clsx';
-import logo from '../../assets/logo.png';
 import { ROUTES } from '../../routes/routes.config';
-import { selectCurrentTheme } from '../../features/theme/themeSlice';
 
 export interface MenuItem {
   label: string;
@@ -34,6 +34,11 @@ export interface MenuItem {
   adminOnly?: boolean;
 }
 
+export interface NavGroup {
+  label: string;
+  items: MenuItem[];
+}
+
 export interface SidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
@@ -41,99 +46,56 @@ export interface SidebarProps {
   onMobileClose?: () => void;
 }
 
-const menuItems: MenuItem[] = [
+const ACCENT_SOFT = 'color-mix(in oklab, var(--color-primary-600) 16%, transparent)';
+
+const navGroups: NavGroup[] = [
   {
-    label: 'Dashboard',
-    path: ROUTES.DASHBOARD,
-    icon: <LayoutDashboard size={20} />,
+    label: 'Overview',
+    items: [{ label: 'Dashboard', path: ROUTES.DASHBOARD, icon: <LayoutDashboard size={18} /> }],
   },
   {
-    label: 'Customers',
-    path: ROUTES.CUSTOMERS,
-    icon: <Users size={20} />,
+    label: 'Sales',
+    items: [
+      { label: 'Customers', path: ROUTES.CUSTOMERS, icon: <Users size={18} /> },
+      { label: 'Quotations', path: ROUTES.QUOTATIONS, icon: <FileText size={18} /> },
+      { label: 'Projects', path: ROUTES.PROJECTS, icon: <FolderKanban size={18} /> },
+    ],
   },
   {
-    label: 'Design Phase',
-    path: ROUTES.DESIGN_PHASE,
-    icon: <Palette size={20} />,
+    label: 'Operations',
+    items: [
+      { label: 'Design Phase', path: ROUTES.DESIGN_PHASE, icon: <Palette size={18} /> },
+      { label: 'Production', path: ROUTES.PRODUCTION, icon: <Hammer size={18} /> },
+      { label: 'Products', path: ROUTES.PRODUCTS, icon: <Package size={18} /> },
+    ],
   },
   {
-    label: 'Production',
-    path: ROUTES.PRODUCTION,
-    icon: <Hammer size={20} />,
+    label: 'Finance',
+    items: [
+      { label: 'Payments', path: ROUTES.PAYMENTS, icon: <CreditCard size={18} /> },
+      { label: 'Vendors', path: ROUTES.VENDORS, icon: <Store size={18} /> },
+    ],
   },
   {
-    label: 'Products',
-    path: ROUTES.PRODUCTS,
-    icon: <Package size={20} />,
+    label: 'People',
+    items: [
+      { label: 'Architects', path: ROUTES.ARCHITECTS, icon: <Building2 size={18} /> },
+      { label: 'Staff', path: ROUTES.STAFF, icon: <IdCard size={18} />, adminOnly: true },
+    ],
   },
   {
-    label: 'Quotations',
-    path: ROUTES.QUOTATIONS,
-    icon: <FileText size={20} />,
-  },
-  {
-    label: 'Projects',
-    path: ROUTES.PROJECTS,
-    icon: <FolderKanban size={20} />,
-  },
-  {
-    label: 'Payments',
-    path: ROUTES.PAYMENTS,
-    icon: <CreditCard size={20} />,
-  },
-  {
-    label: 'Vendors',
-    path: ROUTES.VENDORS,
-    icon: <Store size={20} />,
-  },
-  {
-    label: 'Architects',
-    path: ROUTES.ARCHITECTS,
-    icon: <Building2 size={20} />,
-  },
-  {
-    label: 'Staff',
-    path: ROUTES.STAFF,
-    icon: <Users size={20} />,
-    adminOnly: true,
-  },
-  {
-    label: 'Settings',
-    path: ROUTES.SETTINGS,
-    icon: <Settings size={20} />,
-    adminOnly: true,
+    label: 'System',
+    items: [{ label: 'Settings', path: ROUTES.SETTINGS, icon: <Settings size={18} />, adminOnly: true }],
   },
 ];
 
 export const Sidebar = ({ isCollapsed, onToggle, isMobileOpen = false, onMobileClose }: SidebarProps) => {
   const location = useLocation();
   const currentUser = useAppSelector((state) => state.auth.user);
-  const currentTheme = useAppSelector(selectCurrentTheme);
   const isSuperAdmin = currentUser?.role === 'ROLE_SUPER_ADMIN';
 
-  // Create dynamic gradient for active state based on current theme
-  const activeGradient = useMemo(() => {
-    if (!currentTheme?.colors) {
-      // Fallback gradient if theme is not loaded
-      return 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)';
-    }
-    const { primary } = currentTheme.colors;
-    // Create gradient from primary-600 to primary-500
-    return `linear-gradient(135deg, ${primary[600]} 0%, ${primary[500]} 100%)`;
-  }, [currentTheme]);
-
-  // Get active text color from theme
-  const activeTextColor = useMemo(() => {
-    if (!currentTheme?.colors) {
-      return '#FFFFFF';
-    }
-    return currentTheme.colors.text[900];
-  }, [currentTheme]);
-
-  const isActive = (path: string) => {
-    return location.pathname === path || location.pathname.startsWith(path + '/');
-  };
+  const isActive = (path: string) =>
+    location.pathname === path || location.pathname.startsWith(path + '/');
 
   // Close sidebar when clicking outside on mobile
   useEffect(() => {
@@ -171,97 +133,105 @@ export const Sidebar = ({ isCollapsed, onToggle, isMobileOpen = false, onMobileC
       {/* Sidebar */}
       <div
         className={clsx(
-          'sidebar-container h-screen bg-background-800 border-r-2 border-background-700 transition-all duration-300 flex flex-col z-50',
-          // Mobile: overlay, hidden by default, shown when isMobileOpen
+          'sidebar-container h-screen bg-background-800 border-r border-background-600 transition-all duration-200 flex flex-col z-50',
           'fixed md:relative inset-y-0 left-0',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
-          // Desktop: collapsed/expanded width
-          isCollapsed ? 'w-20' : 'w-64'
+          isCollapsed ? 'w-16' : 'w-[238px]'
         )}
       >
-      {/* Logo */}
-      <div className="h-20 flex items-center justify-between px-4 border-b-2 border-background-700">
-        {!isCollapsed && (
-          <img src={logo} alt="HOCH" className="h-10 sm:h-12" />
-        )}
-        <button
-          onClick={onToggle}
-          className="p-2 hover:bg-background-600 rounded-lg transition-colors text-text-700 hover:text-text-900"
+        {/* Brand */}
+        <div
+          className={clsx(
+            'border-b border-background-600',
+            isCollapsed
+              ? 'flex flex-col items-center gap-2 py-3 px-2'
+              : 'flex items-center gap-2.5 px-3.5 min-h-[58px]'
+          )}
         >
-          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-        </button>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4">
-        <ul className="space-y-1 px-2">
-          {menuItems
-            .filter((item) => !item.adminOnly || isSuperAdmin)
-            .map((item) => {
-              const active = isActive(item.path);
-              return (
-                <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    className={clsx(
-                      'flex items-center gap-3 px-3 py-3 rounded-lg transition-all group sidebar-nav-item',
-                      active
-                        ? 'text-text-900'
-                        : 'text-text-700 hover:bg-background-600 hover:text-text-900'
-                    )}
-                    style={
-                      active
-                        ? {
-                            background: activeGradient,
-                            color: activeTextColor,
-                          }
-                        : undefined
-                    }
-                    title={isCollapsed ? item.label : undefined}
-                    onClick={() => {
-                      // Close mobile sidebar when clicking a link
-                      if (isMobileOpen) {
-                        onMobileClose?.();
-                      }
-                    }}
-                  >
-                    <span
-                      style={active ? { color: activeTextColor } : undefined}
-                      className={clsx(!active && 'text-text-700')}
-                    >
-                      {item.icon}
-                    </span>
-                    {!isCollapsed && (
-                      <>
-                        <span className="flex-1 font-medium">{item.label}</span>
-                        {item.badge && (
-                          <span className="px-2 py-0.5 text-xs font-semibold bg-primary-900 text-text-900 rounded-full">
-                            {item.badge}
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-        </ul>
-      </nav>
-
-      {/* Footer */}
-      <div className="p-4 border-t-2 border-background-700">
-        {!isCollapsed ? (
-          <div className="text-xs text-text-600 text-center">
-            <p>HOCH v1.0.0</p>
-            <p className="mt-1">© 2025 All rights reserved</p>
+          <div
+            className="w-8 h-8 rounded-[9px] flex items-center justify-center text-sm font-bold text-primary-600 shrink-0 border"
+            style={{
+              background: ACCENT_SOFT,
+              borderColor: 'color-mix(in oklab, var(--color-primary-600) 35%, transparent)',
+            }}
+          >
+            H
           </div>
-        ) : (
-          <div className="text-xs text-text-600 text-center">
-            <p>v1.0</p>
+          {!isCollapsed && (
+            <div className="leading-tight whitespace-nowrap overflow-hidden">
+              <div className="text-[13.5px] font-bold tracking-[0.05em] text-text-900">THE HOCH</div>
+              <div className="text-[9.5px] tracking-[0.12em] text-text-500 uppercase">
+                Kitchens &amp; Wardrobes
+              </div>
+            </div>
+          )}
+          <button
+            onClick={onToggle}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className={clsx(
+              'w-[26px] h-[26px] rounded-lg flex items-center justify-center text-text-500 hover:text-text-900 hover:bg-background-600 transition-colors shrink-0',
+              !isCollapsed && 'ml-auto'
+            )}
+          >
+            {isCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2.5 py-3 flex flex-col gap-4">
+          {navGroups.map((group) => {
+            const items = group.items.filter((item) => !item.adminOnly || isSuperAdmin);
+            if (items.length === 0) return null;
+            return (
+              <div key={group.label} className="flex flex-col gap-0.5">
+                {!isCollapsed && (
+                  <div className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-text-500 px-2.5 mb-1">
+                    {group.label}
+                  </div>
+                )}
+                {items.map((item) => {
+                  const active = isActive(item.path);
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      title={item.label}
+                      onClick={() => {
+                        if (isMobileOpen) onMobileClose?.();
+                      }}
+                      className={clsx(
+                        'flex items-center gap-2.5 rounded-[9px] text-[13.5px] whitespace-nowrap transition-colors sidebar-nav-item',
+                        isCollapsed ? 'justify-center py-2.5 px-0' : 'py-2 px-2.5',
+                        active
+                          ? 'font-semibold text-primary-600'
+                          : 'font-medium text-text-700 hover:bg-background-700 hover:text-text-900'
+                      )}
+                      style={active ? { background: ACCENT_SOFT } : undefined}
+                    >
+                      <span className="shrink-0">{item.icon}</span>
+                      {!isCollapsed && <span className="flex-1 overflow-hidden text-ellipsis">{item.label}</span>}
+                      {!isCollapsed && item.badge && (
+                        <span className="ml-auto text-[11px] font-semibold px-1.5 py-px rounded-full bg-background-600 text-text-700 tabular-nums">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </nav>
+
+        {/* Footer */}
+        {!isCollapsed && (
+          <div className="px-4 py-3.5 border-t border-background-600 text-[11px] text-text-500 leading-relaxed">
+            HOCH ERP v2.0
+            <br />
+            © 2026 All rights reserved
           </div>
         )}
       </div>
-    </div>
     </>
   );
 };

@@ -434,8 +434,116 @@ export const lightGrayTheme: Theme = {
   },
 };
 
+// HOCH ERP redesign themes: violet accent (#6E56CF), near-black neutrals in night
+// mode (accent auto-lightened toward white), soft light-grey day mode.
+export const hochNightTheme: Theme = {
+  id: 'hoch-night',
+  name: 'HOCH Night',
+  type: 'dark',
+  description: 'HOCH ERP night mode - near-black neutrals with violet accent',
+  colors: {
+    background: {
+      900: '#0C0E12', // page bg
+      800: '#13161C', // surfaces / cards
+      700: '#1A1E26', // secondary surfaces
+      600: '#232833', // borders
+      500: '#2F3644', // strong borders / disabled
+    },
+    primary: {
+      900: '#2E2465',
+      800: '#3D308A',
+      700: '#6E56CF', // base accent
+      600: '#9B8AFB', // brightened accent (night acc-eff)
+      500: '#A99AFC',
+      400: '#B3A4FF',
+      300: '#C9BEFF',
+      200: '#DFD8FF',
+      100: '#EFEBFF',
+    },
+    accent: {
+      900: '#2E2465',
+      800: '#3D308A',
+      700: '#6E56CF',
+      600: '#9B8AFB',
+      500: '#A99AFC',
+      400: '#B3A4FF',
+      300: '#C9BEFF',
+      200: '#DFD8FF',
+      100: '#EFEBFF',
+    },
+    text: {
+      900: '#E8EAF0', // primary text
+      800: '#C7CCDA',
+      700: '#99A2B3', // secondary text
+      600: '#7A8296',
+      500: '#5F6878', // muted
+      400: '#4A5261',
+    },
+    semantic: {
+      success: '#52DB93',
+      warning: '#F2B457',
+      info: '#7DB5FF',
+      error: '#F08A8A',
+    },
+  },
+};
+
+export const hochDayTheme: Theme = {
+  id: 'hoch-day',
+  name: 'HOCH Day',
+  type: 'light',
+  description: 'HOCH ERP day mode - white surfaces with violet accent',
+  colors: {
+    background: {
+      900: '#F4F5F7', // page bg
+      800: '#FFFFFF', // surfaces / cards
+      700: '#F2F3F6', // secondary surfaces
+      600: '#E5E7EC', // borders
+      500: '#D5D9E0', // strong borders
+    },
+    primary: {
+      900: '#3A2E78',
+      800: '#4A3A9E',
+      700: '#5F49BE',
+      600: '#6E56CF', // accent (day: no lightening)
+      500: '#8471DB',
+      400: '#9B8AE6',
+      300: '#B8ACF0',
+      200: '#D5CDF7',
+      100: '#EEEBFD',
+    },
+    accent: {
+      900: '#3A2E78',
+      800: '#4A3A9E',
+      700: '#5F49BE',
+      600: '#6E56CF',
+      500: '#8471DB',
+      400: '#9B8AE6',
+      300: '#B8ACF0',
+      200: '#D5CDF7',
+      100: '#EEEBFD',
+    },
+    text: {
+      900: '#171B24',
+      800: '#2A3040',
+      700: '#5A6373',
+      600: '#737D8F',
+      500: '#8B93A3',
+      400: '#A5ACBA',
+    },
+    semantic: {
+      success: '#137A43',
+      warning: '#A97207',
+      info: '#1863D6',
+      error: '#B93838',
+    },
+  },
+};
+
 // Export all themes
 export const themes: Record<string, Theme> = {
+  'hoch-night': hochNightTheme,
+  'hoch-day': hochDayTheme,
   'dark-purple-cyan': darkPurpleCyanTheme,
   'classic-red-black': classicRedBlackTheme,
   'blue-teal-dark': blueTealDarkTheme,
@@ -447,6 +555,8 @@ export const themes: Record<string, Theme> = {
 
 // Export theme list
 export const themeList: Theme[] = [
+  hochNightTheme,
+  hochDayTheme,
   darkPurpleCyanTheme,
   classicRedBlackTheme,
   blueTealDarkTheme,
@@ -457,5 +567,5 @@ export const themeList: Theme[] = [
 ];
 
 // Default theme
-export const defaultTheme = darkPurpleCyanTheme;
+export const defaultTheme = hochNightTheme;
 

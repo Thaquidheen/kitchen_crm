@@ -1,9 +1,33 @@
 /* Import Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* HOCH ERP redesign: customer-status pill colors (soft bg + strong fg), themed by
+   the active theme type (ThemeProvider sets data-theme="dark" | "light"). */
+:root {
+  --st-lead-bg: rgba(77, 159, 255, 0.13);   --st-lead-fg: #7DB5FF;
+  --st-potential-bg: rgba(244, 171, 54, 0.14); --st-potential-fg: #F2B457;
+  --st-design-bg: rgba(155, 138, 251, 0.14);   --st-design-fg: #B3A4FF;
+  --st-quote-bg: rgba(56, 199, 181, 0.13);     --st-quote-fg: #4FD3BE;
+  --st-follow-bg: rgba(255, 138, 196, 0.12);   --st-follow-fg: #FF9DCB;
+  --st-nego-bg: rgba(255, 151, 88, 0.13);      --st-nego-fg: #FFA26B;
+  --st-confirmed-bg: rgba(61, 214, 140, 0.13); --st-confirmed-fg: #52DB93;
+  --st-lost-bg: rgba(240, 98, 98, 0.12);       --st-lost-fg: #F08A8A;
+}
+[data-theme='light'] {
+  --st-lead-bg: #E8F1FE;      --st-lead-fg: #1863D6;
+  --st-potential-bg: #FCF1DD; --st-potential-fg: #96660A;
+  --st-design-bg: #EEEBFD;    --st-design-fg: #5844C4;
+  --st-quote-bg: #DFF6F1;     --st-quote-fg: #0B7E68;
+  --st-follow-bg: #FCE9F2;    --st-follow-fg: #B02E72;
+  --st-nego-bg: #FDEEE2;      --st-nego-fg: #B25411;
+  --st-confirmed-bg: #E2F6EA; --st-confirmed-fg: #137A43;
+  --st-lost-bg: #FBE7E7;      --st-lost-fg: #B93838;
+}
 
 /* Hide number input spinner arrows globally */
 input[type="number"]::-webkit-outer-spin-button,

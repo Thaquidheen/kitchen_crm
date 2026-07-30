@@ -3,7 +3,7 @@
  * Search and filter controls for customers list
  */
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -16,15 +16,18 @@ interface CustomerFiltersProps {
   filters: CustomerListParams;
   onFiltersChange: (filters: CustomerListParams) => void;
   onReset: () => void;
+  /** Embedded mode (inside the table card): no own search bar/card, advanced grid always open */
+  hideSearch?: boolean;
 }
 
 export function CustomerFilters({
   filters,
   onFiltersChange,
   onReset,
+  hideSearch = false,
 }: CustomerFiltersProps) {
   const [localFilters, setLocalFilters] = useState<CustomerListParams>(filters);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(hideSearch);
 
   const handleApply = () => {
     onFiltersChange({ ...localFilters, page: 0 }); // Reset to first page when filtering
@@ -53,10 +56,17 @@ export function CustomerFilters({
     { value: 'LOST', label: 'Lost' },
   ];
 
+  const Wrapper = hideSearch
+    ? ({ children }: { children: ReactNode }) => <div className="pt-1">{children}</div>
+    : ({ children }: { children: ReactNode }) => (
+        <Card className="p-4 sm:p-5 lg:p-6 bg-background-800 border-background-600 shadow-md">{children}</Card>
+      );
+
   return (
-    <Card className="p-4 sm:p-5 lg:p-6 bg-background-800 border-background-600 shadow-md">
+    <Wrapper>
       <div className="space-y-4 sm:space-y-5">
         {/* Quick Search Bar */}
+        {!hideSearch && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div className="flex-1">
             <div className="relative">
@@ -102,9 +112,9 @@ export function CustomerFilters({
             </Button>
 
             {hasActiveFilters && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleReset}
                 className="border border-background-600 hover:border-background-500"
               >
@@ -114,6 +124,7 @@ export function CustomerFilters({
             )}
           </div>
         </div>
+        )}
 
         {/* Advanced Filters */}
         {isExpanded && (
@@ -278,7 +289,7 @@ export function CustomerFilters({
           </div>
         )}
       </div>
-    </Card>
+    </Wrapper>
   );
 }
 
