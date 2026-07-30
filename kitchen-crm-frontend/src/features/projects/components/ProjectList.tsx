@@ -1,14 +1,14 @@
 /**
  * ProjectList Component
- * Displays a list of projects with search, filters, and actions
+ * HOCH ERP design: token-styled cells (avatars, dot status pills, tabular amounts).
+ * Functionality unchanged: search, status filter, clear, sorting, pagination, actions.
+ * Filters can be controlled from the page (for the status chips) or kept internal
+ * when embedded elsewhere.
  */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppSelector } from '@/app/hooks';
-import { selectCurrentTheme } from '@/features/theme/themeSlice';
 import { Table } from '@/components/ui/Table';
-import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -20,18 +20,45 @@ import toast from 'react-hot-toast';
 export interface ProjectListProps {
   customerId?: number;
   showFilters?: boolean;
+  /** Optional controlled filters (used by ProjectsPage so the status chips drive the list) */
+  filters?: ProjectFilters;
+  onFiltersChange?: (filters: ProjectFilters) => void;
 }
 
-export function ProjectList({ customerId, showFilters = true }: ProjectListProps) {
+// Status -> semantic pill token + label
+const PSTATUS: Record<string, { st: string; label: string }> = {
+  ACTIVE: { st: 'lead', label: 'Active' },
+  IN_PROGRESS: { st: 'design', label: 'In Progress' },
+  COMPLETED: { st: 'confirmed', label: 'Completed' },
+  ON_HOLD: { st: 'potential', label: 'On Hold' },
+  CANCELLED: { st: 'lost', label: 'Cancelled' },
+};
+
+const initialsOf = (name?: string) =>
+  (name ?? '')
+    .replace(/^(mr|mrs|ms|dr)\.?\s+/i, '')
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase() || '?';
+
+export function ProjectList({
+  customerId,
+  showFilters = true,
+  filters: controlledFilters,
+  onFiltersChange,
+}: ProjectListProps) {
   const navigate = useNavigate();
-  const currentTheme = useAppSelector(selectCurrentTheme);
-  const [filters, setFilters] = useState<ProjectFilters>({
+  const [internalFilters, setInternalFilters] = useState<ProjectFilters>({
     customerId,
     page: 0,
     size: 10,
     sortBy: 'createdAt',
     sortDir: 'desc',
   });
+  const filters = controlledFilters ?? internalFilters;
+  const setFilters = onFiltersChange ?? setInternalFilters;
 
   const { data, isLoading, error } = useGetProjectsQuery(filters);
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
@@ -44,10 +71,8 @@ export function ProjectList({ customerId, showFilters = true }: ProjectListProps
     setFilters({ ...filters, [field]: value, page: 0 });
   };
 
-
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this project?')) return;
-
     try {
       await deleteProject(id).unwrap();
       toast.success('Project deleted successfully');
@@ -57,16 +82,31 @@ export function ProjectList({ customerId, showFilters = true }: ProjectListProps
     }
   };
 
+  const statusPill = (status?: string) => {
+    const m = (status && PSTATUS[status]) || { st: '', label: status ?? '—' };
+    const fg = m.st ? `var(--st-${m.st}-fg)` : 'var(--color-text-700)';
+    const bg = m.st ? `var(--st-${m.st}-bg)` : 'var(--color-background-700)';
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 px-2.5 py-[3.5px] rounded-full text-xs font-semibold whitespace-nowrap"
+        style={{ background: bg, color: fg }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: fg }} />
+        {m.label}
+      </span>
+    );
+  };
+
   const columns = [
     {
       accessorKey: 'projectName',
-      header: 'Project Name',
+      header: 'Project',
       cell: ({ row }: { row: any }) => (
-        <div
-          className="font-medium break-words"
-          style={{ color: currentTheme?.colors?.text?.[900] || '#ffffff' }}
-        >
-          {row.original.projectName}
+        <div className="min-w-0">
+          <div className="text-[13.5px] font-semibold text-text-900 break-words">{row.original.projectName}</div>
+          {row.original.quotationNumber && (
+            <div className="text-xs text-text-700 tabular-nums mt-0.5">{row.original.quotationNumber}</div>
+          )}
         </div>
       ),
     },
@@ -74,11 +114,13 @@ export function ProjectList({ customerId, showFilters = true }: ProjectListProps
       accessorKey: 'customerName',
       header: 'Customer',
       cell: ({ row }: { row: any }) => (
-        <div
-          className="break-words"
-          style={{ color: currentTheme?.colors?.text?.[700] || '#d1d5db' }}
-        >
-          {row.original.customerName}
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-[8px] bg-background-600 border border-background-500 flex items-center justify-center text-[10px] font-[650] text-text-700 shrink-0">
+            {initialsOf(row.original.customerName)}
+          </div>
+          <span className="text-[13px] text-text-900 whitespace-nowrap overflow-hidden text-ellipsis">
+            {row.original.customerName || '—'}
+          </span>
         </div>
       ),
     },
@@ -86,10 +128,7 @@ export function ProjectList({ customerId, showFilters = true }: ProjectListProps
       accessorKey: 'totalAmount',
       header: 'Total Amount',
       cell: ({ row }: { row: any }) => (
-        <div
-          className="font-medium"
-          style={{ color: currentTheme?.colors?.text?.[900] || '#ffffff' }}
-        >
+        <div className="text-[13px] font-semibold text-text-900 text-right tabular-nums whitespace-nowrap">
           ₹{row.original.totalAmount?.toLocaleString('en-IN') ?? '0'}
         </div>
       ),
@@ -99,11 +138,9 @@ export function ProjectList({ customerId, showFilters = true }: ProjectListProps
       header: 'Balance',
       cell: ({ row }: { row: any }) => (
         <div
-          className="font-medium"
+          className="text-[13px] font-semibold text-right tabular-nums whitespace-nowrap"
           style={{
-            color: row.original.balanceAmount > 0
-              ? currentTheme?.colors?.warning || '#f59e0b'
-              : currentTheme?.colors?.accent?.[500] || '#10b981'
+            color: row.original.balanceAmount > 0 ? 'var(--st-potential-fg)' : 'var(--st-confirmed-fg)',
           }}
         >
           ₹{row.original.balanceAmount?.toLocaleString('en-IN') ?? '0'}
@@ -113,16 +150,20 @@ export function ProjectList({ customerId, showFilters = true }: ProjectListProps
     {
       accessorKey: 'status',
       header: 'Status',
-      cell: ({ row }: { row: any }) => <StatusBadge status={row.original.status} />,
+      cell: ({ row }: { row: any }) => statusPill(row.original.status),
     },
     {
       accessorKey: 'startDate',
       header: 'Start Date',
       cell: ({ row }: { row: any }) => (
-        <div
-          style={{ color: currentTheme?.colors?.text?.[700] || '#d1d5db' }}
-        >
-          {row.original.startDate ? new Date(row.original.startDate).toLocaleDateString() : '-'}
+        <div className="text-[12.5px] text-text-700 tabular-nums whitespace-nowrap">
+          {row.original.startDate
+            ? new Date(row.original.startDate).toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+              })
+            : '—'}
         </div>
       ),
     },
@@ -130,34 +171,34 @@ export function ProjectList({ customerId, showFilters = true }: ProjectListProps
       id: 'actions',
       header: 'Actions',
       cell: ({ row }: { row: any }) => (
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center justify-end gap-0.5">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate(`/projects/${row.original.id}`)}
-            className="min-w-[32px] h-8"
+            title="View"
+            className="p-1.5"
           >
-            <Eye className="h-4 w-4" />
+            <Eye className="h-[15px] w-[15px]" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate(`/projects/${row.original.id}/edit`)}
-            className="min-w-[32px] h-8"
+            title="Edit"
+            className="p-1.5"
           >
-            <Edit className="h-4 w-4" />
+            <Edit className="h-3.5 w-3.5" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => handleDelete(row.original.id)}
             disabled={isDeleting}
-            className="min-w-[32px] h-8"
+            title="Delete"
+            className="p-1.5 text-error hover:text-error"
           >
-            <Trash2
-              className="h-4 w-4"
-              style={{ color: currentTheme?.colors?.error || '#dc2626' }}
-            />
+            <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
       ),
@@ -167,37 +208,26 @@ export function ProjectList({ customerId, showFilters = true }: ProjectListProps
   if (error) {
     return (
       <div
-        className="p-4 rounded-lg border"
-        style={{
-          backgroundColor: `${currentTheme?.colors?.error || '#dc2626'}20`,
-          borderColor: currentTheme?.colors?.error || '#dc2626'
-        }}
+        className="p-4 rounded-[12px] border text-center"
+        style={{ background: 'var(--st-lost-bg)', borderColor: 'var(--st-lost-fg)', color: 'var(--st-lost-fg)' }}
       >
-        <p style={{ color: currentTheme?.colors?.error || '#dc2626' }}>
-          Failed to load projects
-        </p>
+        Failed to load projects
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {showFilters && (
-        <div
-          className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-4 rounded-lg"
-          style={{
-            backgroundColor: currentTheme?.colors?.background?.[800] || '#1f2937',
-            borderColor: currentTheme?.colors?.background?.[600] || '#374151'
-          }}
-        >
-          <div className="flex-1 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <div className="flex-1 sm:max-w-[480px]">
             <Input
-              placeholder="Search projects..."
+              placeholder="Filter by project name…"
               value={filters.projectName || ''}
               onChange={(e) => handleSearch(e.target.value)}
             />
           </div>
-
+          <div className="flex-1 hidden sm:block" />
           <Select
             value={filters.status || ''}
             onChange={(e) => handleFilterChange('status', e.target.value || undefined)}
@@ -210,22 +240,15 @@ export function ProjectList({ customerId, showFilters = true }: ProjectListProps
               { value: ProjectStatus.ON_HOLD, label: 'On Hold' },
             ]}
           />
-
           <Button
             variant="secondary"
             size="sm"
             onClick={() =>
-              setFilters({
-                customerId,
-                page: 0,
-                size: 10,
-                sortBy: 'createdAt',
-                sortDir: 'desc',
-              })
+              setFilters({ customerId, page: 0, size: 10, sortBy: 'createdAt', sortDir: 'desc' })
             }
             className="w-full sm:w-auto"
           >
-            <Filter className="h-4 w-4 mr-2" />
+            <Filter className="h-3.5 w-3.5 mr-1.5" />
             Clear
           </Button>
         </div>
@@ -241,6 +264,7 @@ export function ProjectList({ customerId, showFilters = true }: ProjectListProps
           emptyMessage="No projects found"
         />
       </div>
+      {isLoading && <p className="text-[12.5px] text-text-600 px-1">Loading projects…</p>}
     </div>
   );
 }

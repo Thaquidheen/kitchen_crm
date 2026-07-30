@@ -1,160 +1,161 @@
 /**
  * ProjectsPage
- * Main page for displaying and managing projects
+ * HOCH ERP design: title + count pill, clickable status chips with distribution bar
+ * (real counts from /projects/statistics), quiet inline financial stat, table card.
+ * All existing functionality (search, status filter, actions, pagination) unchanged.
  */
 
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppSelector } from '@/app/hooks';
-import { selectCurrentTheme } from '@/features/theme/themeSlice';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { ProjectList } from '@/features/projects/components/ProjectList';
 import { useGetProjectStatisticsQuery } from '@/features/projects/projectsAPI';
-import { Briefcase, Plus, TrendingUp, DollarSign, CheckCircle } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import type { ProjectFilters } from '@/features/projects/types';
+
+// Status -> chip token + label + statistics key (backend returns snake_case keys)
+const STATUS_CHIPS: Array<{ status: string; st: string; label: string; statsKey: string }> = [
+  { status: 'ACTIVE', st: 'lead', label: 'Active', statsKey: 'active_projects' },
+  { status: 'IN_PROGRESS', st: 'design', label: 'In Progress', statsKey: 'in_progress_projects' },
+  { status: 'COMPLETED', st: 'confirmed', label: 'Completed', statsKey: 'completed_projects' },
+  { status: 'ON_HOLD', st: 'potential', label: 'On Hold', statsKey: 'on_hold_projects' },
+  { status: 'CANCELLED', st: 'lost', label: 'Cancelled', statsKey: 'cancelled_projects' },
+];
 
 export function ProjectsPage() {
   const navigate = useNavigate();
-  const currentTheme = useAppSelector(selectCurrentTheme);
-  const { data: statistics, isLoading: statsLoading } = useGetProjectStatisticsQuery();
+  const { data: stats } = useGetProjectStatisticsQuery();
+  const [filters, setFilters] = useState<ProjectFilters>({
+    page: 0,
+    size: 10,
+    sortBy: 'createdAt',
+    sortDir: 'desc',
+  });
 
-  // Theme-based stats configuration
-  const stats = [
-    {
-      label: 'Total Projects',
-      value: statistics?.totalProjects || 0,
-      icon: Briefcase,
-      color: currentTheme?.colors?.primary?.[600] || 'text-blue-500',
-    },
-    {
-      label: 'Active Projects',
-      value: statistics?.activeProjects || 0,
-      icon: TrendingUp,
-      color: currentTheme?.colors?.accent?.[500] || 'text-green-500',
-    },
-    {
-      label: 'Completed Projects',
-      value: statistics?.completedProjects || 0,
-      icon: CheckCircle,
-      color: currentTheme?.colors?.accent?.[400] || 'text-purple-500',
-    },
-    {
-      label: 'Total Revenue',
-      value: `₹${(statistics?.totalRevenue || 0).toLocaleString('en-IN')}`,
-      icon: DollarSign,
-      color: currentTheme?.colors?.warning || 'text-yellow-500',
-    },
-  ];
+  const total: number = Number(stats?.total_projects ?? 0);
+  const activeValue: number = Number(stats?.total_active_project_value ?? 0);
+  const receivedValue: number = Number(stats?.total_received_amount ?? 0);
+  const pendingValue: number = Number(stats?.total_pending_amount ?? 0);
+
+  const activeStatus = filters.status ?? 'all';
+  const setStatusFilter = (status?: string) => {
+    setFilters((prev) => ({ ...prev, status: status as any, page: 0 }));
+  };
+
+  const chipCount = (key: string) => Number(stats?.[key] ?? 0);
+  const segments = STATUS_CHIPS.map((c) => ({ ...c, count: chipCount(c.statsKey) })).filter((c) => c.count > 0);
+
+  const chipStyle = (active: boolean) =>
+    active
+      ? {
+          borderColor: 'var(--color-primary-600)',
+          background: 'color-mix(in oklab, var(--color-primary-600) 16%, transparent)',
+        }
+      : { borderColor: 'var(--color-background-600)', background: 'var(--color-background-800)' };
 
   return (
-    <div
-      className="min-h-screen p-4 sm:p-6 lg:p-8"
-      style={{ backgroundColor: currentTheme?.colors?.background?.[900] || '#111827' }}
-    >
-      {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
-            <div
-              className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: `${currentTheme?.colors?.primary?.[600]}20` }}
-            >
-              <Briefcase
-                className="h-6 w-6 sm:h-8 sm:w-8"
-                style={{ color: currentTheme?.colors?.primary?.[600] || '#dc2626' }}
-              />
-            </div>
-            <div>
-              <h1
-                className="text-2xl sm:text-3xl font-bold"
-                style={{ color: currentTheme?.colors?.text?.[900] || '#ffffff' }}
-              >
-                Projects
-              </h1>
-              <p
-                className="text-sm sm:text-base mt-1"
-                style={{ color: currentTheme?.colors?.text?.[600] || '#9ca3af' }}
-              >
-                Manage all your projects
-              </p>
-            </div>
+    <div className="w-full">
+      {/* Page header */}
+      <div className="flex items-end gap-4 flex-wrap mb-[18px]">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="m-0 text-[22px] font-[650] tracking-[-0.01em] text-text-900">Projects</h1>
+            <span className="text-xs font-[650] px-[9px] py-0.5 rounded-full bg-background-700 border border-background-600 text-text-700 tabular-nums">
+              {total}
+            </span>
           </div>
-
-          <Button
-            variant="primary"
-            onClick={() => navigate('/projects/new')}
-            className="w-full sm:w-auto min-w-[140px]"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Project
-          </Button>
+          <p className="mt-[5px] mb-0 text-[13px] text-text-700">
+            Track every project from kickoff to handover.
+          </p>
         </div>
-
-        {/* Statistics Cards - Responsive Grid */}
-        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-6">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <Card
-                key={index}
-                className="p-4 sm:p-6 transition-all hover:scale-[1.02] hover:shadow-lg"
-                style={{
-                  backgroundColor: currentTheme?.colors?.background?.[800] || '#1f2937',
-                  borderColor: currentTheme?.colors?.background?.[600] || '#374151'
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p
-                      className="text-xs sm:text-sm font-medium mb-1"
-                      style={{ color: currentTheme?.colors?.text?.[600] || '#9ca3af' }}
-                    >
-                      {stat.label}
-                    </p>
-                    <div
-                      className="text-lg sm:text-2xl font-bold mt-1"
-                      style={{ color: currentTheme?.colors?.text?.[900] || '#ffffff' }}
-                    >
-                      {statsLoading ? (
-                        <div
-                          className="h-6 w-16 sm:h-8 sm:w-24 rounded animate-pulse"
-                          style={{ backgroundColor: currentTheme?.colors?.background?.[700] || '#374151' }}
-                        />
-                      ) : (
-                        <span className="break-words">{stat.value}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="ml-3 sm:ml-4 flex-shrink-0">
-                    <Icon
-                      className={`h-8 w-8 sm:h-10 sm:w-10 transition-opacity hover:opacity-80`}
-                      style={{ color: stat.color }}
-                    />
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+        <div className="flex-1" />
+        <button
+          onClick={() => navigate('/projects/new')}
+          className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold whitespace-nowrap"
+        >
+          <span className="w-5 h-5 rounded-md bg-white/20 backdrop-blur-[2px] flex items-center justify-center shrink-0">
+            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+          </span>
+          New Project
+        </button>
       </div>
 
-      {/* Project List - Responsive */}
-      <Card
-        className="p-4 sm:p-6"
-        style={{
-          backgroundColor: currentTheme?.colors?.background?.[800] || '#1f2937',
-          borderColor: currentTheme?.colors?.background?.[600] || '#374151'
-        }}
-      >
-        <h2
-          className="text-lg sm:text-xl font-bold mb-4 sm:mb-6"
-          style={{ color: currentTheme?.colors?.text?.[900] || '#ffffff' }}
+      {/* Status chips + quiet financial stat */}
+      <div className="flex items-center gap-2 flex-wrap mb-2.5">
+        <button
+          onClick={() => setStatusFilter(undefined)}
+          className="flex items-center gap-2 px-[13px] py-2 rounded-[11px] border transition-colors"
+          style={chipStyle(activeStatus === 'all')}
         >
-          All Projects
-        </h2>
-        <div className="w-full overflow-x-auto">
-          <ProjectList />
+          <span
+            className={`text-[12.5px] whitespace-nowrap ${
+              activeStatus === 'all' ? 'font-semibold text-text-900' : 'font-medium text-text-700'
+            }`}
+          >
+            All Projects
+          </span>
+          <span
+            className={`text-[13px] font-[650] tabular-nums ${
+              activeStatus === 'all' ? 'text-primary-600' : 'text-text-900'
+            }`}
+          >
+            {total}
+          </span>
+        </button>
+        {STATUS_CHIPS.map((c) => {
+          const count = chipCount(c.statsKey);
+          const active = activeStatus === c.status;
+          return (
+            <button
+              key={c.status}
+              onClick={() => setStatusFilter(c.status)}
+              className="flex items-center gap-2 px-[13px] py-2 rounded-[11px] border transition-colors"
+              style={chipStyle(active)}
+            >
+              <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ background: `var(--st-${c.st}-fg)` }} />
+              <span
+                className={`text-[12.5px] whitespace-nowrap ${
+                  active ? 'font-semibold text-text-900' : count === 0 ? 'font-medium text-text-500' : 'font-medium text-text-700'
+                }`}
+              >
+                {c.label}
+              </span>
+              <span
+                className={`text-[13px] font-[650] tabular-nums ${
+                  active ? 'text-primary-600' : count === 0 ? 'text-text-500' : 'text-text-900'
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
+        <div className="flex-1" />
+        {activeValue > 0 && (
+          <span className="text-[12.5px] text-text-700 whitespace-nowrap tabular-nums">
+            Active value <span className="font-semibold text-text-900">₹{activeValue.toLocaleString('en-IN')}</span>
+            {' · '}Received <span className="font-semibold" style={{ color: 'var(--st-confirmed-fg)' }}>₹{receivedValue.toLocaleString('en-IN')}</span>
+            {' · '}Pending <span className="font-semibold" style={{ color: 'var(--st-potential-fg)' }}>₹{pendingValue.toLocaleString('en-IN')}</span>
+          </span>
+        )}
+      </div>
+
+      {/* Distribution bar */}
+      {total > 0 && segments.length > 0 && (
+        <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden mx-0.5 mb-5">
+          {segments.map((c) => (
+            <div
+              key={c.status}
+              title={`${c.label} · ${c.count}`}
+              style={{ width: `${(c.count / total) * 100}%`, background: `var(--st-${c.st}-fg)` }}
+            />
+          ))}
         </div>
-      </Card>
+      )}
+
+      {/* Table card */}
+      <div className="bg-background-800 border border-background-600 rounded-[14px] p-3.5">
+        <ProjectList filters={filters} onFiltersChange={setFilters} />
+      </div>
     </div>
   );
 }
