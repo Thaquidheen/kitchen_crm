@@ -71,6 +71,7 @@ public class CustomerServiceImpl implements CustomerService {
                 customerCreateDto.getArchitectId(),
                 customerCreateDto.getReferralName(), customerCreateDto.getReferralContact(),
                 customerCreateDto.getReferralLocation(), customerCreateDto.getReferralDesignation(),
+                customerCreateDto.getReferralFirm(), customerCreateDto.getReferralEmail(),
                 customerCreateDto.getManualLeadName(), customerCreateDto.getManualLeadContact());
 
         Customer savedCustomer = customerRepository.save(customer);
@@ -129,6 +130,7 @@ public class CustomerServiceImpl implements CustomerService {
                     customerDto.getArchitectId(),
                     customerDto.getReferralName(), customerDto.getReferralContact(),
                     customerDto.getReferralLocation(), customerDto.getReferralDesignation(),
+                    customerDto.getReferralFirm(), customerDto.getReferralEmail(),
                     customerDto.getManualLeadName(), customerDto.getManualLeadContact());
         }
 
@@ -225,6 +227,8 @@ public class CustomerServiceImpl implements CustomerService {
         dto.setReferralContact(customer.getReferralContact());
         dto.setReferralLocation(customer.getReferralLocation());
         dto.setReferralDesignation(customer.getReferralDesignation());
+        dto.setReferralFirm(customer.getReferralFirm());
+        dto.setReferralEmail(customer.getReferralEmail());
 
         return dto;
     }
@@ -239,6 +243,7 @@ public class CustomerServiceImpl implements CustomerService {
                                  Long architectId,
                                  String referralName, String referralContact,
                                  String referralLocation, String referralDesignation,
+                                 String referralFirm, String referralEmail,
                                  String manualLeadName, String manualLeadContact) {
         if (type == null) {
             if (architectId != null) {
@@ -261,18 +266,30 @@ public class CustomerServiceImpl implements CustomerService {
         customer.setReferralContact(null);
         customer.setReferralLocation(null);
         customer.setReferralDesignation(null);
+        customer.setReferralFirm(null);
+        customer.setReferralEmail(null);
 
         switch (type) {
             case ARCHITECT -> {
+                // Architect can be linked from the Architects module and/or described free-text
+                // via the source-details panel (name/firm/phone/email/location).
                 if (architectId != null) {
                     architectRepository.findById(architectId).ifPresent(customer::setArchitect);
                 }
-            }
-            case BUILDER_REFERRAL, MANUAL_REFERRAL -> {
                 customer.setReferralName(referralName);
                 customer.setReferralContact(referralContact);
                 customer.setReferralLocation(referralLocation);
                 customer.setReferralDesignation(referralDesignation);
+                customer.setReferralFirm(referralFirm);
+                customer.setReferralEmail(referralEmail);
+            }
+            case BUILDER_REFERRAL, MANUAL_REFERRAL, CONSULTED -> {
+                customer.setReferralName(referralName);
+                customer.setReferralContact(referralContact);
+                customer.setReferralLocation(referralLocation);
+                customer.setReferralDesignation(referralDesignation);
+                customer.setReferralFirm(referralFirm);
+                customer.setReferralEmail(referralEmail);
             }
             case MANUAL -> {
                 // Legacy "Enter Lead Manually"

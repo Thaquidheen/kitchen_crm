@@ -77,12 +77,18 @@ public class Customer extends Auditable {
     @Column(name = "referral_designation")
     private String referralDesignation;
 
+    @Column(name = "referral_firm")
+    private String referralFirm;
+
+    @Column(name = "referral_email")
+    private String referralEmail;
+
     public enum CustomerStatus {
         LEAD, POTENTIAL, DESIGN_STAGE, QUOTE_GIVEN, FOLLOW_UP, NEGOTIATIONS, CONFIRMED, LOST
     }
 
     public enum LeadSourceType {
         // MANUAL is legacy (replaced by MANUAL_REFERRAL); kept so old rows still deserialize.
-        NONE, ARCHITECT, MANUAL, ONLINE, WALK_IN, SCOUTING, BUILDER_REFERRAL, MANUAL_REFERRAL
+        NONE, ARCHITECT, MANUAL, ONLINE, WALK_IN, SCOUTING, BUILDER_REFERRAL, MANUAL_REFERRAL, CONSULTED
     }
 }

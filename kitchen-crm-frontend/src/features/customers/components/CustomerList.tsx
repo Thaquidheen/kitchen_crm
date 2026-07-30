@@ -12,7 +12,7 @@ import { Pagination } from '@/components/shared/Pagination';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { CustomerFormModal } from './CustomerFormModal';
 import { CustomerFilters } from './CustomerFilters';
-import { Eye, Edit, Trash2, Search, Filter } from 'lucide-react';
+import { Eye, Edit, Trash2, Search, Filter, Columns3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   useGetCustomersPageQuery,
@@ -148,6 +148,30 @@ export function CustomerList({
 
   const hasSelection = selectedCustomers.length > 0;
 
+  // CSV export of the currently selected (loaded) rows
+  const exportSelected = () => {
+    const rows = customers.filter((c) => selectedCustomers.includes(c.id));
+    if (rows.length === 0) {
+      toast('Selected customers are not on this page');
+      return;
+    }
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = [
+      ['Name', 'Phone', 'Email', 'Status', 'Place', 'Sqft', 'Created'].join(','),
+      ...rows.map((c) =>
+        [c.name, c.contact, c.email, c.status, c.place, c.sqft, formatCreated(c.createdAt)].map(esc).join(',')
+      ),
+    ].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `customers-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${rows.length} customer(s)`);
+  };
+
   if (error) {
     return (
       <div className="bg-background-800 border border-background-600 rounded-[14px] p-6 text-center text-text-700">
@@ -193,6 +217,13 @@ export function CustomerList({
             <Filter size={13} />
             More Filters
           </button>
+          <button
+            title="Columns"
+            onClick={() => toast('Column settings coming soon')}
+            className="w-8 h-8 rounded-[10px] border border-background-500 bg-background-800 text-text-700 hover:bg-background-700 hover:text-text-900 flex items-center justify-center transition-colors"
+          >
+            <Columns3 size={14} />
+          </button>
         </div>
       ) : (
         <div
@@ -203,6 +234,12 @@ export function CustomerList({
             {selectedCustomers.length} selected
           </span>
           <div className="flex-1" />
+          <button
+            onClick={exportSelected}
+            className="px-[11px] py-1.5 rounded-[9px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors whitespace-nowrap"
+          >
+            Export selected
+          </button>
           {onBulkStatusChange && (
             <select
               defaultValue=""

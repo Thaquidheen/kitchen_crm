@@ -11,23 +11,30 @@ export const LEAD_SOURCE_LABELS: Record<LeadSourceType, string> = {
   ONLINE: 'Online Lead',
   WALK_IN: 'Walk-in',
   SCOUTING: 'Scouting',
-  BUILDER_REFERRAL: 'Builder Referral',
-  MANUAL_REFERRAL: 'Manual Referral',
+  BUILDER_REFERRAL: 'Builder',
+  MANUAL_REFERRAL: 'Manual',
+  CONSULTED: 'Consulted',
 };
 
 /** Lead sources offered in the create/edit form (legacy MANUAL excluded). */
 export const SELECTABLE_LEAD_SOURCES: { value: LeadSourceType; label: string }[] = [
   { value: 'NONE', label: LEAD_SOURCE_LABELS.NONE },
-  { value: 'ARCHITECT', label: 'Select Architect' },
+  { value: 'ARCHITECT', label: LEAD_SOURCE_LABELS.ARCHITECT },
+  { value: 'BUILDER_REFERRAL', label: LEAD_SOURCE_LABELS.BUILDER_REFERRAL },
+  { value: 'CONSULTED', label: LEAD_SOURCE_LABELS.CONSULTED },
+  { value: 'MANUAL_REFERRAL', label: LEAD_SOURCE_LABELS.MANUAL_REFERRAL },
   { value: 'WALK_IN', label: LEAD_SOURCE_LABELS.WALK_IN },
   { value: 'SCOUTING', label: LEAD_SOURCE_LABELS.SCOUTING },
   { value: 'ONLINE', label: LEAD_SOURCE_LABELS.ONLINE },
-  { value: 'BUILDER_REFERRAL', label: LEAD_SOURCE_LABELS.BUILDER_REFERRAL },
-  { value: 'MANUAL_REFERRAL', label: LEAD_SOURCE_LABELS.MANUAL_REFERRAL },
 ];
 
-/** Lead sources that carry referrer details (name/number/location/designation). */
-export const REFERRAL_LEAD_SOURCES: LeadSourceType[] = ['BUILDER_REFERRAL', 'MANUAL_REFERRAL'];
+/** Lead sources that carry source details (name/firm/phone/email/location). */
+export const REFERRAL_LEAD_SOURCES: LeadSourceType[] = [
+  'ARCHITECT',
+  'BUILDER_REFERRAL',
+  'MANUAL_REFERRAL',
+  'CONSULTED',
+];
 
 export const isReferralSource = (type?: LeadSourceType): boolean =>
   !!type && REFERRAL_LEAD_SOURCES.includes(type);

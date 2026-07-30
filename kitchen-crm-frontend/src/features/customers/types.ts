@@ -24,7 +24,8 @@ export type LeadSourceType =
   | 'WALK_IN'
   | 'SCOUTING'
   | 'BUILDER_REFERRAL'
-  | 'MANUAL_REFERRAL';
+  | 'MANUAL_REFERRAL'
+  | 'CONSULTED';
 
 export interface Customer {
   id: number;
@@ -45,11 +46,13 @@ export interface Customer {
   leadSourceType?: LeadSourceType;
   manualLeadName?: string;
   manualLeadContact?: string;
-  // Referrer details (Builder Referral / Manual Referral)
+  // Source details (Architect / Builder / Consulted / Manual)
   referralName?: string;
   referralContact?: string;
   referralLocation?: string;
   referralDesignation?: string;
+  referralFirm?: string;
+  referralEmail?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -71,11 +74,13 @@ export interface CustomerCreate {
   architectId?: number;
   manualLeadName?: string;
   manualLeadContact?: string;
-  // Referrer details (Builder Referral / Manual Referral)
+  // Source details (Architect / Builder / Consulted / Manual)
   referralName?: string;
   referralContact?: string;
   referralLocation?: string;
   referralDesignation?: string;
+  referralFirm?: string;
+  referralEmail?: string;
 }
 
 export type CustomerUpdate = Partial<Omit<Customer, 'id'>> & { id: number };

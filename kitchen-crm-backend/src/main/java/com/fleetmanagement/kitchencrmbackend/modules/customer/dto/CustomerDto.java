@@ -42,11 +42,13 @@ public class CustomerDto {
     private String manualLeadName;
     private String manualLeadContact;
 
-    // Referrer details (Builder Referral / Manual Referral)
+    // Source details (Architect / Builder / Consulted / Manual)
     private String referralName;
     private String referralContact;
     private String referralLocation;
     private String referralDesignation;
+    private String referralFirm;
+    private String referralEmail;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
