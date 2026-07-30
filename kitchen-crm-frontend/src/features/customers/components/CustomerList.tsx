@@ -186,7 +186,6 @@ export function CustomerList({
                     )}
                   </button>
                 </th>
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-text-900 font-semibold text-sm">Email</th>
                 <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-text-900 font-semibold text-sm">Contact</th>
                 <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-text-900 font-semibold text-sm">
                   <button
@@ -195,19 +194,6 @@ export function CustomerList({
                   >
                     Status
                     {filters.sortBy === 'status' && (
-                      <span className="text-xs">{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
-                    )}
-                  </button>
-                </th>
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-text-900 font-semibold text-sm">Lead Source</th>
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-text-900 font-semibold text-sm">Kitchen Types</th>
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-text-900 font-semibold text-sm">
-                  <button
-                    onClick={() => handleSort('createdAt')}
-                    className="flex items-center gap-1 hover:text-primary-500 transition-colors"
-                  >
-                    Created
-                    {filters.sortBy === 'createdAt' && (
                       <span className="text-xs">{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </button>
@@ -222,18 +208,14 @@ export function CustomerList({
                   <tr key={i} className="animate-pulse">
                     <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-4" /></td>
                     <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-24 sm:w-32" /></td>
-                    <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-32 sm:w-40" /></td>
                     <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-20 sm:w-24" /></td>
                     <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-6 bg-background-600 rounded w-16 sm:w-20" /></td>
-                    <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-24 sm:w-28" /></td>
-                    <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-24 sm:w-28" /></td>
-                    <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-16 sm:w-20" /></td>
                     <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-600 rounded w-12 sm:w-16" /></td>
                   </tr>
                 ))
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 sm:py-12 text-center text-text-600 text-sm">
+                  <td colSpan={5} className="px-4 py-8 sm:py-12 text-center text-text-600 text-sm">
                     No customers found
                   </td>
                 </tr>
@@ -260,44 +242,9 @@ export function CustomerList({
                     <td className="px-2 sm:px-4 py-3 sm:py-4">
                       <div className="font-medium text-text-900 text-sm sm:text-base">{customer.name}</div>
                     </td>
-                    <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-800 text-xs sm:text-sm">{customer.email || '-'}</td>
                     <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-800 text-xs sm:text-sm">{customer.contact || '-'}</td>
                     <td className="px-2 sm:px-4 py-3 sm:py-4">
                       <StatusBadge status={customer.status} variant={getStatusVariant(customer.status)} />
-                    </td>
-                    <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-800 text-xs sm:text-sm">
-                      {(() => {
-                        const details = referralDetailLines(customer);
-                        return (
-                          <span title={details.length ? details.join('\n') : undefined}>
-                            {formatLeadSource(customer)}
-                          </span>
-                        );
-                      })()}
-                    </td>
-                    <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-800">
-                      {customer.kitchenTypes ? (
-                        <div className="flex flex-wrap gap-1">
-                          {customer.kitchenTypes.split(',').slice(0, 2).map((type, i) => (
-                            <span
-                              key={i}
-                              className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-background-600 text-text-900 rounded text-[10px] sm:text-xs font-medium"
-                            >
-                              {type.trim()}
-                            </span>
-                          ))}
-                          {customer.kitchenTypes.split(',').length > 2 && (
-                            <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-text-600 text-[10px] sm:text-xs">
-                              +{customer.kitchenTypes.split(',').length - 2}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        '-'
-                      )}
-                    </td>
-                    <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-700 text-xs sm:text-sm">
-                      {formatDate(customer.createdAt)}
                     </td>
                     <td className="px-2 sm:px-4 py-3 sm:py-4">
                       <div className="flex items-center justify-end gap-1 sm:gap-2">
