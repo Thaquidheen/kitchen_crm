@@ -98,7 +98,7 @@ export function CustomersPage() {
   );
 
   return (
-    <div className="w-full max-w-[1440px] mx-auto">
+    <div className="w-full">
       {/* Page header */}
       <div className="flex items-end gap-4 flex-wrap mb-[18px]">
         <div>
