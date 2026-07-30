@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useGetCustomerByIdQuery } from '../../features/customers/customersAPI';
 import { CustomerDetail } from '../../features/customers/components/CustomerDetail';
 import { CustomerReminders } from '../../features/customers/components/CustomerReminders';
+import { CustomerFollowUps } from '../../features/customers/components/CustomerFollowUps';
 
 const CustomerDetailPage: React.FC = () => {
   const navigate = useNavigate();
@@ -67,6 +68,9 @@ const CustomerDetailPage: React.FC = () => {
 
       {/* Customer Detail Component */}
       <CustomerDetail customer={customer} />
+
+      {/* Follow-up log for this customer */}
+      <CustomerFollowUps customerId={customer.id} />
 
       {/* Reminders for this customer */}
       <CustomerReminders customerId={customer.id} />

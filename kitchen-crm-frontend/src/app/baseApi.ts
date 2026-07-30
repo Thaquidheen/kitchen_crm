@@ -278,6 +278,7 @@ export const baseApi = createApi({
     'WarrantyComponents',
     'Staff',
     'Reminders',
+    'FollowUps',
   ],
   endpoints: (builder) => ({
     // ==================== QUOTATION ENDPOINTS ====================
@@ -473,6 +474,25 @@ export const baseApi = createApi({
       invalidatesTags: ['Reminders'],
     }),
 
+    // ==================== CUSTOMER FOLLOW-UP ENDPOINTS ====================
+
+    getCustomerFollowUps: builder.query<any, number>({
+      query: (customerId) => `/followups/customer/${customerId}`,
+      transformResponse: (response: any) => response?.data ?? [],
+      providesTags: ['FollowUps'],
+    }),
+
+    // Creating a follow-up with a next-follow-up time also creates a reminder
+    createFollowUp: builder.mutation<any, { customerId: number; followupType: string; notes?: string; nextFollowUpAt?: string }>({
+      query: (body) => ({ url: '/followups', method: 'POST', body }),
+      invalidatesTags: ['FollowUps', 'Reminders'],
+    }),
+
+    deleteFollowUp: builder.mutation<any, number>({
+      query: (id) => ({ url: `/followups/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['FollowUps'],
+    }),
+
     // Download quotation PDF
     downloadQuotationPDF: builder.mutation<Blob, number>({
       query: (id) => ({
@@ -549,6 +569,9 @@ export const {
   useUpdateReminderMutation,
   useMarkReminderDoneMutation,
   useDeleteReminderMutation,
+  useGetCustomerFollowUpsQuery,
+  useCreateFollowUpMutation,
+  useDeleteFollowUpMutation,
   useDownloadQuotationPDFMutation,
   useDownloadQuotationBillPDFMutation,
   useGetCustomerAvailablePlanImagesQuery,

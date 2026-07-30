@@ -21,7 +21,6 @@ const customerSchema = z.object({
   kitchenTypes: z.string().optional().or(z.literal('')),
   sqft: z.string().optional().or(z.literal('')),
   place: z.string().optional().or(z.literal('')),
-  contactPerson: z.string().optional().or(z.literal('')),
   followUpNotes: z.string().optional().or(z.literal('')),
   status: z.enum(['LEAD', 'POTENTIAL', 'DESIGN_STAGE', 'QUOTE_GIVEN', 'FOLLOW_UP', 'NEGOTIATIONS', 'CONFIRMED', 'LOST']).optional(),
   // Lead tracking fields
@@ -84,7 +83,6 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
       kitchenTypes: existingCustomer?.kitchenTypes ?? '',
       sqft: existingCustomer?.sqft ?? '',
       place: existingCustomer?.place ?? '',
-      contactPerson: existingCustomer?.contactPerson ?? '',
       followUpNotes: existingCustomer?.followUpNotes ?? '',
       status: existingCustomer?.status ?? 'LEAD',
       leadSourceType: existingCustomer?.leadSourceType ?? 'NONE',
@@ -180,7 +178,6 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           kitchenTypes: values.kitchenTypes || undefined,
           sqft: values.sqft || undefined,
           place: values.place || undefined,
-          contactPerson: values.contactPerson || undefined,
           followUpNotes: values.followUpNotes || undefined,
           status: values.status,
           ...leadFields,
@@ -197,7 +194,6 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           kitchenTypes: values.kitchenTypes || undefined,
           sqft: values.sqft || undefined,
           place: values.place || undefined,
-          contactPerson: values.contactPerson || undefined,
           followUpNotes: values.followUpNotes || undefined,
           status: values.status,
           ...leadFields,
@@ -303,18 +299,6 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
         />
       </div>
 
-      {/* Contacting Person and Designation */}
-      <div>
-        <label className="block text-sm font-medium mb-1">Contacting Person &amp; Designation</label>
-        <input
-          type="text"
-          className="w-full rounded-md border border-gray-600 bg-white text-black p-2 !text-black"
-          style={{ color: '#000000' }}
-          placeholder="e.g., Mr. Ramesh - Site Engineer"
-          {...register('contactPerson')}
-          disabled={disabled}
-        />
-      </div>
 
       {/* Kitchen Types */}
       <div>
