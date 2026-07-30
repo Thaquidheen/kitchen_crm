@@ -10,7 +10,6 @@ import { useSelector } from 'react-redux';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/shared/Pagination';
-import { StatusBadge } from '@/components/shared/StatusBadge';
 import SignatureStatusBadge from '@/components/quotations/SignatureStatusBadge';
 import { Eye, Edit, Trash2, Folder, FolderOpen, ChevronRight, ChevronDown, Pencil, List as ListIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -124,6 +123,41 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
   const formatDate = (d?: string) =>
     d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
+  // Design-only: semantic status pills (gray draft, blue sent, green approved,
+  // red rejected, violet revised) using the shared --st-* tokens.
+  const QSTATUS: Record<string, { st: string; label: string }> = {
+    DRAFT: { st: '', label: 'Draft' },
+    SENT: { st: 'lead', label: 'Sent' },
+    APPROVED: { st: 'confirmed', label: 'Approved' },
+    REJECTED: { st: 'lost', label: 'Rejected' },
+    REVISED: { st: 'design', label: 'Revised' },
+    PENDING: { st: 'potential', label: 'Pending' },
+  };
+  const statusPill = (status?: string) => {
+    const m = (status && QSTATUS[status]) || { st: '', label: status ?? '—' };
+    const fg = m.st ? `var(--st-${m.st}-fg)` : 'var(--color-text-700)';
+    const bg = m.st ? `var(--st-${m.st}-bg)` : 'var(--color-background-700)';
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 px-2.5 py-[3.5px] rounded-full text-xs font-semibold whitespace-nowrap"
+        style={{ background: bg, color: fg }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: fg }} />
+        {m.label}
+      </span>
+    );
+  };
+  const isOverdue = (d?: string) => !!d && new Date(d) < new Date(new Date().toDateString());
+
+  const initialsOf = (name?: string) =>
+    (name ?? '')
+      .replace(/^(mr|mrs|ms|dr)\.?\s+/i, '')
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase() || '?';
+
   const rowActions = (q: QuotationSummary) => (
     <div className="flex items-center justify-end gap-1 sm:gap-2">
       <Button variant="ghost" size="sm" onClick={() => navigate(`/quotations/${q.id}`)} title="View" className="p-1 sm:p-2">
@@ -195,7 +229,7 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
                 <tr>
                   <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm">Folder</th>
                   <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm">Versions</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm">Latest Amount</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm">Latest Amount</th>
                   <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm">Status</th>
                   <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm hidden md:table-cell">Date</th>
                   <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm w-24 sm:w-36">Actions</th>
@@ -248,11 +282,11 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
                               {f.versionCount} {f.versionCount === 1 ? 'version' : 'versions'}
                             </span>
                           </td>
-                          <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-700 text-xs sm:text-sm">
+                          <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-900 font-semibold text-xs sm:text-sm text-right tabular-nums whitespace-nowrap">
                             ₹{f.latestTotalAmount?.toLocaleString('en-IN') ?? '-'}
                           </td>
                           <td className="px-2 sm:px-4 py-3 sm:py-4">
-                            {f.latestStatus ? <StatusBadge status={f.latestStatus} className="inline-flex" /> : '-'}
+                            {f.latestStatus ? statusPill(f.latestStatus) : '-'}
                           </td>
                           <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-700 text-xs sm:text-sm hidden md:table-cell">
                             {formatDate(f.latestCreatedAt)}
@@ -303,11 +337,11 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
                                 <td className="px-2 sm:px-4 py-2.5 sm:py-3 text-text-600 text-xs sm:text-sm">
                                   {q.createdBy || '-'}
                                 </td>
-                                <td className="px-2 sm:px-4 py-2.5 sm:py-3 text-text-700 text-xs sm:text-sm">
+                                <td className="px-2 sm:px-4 py-2.5 sm:py-3 text-text-800 text-xs sm:text-sm text-right tabular-nums whitespace-nowrap">
                                   ₹{q.totalAmount?.toLocaleString('en-IN') ?? '-'}
                                 </td>
                                 <td className="px-2 sm:px-4 py-2.5 sm:py-3">
-                                  <StatusBadge status={q.status} className="inline-flex" />
+                                  {statusPill(q.status)}
                                 </td>
                                 <td className="px-2 sm:px-4 py-2.5 sm:py-3 text-text-700 text-xs sm:text-sm hidden md:table-cell">
                                   {formatDate(q.createdAt)}
@@ -336,7 +370,7 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
                     </button>
                   </th>
                   <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm">Customer</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm">Amount</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm">Amount</th>
                   <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm">
                     <button onClick={() => handleSort('status')} className="flex items-center gap-1 hover:text-primary-500 transition-colors">
                       Status
@@ -353,6 +387,7 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
                       )}
                     </button>
                   </th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm hidden lg:table-cell">Valid till</th>
                   <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm hidden sm:table-cell">Signature</th>
                   <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm w-20 sm:w-32">Actions</th>
                 </tr>
@@ -366,36 +401,58 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
                       <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-700 rounded w-16 sm:w-20" /></td>
                       <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-6 bg-background-700 rounded w-16 sm:w-20" /></td>
                       <td className="px-2 sm:px-4 py-3 sm:py-4 hidden md:table-cell"><div className="h-4 bg-background-700 rounded w-24 sm:w-28" /></td>
+                      <td className="px-2 sm:px-4 py-3 sm:py-4 hidden lg:table-cell"><div className="h-4 bg-background-700 rounded w-20" /></td>
                       <td className="px-2 sm:px-4 py-3 sm:py-4 hidden sm:table-cell"><div className="h-6 bg-background-700 rounded w-16 sm:w-20" /></td>
                       <td className="px-2 sm:px-4 py-3 sm:py-4"><div className="h-4 bg-background-700 rounded w-12 sm:w-16" /></td>
                     </tr>
                   ))
                 ) : quotations.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 sm:py-12 text-center text-text-600 text-sm sm:text-base">
+                    <td colSpan={8} className="px-4 py-8 sm:py-12 text-center text-text-600 text-sm sm:text-base">
                       No quotations found
                     </td>
                   </tr>
                 ) : (
                   quotations.map((q) => (
                     <tr key={q.id} className="hover:bg-background-700 transition-colors">
-                      <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-900 font-medium text-xs sm:text-sm">
+                      <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-900 font-semibold text-xs sm:text-sm">
                         <div className="flex items-center gap-2">
-                          {q.quotationNumber}
-                          {q.versionNumber != null && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary-600/15 text-primary-600">
-                              V{q.versionNumber}
+                          <span className="tabular-nums tracking-tight">{q.quotationNumber}</span>
+                          {(q.versionNumber ?? 1) > 1 && (
+                            <span
+                              className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+                              style={{
+                                background: 'color-mix(in oklab, var(--color-primary-600) 14%, transparent)',
+                                color: 'var(--color-primary-600)',
+                              }}
+                            >
+                              Rev {q.versionNumber}
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-700 text-xs sm:text-sm">{q.customerName}</td>
-                      <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-700 text-xs sm:text-sm">₹{q.totalAmount?.toLocaleString('en-IN') ?? '-'}</td>
+                      <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-7 h-7 rounded-[8px] bg-background-600 border border-background-500 flex items-center justify-center text-[10px] font-[650] text-text-700 shrink-0">
+                            {initialsOf(q.customerName)}
+                          </div>
+                          <span className="text-text-900 whitespace-nowrap overflow-hidden text-ellipsis">{q.customerName}</span>
+                        </div>
+                      </td>
+                      <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-900 font-semibold text-xs sm:text-sm text-right tabular-nums whitespace-nowrap">
+                        ₹{q.totalAmount?.toLocaleString('en-IN') ?? '-'}
+                      </td>
                       <td className="px-2 sm:px-4 py-3 sm:py-4">
-                        <StatusBadge status={q.status} className="inline-flex" />
+                        {statusPill(q.status)}
                       </td>
                       <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-700 text-xs sm:text-sm hidden md:table-cell">
                         {formatDate(q.createdAt)}
+                      </td>
+                      <td
+                        className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm hidden lg:table-cell tabular-nums whitespace-nowrap"
+                        style={isOverdue(q.validUntil) ? { color: 'var(--st-lost-fg)' } : { color: 'var(--color-text-700)' }}
+                      >
+                        {q.validUntil ? formatDate(q.validUntil) : '—'}
                       </td>
                       <td className="px-2 sm:px-4 py-3 sm:py-4 hidden sm:table-cell">
                         <SignatureStatusBadge status={q.signatureStatus} />
