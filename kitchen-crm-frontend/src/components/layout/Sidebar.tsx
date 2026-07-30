@@ -22,6 +22,7 @@ import {
   Store,
   Building2,
   IdCard,
+  Refrigerator,
 } from 'lucide-react';
 import clsx from 'clsx';
 import logo from '../../assets/logo.png';
@@ -59,6 +60,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Customers', path: ROUTES.CUSTOMERS, icon: <Users size={18} /> },
       { label: 'Quotations', path: ROUTES.QUOTATIONS, icon: <FileText size={18} /> },
+      { label: 'Appliance & Quartz', path: ROUTES.APPLIANCE_QUARTZ, icon: <Refrigerator size={18} /> },
       { label: 'Projects', path: ROUTES.PROJECTS, icon: <FolderKanban size={18} /> },
     ],
   },

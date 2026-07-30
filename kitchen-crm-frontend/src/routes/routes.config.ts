@@ -44,6 +44,9 @@ export const ROUTES = {
   QUOTATIONS_DETAIL: '/quotations/:id',
   QUOTATIONS_EDIT: '/quotations/:id/edit',
 
+  // Appliance & Quartz routes
+  APPLIANCE_QUARTZ: '/appliance-quartz',
+
   // Project routes
   PROJECTS: '/projects',
   PROJECTS_NEW: '/projects/new',

@@ -279,6 +279,7 @@ export const baseApi = createApi({
     'Staff',
     'Reminders',
     'FollowUps',
+    'ApplianceCustomers',
   ],
   endpoints: (builder) => ({
     // ==================== QUOTATION ENDPOINTS ====================
@@ -493,6 +494,43 @@ export const baseApi = createApi({
       invalidatesTags: ['FollowUps'],
     }),
 
+    // ==================== APPLIANCE & QUARTZ ENDPOINTS ====================
+
+    getApplianceCustomers: builder.query<any, { category?: string; status?: string; search?: string; page?: number; size?: number }>({
+      query: (params) => {
+        const search = new URLSearchParams();
+        if (params.category) search.append('category', params.category);
+        if (params.status) search.append('status', params.status);
+        if (params.search) search.append('search', params.search);
+        if (params.page !== undefined) search.append('page', params.page.toString());
+        if (params.size !== undefined) search.append('size', params.size.toString());
+        return { url: '/appliance-customers', params: Object.fromEntries(search) };
+      },
+      transformResponse: (response: any) => response?.data ?? { content: [], totalElements: 0, totalPages: 0 },
+      providesTags: ['ApplianceCustomers'],
+    }),
+
+    getApplianceStatistics: builder.query<any, void>({
+      query: () => '/appliance-customers/statistics',
+      transformResponse: (response: any) => response?.data ?? {},
+      providesTags: ['ApplianceCustomers'],
+    }),
+
+    createApplianceCustomer: builder.mutation<any, any>({
+      query: (body) => ({ url: '/appliance-customers', method: 'POST', body }),
+      invalidatesTags: ['ApplianceCustomers'],
+    }),
+
+    updateApplianceCustomer: builder.mutation<any, { id: number } & Record<string, any>>({
+      query: ({ id, ...body }) => ({ url: `/appliance-customers/${id}`, method: 'PUT', body }),
+      invalidatesTags: ['ApplianceCustomers'],
+    }),
+
+    deleteApplianceCustomer: builder.mutation<any, number>({
+      query: (id) => ({ url: `/appliance-customers/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['ApplianceCustomers'],
+    }),
+
     // Download quotation PDF
     downloadQuotationPDF: builder.mutation<Blob, number>({
       query: (id) => ({
@@ -572,6 +610,11 @@ export const {
   useGetCustomerFollowUpsQuery,
   useCreateFollowUpMutation,
   useDeleteFollowUpMutation,
+  useGetApplianceCustomersQuery,
+  useGetApplianceStatisticsQuery,
+  useCreateApplianceCustomerMutation,
+  useUpdateApplianceCustomerMutation,
+  useDeleteApplianceCustomerMutation,
   useDownloadQuotationPDFMutation,
   useDownloadQuotationBillPDFMutation,
   useGetCustomerAvailablePlanImagesQuery,

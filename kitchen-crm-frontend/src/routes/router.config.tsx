@@ -28,6 +28,7 @@ import ProductsPage from '../pages/products/ProductsPage';
 
 // Quotations
 import QuotationsPage from '../pages/quotations/QuotationsPage';
+import ApplianceQuartzPage from '../pages/appliance/ApplianceQuartzPage';
 import QuotationDetailPage from '../pages/quotations/QuotationDetailPage';
 import QuotationBuilderPage from '../pages/quotations/QuotationBuilderPage';
 
@@ -163,6 +164,12 @@ const routes = [
           {
             path: ROUTES.QUOTATIONS_DETAIL,
             element: <QuotationDetailPage />,
+          },
+
+          // Appliance & Quartz
+          {
+            path: ROUTES.APPLIANCE_QUARTZ,
+            element: <ApplianceQuartzPage />,
           },
 
           // Projects
