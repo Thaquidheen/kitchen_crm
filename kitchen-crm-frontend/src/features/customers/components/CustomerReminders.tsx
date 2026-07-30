@@ -31,12 +31,6 @@ interface CustomerRemindersProps {
   customerId: number;
 }
 
-const statusStyles: Record<string, string> = {
-  PENDING: 'bg-background-700 text-text-700',
-  DUE: 'bg-warning/15 text-warning',
-  DONE: 'bg-success/15 text-success',
-};
-
 export function CustomerReminders({ customerId }: CustomerRemindersProps) {
   const { data: reminders = [], isLoading } = useGetCustomerRemindersQuery(customerId);
   const [createReminder, { isLoading: isCreating }] = useCreateReminderMutation();
@@ -133,40 +127,65 @@ export function CustomerReminders({ customerId }: CustomerRemindersProps) {
         <p className="text-text-600 text-sm py-4">No reminders yet. Add one to get notified at the right time.</p>
       ) : (
         <div className="divide-y divide-background-600">
-          {(reminders as CustomerReminder[]).map((r) => (
-            <div key={r.id} className="py-3 flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`text-text-900 text-sm font-medium ${r.status === 'DONE' ? 'line-through opacity-60' : ''}`}>
-                    {r.title}
-                  </span>
-                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${statusStyles[r.status]}`}>
-                    {r.status === 'DUE' ? 'DUE NOW' : r.status}
-                  </span>
+          {(reminders as CustomerReminder[]).map((r) => {
+            const done = r.status === 'DONE';
+            return (
+              <div key={r.id} className="py-3 flex items-start gap-3">
+                {/* Circle check: click to mark done */}
+                <button
+                  onClick={() => !done && handleDone(r.id)}
+                  title={done ? 'Done' : 'Mark done'}
+                  disabled={done}
+                  className={`mt-0.5 w-[20px] h-[20px] rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                    done
+                      ? 'cursor-default'
+                      : 'border-background-500 hover:border-primary-600 cursor-pointer'
+                  }`}
+                  style={
+                    done
+                      ? { background: 'var(--st-confirmed-fg)', borderColor: 'var(--st-confirmed-fg)' }
+                      : undefined
+                  }
+                >
+                  {done && <Check className="h-3 w-3 text-background-900" strokeWidth={3} />}
+                </button>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-text-900 text-sm font-medium ${done ? 'line-through opacity-60' : ''}`}>
+                      {r.title}
+                    </span>
+                    <span
+                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide"
+                      style={
+                        done
+                          ? { background: 'var(--st-confirmed-bg)', color: 'var(--st-confirmed-fg)' }
+                          : { background: 'var(--st-potential-bg)', color: 'var(--st-potential-fg)' }
+                      }
+                    >
+                      {done ? 'DONE' : r.status === 'DUE' ? 'DUE NOW' : 'PENDING'}
+                    </span>
+                  </div>
+                  <p className="text-text-600 text-xs mt-0.5">
+                    {fmt(r.remindAt)}
+                    {r.createdBy ? ` · by ${r.createdBy}` : ''}
+                  </p>
+                  {r.notes && <p className="text-text-700 text-xs mt-1">{r.notes}</p>}
                 </div>
-                <p className="text-text-600 text-xs mt-0.5">
-                  {fmt(r.remindAt)}
-                  {r.createdBy ? ` · by ${r.createdBy}` : ''}
-                </p>
-                {r.notes && <p className="text-text-700 text-xs mt-1">{r.notes}</p>}
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {r.status !== 'DONE' && (
-                  <>
-                    <Button variant="ghost" size="sm" onClick={() => handleDone(r.id)} title="Mark done" className="p-1.5 text-success hover:text-success">
-                      <Check className="h-4 w-4" />
-                    </Button>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  {!done && (
                     <Button variant="ghost" size="sm" onClick={() => openEdit(r)} title="Edit" className="p-1.5">
                       <Pencil className="h-4 w-4" />
                     </Button>
-                  </>
-                )}
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} title="Delete" className="p-1.5 text-error hover:text-error">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                  )}
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} title="Delete" className="p-1.5 text-error hover:text-error">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

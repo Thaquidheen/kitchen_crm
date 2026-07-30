@@ -101,10 +101,14 @@ export function CustomerFollowUps({ customerId }: CustomerFollowUpsProps) {
           <PhoneCall className="h-5 w-5 text-primary-600" />
           Follow-ups
         </h2>
-        <Button variant="primary" size="sm" onClick={openAdd} className="flex items-center gap-1.5">
-          <Plus className="h-4 w-4" />
+        <button
+          onClick={openAdd}
+          className="inline-flex items-center gap-1.5 px-3 py-[7px] rounded-[10px] text-[12.5px] font-semibold text-primary-600 border border-transparent hover:brightness-105 transition-all"
+          style={{ background: 'color-mix(in oklab, var(--color-primary-600) 14%, transparent)' }}
+        >
+          <Plus className="h-3.5 w-3.5" />
           Add Follow-up
-        </Button>
+        </button>
       </div>
 
       {isLoading ? (
@@ -130,10 +134,13 @@ export function CustomerFollowUps({ customerId }: CustomerFollowUpsProps) {
                   </div>
                   {f.notes && <p className="text-text-800 text-sm mt-1">{f.notes}</p>}
                   {f.nextFollowUpAt && (
-                    <p className="text-warning text-xs mt-1 inline-flex items-center gap-1">
-                      <CalendarClock className="h-3.5 w-3.5" />
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold mt-1.5"
+                      style={{ background: 'var(--st-potential-bg)', color: 'var(--st-potential-fg)' }}
+                    >
+                      <CalendarClock className="h-3 w-3" />
                       Next follow-up: {fmt(f.nextFollowUpAt)}
-                    </p>
+                    </span>
                   )}
                 </div>
                 <Button

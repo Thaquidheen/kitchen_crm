@@ -31,7 +31,7 @@ export interface CustomerListProps {
 }
 
 // Status -> pill token (--st-*-bg/fg) + label
-const STATUS_PILL: Record<string, { st: string; label: string }> = {
+export const STATUS_PILL: Record<string, { st: string; label: string }> = {
   LEAD: { st: 'lead', label: 'Lead' },
   POTENTIAL: { st: 'potential', label: 'Potential' },
   DESIGN_STAGE: { st: 'design', label: 'Design Stage' },
@@ -395,14 +395,18 @@ export function CustomerList({
                       />
                     </td>
                     <td className="px-3 py-[13px]">
-                      <div className="flex items-center gap-2.5 min-w-0">
+                      <button
+                        onClick={() => navigate(`/customers/${customer.id}`)}
+                        className="flex items-center gap-2.5 min-w-0 text-left group"
+                        title="Open customer"
+                      >
                         <div className="w-8 h-8 rounded-[9px] bg-background-600 border border-background-500 flex items-center justify-center text-[11px] font-[650] text-text-700 shrink-0">
                           {initialsOf(customer.name)}
                         </div>
-                        <div className="text-[13.5px] font-semibold text-text-900 whitespace-nowrap overflow-hidden text-ellipsis">
+                        <div className="text-[13.5px] font-semibold text-text-900 whitespace-nowrap overflow-hidden text-ellipsis group-hover:text-primary-600 transition-colors">
                           {customer.name}
                         </div>
-                      </div>
+                      </button>
                     </td>
                     <td className="px-3 py-[13px] min-w-0">
                       <div className="text-[13px] text-text-900 tabular-nums">{customer.contact || '—'}</div>
