@@ -71,19 +71,19 @@ function CategorySection({
   };
 
   return (
-    <div className="border border-background-600 rounded-lg p-3 sm:p-4 bg-background-800/50">
-      <div className="flex items-center gap-2 mb-2 sm:mb-3">
-        <div className={clsx('p-1.5 sm:p-2 rounded-lg', color)}>
+    <div className="border border-background-600 rounded-xl p-3.5 bg-background-800/50">
+      <div className="flex items-center gap-2 mb-2.5">
+        <div className={clsx('flex h-7 w-7 items-center justify-center rounded-lg', color)}>
           {icon}
         </div>
-        <h4 className="text-xs sm:text-sm font-semibold text-text-800">{label}</h4>
+        <h4 className="text-[13px] font-semibold text-text-900">{label}</h4>
       </div>
 
       <div className="space-y-2 sm:space-y-3">
         {/* Subtotal */}
-        <div className="flex justify-between text-xs sm:text-sm">
-          <span className="text-text-700">Subtotal</span>
-          <span className="font-medium text-text-900">₹{subtotal.toLocaleString('en-IN')}</span>
+        <div className="flex justify-between text-xs">
+          <span className="text-text-600">Subtotal</span>
+          <span className="font-medium text-text-900 tabular-nums">₹{subtotal.toLocaleString('en-IN')}</span>
         </div>
 
         {/* Margin Input - Only visible to Super Admin */}
@@ -104,7 +104,7 @@ function CategorySection({
               />
               <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-text-600" />
             </div>
-            <p className="text-xs text-info mt-1 font-medium">
+            <p className="text-[11px] text-text-500 mt-1">
               ₹{total.marginAmount.toLocaleString('en-IN')} margin added
             </p>
           </div>
@@ -129,10 +129,10 @@ function CategorySection({
         </div>
 
         {/* Category Total */}
-        <div className="border-t border-background-700 pt-2">
+        <div className="border-t border-background-600 pt-2">
           <div className="flex justify-between items-center">
             <span className="text-xs text-text-600">Category Total</span>
-            <span className="font-semibold text-text-900">
+            <span className="text-[13px] font-semibold text-text-900 tabular-nums">
               ₹{total.finalTotal.toLocaleString('en-IN')}
             </span>
           </div>
@@ -274,24 +274,24 @@ export function CategoryPricingPanel({
     otherExpensesTotal;
 
   return (
-    <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
-      <div className="flex items-center gap-2 mb-4 sm:mb-6">
-        <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-primary-600" />
-        <h3 className="text-base sm:text-lg font-bold text-text-900">
-          Pricing by Category{kitchenName ? ` - ${kitchenName}` : ''}
+    <Card className="p-4 sm:p-5 bg-background-800 border-background-600 rounded-xl">
+      <div className="flex items-center gap-2 mb-4">
+        <Calculator className="h-4 w-4 text-text-500" />
+        <h3 className="text-sm font-[650] text-text-900">
+          Pricing by Category{kitchenName ? ` — ${kitchenName}` : ''}
         </h3>
       </div>
 
-      <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-4 sm:space-y-5">
         {/* Category Sections */}
-        <div className="space-y-3 sm:space-y-4">
-          <h4 className="text-xs sm:text-sm font-semibold text-text-800">Category Rates & Totals</h4>
+        <div className="space-y-3">
+          <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Category Rates & Totals</h4>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <CategorySection
               label="Accessories"
-              icon={<TrendingUp className="h-4 w-4 text-info" />}
-              color="bg-info/10"
+              icon={<TrendingUp className="h-3.5 w-3.5 text-text-600" />}
+              color="bg-background-700 border border-background-600"
               subtotal={categorySubtotals.accessories}
               marginPercent={accessoriesMargin}
               taxPercent={accessoriesTax}
@@ -303,8 +303,8 @@ export function CategoryPricingPanel({
 
             <CategorySection
               label="Cabinets"
-              icon={<TrendingUp className="h-4 w-4 text-success" />}
-              color="bg-success/10"
+              icon={<TrendingUp className="h-3.5 w-3.5 text-text-600" />}
+              color="bg-background-700 border border-background-600"
               subtotal={categorySubtotals.cabinets}
               marginPercent={cabinetsMargin}
               taxPercent={cabinetsTax}
@@ -316,8 +316,8 @@ export function CategoryPricingPanel({
 
             <CategorySection
               label="Doors"
-              icon={<TrendingUp className="h-4 w-4 text-purple-500" />}
-              color="bg-purple-500/10"
+              icon={<TrendingUp className="h-3.5 w-3.5 text-text-600" />}
+              color="bg-background-700 border border-background-600"
               subtotal={categorySubtotals.doors}
               marginPercent={doorsMargin}
               taxPercent={doorsTax}
@@ -329,8 +329,8 @@ export function CategoryPricingPanel({
 
             <CategorySection
               label="Lighting"
-              icon={<TrendingUp className="h-4 w-4 text-accent-500" />}
-              color="bg-accent-500/10"
+              icon={<TrendingUp className="h-3.5 w-3.5 text-text-600" />}
+              color="bg-background-700 border border-background-600"
               subtotal={categorySubtotals.lighting}
               marginPercent={lightingMargin}
               taxPercent={lightingTax}
@@ -344,12 +344,12 @@ export function CategoryPricingPanel({
 
         {/* Miscellaneous (Other Expenses) */}
         {otherExpenses.length > 0 && (
-          <div className="space-y-3 sm:space-y-4">
-            <h4 className="text-xs sm:text-sm font-semibold text-text-800">Miscellaneous</h4>
+          <div className="space-y-3">
+            <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Miscellaneous</h4>
             <CategorySection
               label="Other Expenses"
-              icon={<Receipt className="h-4 w-4 text-orange-500" />}
-              color="bg-orange-500/10"
+              icon={<Receipt className="h-3.5 w-3.5 text-text-600" />}
+              color="bg-background-700 border border-background-600"
               subtotal={otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0)}
               marginPercent={miscellaneousMarginPercentage}
               taxPercent={miscellaneousTaxPercentage}
@@ -365,10 +365,10 @@ export function CategoryPricingPanel({
         )}
 
         {/* Grand Total */}
-        <div className="border-t-2 border-primary-700 pt-3 sm:pt-4 mt-3 sm:mt-4">
-          <div className="flex items-center justify-between">
-            <span className="text-base sm:text-lg font-bold text-text-900">Grand Total</span>
-            <span className="text-xl sm:text-2xl font-bold text-primary-600">
+        <div className="border-t border-background-600 pt-3 mt-3">
+          <div className="flex items-baseline justify-between">
+            <span className="text-[13px] font-[650] text-text-900">Grand Total</span>
+            <span className="text-xl font-bold text-primary-600 tabular-nums">
               ₹{grandTotal.toLocaleString('en-IN')}
             </span>
           </div>

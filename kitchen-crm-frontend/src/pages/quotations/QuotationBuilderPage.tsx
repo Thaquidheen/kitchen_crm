@@ -1687,8 +1687,8 @@ export function QuotationBuilderPage() {
                 </div>
 
                 {/* Quotation Details */}
-                <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
-                  <h3 className="text-base sm:text-lg font-semibold text-text-900 mb-4">Quotation Details</h3>
+                <Card className="p-4 sm:p-6 bg-background-800 border-background-600 rounded-xl">
+                  <h3 className="text-sm font-[650] text-text-900 mb-4">Quotation Details</h3>
                   <div className="space-y-4">
                     {/* Project Name */}
                     <div>
@@ -1827,8 +1827,8 @@ export function QuotationBuilderPage() {
                     oe = formData.otherExpenses || [];
                   }
                   return (
-                    <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
-                      <h3 className="text-base sm:text-lg font-semibold text-text-900 mb-1">Pricing by Category — MRP (List Price)</h3>
+                    <Card className="p-4 sm:p-6 bg-background-800 border-background-600 rounded-xl">
+                      <h3 className="text-sm font-[650] text-text-900 mb-1">Pricing by Category — MRP (List Price)</h3>
                       <p className="text-xs text-text-500 mb-4">Set the per-category margin &amp; tax used for the MRP. The Offer Price uses the rates above.</p>
                       <CategoryPricingPanel
                         accessories={acc}

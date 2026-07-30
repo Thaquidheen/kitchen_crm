@@ -337,12 +337,12 @@ export function QuotationPreview({
       miscellaneousMrpMarginPercentage, miscellaneousMrpTaxPercentage]);
 
   return (
-    <div className="space-y-4 sm:space-y-6 bg-background-900 p-4 sm:p-6 rounded-lg">
+    <div className="space-y-4 bg-background-900/60 p-4 sm:p-5 rounded-xl">
       {/* Customer Information */}
-      <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
-        <div className="flex items-center gap-2 mb-3 sm:mb-4">
-          <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary-600" />
-          <h3 className="text-base sm:text-lg font-bold text-text-900">Customer Information</h3>
+      <Card className="p-4 sm:p-5 bg-background-800 border-background-600 rounded-xl">
+        <div className="flex items-center gap-2 mb-3">
+          <User className="h-4 w-4 text-text-500" />
+          <h3 className="text-sm font-[650] text-text-900">Customer Information</h3>
         </div>
 
         {customer ? (
@@ -379,19 +379,21 @@ export function QuotationPreview({
       {isMultiKitchen && kitchenCalculations ? (
         <>
           {kitchenCalculations.map((kitchenCalc, kitchenIndex) => (
-            <Card key={kitchenIndex} className="p-4 sm:p-6 bg-background-800 border-background-600">
-              <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                <Home className="h-4 w-4 sm:h-5 sm:w-5 text-primary-600" />
-                <h3 className="text-base sm:text-lg font-bold text-text-900">
+            <Card key={kitchenIndex} className="p-4 sm:p-5 bg-background-800 border-background-600 rounded-xl">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-600/10">
+                  <Home className="h-3.5 w-3.5 text-primary-600" />
+                </div>
+                <h3 className="text-sm font-[650] text-text-900">
                   {kitchenCalc.kitchen.kitchenName}
                 </h3>
               </div>
 
               {/* Scope of Work */}
               {kitchenCalc.kitchen.scopeDetails && kitchenCalc.kitchen.scopeDetails.length > 0 && (
-                <div className="mb-4 sm:mb-6">
-                  <h4 className="text-xs sm:text-sm font-semibold text-text-800 mb-2 sm:mb-3">Scope of Work</h4>
-                  <div className="bg-background-700 rounded-lg p-3 sm:p-4 overflow-x-auto">
+                <div className="mb-4 sm:mb-5">
+                  <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600 mb-2">Scope of Work</h4>
+                  <div className="bg-background-700/40 border border-background-600 rounded-xl p-3 sm:p-4 overflow-x-auto">
                     <table className="w-full min-w-[300px]">
                       <tbody className="space-y-2">
                         {kitchenCalc.kitchen.scopeDetails.map((detail, idx) => (
@@ -410,8 +412,8 @@ export function QuotationPreview({
 
               {/* Plan Images */}
               {kitchenCalc.kitchen.planImages && kitchenCalc.kitchen.planImages.length > 0 && (
-                <div className="mb-4 sm:mb-6">
-                  <h4 className="text-xs sm:text-sm font-semibold text-text-800 mb-2 sm:mb-3">Plan Images</h4>
+                <div className="mb-4 sm:mb-5">
+                  <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600 mb-2">Plan Images</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
                     {kitchenCalc.kitchen.planImages.map((planImage, idx) => (
                       <div key={idx} className="relative">
@@ -436,8 +438,8 @@ export function QuotationPreview({
               )}
 
               {/* Kitchen Products */}
-              <div className="mb-4 sm:mb-6">
-                <h4 className="text-xs sm:text-sm font-semibold text-text-800 mb-2 sm:mb-3">Products</h4>
+              <div className="mb-4 sm:mb-5">
+                <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600 mb-2">Products</h4>
                 <div className="space-y-2 sm:space-y-3">
                   {[
                     { category: 'Accessories', items: kitchenCalc.kitchen.accessories || [] },
@@ -489,13 +491,13 @@ export function QuotationPreview({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-text-700">Margin</span>
-                    <span className="font-medium text-success">
+                    <span className="font-medium text-text-900 tabular-nums">
                       ₹{kitchenCalc.marginAmount.toLocaleString('en-IN')}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-text-700">Tax</span>
-                    <span className="font-medium text-warning">
+                    <span className="font-medium text-text-900 tabular-nums">
                       ₹{kitchenCalc.taxAmount.toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -521,7 +523,7 @@ export function QuotationPreview({
                   )}
                   <div className="flex justify-between border-t border-background-600 pt-2">
                     <span className="font-semibold text-text-900">Kitchen Total</span>
-                    <span className="font-bold text-primary-600">
+                    <span className="font-bold text-primary-600 tabular-nums">
                       ₹{kitchenCalc.total.toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -531,40 +533,40 @@ export function QuotationPreview({
           ))}
 
           {/* Grand Total Summary */}
-          <Card className="p-4 sm:p-6 bg-background-800 border-background-600 border-2 border-primary-600">
-            <div className="flex items-center gap-2 mb-3 sm:mb-4">
-              <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-primary-600" />
-              <h3 className="text-base sm:text-lg font-bold text-text-900">Grand Total Summary</h3>
+          <Card className="p-4 sm:p-5 bg-primary-600/[0.06] border-primary-600/40 rounded-xl">
+            <div className="flex items-center gap-2 mb-3">
+              <Calculator className="h-4 w-4 text-primary-600" />
+              <h3 className="text-sm font-[650] text-text-900">Grand Total Summary</h3>
             </div>
-            <div className="space-y-2 sm:space-y-3">
+            <div className="space-y-2">
               {kitchenCalculations.map((kitchenCalc, idx) => (
-                <div key={idx} className="flex justify-between text-xs sm:text-sm">
+                <div key={idx} className="flex justify-between text-xs">
                   <span className="text-text-700">{kitchenCalc.kitchen.kitchenName}</span>
-                  <span className="font-medium text-text-900">
+                  <span className="font-medium text-text-900 tabular-nums">
                     ₹{kitchenCalc.total.toLocaleString('en-IN')}
                   </span>
                 </div>
               ))}
               {commonTransportFinal > 0 && (
-                <div className="flex justify-between text-xs sm:text-sm">
+                <div className="flex justify-between text-xs">
                   <span className="text-text-700">Transportation (common)</span>
-                  <span className="font-medium text-text-900">
+                  <span className="font-medium text-text-900 tabular-nums">
                     ₹{commonTransportFinal.toLocaleString('en-IN')}
                   </span>
                 </div>
               )}
-              <div className="border-t-2 border-primary-700 pt-2 sm:pt-3 mt-2 sm:mt-3 space-y-1">
+              <div className="border-t border-primary-600/30 pt-2.5 mt-2.5 space-y-1">
                 {mrpFinal > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-xs sm:text-sm text-text-600">MRP</span>
-                    <span className={`text-sm sm:text-base ${mrpFinal > grandTotal ? 'text-text-500 line-through' : 'text-text-700'}`}>
+                    <span className="text-xs text-text-600">MRP</span>
+                    <span className={`text-sm tabular-nums ${mrpFinal > grandTotal ? 'text-text-500 line-through' : 'text-text-700'}`}>
                       ₹{mrpFinal.toLocaleString('en-IN')}
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between items-center">
-                  <span className="text-base sm:text-xl font-bold text-text-900">Offer Price</span>
-                  <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary-600">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-sm font-[650] text-text-900">Offer Price</span>
+                  <span className="text-2xl font-bold text-primary-600 tabular-nums">
                     ₹{grandTotal.toLocaleString('en-IN')}
                   </span>
                 </div>
@@ -575,10 +577,10 @@ export function QuotationPreview({
       ) : (
         <>
           {/* Products Summary - Single Quotation */}
-          <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
-            <div className="flex items-center gap-2 mb-3 sm:mb-4">
-              <Package className="h-4 w-4 sm:h-5 sm:w-5 text-primary-600" />
-              <h3 className="text-base sm:text-lg font-bold text-text-900">Products Summary</h3>
+          <Card className="p-4 sm:p-5 bg-background-800 border-background-600 rounded-xl">
+            <div className="flex items-center gap-2 mb-3">
+              <Package className="h-4 w-4 text-text-500" />
+              <h3 className="text-sm font-[650] text-text-900">Products Summary</h3>
             </div>
 
             {allProducts.length > 0 ? (
@@ -619,10 +621,10 @@ export function QuotationPreview({
 
       {/* Pricing Breakdown - Single Quotation Only */}
       {!isMultiKitchen && (
-        <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
-          <div className="flex items-center gap-2 mb-3 sm:mb-4">
-            <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-primary-600" />
-            <h3 className="text-base sm:text-lg font-bold text-text-900">Pricing Breakdown</h3>
+        <Card className="p-4 sm:p-5 bg-background-800 border-background-600 rounded-xl">
+          <div className="flex items-center gap-2 mb-3">
+            <Calculator className="h-4 w-4 text-text-500" />
+            <h3 className="text-sm font-[650] text-text-900">Pricing Breakdown</h3>
           </div>
 
           <div className="space-y-2 sm:space-y-3">
@@ -675,18 +677,18 @@ export function QuotationPreview({
             ))}
 
             {/* MRP + Offer Price */}
-            <div className="border-t-2 border-primary-700 pt-2 sm:pt-3 mt-2 sm:mt-3 space-y-1">
+            <div className="border-t border-background-600 pt-2.5 mt-2.5 space-y-1">
               {mrpFinal > 0 && (
                 <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-text-600">MRP</span>
-                  <span className={`text-sm sm:text-base ${mrpFinal > calculations.grandTotal ? 'text-text-500 line-through' : 'text-text-700'}`}>
+                  <span className="text-xs text-text-600">MRP</span>
+                  <span className={`text-sm tabular-nums ${mrpFinal > calculations.grandTotal ? 'text-text-500 line-through' : 'text-text-700'}`}>
                     ₹{mrpFinal.toLocaleString('en-IN')}
                   </span>
                 </div>
               )}
-              <div className="flex justify-between items-center">
-                <span className="text-base sm:text-lg font-bold text-text-900">Offer Price</span>
-                <span className="text-xl sm:text-2xl font-bold text-primary-600">
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm font-[650] text-text-900">Offer Price</span>
+                <span className="text-2xl font-bold text-primary-600 tabular-nums">
                   ₹{calculations.grandTotal.toLocaleString('en-IN')}
                 </span>
               </div>
@@ -696,47 +698,47 @@ export function QuotationPreview({
       )}
 
       {/* Summary Stats */}
-      <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
-        <div className="flex items-center gap-2 mb-3 sm:mb-4">
-          <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary-600" />
-          <h3 className="text-base sm:text-lg font-bold text-text-900">Quick Stats</h3>
+      <Card className="p-4 sm:p-5 bg-background-800 border-background-600 rounded-xl">
+        <div className="flex items-center gap-2 mb-3">
+          <DollarSign className="h-4 w-4 text-text-500" />
+          <h3 className="text-sm font-[650] text-text-900">Quick Stats</h3>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:gap-4">
-          <div className="text-center p-2 sm:p-3 bg-background-700 rounded-lg">
-            <div className="text-xl sm:text-2xl font-bold text-text-900">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="p-3 rounded-xl border border-background-600 bg-background-700/40">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Total Items</div>
+            <div className="text-lg font-bold text-text-900 tabular-nums mt-0.5">
               {isMultiKitchen && kitchenCalculations
                 ? kitchenCalculations.reduce((sum, k) => sum + (k.kitchen.accessories?.length || 0) + (k.kitchen.cabinets?.length || 0) + (k.kitchen.doors?.length || 0) + (k.kitchen.lighting?.length || 0), 0)
                 : accessories.length + cabinets.length + doors.length + lighting.length}
             </div>
-            <div className="text-xs sm:text-sm text-text-600">Total Items</div>
           </div>
 
-          <div className="text-center p-2 sm:p-3 bg-background-700 rounded-lg">
-            <div className="text-xl sm:text-2xl font-bold text-success">
+          <div className="p-3 rounded-xl border border-background-600 bg-background-700/40">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Total Margin</div>
+            <div className="text-lg font-bold text-text-900 tabular-nums mt-0.5">
               ₹{(isMultiKitchen && kitchenCalculations
                 ? kitchenCalculations.reduce((sum, k) => sum + k.categoryTotals.accessories.marginAmount + k.categoryTotals.cabinets.marginAmount + k.categoryTotals.doors.marginAmount + k.categoryTotals.lighting.marginAmount, 0)
                 : calculations.totalMarginAmount
               ).toLocaleString('en-IN')}
             </div>
-            <div className="text-xs sm:text-sm text-text-600">Total Margin</div>
           </div>
 
-          <div className="text-center p-2 sm:p-3 bg-background-700 rounded-lg">
-            <div className="text-xl sm:text-2xl font-bold text-warning">
+          <div className="p-3 rounded-xl border border-background-600 bg-background-700/40">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Total Tax</div>
+            <div className="text-lg font-bold text-text-900 tabular-nums mt-0.5">
               ₹{(isMultiKitchen && kitchenCalculations
                 ? kitchenCalculations.reduce((sum, k) => sum + k.categoryTotals.accessories.taxAmount + k.categoryTotals.cabinets.taxAmount + k.categoryTotals.doors.taxAmount + k.categoryTotals.lighting.taxAmount, 0)
                 : calculations.totalTaxAmount
               ).toLocaleString('en-IN')}
             </div>
-            <div className="text-xs sm:text-sm text-text-600">Total Tax</div>
           </div>
 
-          <div className="text-center p-2 sm:p-3 bg-background-700 rounded-lg">
-            <div className="text-xl sm:text-2xl font-bold text-info">
+          <div className="p-3 rounded-xl border border-primary-600/40 bg-primary-600/[0.06]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Grand Total</div>
+            <div className="text-lg font-bold text-primary-600 tabular-nums mt-0.5">
               ₹{grandTotal.toLocaleString('en-IN')}
             </div>
-            <div className="text-xs sm:text-sm text-text-600">Grand Total</div>
           </div>
         </div>
       </Card>
