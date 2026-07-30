@@ -5,7 +5,6 @@
 
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { Pencil, ChevronDown, ChevronRight, Layers, Receipt, X } from 'lucide-react';
 import { useState } from 'react';
 import type { QuotationElevation, QuotationOtherExpense } from '../types';
@@ -270,28 +269,28 @@ export function SelectedProductsList({
     };
 
     return (
-      <div key={uniqueKey} className="text-xs text-text-700 p-2 bg-background-700/50 rounded-lg relative group">
+      <div key={uniqueKey} className="text-xs px-2 py-1.5 rounded-lg hover:bg-background-700/60 transition-colors group">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <span className="break-words leading-tight">{displayName}</span>
+          <div className="flex-1 min-w-0 text-text-800">
+            <span className="break-words leading-snug">{displayName}</span>
             {category === 'cabinets' && item.materialName && (
-              <span className="text-text-500 ml-1">- {item.materialName}</span>
+              <span className="text-text-500 ml-1">· {item.materialName}</span>
             )}
             {category === 'cabinets' && (item as any).innerPanelTypeName && (item as any).innerPanelQuantity > 0 && (
-              <span className="text-text-500 ml-1">- {(item as any).innerPanelTypeName} x{(item as any).innerPanelQuantity}</span>
+              <span className="text-text-500 ml-1">· {(item as any).innerPanelTypeName} x{(item as any).innerPanelQuantity}</span>
             )}
             {item.quantity && item.quantity > 1 && (
-              <span className="text-text-600 ml-1">× {item.quantity}</span>
+              <span className="text-text-600 ml-1 font-medium">× {item.quantity}</span>
             )}
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <span className="font-semibold whitespace-nowrap text-primary-400">
+          <div className="flex items-center gap-0.5 flex-shrink-0">
+            <span className="font-semibold whitespace-nowrap text-text-900 tabular-nums">
               ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
             </span>
             {showEdit && (
               <button
                 onClick={handleEdit}
-                className="p-0.5 rounded hover:bg-background-600 text-text-600 hover:text-primary-400 transition-colors"
+                className="flex h-6 w-6 items-center justify-center rounded-md text-text-600 hover:text-text-900 hover:bg-background-600 transition-colors"
                 title="Edit"
               >
                 <Pencil className="w-3 h-3" />
@@ -300,7 +299,7 @@ export function SelectedProductsList({
             {onRemove && (
               <button
                 onClick={() => onRemove(category, originalIndex)}
-                className="p-0.5 rounded hover:bg-background-600 text-text-600 hover:text-error transition-colors"
+                className="flex h-6 w-6 items-center justify-center rounded-md text-text-600 hover:text-error hover:bg-error/10 transition-colors"
                 title="Remove"
               >
                 <X className="w-3 h-3" />
@@ -320,19 +319,21 @@ export function SelectedProductsList({
     if (items.length === 0) return null;
 
     return (
-      <div className="ml-3 mt-2">
-        <div className="text-sm font-semibold text-primary-400 mb-2 mt-3 pb-1 border-b border-background-600 flex items-center justify-between">
-          <span>{label} ({items.length})</span>
+      <div className="mt-3">
+        <div className="mb-1 pb-1 border-b border-background-600 flex items-center justify-between">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-text-600">
+            {label} <span className="text-text-500">({items.length})</span>
+          </span>
           {onClearCategory && (
             <button
               onClick={() => onClearCategory(category)}
-              className="text-xs text-error hover:text-error/80 font-normal transition-colors"
+              className="text-[10px] font-medium text-text-500 hover:text-error transition-colors"
             >
               Clear All
             </button>
           )}
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           {items.map(({ item, originalIndex }) => renderItem(item, category, originalIndex))}
         </div>
       </div>
@@ -358,36 +359,36 @@ export function SelectedProductsList({
         const itemCount = group.accessories.length + group.cabinets.length + group.doors.length + group.lighting.length;
 
         return (
-          <Card key={group.elevationName} className="p-3 sm:p-4 bg-background-800 border-background-600">
+          <Card key={group.elevationName} className="p-3 bg-background-800 border-background-600 rounded-xl">
             {/* Elevation Header */}
             <button
               onClick={() => toggleElevation(group.elevationName)}
-              className="w-full flex items-center justify-between text-left"
+              className="w-full flex items-center justify-between text-left gap-2"
             >
-              <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-primary-500" />
-                <span className="text-xs sm:text-sm font-semibold text-text-800">
+              <div className="flex items-center gap-2 min-w-0">
+                <Layers className="h-3.5 w-3.5 text-text-500 flex-shrink-0" />
+                <span className="text-xs font-semibold text-text-900 truncate">
                   {group.elevationName}
                 </span>
-                <span className="text-xs text-text-600">
-                  ({itemCount} {itemCount === 1 ? 'item' : 'items'})
+                <span className="text-[10px] text-text-500 flex-shrink-0">
+                  {itemCount} {itemCount === 1 ? 'item' : 'items'}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-sm font-semibold text-primary-400">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <span className="text-xs font-semibold text-text-900 tabular-nums">
                   ₹{group.subtotal.toLocaleString('en-IN')}
                 </span>
                 {isExpanded ? (
-                  <ChevronDown className="h-4 w-4 text-text-600" />
+                  <ChevronDown className="h-3.5 w-3.5 text-text-600" />
                 ) : (
-                  <ChevronRight className="h-4 w-4 text-text-600" />
+                  <ChevronRight className="h-3.5 w-3.5 text-text-600" />
                 )}
               </div>
             </button>
 
             {/* Expanded Content */}
             {isExpanded && (
-              <div className="mt-3 pt-2 border-t border-background-600">
+              <div className="mt-2 pt-1 border-t border-background-600">
                 {renderCategorySection('Accessories', group.accessories, 'accessories')}
                 {renderCategorySection('Cabinets', group.cabinets, 'cabinets')}
                 {renderCategorySection('Doors', group.doors, 'doors')}
@@ -400,38 +401,37 @@ export function SelectedProductsList({
 
       {/* Other Expenses */}
       {otherExpenses.length > 0 && otherExpenses.some(e => e.amount > 0) && (
-        <Card className="p-3 sm:p-4 bg-background-800 border-background-600">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Receipt className="h-4 w-4 text-text-600" />
-              <span className="text-xs sm:text-sm font-semibold text-text-800">Other Expenses</span>
+        <Card className="p-3 bg-background-800 border-background-600 rounded-xl">
+          <div className="flex items-center justify-between mb-1 pb-1 border-b border-background-600">
+            <div className="flex items-center gap-1.5">
+              <Receipt className="h-3.5 w-3.5 text-text-500" />
+              <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-text-600">Other Expenses</span>
             </div>
             {onClearOtherExpenses && (
               <button
                 onClick={onClearOtherExpenses}
-                className="text-xs text-error hover:text-error/80 font-normal transition-colors"
+                className="text-[10px] font-medium text-text-500 hover:text-error transition-colors"
               >
                 Clear All
               </button>
             )}
           </div>
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {otherExpenses.filter(e => e.amount > 0).map((expense, index) => (
-              <div key={`expense-${index}`} className="text-xs text-text-700 p-2 bg-background-700/50 rounded-lg">
+              <div key={`expense-${index}`} className="text-xs px-2 py-1.5 rounded-lg hover:bg-background-700/60 transition-colors">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="flex-1">{expense.name}</span>
-                  <span className="font-semibold text-primary-400">
+                  <span className="flex-1 text-text-800">{expense.name}</span>
+                  <span className="font-semibold text-text-900 tabular-nums">
                     ₹{expense.amount.toLocaleString('en-IN')}
                   </span>
                   {!expense.isDefault && onRemoveOtherExpense && (
-                    <Button
-                      size="xs"
-                      variant="ghost"
+                    <button
                       onClick={() => onRemoveOtherExpense(index)}
-                      className="flex-shrink-0 text-xs px-2 py-1 text-error hover:text-error"
+                      className="flex h-6 w-6 items-center justify-center rounded-md text-text-600 hover:text-error hover:bg-error/10 transition-colors flex-shrink-0"
+                      title="Remove"
                     >
-                      Remove
-                    </Button>
+                      <X className="w-3 h-3" />
+                    </button>
                   )}
                 </div>
               </div>
@@ -440,9 +440,9 @@ export function SelectedProductsList({
         </Card>
       )}
 
-      <Card className="p-3 sm:p-4 bg-background-800 border-background-600 border-2 border-primary-700/50">
-        <div className="text-xs sm:text-sm font-semibold text-text-800 mb-1">Grand Total</div>
-        <div className="text-lg sm:text-xl md:text-2xl font-bold text-primary-400 break-all">
+      <Card className="p-3 sm:p-4 bg-primary-600/[0.06] border-primary-600/40 rounded-xl">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-text-600 mb-0.5">Grand Total</div>
+        <div className="text-lg sm:text-xl font-bold text-primary-600 tabular-nums break-all">
           ₹{grandTotal.toLocaleString('en-IN')}
         </div>
       </Card>

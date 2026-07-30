@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Tabs } from '@/components/ui/Tabs';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
-import { FileText, ArrowLeft, Save, Send, FilePlus } from 'lucide-react';
+import { ArrowLeft, Save, Send, FilePlus, Check } from 'lucide-react';
 import { UnsavedChangesDialog } from '@/components/ui/UnsavedChangesDialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { CustomerSelector } from '@/features/quotations/components/CustomerSelector';
@@ -1322,17 +1322,21 @@ export function QuotationBuilderPage() {
   return (
     <div className="min-h-screen bg-background-900 p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-4 sm:mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/quotations')} className="hidden sm:flex">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-primary-600" />
-            <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-text-900">{isEditMode ? 'Edit Quotation' : 'New Quotation'}</h1>
-              <p className="text-xs sm:text-sm text-text-600 mt-1">
+      <div className="mb-4 sm:mb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => navigate('/quotations')}
+              title="Back to quotations"
+              className="hidden sm:flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-background-600 bg-background-800 text-text-600 hover:text-text-900 hover:border-background-500 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div className="min-w-0">
+              <h1 className="text-[19px] sm:text-[21px] font-[650] tracking-[-0.01em] leading-tight text-text-900">
+                {isEditMode ? 'Edit Quotation' : 'New Quotation'}
+              </h1>
+              <p className="text-xs text-text-600 mt-0.5">
                 {isEditMode ? 'Update the existing quotation' : 'Create a new quotation'}
               </p>
             </div>
@@ -1351,7 +1355,7 @@ export function QuotationBuilderPage() {
               <span className="hidden sm:inline">{isCreating || isUpdating ? 'Saving...' : 'Save Draft'}</span>
               <span className="sm:hidden">Draft</span>
             </Button>
-            <Button variant="primary" size="sm" onClick={handleSubmit} disabled={isCreating || isUpdating} className="w-full sm:w-auto">
+            <Button variant="primary" size="sm" onClick={handleSubmit} disabled={isCreating || isUpdating} className="w-full sm:w-auto btn-raised-accent">
               <Send className="h-4 w-4 mr-2" />
               {isCreating || isUpdating ? 'Saving...' : 'Submit'}
             </Button>
@@ -1359,38 +1363,43 @@ export function QuotationBuilderPage() {
         </div>
 
         {/* Progress Steps */}
-        <div className="overflow-x-auto pb-2">
-          <div className="flex items-center gap-2 sm:gap-4 min-w-max">
+        <div className="overflow-x-auto pb-1">
+          <div className="flex items-center min-w-max">
             {steps.map((step, index) => {
               const currentIndex = stepOrder.indexOf(currentStep);
+              const isCurrent = currentStep === step.id;
               const isClickable = index !== currentIndex && index <= highestVisitedStep;
               return (
                 <div key={step.id} className="flex items-center">
                   <div
-                    className={`flex items-center gap-2 ${isClickable ? 'cursor-pointer hover:opacity-80' : ''}`}
+                    className={`flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors ${
+                      isCurrent
+                        ? 'border-primary-600/60 bg-primary-600/10'
+                        : 'border-background-600 bg-background-800'
+                    } ${isClickable ? 'cursor-pointer hover:border-primary-600/50' : ''}`}
                     onClick={() => isClickable && handleStepClick(step.id)}
                   >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                        currentStep === step.id
-                          ? 'bg-primary-600 text-text-900'
+                    <span
+                      className={`flex h-[18px] w-[18px] items-center justify-center rounded-full text-[10px] font-semibold ${
+                        isCurrent
+                          ? 'bg-primary-600 text-[var(--on-accent)]'
                           : step.completed
-                          ? 'bg-success text-text-900'
+                          ? 'bg-[var(--st-confirmed-bg)] text-[var(--st-confirmed-fg)]'
                           : 'bg-background-700 text-text-600'
                       }`}
                     >
-                      {index + 1}
-                    </div>
+                      {step.completed && !isCurrent ? <Check className="h-3 w-3" /> : index + 1}
+                    </span>
                     <span
-                      className={`text-xs sm:text-sm font-medium ${
-                        currentStep === step.id ? 'text-text-900' : 'text-text-600'
+                      className={`text-xs font-medium ${
+                        isCurrent ? 'text-text-900' : step.completed ? 'text-text-800' : 'text-text-600'
                       }`}
                     >
                       {step.label}
                     </span>
                   </div>
                   {index < steps.length - 1 && (
-                    <div className="w-8 sm:w-16 h-0.5 bg-background-600 mx-2 sm:mx-4" />
+                    <div className="h-px w-5 sm:w-9 bg-background-600 mx-1.5" />
                   )}
                 </div>
               );
@@ -1406,18 +1415,23 @@ export function QuotationBuilderPage() {
           <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
             {currentStep === 'customer' && (
               <div>
-                <h2 className="text-lg sm:text-xl font-bold text-text-900 mb-4">Select Customer</h2>
+                <div className="mb-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Step 1</div>
+                  <h2 className="text-base sm:text-lg font-[650] text-text-900 mt-0.5">Select Customer</h2>
+                </div>
                 {isEditMode && selectedCustomer ? (
-                  <div className="p-4 rounded-lg border border-primary-600 bg-primary-900/20">
+                  <div className="p-4 rounded-xl border border-primary-600/40 bg-primary-600/[0.06]">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-background-600 flex items-center justify-center">
-                        <svg className="w-5 h-5 text-text-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                      <div className="w-10 h-10 rounded-full bg-primary-600/15 flex items-center justify-center text-sm font-semibold text-primary-600 flex-shrink-0">
+                        {(selectedCustomer.name || '?').trim().split(/\s+/).slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()}
                       </div>
-                      <div>
-                        <p className="font-semibold text-text-900">{selectedCustomer.name}</p>
-                        {selectedCustomer.phone && <p className="text-sm text-text-600">{selectedCustomer.phone}</p>}
-                        {selectedCustomer.email && <p className="text-sm text-text-600">{selectedCustomer.email}</p>}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-text-900 truncate">{selectedCustomer.name}</p>
+                        <p className="text-xs text-text-600 mt-0.5 truncate">
+                          {[selectedCustomer.phone, selectedCustomer.email].filter(Boolean).join(' · ')}
+                        </p>
                       </div>
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-primary-600 flex-shrink-0">Selected</span>
                     </div>
                   </div>
                 ) : (
@@ -1436,10 +1450,13 @@ export function QuotationBuilderPage() {
 
             {currentStep === 'kitchens' && (
               <div className="space-y-4 sm:space-y-6">
-                <h2 className="text-lg sm:text-xl font-bold text-text-900 mb-4">Add Kitchens</h2>
-                <p className="text-xs sm:text-sm text-text-600 mb-4">
-                  Add one or more kitchens to this quotation. Each kitchen can have its own scope of work, plan images, and products.
-                </p>
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Step 2</div>
+                  <h2 className="text-base sm:text-lg font-[650] text-text-900 mt-0.5">Add Kitchens</h2>
+                  <p className="text-xs text-text-600 mt-1">
+                    Add one or more kitchens to this quotation. Each kitchen can have its own scope of work, plan images, and products.
+                  </p>
+                </div>
 
                 <KitchenSelector
                   kitchens={formData.kitchens || []}
@@ -1452,9 +1469,14 @@ export function QuotationBuilderPage() {
                   <div className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
                     {formData.kitchens.map((kitchen, kitchenIndex) => (
                       <Card key={kitchenIndex} className="p-4 sm:p-6 bg-background-800 border-background-600">
-                        <h3 className="text-base sm:text-lg font-semibold text-text-900 mb-4">
-                          {kitchen.kitchenName}
-                        </h3>
+                        <div className="flex items-center gap-2.5 mb-4">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-600/10 text-xs font-semibold text-primary-600">
+                            {kitchenIndex + 1}
+                          </div>
+                          <h3 className="text-sm sm:text-base font-[650] text-text-900">
+                            {kitchen.kitchenName}
+                          </h3>
+                        </div>
 
                         <div className="space-y-6">
                           {/* Scope of Work */}
@@ -1510,7 +1532,10 @@ export function QuotationBuilderPage() {
 
             {currentStep === 'products' && (
               <div className="space-y-4 sm:space-y-6">
-                <h2 className="text-lg sm:text-xl font-bold text-text-900 mb-4">Add Products</h2>
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Step 3</div>
+                  <h2 className="text-base sm:text-lg font-[650] text-text-900 mt-0.5">Add Products</h2>
+                </div>
                 
                 {/* Check if kitchens exist - if yes, show KitchenProductTabs, otherwise show global product selection */}
                 {formData.kitchens && formData.kitchens.length > 0 ? (
@@ -1656,7 +1681,10 @@ export function QuotationBuilderPage() {
 
             {currentStep === 'review' && (
               <div className="space-y-4 sm:space-y-6">
-                <h2 className="text-lg sm:text-xl font-bold text-text-900 mb-4">Review & Finalize Quotation</h2>
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Step 4</div>
+                  <h2 className="text-base sm:text-lg font-[650] text-text-900 mt-0.5">Review & Finalize Quotation</h2>
+                </div>
 
                 {/* Quotation Details */}
                 <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
@@ -1896,7 +1924,7 @@ export function QuotationBuilderPage() {
                       variant="primary"
                       onClick={handleSubmit}
                       disabled={isCreating || isUpdating}
-                      className="w-full sm:w-auto"
+                      className="w-full sm:w-auto btn-raised-accent"
                     >
                       <Send className="h-4 w-4 mr-2" />
                       {isCreating || isUpdating ? 'Submitting...' : 'Submit Quotation'}
@@ -1910,14 +1938,17 @@ export function QuotationBuilderPage() {
 
         {/* Sidebar - Selected Products Summary */}
         <div className="lg:col-span-1 lg:sticky lg:top-4 lg:self-start">
-          <Card className="p-4 sm:p-6 bg-background-800 border-background-600 max-h-[calc(100vh-2rem)] overflow-y-auto">
-            <h3 className="text-base sm:text-lg font-bold text-text-900 mb-4">Selected Products</h3>
+          <Card className="p-4 sm:p-5 bg-background-800 border-background-600 max-h-[calc(100vh-2rem)] overflow-y-auto">
+            <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600 mb-3">Selected Products</h3>
             {formData.kitchens && formData.kitchens.length > 0 ? (
               // Show products per kitchen
               <div className="space-y-4">
                 {formData.kitchens.map((kitchen, kitchenIndex) => (
-                  <div key={kitchenIndex} className="border border-background-600 rounded-lg p-3 sm:p-4">
-                    <h4 className="text-xs sm:text-sm font-semibold text-text-800 mb-3">{kitchen.kitchenName}</h4>
+                  <div key={kitchenIndex} className="border border-background-600 rounded-xl p-3 sm:p-4">
+                    <h4 className="text-xs font-semibold text-text-900 mb-3 flex items-center gap-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-primary-600/10 text-[10px] font-semibold text-primary-600">{kitchenIndex + 1}</span>
+                      {kitchen.kitchenName}
+                    </h4>
                     <SelectedProductsList
                       accessories={kitchen.accessories || []}
                       cabinets={kitchen.cabinets || []}

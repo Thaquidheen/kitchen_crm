@@ -7,13 +7,16 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Search, User, Mail, Phone, CheckCircle } from 'lucide-react';
+import { Search, CheckCircle } from 'lucide-react';
 import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
 
 export interface CustomerSelectorProps {
   selectedCustomerId?: number;
   onSelect: (customerId: number) => void;
 }
+
+const initialsOf = (name?: string) =>
+  (name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
 
 export function CustomerSelector({ selectedCustomerId, onSelect }: CustomerSelectorProps) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,38 +56,27 @@ export function CustomerSelector({ selectedCustomerId, onSelect }: CustomerSelec
           customers.map((customer) => (
             <Card
               key={customer.id}
-              className={`p-3 sm:p-4 cursor-pointer transition-all ${
+              className={`p-3 cursor-pointer rounded-xl transition-colors ${
                 selectedCustomerId === customer.id
-                  ? 'bg-primary-900/20 border-primary-600'
-                  : 'bg-background-700 border-background-600 hover:border-primary-700'
+                  ? 'bg-primary-600/[0.06] border-primary-600/60'
+                  : 'bg-background-800 border-background-600 hover:border-primary-600/50'
               }`}
               onClick={() => onSelect(customer.id)}
             >
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-background-600 flex items-center justify-center flex-shrink-0">
-                    <User className="h-4 w-4 sm:h-5 sm:w-5 text-text-600" />
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="w-9 h-9 rounded-full bg-primary-600/10 flex items-center justify-center text-xs font-semibold text-primary-600 flex-shrink-0">
+                    {initialsOf(customer.name)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-xs sm:text-sm text-text-900 truncate">{customer.name}</div>
-                    <div className="text-xs sm:text-sm text-text-600 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1">
-                      {customer.email && (
-                        <span className="flex items-center gap-1 truncate">
-                          <Mail className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">{customer.email}</span>
-                        </span>
-                      )}
-                      {customer.contact && (
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3 flex-shrink-0" />
-                          {customer.contact}
-                        </span>
-                      )}
+                    <div className="text-[13px] font-semibold text-text-900 truncate">{customer.name}</div>
+                    <div className="text-xs text-text-600 truncate mt-0.5">
+                      {[customer.contact, customer.email].filter(Boolean).join(' · ') || '—'}
                     </div>
                   </div>
                 </div>
                 {selectedCustomerId === customer.id && (
-                  <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-primary-600 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-primary-600 flex-shrink-0" />
                 )}
               </div>
             </Card>
