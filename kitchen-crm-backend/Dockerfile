@@ -8,14 +8,19 @@ WORKDIR /app
 # Copy pom.xml first to leverage Docker cache for dependencies
 COPY pom.xml .
 
+# Maven Central resolves to IPv6-first via Cloudflare and the VPS's IPv6 route flaps,
+# which has failed builds mid-download. Prefer IPv4 and retry transient transfer errors.
+ENV MAVEN_OPTS="-Djava.net.preferIPv4Stack=true"
+ENV MAVEN_ARGS="-Dmaven.wagon.http.retryHandler.count=5 -Daether.connector.http.retryHandler.count=5"
+
 # Download dependencies (cached unless pom.xml changes)
-RUN mvn dependency:go-offline -B
+RUN mvn dependency:go-offline -B $MAVEN_ARGS
 
 # Copy source code
 COPY src ./src
 
 # Build the application
-RUN mvn clean package -DskipTests -B
+RUN mvn clean package -DskipTests -B $MAVEN_ARGS
 
 # ==========================================
 # Stage 2: Create the runtime image
