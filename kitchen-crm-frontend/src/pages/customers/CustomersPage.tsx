@@ -15,7 +15,6 @@ import {
 } from '@/features/customers/customersAPI';
 import { CustomerList } from '@/features/customers/components/CustomerList';
 import { CustomerFormModal } from '@/features/customers/components/CustomerFormModal';
-import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Plus, Download, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -113,19 +112,36 @@ export function CustomersPage() {
           </p>
         </div>
         <div className="flex-1" />
-        <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={() => toast.success('Export feature coming soon!')}>
-            <Download className="h-3.5 w-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Export</span>
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => toast.success('Import feature coming soon!')}>
-            <Upload className="h-3.5 w-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Import</span>
-          </Button>
-          <Button variant="primary" size="sm" onClick={() => setIsCustomerModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-1.5" />
+        <div className="flex items-center gap-2.5">
+          {/* Export | Import: joined segmented pair */}
+          <div className="inline-flex rounded-[10px] border border-background-500 bg-background-800 overflow-hidden shadow-sm">
+            <button
+              onClick={() => toast.success('Export feature coming soon!')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-[8px] text-[13px] font-medium text-text-900 hover:bg-background-700 transition-colors"
+            >
+              <Download className="h-3.5 w-3.5 text-text-700" />
+              <span className="hidden sm:inline">Export</span>
+            </button>
+            <div className="w-px self-stretch bg-background-500" />
+            <button
+              onClick={() => toast.success('Import feature coming soon!')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-[8px] text-[13px] font-medium text-text-900 hover:bg-background-700 transition-colors"
+            >
+              <Upload className="h-3.5 w-3.5 text-text-700" />
+              <span className="hidden sm:inline">Import</span>
+            </button>
+          </div>
+
+          {/* Add Customer: raised accent button with frosted icon square */}
+          <button
+            onClick={() => setIsCustomerModalOpen(true)}
+            className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold"
+          >
+            <span className="w-5 h-5 rounded-md bg-white/20 backdrop-blur-[2px] flex items-center justify-center shrink-0">
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </span>
             Add Customer
-          </Button>
+          </button>
         </div>
       </div>
 
