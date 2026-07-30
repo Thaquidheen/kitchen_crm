@@ -266,10 +266,10 @@ export function AddCabinetModal({
     <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? "Edit Cabinet" : "Add Cabinet to Quotation"} size="lg">
       <ModalBody>
         {/* Cabinet Info */}
-        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-background-700 rounded-lg border border-background-600">
-          <div className="text-text-900 font-semibold text-base sm:text-lg">{cabinet.name}</div>
+        <div className="mb-4 sm:mb-5 p-3.5 bg-background-700/60 rounded-xl border border-background-600">
+          <div className="text-text-900 font-[650] text-sm">{cabinet.name}</div>
           {cabinet.categoryName && (
-            <div className="text-text-600 text-xs sm:text-sm mt-1">Category: {cabinet.categoryName}</div>
+            <div className="text-text-600 text-xs mt-0.5">{cabinet.categoryName}</div>
           )}
         </div>
 
@@ -407,75 +407,75 @@ export function AddCabinetModal({
 
         {/* Pricing Breakdown */}
         {widthMm > 0 && heightMm > 0 && depthMm > 0 && selectedMaterialId && (
-          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-primary-900/10 border border-primary-700/30 rounded-lg">
-            <div className="text-text-800 text-sm font-semibold mb-3 border-b border-primary-700/30 pb-2">
-              PRICING BREAKDOWN
+          <div className="mb-4 sm:mb-5 p-3.5 bg-background-700/40 border border-background-600 rounded-xl">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600 mb-2.5 pb-2 border-b border-background-600">
+              Pricing Breakdown
             </div>
 
             {/* Surface Area */}
-            <div className="flex justify-between text-xs sm:text-sm mb-2">
+            <div className="flex justify-between text-xs mb-1.5">
               <span className="text-text-600">
-                {selectedMaterial?.calculationType === 'FACE_AREA' ? 'Face Area' : 'Cabinet SQFT'}:
+                {selectedMaterial?.calculationType === 'FACE_AREA' ? 'Face Area' : 'Cabinet SQFT'}
               </span>
-              <span className="text-text-900 font-medium">{surfaceArea.toFixed(2)} sqft</span>
+              <span className="text-text-900 font-medium tabular-nums">{surfaceArea.toFixed(2)} sqft</span>
             </div>
 
             {/* Material Rate */}
-            <div className="flex justify-between text-xs sm:text-sm mb-2">
-              <span className="text-text-600">Material Rate ({selectedMaterial?.name}):</span>
-              <span className="text-text-900 font-medium">₹{materialRate.toLocaleString('en-IN')}/sqft</span>
+            <div className="flex justify-between text-xs mb-1.5">
+              <span className="text-text-600">Material Rate ({selectedMaterial?.name})</span>
+              <span className="text-text-900 font-medium tabular-nums">₹{materialRate.toLocaleString('en-IN')}/sqft</span>
             </div>
 
             {/* Cabinet Price */}
-            <div className="flex justify-between text-xs sm:text-sm mb-2">
-              <span className="text-text-600">Cabinet Price:</span>
-              <span className="text-text-900 font-medium">
+            <div className="flex justify-between text-xs mb-1.5">
+              <span className="text-text-600">Cabinet Price</span>
+              <span className="text-text-900 font-medium tabular-nums">
                 {surfaceArea.toFixed(2)} × ₹{materialRate.toLocaleString('en-IN')} = ₹{cabinetPrice.toFixed(2)}
               </span>
             </div>
 
             {/* Fixed Price */}
             {includeAccessories && (
-              <div className="flex justify-between text-xs sm:text-sm mb-2">
-                <span className="text-text-600">Fixed Price:</span>
-                <span className="text-text-900 font-medium">₹{accessoriesCost.toLocaleString('en-IN')}</span>
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-text-600">Fixed Price</span>
+                <span className="text-text-900 font-medium tabular-nums">₹{accessoriesCost.toLocaleString('en-IN')}</span>
               </div>
             )}
 
             {/* Inner Panel */}
             {selectedInnerPanel && innerPanelCost > 0 && (
-              <div className="flex justify-between text-xs sm:text-sm mb-2">
-                <span className="text-text-600">Inner Panel ({selectedInnerPanel.name} x{innerPanelQty}):</span>
-                <span className="text-text-900 font-medium">₹{innerPanelCost.toFixed(2)}</span>
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-text-600">Inner Panel ({selectedInnerPanel.name} x{innerPanelQty})</span>
+                <span className="text-text-900 font-medium tabular-nums">₹{innerPanelCost.toFixed(2)}</span>
               </div>
             )}
 
             {/* Lighting */}
             {includeLighting && (
-              <div className="flex justify-between text-xs sm:text-sm mb-2">
-                <span className="text-text-600">Lightings ({widthMm} × 2):</span>
-                <span className="text-text-900 font-medium">₹{lightingCost.toLocaleString('en-IN')}</span>
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-text-600">Lightings ({widthMm} × 2)</span>
+                <span className="text-text-900 font-medium tabular-nums">₹{lightingCost.toLocaleString('en-IN')}</span>
               </div>
             )}
 
             {/* Per Unit Total */}
-            <div className="flex justify-between text-xs sm:text-sm mb-2 pt-2 border-t border-primary-700/30">
-              <span className="text-text-600">Per Unit Total:</span>
-              <span className="text-text-900 font-medium">₹{perUnitTotal.toFixed(2)}</span>
+            <div className="flex justify-between text-xs mb-1.5 pt-2 border-t border-background-600">
+              <span className="text-text-600">Per Unit Total</span>
+              <span className="text-text-900 font-medium tabular-nums">₹{perUnitTotal.toFixed(2)}</span>
             </div>
 
             {/* Quantity multiplier */}
             {quantity > 1 && (
-              <div className="flex justify-between text-xs sm:text-sm mb-2">
-                <span className="text-text-600">Quantity:</span>
-                <span className="text-text-900 font-medium">× {quantity}</span>
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-text-600">Quantity</span>
+                <span className="text-text-900 font-medium tabular-nums">× {quantity}</span>
               </div>
             )}
 
             {/* Subtotal */}
-            <div className="flex justify-between text-sm sm:text-base pt-2 border-t border-primary-700/30 mt-2">
-              <span className="text-text-800 font-semibold">SUBTOTAL (Cabinet):</span>
-              <span className="text-success font-bold">₹{totalCabinetPrice.toFixed(2)}</span>
+            <div className="flex justify-between items-baseline pt-2 border-t border-background-600 mt-2">
+              <span className="text-xs font-semibold text-text-800">Subtotal (Cabinet)</span>
+              <span className="text-primary-600 font-bold text-base tabular-nums">₹{totalCabinetPrice.toFixed(2)}</span>
             </div>
           </div>
         )}
@@ -491,7 +491,7 @@ export function AddCabinetModal({
 
         {/* Door Selection */}
         {addDoor && (
-          <div className="p-3 sm:p-4 bg-background-700 rounded-lg border border-background-600">
+          <div className="p-3.5 bg-background-700/40 rounded-xl border border-background-600">
             <Select
               label="Select Door Type *"
               value={selectedDoorId}
@@ -507,12 +507,12 @@ export function AddCabinetModal({
 
             {/* Calculated Door Price */}
             {selectedDoor && doorArea > 0 && (
-              <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-primary-900/10 border border-primary-700/30 rounded-lg">
-                <div className="text-text-800 text-xs sm:text-sm">Door Calculation:</div>
-                <div className="text-text-700 text-xs mt-1">
-                  (Uses cabinet width × height)
+              <div className="mt-3 p-3 bg-background-800 border border-background-600 rounded-xl">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Door Calculation</div>
+                <div className="text-text-500 text-[11px] mt-0.5">
+                  Uses cabinet width × height
                 </div>
-                <div className="text-text-900 font-semibold mt-1 text-xs sm:text-sm">
+                <div className="text-text-900 font-medium mt-1 text-xs tabular-nums">
                   {doorArea.toFixed(2)} sqft × ₹{selectedDoor.companyPrice?.toLocaleString('en-IN')} × {quantity} = ₹
                   {doorPrice.toFixed(2)}
                 </div>
@@ -523,9 +523,9 @@ export function AddCabinetModal({
 
         {/* Total Preview */}
         {widthMm > 0 && heightMm > 0 && depthMm > 0 && selectedMaterialId && quantity > 0 && (
-          <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-background-800 border-2 border-primary-700 rounded-lg">
-            <div className="text-text-800 text-xs sm:text-sm">Estimated Total (before margin & tax):</div>
-            <div className="text-text-900 font-bold text-lg sm:text-xl mt-1">
+          <div className="mt-4 p-3.5 bg-primary-600/[0.06] border border-primary-600/40 rounded-xl">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Estimated Total (before margin & tax)</div>
+            <div className="text-primary-600 font-bold text-lg mt-0.5 tabular-nums">
               ₹{(totalCabinetPrice + doorPrice).toFixed(2)}
             </div>
           </div>
@@ -540,6 +540,7 @@ export function AddCabinetModal({
           variant="primary"
           onClick={handleAdd}
           disabled={!isValid || !isDoorValid || !isElevationValid}
+          className="btn-raised-accent"
         >
           {isEditing ? "Update Cabinet" : "Add to Quotation"}
         </Button>

@@ -4,6 +4,7 @@
  */
 
 import { useMemo, useState } from 'react';
+import { Search } from 'lucide-react';
 import { Tabs } from '@/components/ui/Tabs';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
@@ -322,11 +323,15 @@ export function ProductSelector({
   return (
     <div className="space-y-4">
       {/* Search */}
-      <Input
-        placeholder="Search products..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-600 pointer-events-none" />
+        <Input
+          placeholder="Search products..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10"
+        />
+      </div>
 
       {/* Category Tabs */}
       <Card className="p-0 bg-background-800 border-background-600">

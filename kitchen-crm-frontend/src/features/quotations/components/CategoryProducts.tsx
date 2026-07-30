@@ -196,11 +196,11 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
     <>
     {/* Category filter dropdown for accessories */}
     {category === 'accessories' && categories && categories.length > 0 && (
-      <div className="px-3 sm:px-4 pt-3 sm:pt-4">
+      <div>
         <select
           value={selectedCategoryId || ''}
           onChange={(e) => setSelectedCategoryId(e.target.value ? Number(e.target.value) : undefined)}
-          className="w-full sm:w-64 px-3 py-2 bg-background-900 border border-background-600 rounded-md text-text-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary-600"
+          className="w-full sm:w-64 px-3 py-2 bg-background-800 border border-background-600 rounded-lg text-text-900 text-[13px] focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/30"
         >
           <option value="">All Categories</option>
           {categories.map((cat: any) => (
@@ -210,12 +210,12 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
       </div>
     )}
 
-    <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+    <div className="py-3 sm:py-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
       {items.map((item) => {
         // Generate unique key: for lighting items, combine itemType with id to avoid collisions
         const uniqueKey = item.raw?.itemType ? `${item.raw.itemType}-${item.id}` : `${category}-${item.id}`;
         return (
-        <Card key={uniqueKey} className={`${category === 'accessories' ? 'p-0 overflow-hidden' : 'p-3 sm:p-4'} bg-background-800 border-background-600`}>
+        <Card key={uniqueKey} className={`${category === 'accessories' ? 'p-0 overflow-hidden' : 'p-3 sm:p-4'} bg-background-800 border-background-600 rounded-xl hover:border-primary-600/50 transition-colors`}>
           {/* Image section - only for accessories */}
           {category === 'accessories' && (
             <div className="relative h-28 sm:h-32 bg-background-700">
@@ -237,7 +237,7 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
               {(() => {
                 const qty = (getQuantity ? getQuantity(item.id, item.raw?.itemType) : 0) || 0;
                 return qty > 0 ? (
-                  <span className="absolute top-2 right-2 inline-flex items-center text-xs px-1.5 py-0.5 rounded bg-success text-text-900">
+                  <span className="absolute top-2 right-2 inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--st-confirmed-bg)] text-[var(--st-confirmed-fg)] backdrop-blur-sm">
                     ✓ Added ({qty})
                   </span>
                 ) : null;
@@ -248,9 +248,9 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
           {/* Content section */}
           <div className={category === 'accessories' ? 'p-3 sm:p-4' : ''}>
             {/* Name - show badge inline for non-accessories */}
-            <div className="text-xs sm:text-sm text-text-900 font-semibold flex items-center gap-2">
+            <div className="text-[13px] text-text-900 font-semibold flex items-center gap-2">
               {category !== 'accessories' && isTypeSelected(item) && (
-                <span className="inline-flex items-center text-xs px-1.5 sm:px-2 py-0.5 rounded bg-success text-text-900">✓ Added</span>
+                <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--st-confirmed-bg)] text-[var(--st-confirmed-fg)]">✓ Added</span>
               )}
               <span className="line-clamp-2" title={item.name}>{item.name}</span>
             </div>
@@ -259,11 +259,11 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
             )}
 
             {/* Price */}
-            <div className="text-xs sm:text-sm text-text-700 mt-1">
+            <div className="mt-1">
               {item.price === -1 ? (
-                <span className="text-primary-400">Select to configure</span>
+                <span className="text-xs font-medium text-primary-600">Select to configure</span>
               ) : (
-                <>₹{item.price.toLocaleString('en-IN')}</>
+                <span className="text-[13px] font-semibold text-text-900 tabular-nums">₹{item.price.toLocaleString('en-IN')}</span>
               )}
             </div>
 
@@ -281,21 +281,29 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
                   }
                   const unitPrice = Number(item.price || 0);
                   return (
-                    <div className="inline-flex items-center gap-2">
-                      <Button size="sm" variant="secondary" onClick={() => onDecrement && onDecrement(item.id, unitPrice, item.raw?.itemType)}>
+                    <div className="inline-flex items-center rounded-lg border border-background-600 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => onDecrement && onDecrement(item.id, unitPrice, item.raw?.itemType)}
+                        className="flex h-8 w-8 items-center justify-center text-text-700 hover:bg-background-700 hover:text-text-900 transition-colors"
+                      >
                         −
-                      </Button>
-                      <span className="text-text-900 font-semibold w-6 text-center text-xs sm:text-sm">{qty}</span>
-                      <Button size="sm" variant="secondary" onClick={() => {
-                        if (category === 'accessories') {
-                          setSelectedAccessory(item);
-                          setAccessoryModalOpen(true);
-                        } else {
-                          onIncrement && onIncrement(item.id, unitPrice, item);
-                        }
-                      }}>
+                      </button>
+                      <span className="w-8 text-center text-xs font-semibold text-text-900 tabular-nums leading-8 border-x border-background-600">{qty}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (category === 'accessories') {
+                            setSelectedAccessory(item);
+                            setAccessoryModalOpen(true);
+                          } else {
+                            onIncrement && onIncrement(item.id, unitPrice, item);
+                          }
+                        }}
+                        className="flex h-8 w-8 items-center justify-center text-text-700 hover:bg-background-700 hover:text-text-900 transition-colors"
+                      >
                         +
-                      </Button>
+                      </button>
                     </div>
                   );
                 })()
@@ -316,7 +324,7 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
 
     {/* Pagination for Accessories */}
     {category === 'accessories' && accessoriesTotalPages > 1 && (
-      <div className="border-t border-background-600 px-4 py-3">
+      <div className="border-t border-background-600 pt-3">
         <Pagination
           currentPage={accessoriesPage + 1}
           totalPages={accessoriesTotalPages}
@@ -327,8 +335,8 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
 
     {/* Custom Lighting Item */}
     {category === 'lighting' && (
-      <div className="mx-3 sm:mx-4 mb-4 p-3 sm:p-4 border border-background-600 rounded-lg bg-background-800">
-        <h4 className="text-xs font-semibold text-text-700 mb-3">Add Custom Lighting Item</h4>
+      <div className="mb-1 p-3 sm:p-4 border border-background-600 rounded-xl bg-background-800">
+        <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600 mb-3">Add Custom Lighting Item</h4>
         <div className="flex flex-col sm:flex-row items-end gap-2">
           <div className="flex-1 w-full">
             <Input

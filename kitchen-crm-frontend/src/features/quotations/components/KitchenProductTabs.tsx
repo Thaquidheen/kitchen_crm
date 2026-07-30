@@ -107,8 +107,8 @@ export function KitchenProductTabs({
       <div className="space-y-6">
         {/* Product Selector */}
         <div>
-          <h4 className="text-sm sm:text-base font-semibold text-text-800 mb-3 sm:mb-4">
-            Select Products for {kitchen.kitchenName}
+          <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600 mb-3">
+            Select Products — <span className="text-text-800">{kitchen.kitchenName}</span>
           </h4>
           <ProductSelector
             selectedProducts={{
@@ -133,15 +133,15 @@ export function KitchenProductTabs({
             type="button"
             variant="ghost"
             onClick={() => togglePanel(index, 'pricing')}
-            className="w-full flex items-center justify-between p-3 sm:p-4 bg-background-700 hover:bg-background-600 border border-background-600 rounded-lg"
+            className="w-full flex items-center justify-between px-4 py-3 bg-background-800 hover:bg-background-700 border border-background-600 rounded-xl"
           >
-            <span className="text-base sm:text-lg font-semibold text-text-900">
-              Pricing by Category - {kitchen.kitchenName}
+            <span className="text-sm font-[650] text-text-900">
+              Pricing by Category — {kitchen.kitchenName}
             </span>
             {expandedPanels[index]?.pricing ? (
-              <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5 text-text-600" />
+              <ChevronUp className="h-4 w-4 text-text-600" />
             ) : (
-              <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5 text-text-600" />
+              <ChevronDown className="h-4 w-4 text-text-600" />
             )}
           </Button>
           {expandedPanels[index]?.pricing && (
@@ -185,15 +185,15 @@ export function KitchenProductTabs({
             type="button"
             variant="ghost"
             onClick={() => togglePanel(index, 'totals')}
-            className="w-full flex items-center justify-between p-3 sm:p-4 bg-background-700 hover:bg-background-600 border border-background-600 rounded-lg"
+            className="w-full flex items-center justify-between px-4 py-3 bg-background-800 hover:bg-background-700 border border-background-600 rounded-xl"
           >
-            <span className="text-base sm:text-lg font-semibold text-text-900">
-              Category Breakdown - {kitchen.kitchenName}
+            <span className="text-sm font-[650] text-text-900">
+              Category Breakdown — {kitchen.kitchenName}
             </span>
             {expandedPanels[index]?.totals ? (
-              <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5 text-text-600" />
+              <ChevronUp className="h-4 w-4 text-text-600" />
             ) : (
-              <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5 text-text-600" />
+              <ChevronDown className="h-4 w-4 text-text-600" />
             )}
           </Button>
           {expandedPanels[index]?.totals && (

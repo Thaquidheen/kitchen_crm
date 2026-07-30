@@ -93,10 +93,10 @@ export function AddAccessoryModal({
     <Modal isOpen={isOpen} onClose={onClose} title="Add Accessory to Quotation" size="md">
       <ModalBody>
         {/* Accessory Info */}
-        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-background-700 rounded-lg border border-background-600">
-          <div className="text-text-900 font-semibold text-base sm:text-lg">{accessory.name}</div>
-          <div className="text-text-600 text-xs sm:text-sm mt-1">
-            Unit Price: ₹{unitPrice.toLocaleString('en-IN')}
+        <div className="mb-4 sm:mb-5 p-3.5 bg-background-700/60 rounded-xl border border-background-600">
+          <div className="text-text-900 font-[650] text-sm">{accessory.name}</div>
+          <div className="text-text-600 text-xs mt-0.5">
+            Unit price · <span className="font-semibold text-text-800 tabular-nums">₹{unitPrice.toLocaleString('en-IN')}</span>
           </div>
         </div>
 
@@ -135,24 +135,24 @@ export function AddAccessoryModal({
 
         {/* Price Preview */}
         {quantity > 0 && (
-          <div className="p-3 sm:p-4 bg-primary-900/10 border border-primary-700/30 rounded-lg">
-            <div className="flex justify-between text-xs sm:text-sm mb-2">
-              <span className="text-text-600">Unit Price:</span>
-              <span className="text-text-900 font-medium">₹{unitPrice.toLocaleString('en-IN')}</span>
+          <div className="p-3.5 bg-background-700/40 border border-background-600 rounded-xl">
+            <div className="flex justify-between text-xs mb-1.5">
+              <span className="text-text-600">Unit Price</span>
+              <span className="text-text-900 font-medium tabular-nums">₹{unitPrice.toLocaleString('en-IN')}</span>
             </div>
-            <div className="flex justify-between text-xs sm:text-sm mb-2">
-              <span className="text-text-600">Quantity:</span>
-              <span className="text-text-900 font-medium">× {quantity}</span>
+            <div className="flex justify-between text-xs mb-1.5">
+              <span className="text-text-600">Quantity</span>
+              <span className="text-text-900 font-medium tabular-nums">× {quantity}</span>
             </div>
             {selectedElevation && (
-              <div className="flex justify-between text-xs sm:text-sm mb-2">
-                <span className="text-text-600">Elevation:</span>
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-text-600">Elevation</span>
                 <span className="text-text-900 font-medium">{selectedElevation.name}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm sm:text-base pt-2 border-t border-primary-700/30 mt-2">
-              <span className="text-text-800 font-semibold">Total:</span>
-              <span className="text-success font-bold">₹{totalPrice.toLocaleString('en-IN')}</span>
+            <div className="flex justify-between items-baseline pt-2 border-t border-background-600 mt-2">
+              <span className="text-xs font-semibold text-text-800">Total</span>
+              <span className="text-primary-600 font-bold text-base tabular-nums">₹{totalPrice.toLocaleString('en-IN')}</span>
             </div>
           </div>
         )}
@@ -166,6 +166,7 @@ export function AddAccessoryModal({
           variant="primary"
           onClick={handleAdd}
           disabled={!isValid || !isElevationValid}
+          className="btn-raised-accent"
         >
           Add to Quotation
         </Button>

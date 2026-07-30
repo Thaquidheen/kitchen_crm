@@ -29,18 +29,18 @@ export const Tabs = ({
 }: TabsProps) => {
   return (
     <Tab.Group defaultIndex={defaultIndex} onChange={onChange}>
-      <Tab.List className={clsx('flex space-x-1 rounded-lg bg-background-800 p-1', className)}>
+      <Tab.List className={clsx('flex gap-1 border-b border-background-600 px-2 overflow-x-auto scrollbar-hide', className)}>
         {tabs.map((tab, index) => (
           <Tab
             key={index}
             disabled={tab.disabled}
             className={({ selected }) =>
               clsx(
-                'w-full rounded-lg py-2.5 px-4 text-sm font-semibold transition-all',
-                'focus:outline-none focus:ring-2 focus:ring-primary-700 focus:ring-offset-2 focus:ring-offset-background-900',
+                'whitespace-nowrap px-3.5 py-2.5 text-[13px] font-medium border-b-2 -mb-px transition-colors',
+                'focus:outline-none',
                 selected
-                  ? 'bg-primary-700 text-text-900 shadow-primary'
-                  : 'text-text-700 hover:bg-background-700 hover:text-text-900',
+                  ? 'border-primary-600 text-text-900'
+                  : 'border-transparent text-text-600 hover:text-text-900',
                 tab.disabled && 'opacity-50 cursor-not-allowed'
               )
             }
@@ -56,10 +56,7 @@ export const Tabs = ({
         {tabs.map((tab, index) => (
           <Tab.Panel
             key={index}
-            className={clsx(
-              'rounded-lg bg-background-800 p-6',
-              'focus:outline-none focus:ring-2 focus:ring-primary-700 focus:ring-offset-2 focus:ring-offset-background-900'
-            )}
+            className="rounded-lg bg-background-800 p-4 sm:p-5 focus:outline-none"
           >
             {tab.content}
           </Tab.Panel>

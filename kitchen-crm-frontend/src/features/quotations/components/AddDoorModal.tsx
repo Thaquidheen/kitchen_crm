@@ -118,17 +118,13 @@ export function AddDoorModal({
     <Modal isOpen={isOpen} onClose={onClose} title={isEditMode ? "Edit Door" : "Add Door to Quotation"} size="md">
       <ModalBody>
         {/* Door Info */}
-        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-background-700 rounded-lg border border-background-600">
-          <div className="text-text-900 font-semibold text-base sm:text-lg">{door.name}</div>
-          <div className="text-text-700 mt-1 text-sm sm:text-base">
-            Price: ₹{door.companyPrice?.toLocaleString('en-IN')}/sqft
+        <div className="mb-4 sm:mb-5 p-3.5 bg-background-700/60 rounded-xl border border-background-600">
+          <div className="text-text-900 font-[650] text-sm">{door.name}</div>
+          <div className="text-text-600 text-xs mt-0.5">
+            <span className="font-semibold text-text-800 tabular-nums">₹{door.companyPrice?.toLocaleString('en-IN')}/sqft</span>
+            {door.brandName && <> · {door.brandName}</>}
+            {door.material && <> · {door.material}</>}
           </div>
-          {door.brandName && (
-            <div className="text-text-600 text-xs sm:text-sm mt-1">Brand: {door.brandName}</div>
-          )}
-          {door.material && (
-            <div className="text-text-600 text-xs sm:text-sm">Material: {door.material}</div>
-          )}
         </div>
 
         {/* Dimension Inputs */}
@@ -186,9 +182,9 @@ export function AddDoorModal({
 
         {/* Calculated Door Price */}
         {faceArea > 0 && (
-          <div className="mb-4 sm:mb-6 p-2 sm:p-3 bg-primary-900/10 border border-primary-700/30 rounded-lg">
-            <div className="text-text-800 text-xs sm:text-sm">Door Calculation:</div>
-            <div className="text-text-900 font-semibold mt-1 text-xs sm:text-sm">
+          <div className="mb-4 p-3 bg-background-700/40 border border-background-600 rounded-xl">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Door Calculation</div>
+            <div className="text-text-900 font-medium mt-1 text-xs tabular-nums">
               {faceArea.toFixed(2)} sqft × ₹{door.companyPrice?.toLocaleString('en-IN')} × {quantity} = ₹
               {doorPrice.toFixed(2)}
             </div>
@@ -197,9 +193,9 @@ export function AddDoorModal({
 
         {/* Total Preview */}
         {faceArea > 0 && (
-          <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-background-800 border-2 border-primary-700 rounded-lg">
-            <div className="text-text-800 text-xs sm:text-sm">Estimated Total (before margin & tax):</div>
-            <div className="text-text-900 font-bold text-lg sm:text-xl mt-1">
+          <div className="mt-4 p-3.5 bg-primary-600/[0.06] border border-primary-600/40 rounded-xl">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Estimated Total (before margin & tax)</div>
+            <div className="text-primary-600 font-bold text-lg mt-0.5 tabular-nums">
               ₹{doorPrice.toFixed(2)}
             </div>
           </div>
@@ -214,6 +210,7 @@ export function AddDoorModal({
           variant="primary"
           onClick={handleAdd}
           disabled={!isValid || !isElevationValid}
+          className="btn-raised-accent"
         >
           {isEditMode ? "Save Changes" : "Add to Quotation"}
         </Button>

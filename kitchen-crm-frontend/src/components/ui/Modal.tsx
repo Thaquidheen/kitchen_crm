@@ -86,17 +86,17 @@ export const Modal = ({
             >
               <Dialog.Panel
                 className={clsx(
-                  'w-full transform overflow-hidden rounded-lg bg-background-800 gradient-card border-2 border-primary-700 p-6 text-left align-middle shadow-xl transition-all',
+                  'w-full transform overflow-hidden rounded-2xl bg-background-800 border border-background-600 p-5 sm:p-6 text-left align-middle shadow-2xl transition-all',
                   sizeStyles[size]
                 )}
               >
                 {/* Header */}
                 {(title || showCloseButton) && (
-                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-background-600">
+                  <div className="flex items-center justify-between mb-4 pb-3.5 border-b border-background-600">
                     {title && (
                       <Dialog.Title
                         as="h3"
-                        className="text-xl font-heading font-semibold text-text-900"
+                        className="text-base font-[650] tracking-[-0.01em] text-text-900"
                       >
                         {title}
                       </Dialog.Title>
@@ -104,10 +104,10 @@ export const Modal = ({
                     {showCloseButton && (
                       <button
                         type="button"
-                        className="text-text-600 hover:text-text-900 transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-text-600 hover:text-text-900 hover:bg-background-700 transition-colors"
                         onClick={onClose}
                       >
-                        <X size={24} />
+                        <X size={18} />
                       </button>
                     )}
                   </div>
