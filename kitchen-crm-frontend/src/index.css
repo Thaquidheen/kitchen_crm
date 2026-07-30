@@ -18,6 +18,15 @@
   --st-confirmed-bg: rgba(61, 214, 140, 0.13); --st-confirmed-fg: #52DB93;
   --st-lost-bg: rgba(240, 98, 98, 0.12);       --st-lost-fg: #F08A8A;
 }
+/* Native UI (scrollbars, form controls) must match the active theme */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+}
+[data-theme='dark'] {
+  color-scheme: dark;
+}
+
 /* The HOCH logo asset is white; invert it to dark on light surfaces */
 [data-theme='light'] .brand-logo {
   filter: invert(1);
@@ -78,41 +87,43 @@ input[type="number"] {
 }
 
 @layer base {
-  /* CSS Variable defaults - will be overridden by ThemeProvider */
+  /* CSS Variable defaults (HOCH day theme) — overridden by ThemeProvider at runtime.
+     These must match the default theme so the first paint (before React mounts)
+     doesn't flash dark surfaces or dark scrollbar rails. */
   :root {
-    --color-background-900: #0A0A0F;
-    --color-background-800: #12121A;
-    --color-background-700: #1A1A24;
-    --color-background-600: #252530;
-    --color-background-500: #3A3A45;
-    --color-primary-900: #4C1D95;
-    --color-primary-800: #5B21B6;
-    --color-primary-700: #6D28D9;
-    --color-primary-600: #7C3AED;
-    --color-primary-500: #8B5CF6;
-    --color-primary-400: #A78BFA;
-    --color-primary-300: #C4B5FD;
-    --color-primary-200: #DDD6FE;
-    --color-primary-100: #EDE9FE;
-    --color-accent-900: #0E7490;
-    --color-accent-800: #155E75;
-    --color-accent-700: #0891B2;
-    --color-accent-600: #06B6D4;
-    --color-accent-500: #22D3EE;
-    --color-accent-400: #67E8F9;
-    --color-accent-300: #A5F3FC;
-    --color-accent-200: #CFFAFE;
-    --color-accent-100: #ECFEFF;
-    --color-text-900: #FFFFFF;
-    --color-text-800: #F5F5F5;
-    --color-text-700: #E5E5E5;
-    --color-text-600: #D5D5D5;
-    --color-text-500: #C5C5C5;
-    --color-text-400: #B5B5B5;
-    --color-success: #10B981;
-    --color-warning: #F59E0B;
-    --color-info: #3B82F6;
-    --color-error: #EF4444;
+    --color-background-900: #F4F5F7;
+    --color-background-800: #FFFFFF;
+    --color-background-700: #F2F3F6;
+    --color-background-600: #E5E7EC;
+    --color-background-500: #D5D9E0;
+    --color-primary-900: #3A2E78;
+    --color-primary-800: #4A3A9E;
+    --color-primary-700: #5F49BE;
+    --color-primary-600: #6E56CF;
+    --color-primary-500: #8471DB;
+    --color-primary-400: #9B8AE6;
+    --color-primary-300: #B8ACF0;
+    --color-primary-200: #D5CDF7;
+    --color-primary-100: #EEEBFD;
+    --color-accent-900: #3A2E78;
+    --color-accent-800: #4A3A9E;
+    --color-accent-700: #5F49BE;
+    --color-accent-600: #6E56CF;
+    --color-accent-500: #8471DB;
+    --color-accent-400: #9B8AE6;
+    --color-accent-300: #B8ACF0;
+    --color-accent-200: #D5CDF7;
+    --color-accent-100: #EEEBFD;
+    --color-text-900: #171B24;
+    --color-text-800: #2A3040;
+    --color-text-700: #5A6373;
+    --color-text-600: #737D8F;
+    --color-text-500: #8B93A3;
+    --color-text-400: #A5ACBA;
+    --color-success: #137A43;
+    --color-warning: #A97207;
+    --color-info: #1863D6;
+    --color-error: #B93838;
   }
 
   /* Base styles with dynamic theme support */
@@ -133,22 +144,36 @@ input[type="number"] {
   }
 
   /* Scrollbar styling - theme aware */
+  /* Slim, theme-aware scrollbars: transparent track (no dark rail), quiet thumb */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 9px;
+    height: 9px;
+    background: transparent;
   }
 
   ::-webkit-scrollbar-track {
-    background-color: var(--color-background-800);
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: var(--color-background-600);
+    background-color: var(--color-background-500);
     border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-primary-700);
+    background-color: var(--color-text-500);
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-background-500) transparent;
   }
 
   /* Focus ring styling - theme aware */
