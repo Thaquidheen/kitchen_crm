@@ -1,7 +1,6 @@
 /**
  * Button Component
- * Reusable button with multiple variants, sizes, and states
- * Enhanced with better styling, shadows, and hover effects
+ * HOCH ERP style: flat, 10px radius, 1px borders, no gradients/glows/scale effects.
  */
 
 import { type ButtonHTMLAttributes, type ReactNode } from 'react';
@@ -33,73 +32,43 @@ export const Button = ({
   ...props
 }: ButtonProps) => {
   const baseStyles =
-    'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background-900 disabled:opacity-50 disabled:cursor-not-allowed';
-  
-  const sizeBasedTransform = {
-    sm: 'transform hover:scale-[1.01] active:scale-[0.99] disabled:transform-none',
-    md: 'transform hover:scale-[1.02] active:scale-[0.98] disabled:transform-none',
-    lg: 'transform hover:scale-[1.02] active:scale-[0.98] disabled:transform-none',
-  };
+    'inline-flex items-center justify-center rounded-[10px] transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 disabled:opacity-50 disabled:cursor-not-allowed';
 
-  const variantStyles = {
+  const variantStyles: Record<ButtonVariant, string> = {
     primary:
-      size === 'sm'
-        ? 'bg-primary-700 hover:bg-primary-600 text-white shadow-md shadow-primary-700/30 hover:shadow-lg hover:shadow-primary-600/40 focus:ring-primary-500 active:bg-primary-800 border border-primary-600/30'
-        : 'bg-gradient-to-r from-primary-700 to-primary-600 hover:from-primary-600 hover:to-primary-500 text-white shadow-lg shadow-primary-700/40 hover:shadow-xl hover:shadow-primary-600/50 focus:ring-primary-500 active:from-primary-800 active:to-primary-700 border border-primary-500/20',
+      'bg-primary-600 text-[var(--on-accent)] font-semibold hover:brightness-105 active:brightness-95 border border-transparent',
     secondary:
-      size === 'sm'
-        ? 'bg-background-700 border border-primary-600/40 hover:bg-background-600 hover:border-primary-500 text-text-900 shadow-sm shadow-background-900/20 hover:shadow-md focus:ring-primary-500 active:bg-background-800'
-        : 'bg-background-700 border-2 border-primary-600/50 hover:bg-background-600 hover:border-primary-500 text-text-900 shadow-md shadow-background-900/30 hover:shadow-lg focus:ring-primary-500 active:bg-background-800',
+      'bg-background-800 border border-background-500 text-text-900 font-medium hover:bg-background-700 active:bg-background-600',
     danger:
-      size === 'sm'
-        ? 'bg-error hover:bg-error/90 text-white shadow-md shadow-error/30 hover:shadow-lg hover:shadow-error/40 focus:ring-error active:bg-error/80 border border-error/30'
-        : 'bg-gradient-to-r from-error to-error/90 hover:from-error/90 hover:to-error/80 text-white shadow-lg shadow-error/40 hover:shadow-xl hover:shadow-error/50 focus:ring-error active:from-error/80 active:to-error/70 border border-error/20',
+      'bg-error text-white font-semibold hover:brightness-105 active:brightness-95 border border-transparent',
     ghost:
-      size === 'sm'
-        ? 'bg-transparent hover:bg-background-700/80 text-text-900 border border-background-600/40 hover:border-primary-600/40 focus:ring-primary-500 active:bg-background-800'
-        : 'bg-transparent hover:bg-background-700/80 text-text-900 border border-background-600/50 hover:border-primary-600/50 focus:ring-primary-500 active:bg-background-800 shadow-sm hover:shadow-md',
+      'bg-transparent text-text-700 font-medium hover:bg-background-700 hover:text-text-900 active:bg-background-600 border border-transparent',
     outline:
-      size === 'sm'
-        ? 'bg-transparent border border-background-600 hover:bg-background-800/50 text-text-700 hover:text-text-900 focus:ring-primary-500 active:bg-background-800'
-        : 'bg-transparent border-2 border-background-600 hover:bg-background-800/50 text-text-700 hover:text-text-900 focus:ring-primary-500 active:bg-background-800 shadow-sm hover:shadow-md',
+      'bg-transparent border border-background-500 text-text-700 font-medium hover:bg-background-700 hover:text-text-900 active:bg-background-600',
   };
 
-  const sizeStyles = {
-    sm: 'px-3 py-1.5 text-sm gap-1.5 min-h-[32px]',
-    md: 'px-5 py-2.5 text-base gap-2 min-h-[44px]',
-    lg: 'px-7 py-3.5 text-lg gap-2.5 min-h-[52px]',
+  const sizeStyles: Record<ButtonSize, string> = {
+    sm: 'px-3 py-[7px] text-[13px] gap-1.5 min-h-[32px]',
+    md: 'px-4 py-2 text-sm gap-2 min-h-[38px]',
+    lg: 'px-5 py-2.5 text-[15px] gap-2.5 min-h-[44px]',
   };
 
   const widthStyles = fullWidth ? 'w-full' : '';
 
   return (
     <button
-      className={clsx(
-        baseStyles,
-        variantStyles[variant],
-        sizeStyles[size],
-        sizeBasedTransform[size],
-        widthStyles,
-        className
-      )}
+      className={clsx(baseStyles, variantStyles[variant], sizeStyles[size], widthStyles, className)}
       disabled={disabled || isLoading}
       {...props}
     >
       {isLoading && (
         <svg
-          className="animate-spin h-5 w-5"
+          className="animate-spin h-4 w-4"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
         >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          />
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path
             className="opacity-75"
             fill="currentColor"

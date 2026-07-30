@@ -23,6 +23,15 @@
   filter: invert(1);
 }
 
+/* Text color on accent-filled buttons: white in day mode, near-black in night mode
+   (the night accent is lightened toward white, so dark text reads better). */
+:root {
+  --on-accent: #ffffff;
+}
+[data-theme='dark'] {
+  --on-accent: #0c0e12;
+}
+
 [data-theme='light'] {
   --st-lead-bg: #E8F1FE;      --st-lead-fg: #1863D6;
   --st-potential-bg: #FCF1DD; --st-potential-fg: #96660A;
