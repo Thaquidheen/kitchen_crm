@@ -18,6 +18,11 @@
   --st-confirmed-bg: rgba(61, 214, 140, 0.13); --st-confirmed-fg: #52DB93;
   --st-lost-bg: rgba(240, 98, 98, 0.12);       --st-lost-fg: #F08A8A;
 }
+/* The HOCH logo asset is white; invert it to dark on light surfaces */
+[data-theme='light'] .brand-logo {
+  filter: invert(1);
+}
+
 [data-theme='light'] {
   --st-lead-bg: #E8F1FE;      --st-lead-fg: #1863D6;
   --st-potential-bg: #FCF1DD; --st-potential-fg: #96660A;

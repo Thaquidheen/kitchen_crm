@@ -566,6 +566,6 @@ export const themeList: Theme[] = [
   lightGrayTheme,
 ];
 
-// Default theme
-export const defaultTheme = hochNightTheme;
+// Default theme (grey day mode)
+export const defaultTheme = hochDayTheme;
 

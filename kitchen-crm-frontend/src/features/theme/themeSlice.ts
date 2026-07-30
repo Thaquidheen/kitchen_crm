@@ -9,11 +9,12 @@ import { defaultTheme, themes, type Theme } from '../../styles/themes';
 
 const THEME_STORAGE_KEY = 'app-theme';
 
-// Load theme from localStorage or use default
+// Load theme from localStorage or use default. Only the HOCH day/night pair is kept as a
+// stored preference; any legacy theme id falls back to the grey day default once.
 const loadThemeFromStorage = (): string => {
   try {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    if (savedTheme && savedTheme in themes) {
+    if (savedTheme && (savedTheme === 'hoch-day' || savedTheme === 'hoch-night') && savedTheme in themes) {
       return savedTheme;
     }
   } catch (error) {

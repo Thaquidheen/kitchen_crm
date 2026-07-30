@@ -24,6 +24,7 @@ import {
   IdCard,
 } from 'lucide-react';
 import clsx from 'clsx';
+import logo from '../../assets/logo.png';
 import { ROUTES } from '../../routes/routes.config';
 
 export interface MenuItem {
@@ -148,23 +149,14 @@ export const Sidebar = ({ isCollapsed, onToggle, isMobileOpen = false, onMobileC
               : 'flex items-center gap-2.5 px-3.5 min-h-[58px]'
           )}
         >
-          <div
-            className="w-8 h-8 rounded-[9px] flex items-center justify-center text-sm font-bold text-primary-600 shrink-0 border"
-            style={{
-              background: ACCENT_SOFT,
-              borderColor: 'color-mix(in oklab, var(--color-primary-600) 35%, transparent)',
-            }}
-          >
-            H
-          </div>
-          {!isCollapsed && (
-            <div className="leading-tight whitespace-nowrap overflow-hidden">
-              <div className="text-[13.5px] font-bold tracking-[0.05em] text-text-900">THE HOCH</div>
-              <div className="text-[9.5px] tracking-[0.12em] text-text-500 uppercase">
-                Kitchens &amp; Wardrobes
-              </div>
-            </div>
-          )}
+          <img
+            src={logo}
+            alt="THE HOCH - Kitchens & Wardrobes"
+            className={clsx(
+              'brand-logo object-contain shrink-0',
+              isCollapsed ? 'h-6 max-w-[44px]' : 'h-9 max-w-[160px]'
+            )}
+          />
           <button
             onClick={onToggle}
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
