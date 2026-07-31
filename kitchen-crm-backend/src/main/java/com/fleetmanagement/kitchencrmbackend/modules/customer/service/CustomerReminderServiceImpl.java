@@ -1,6 +1,8 @@
 package com.fleetmanagement.kitchencrmbackend.modules.customer.service;
 
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
+import com.fleetmanagement.kitchencrmbackend.modules.appliance.entity.ApplianceCustomer;
+import com.fleetmanagement.kitchencrmbackend.modules.appliance.repository.ApplianceCustomerRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.dto.CustomerReminderDto;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.CustomerReminder;
@@ -49,6 +51,9 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
     @Autowired
     private CustomerRepository customerRepository;
 
+    @Autowired
+    private ApplianceCustomerRepository applianceCustomerRepository;
+
     @Value("${app.business-timezone:Asia/Kolkata}")
     private String businessTimezone;
 
@@ -73,12 +78,26 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
 
     @Override
     public ApiResponse<CustomerReminderDto> createReminder(CustomerReminderDto dto, String createdBy) {
-        Customer customer = customerRepository.findById(dto.getCustomerId()).orElse(null);
-        if (customer == null) {
-            return ApiResponse.error("Customer not found");
+        boolean hasCustomer = dto.getCustomerId() != null;
+        boolean hasAppliance = dto.getApplianceCustomerId() != null;
+        if (hasCustomer == hasAppliance) {
+            return ApiResponse.error("A reminder must belong to exactly one of a customer or an appliance entry");
         }
+
         CustomerReminder reminder = new CustomerReminder();
-        reminder.setCustomer(customer);
+        if (hasCustomer) {
+            Customer customer = customerRepository.findById(dto.getCustomerId()).orElse(null);
+            if (customer == null) {
+                return ApiResponse.error("Customer not found");
+            }
+            reminder.setCustomer(customer);
+        } else {
+            ApplianceCustomer appliance = applianceCustomerRepository.findById(dto.getApplianceCustomerId()).orElse(null);
+            if (appliance == null) {
+                return ApiResponse.error("Appliance entry not found");
+            }
+            reminder.setApplianceCustomer(appliance);
+        }
         reminder.setTitle(dto.getTitle());
         reminder.setNotes(dto.getNotes());
         reminder.setRemindAt(dto.getRemindAt());
@@ -143,6 +162,12 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
     @Override
     public ApiResponse<List<CustomerReminderDto>> getRemindersForCustomer(Long customerId) {
         return ApiResponse.success(reminderRepository.findByCustomerIdOrderByRemindAtDesc(customerId)
+                .stream().map(this::convertToDto).toList());
+    }
+
+    @Override
+    public ApiResponse<List<CustomerReminderDto>> getRemindersForApplianceCustomer(Long applianceCustomerId) {
+        return ApiResponse.success(reminderRepository.findByApplianceCustomerIdOrderByRemindAtDesc(applianceCustomerId)
                 .stream().map(this::convertToDto).toList());
     }
 
@@ -243,8 +268,24 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
     private CustomerReminderDto convertToDto(CustomerReminder r) {
         CustomerReminderDto dto = new CustomerReminderDto();
         dto.setId(r.getId());
-        dto.setCustomerId(r.getCustomer().getId());
-        dto.setCustomerName(r.getCustomer().getName());
+
+        // Exactly one owner is set. Populate the generic owner fields for the global list, and
+        // keep customerId/customerName filled for customer-owned reminders so the existing
+        // per-customer tab and the bell keep working unchanged.
+        Customer customer = r.getCustomer();
+        ApplianceCustomer appliance = r.getApplianceCustomer();
+        if (customer != null) {
+            dto.setCustomerId(customer.getId());
+            dto.setCustomerName(customer.getName());
+            dto.setOwnerType("CUSTOMER");
+            dto.setOwnerId(customer.getId());
+            dto.setOwnerName(customer.getName());
+        } else if (appliance != null) {
+            dto.setApplianceCustomerId(appliance.getId());
+            dto.setOwnerType("APPLIANCE");
+            dto.setOwnerId(appliance.getId());
+            dto.setOwnerName(appliance.getName());
+        }
         dto.setTitle(r.getTitle());
         dto.setNotes(r.getNotes());
         dto.setRemindAt(r.getRemindAt());

@@ -17,6 +17,8 @@ public interface CustomerReminderRepository extends JpaRepository<CustomerRemind
 
     List<CustomerReminder> findByCustomerIdOrderByRemindAtDesc(Long customerId);
 
+    List<CustomerReminder> findByApplianceCustomerIdOrderByRemindAtDesc(Long applianceCustomerId);
+
     // Scheduler: pending reminders whose day has arrived
     List<CustomerReminder> findByStatusAndRemindAtBefore(CustomerReminder.ReminderStatus status, LocalDateTime time);
 
@@ -32,23 +34,30 @@ public interface CustomerReminderRepository extends JpaRepository<CustomerRemind
      * Bell feed: every open reminder dated today or earlier. Bounded by the start of tomorrow
      * rather than by "now", so a reminder is visible for the whole of its own day.
      */
-    @EntityGraph(attributePaths = "customer")
+    @EntityGraph(attributePaths = {"customer", "applianceCustomer"})
     List<CustomerReminder> findByStatusNotAndRemindAtLessThanOrderByRemindAtAsc(
             CustomerReminder.ReminderStatus excludedStatus, LocalDateTime endExclusive);
 
     /**
-     * Cross-customer list for the Reminders page. Bounds are half-open [from, to) and are always
+     * Cross-owner list for the Reminders page. Bounds are half-open [from, to) and are always
      * supplied — the caller passes wide sentinels for an open end rather than nulls, because
      * ":param IS NULL" in JPQL is fragile across Hibernate versions. {@code q} is lower-cased and
      * %-wrapped by the caller ("%" matches everything).
+     *
+     * The owner joins MUST be explicit LEFT JOINs: a path expression like {@code r.customer.name}
+     * is an implicit INNER join, which would silently drop every appliance-owned reminder (they
+     * have a null customer) from both the list and the search.
      */
-    @EntityGraph(attributePaths = "customer")
-    @Query(value = "SELECT r FROM CustomerReminder r WHERE r.status IN :statuses "
+    @Query(value = "SELECT r FROM CustomerReminder r "
+            + "LEFT JOIN FETCH r.customer c LEFT JOIN FETCH r.applianceCustomer a "
+            + "WHERE r.status IN :statuses "
             + "AND r.remindAt >= :from AND r.remindAt < :to "
-            + "AND (LOWER(r.title) LIKE :q OR LOWER(r.customer.name) LIKE :q)",
-           countQuery = "SELECT COUNT(r) FROM CustomerReminder r WHERE r.status IN :statuses "
+            + "AND (LOWER(r.title) LIKE :q OR LOWER(COALESCE(c.name, a.name, '')) LIKE :q)",
+           countQuery = "SELECT COUNT(r) FROM CustomerReminder r "
+            + "LEFT JOIN r.customer c LEFT JOIN r.applianceCustomer a "
+            + "WHERE r.status IN :statuses "
             + "AND r.remindAt >= :from AND r.remindAt < :to "
-            + "AND (LOWER(r.title) LIKE :q OR LOWER(r.customer.name) LIKE :q)")
+            + "AND (LOWER(r.title) LIKE :q OR LOWER(COALESCE(c.name, a.name, '')) LIKE :q)")
     Page<CustomerReminder> search(@Param("statuses") List<CustomerReminder.ReminderStatus> statuses,
                                   @Param("from") LocalDateTime from,
                                   @Param("to") LocalDateTime to,

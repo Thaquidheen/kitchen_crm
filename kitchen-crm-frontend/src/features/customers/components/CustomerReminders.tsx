@@ -10,6 +10,7 @@ import { AlarmClock, Plus, Check, Trash2, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   useGetCustomerRemindersQuery,
+  useGetApplianceRemindersQuery,
   useCreateReminderMutation,
   useUpdateReminderMutation,
   useMarkReminderDoneMutation,
@@ -28,11 +29,23 @@ export interface CustomerReminder {
 }
 
 interface CustomerRemindersProps {
-  customerId: number;
+  /** Owner: pass exactly one of these. */
+  customerId?: number;
+  applianceCustomerId?: number;
 }
 
-export function CustomerReminders({ customerId }: CustomerRemindersProps) {
-  const { data: reminders = [], isLoading } = useGetCustomerRemindersQuery(customerId);
+export function CustomerReminders({ customerId, applianceCustomerId }: CustomerRemindersProps) {
+  // A reminder belongs to either a customer or an Appliance & Quartz entry; this component
+  // serves both, so only the relevant query runs.
+  const isAppliance = applianceCustomerId != null;
+  const customerQuery = useGetCustomerRemindersQuery(customerId as number, {
+    skip: isAppliance || customerId == null,
+  });
+  const applianceQuery = useGetApplianceRemindersQuery(applianceCustomerId as number, {
+    skip: !isAppliance,
+  });
+  const reminders: CustomerReminder[] = (isAppliance ? applianceQuery.data : customerQuery.data) ?? [];
+  const isLoading = isAppliance ? applianceQuery.isLoading : customerQuery.isLoading;
   const [createReminder, { isLoading: isCreating }] = useCreateReminderMutation();
   const [updateReminder, { isLoading: isUpdating }] = useUpdateReminderMutation();
   const [markDone] = useMarkReminderDoneMutation();
@@ -76,7 +89,8 @@ export function CustomerReminders({ customerId }: CustomerRemindersProps) {
         if (res?.success === false) return toast.error(res?.message || 'Failed to update reminder');
         toast.success('Reminder updated');
       } else {
-        const res = await createReminder({ customerId, title: title.trim(), notes: notes.trim() || undefined, remindAt }).unwrap();
+        const owner = isAppliance ? { applianceCustomerId } : { customerId };
+        const res = await createReminder({ ...owner, title: title.trim(), notes: notes.trim() || undefined, remindAt }).unwrap();
         if (res?.success === false) return toast.error(res?.message || 'Failed to create reminder');
         toast.success('Reminder set');
       }

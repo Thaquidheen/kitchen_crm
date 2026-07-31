@@ -51,6 +51,12 @@ public class CustomerReminderController {
         return ResponseEntity.ok(reminderService.getRemindersForCustomer(customerId));
     }
 
+    @GetMapping("/appliance/{applianceCustomerId}")
+    public ResponseEntity<ApiResponse<List<CustomerReminderDto>>> getRemindersForApplianceCustomer(
+            @PathVariable Long applianceCustomerId) {
+        return ResponseEntity.ok(reminderService.getRemindersForApplianceCustomer(applianceCustomerId));
+    }
+
     @GetMapping("/open")
     public ResponseEntity<ApiResponse<List<CustomerReminderDto>>> getOpenReminders() {
         return ResponseEntity.ok(reminderService.getOpenReminders());

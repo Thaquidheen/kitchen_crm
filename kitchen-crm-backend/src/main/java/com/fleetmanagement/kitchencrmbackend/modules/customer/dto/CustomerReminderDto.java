@@ -18,9 +18,18 @@ import java.time.LocalDateTime;
 public class CustomerReminderDto {
     private Long id;
 
-    @NotNull(message = "Customer ID is required")
+    // Owner: either a customer or an Appliance & Quartz entry. Exactly one must be supplied
+    // on create; the service rejects zero or both.
     private Long customerId;
     private String customerName;
+    private Long applianceCustomerId;
+
+    /** CUSTOMER | APPLIANCE — which module this reminder belongs to. */
+    private String ownerType;
+    /** Id of the owning record within that module. */
+    private Long ownerId;
+    /** Display name of the owner, whichever module it came from. */
+    private String ownerName;
 
     @NotBlank(message = "Reminder title is required")
     private String title;

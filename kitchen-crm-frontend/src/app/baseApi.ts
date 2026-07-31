@@ -448,6 +448,12 @@ export const baseApi = createApi({
       providesTags: ['Reminders'],
     }),
 
+    getApplianceReminders: builder.query<any, number>({
+      query: (applianceCustomerId) => `/reminders/appliance/${applianceCustomerId}`,
+      transformResponse: (response: any) => response?.data ?? [],
+      providesTags: ['Reminders'],
+    }),
+
     // Header bell feed: currently-due reminders + count
     getReminderNotifications: builder.query<any, void>({
       query: () => '/reminders/notifications',
@@ -472,7 +478,7 @@ export const baseApi = createApi({
       providesTags: ['Reminders'],
     }),
 
-    createReminder: builder.mutation<any, { customerId: number; title: string; notes?: string; remindAt: string }>({
+    createReminder: builder.mutation<any, { customerId?: number; applianceCustomerId?: number; title: string; notes?: string; remindAt: string }>({
       query: (body) => ({ url: '/reminders', method: 'POST', body }),
       invalidatesTags: ['Reminders'],
     }),
@@ -620,6 +626,7 @@ export const {
   useGetCustomerRemindersQuery,
   useGetOpenRemindersQuery,
   useGetReminderNotificationsQuery,
+  useGetApplianceRemindersQuery,
   useGetRemindersQuery,
   useGetReminderStatsQuery,
   useCreateReminderMutation,

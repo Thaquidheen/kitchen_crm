@@ -13,6 +13,7 @@ public interface CustomerReminderService {
     ApiResponse<String> markDone(Long id);
     ApiResponse<String> deleteReminder(Long id);
     ApiResponse<List<CustomerReminderDto>> getRemindersForCustomer(Long customerId);
+    ApiResponse<List<CustomerReminderDto>> getRemindersForApplianceCustomer(Long applianceCustomerId);
     ApiResponse<List<CustomerReminderDto>> getOpenReminders();
     // Bell feed: due (unacknowledged) reminders + count
     ApiResponse<Map<String, Object>> getNotifications();

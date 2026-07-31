@@ -6,7 +6,9 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Search, Trash2, Pencil, X } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, X, BellRing } from 'lucide-react';
+import { Modal, ModalBody } from '@/components/ui/Modal';
+import { CustomerReminders } from '@/features/customers/components/CustomerReminders';
 import toast from 'react-hot-toast';
 import { Pagination } from '@/components/shared/Pagination';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
@@ -122,6 +124,7 @@ export function ApplianceQuartzPage() {
   const [fItems, setFItems] = useState<string[]>([]);
   const [itemDraft, setItemDraft] = useState('');
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [remindersFor, setRemindersFor] = useState<ApplianceEntry | null>(null);
 
   const openAdd = () => {
     setEditing(null);
@@ -372,6 +375,13 @@ export function ApplianceQuartzPage() {
                       <td className="px-3.5 py-[13px]">
                         <div className="flex justify-end gap-0.5">
                           <button
+                            onClick={() => setRemindersFor(e)}
+                            title="Reminders"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors"
+                          >
+                            <BellRing size={14} />
+                          </button>
+                          <button
                             onClick={() => openEdit(e)}
                             title="Edit"
                             className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors"
@@ -591,6 +601,19 @@ export function ApplianceQuartzPage() {
         confirmText="Delete"
         type="danger"
       />
+
+      {/* Reminders for one entry — this module is a list with no detail page, so they
+          open in a dialog rather than on a tab. */}
+      <Modal
+        isOpen={remindersFor !== null}
+        onClose={() => setRemindersFor(null)}
+        title={remindersFor ? `Reminders — ${remindersFor.name}` : 'Reminders'}
+        size="lg"
+      >
+        <ModalBody>
+          {remindersFor && <CustomerReminders applianceCustomerId={remindersFor.id} />}
+        </ModalBody>
+      </Modal>
     </div>
   );
 }

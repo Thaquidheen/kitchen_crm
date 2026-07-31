@@ -144,12 +144,17 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
                         className="text-left w-full"
                         onClick={() => {
                           setBellOpen(false);
-                          navigate(`/customers/${r.customerId}`);
+                          // Appliance-owned reminders have no customer to navigate to.
+                          navigate(
+                            r.ownerType === 'APPLIANCE'
+                              ? ROUTES.APPLIANCE_QUARTZ
+                              : `/customers/${r.ownerId ?? r.customerId}`
+                          );
                         }}
                       >
                         <p className="text-sm text-text-900 font-medium">{r.title}</p>
                         <p className="text-xs text-text-600 mt-0.5">
-                          {r.customerName} ·{' '}
+                          {r.ownerName ?? r.customerName} ·{' '}
                           {new Date(r.remindAt).toLocaleString('en-IN', {
                             day: '2-digit',
                             month: 'short',

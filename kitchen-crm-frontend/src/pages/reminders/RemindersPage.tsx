@@ -29,8 +29,13 @@ import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
 
 interface Reminder {
   id: number;
-  customerId: number;
+  customerId?: number;
   customerName?: string;
+  applianceCustomerId?: number;
+  /** Which module the reminder belongs to. */
+  ownerType?: 'CUSTOMER' | 'APPLIANCE';
+  ownerId?: number;
+  ownerName?: string;
   title: string;
   notes?: string;
   remindAt: string;
@@ -348,17 +353,32 @@ export function RemindersPage() {
                         {r.notes && <div className="text-xs text-text-600 mt-0.5 line-clamp-1">{r.notes}</div>}
                       </td>
                       <td className="px-3 py-3">
-                        <button
-                          onClick={() => navigate(`/customers/${r.customerId}`)}
-                          className="flex items-center gap-2 min-w-0 group"
-                        >
-                          <span className="w-7 h-7 rounded-[9px] bg-background-600 border border-background-500 flex items-center justify-center text-[10px] font-[650] text-text-700 shrink-0">
-                            {initialsOf(r.customerName)}
-                          </span>
-                          <span className="text-[13px] text-text-900 truncate group-hover:text-primary-600 transition-colors">
-                            {r.customerName || '—'}
-                          </span>
-                        </button>
+                        {(() => {
+                          const isAppliance = r.ownerType === 'APPLIANCE';
+                          const name = r.ownerName || r.customerName || '—';
+                          return (
+                            <button
+                              onClick={() =>
+                                navigate(isAppliance ? '/appliance-quartz' : `/customers/${r.ownerId ?? r.customerId}`)
+                              }
+                              className="flex items-center gap-2 min-w-0 group"
+                            >
+                              <span className="w-7 h-7 rounded-[9px] bg-background-600 border border-background-500 flex items-center justify-center text-[10px] font-[650] text-text-700 shrink-0">
+                                {initialsOf(name)}
+                              </span>
+                              <span className="min-w-0 text-left">
+                                <span className="block text-[13px] text-text-900 truncate group-hover:text-primary-600 transition-colors">
+                                  {name}
+                                </span>
+                                {isAppliance && (
+                                  <span className="block text-[10px] font-semibold uppercase tracking-[0.06em] text-text-500">
+                                    Appliance &amp; Quartz
+                                  </span>
+                                )}
+                              </span>
+                            </button>
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-3">
                         <div
