@@ -490,8 +490,7 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
                 Cancel
               </Button>
               <Button
-                variant="primary"
-                className="bg-error hover:bg-error/90"
+                variant="danger"
                 onClick={handleDelete}
                 disabled={isDeleting}
               >
@@ -543,8 +542,7 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
                 Cancel
               </Button>
               <Button
-                variant="primary"
-                className="bg-error hover:bg-error/90"
+                variant="danger"
                 onClick={handleDeleteFolder}
                 disabled={isDeletingFolder}
               >

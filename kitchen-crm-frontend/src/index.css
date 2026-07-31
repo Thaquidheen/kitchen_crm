@@ -64,6 +64,16 @@
     0 1px 4px color-mix(in oklab, var(--color-primary-600) 30%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
+/* Disabled: quiet neutral instead of a washed-out accent block */
+.btn-raised-accent:disabled {
+  background: var(--color-background-700);
+  box-shadow: none;
+  color: var(--color-text-500);
+  border-color: var(--color-background-600);
+  transform: none;
+  filter: none;
+  opacity: 1;
+}
 
 [data-theme='light'] {
   --st-lead-bg: #E8F1FE;      --st-lead-fg: #1863D6;

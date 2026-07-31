@@ -36,7 +36,7 @@ export const Button = ({
 
   const variantStyles: Record<ButtonVariant, string> = {
     primary:
-      'bg-primary-600 text-[var(--on-accent)] font-semibold hover:brightness-105 active:brightness-95 border border-transparent',
+      'btn-raised-accent font-semibold border border-transparent',
     secondary:
       'bg-background-800 border border-background-500 text-text-900 font-medium hover:bg-background-700 active:bg-background-600',
     danger:
