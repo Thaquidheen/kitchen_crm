@@ -122,10 +122,20 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
             <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-background-800 border border-background-600 rounded-xl shadow-xl z-50">
               <div className="px-4 py-2.5 border-b border-background-600 flex items-center gap-2">
                 <AlarmClock size={15} className="text-primary-600" />
-                <span className="text-sm font-semibold text-text-900">Reminders due</span>
+                <span className="text-sm font-semibold text-text-900">Today's reminders</span>
+                <span className="flex-1" />
+                <button
+                  onClick={() => {
+                    setBellOpen(false);
+                    navigate(ROUTES.REMINDERS);
+                  }}
+                  className="text-xs font-medium text-primary-600 hover:underline"
+                >
+                  View all
+                </button>
               </div>
               {dueReminders.length === 0 ? (
-                <p className="px-4 py-6 text-sm text-text-600 text-center">No reminders due. All caught up!</p>
+                <p className="px-4 py-6 text-sm text-text-600 text-center">Nothing due today. All caught up!</p>
               ) : (
                 <div className="divide-y divide-background-600">
                   {dueReminders.map((r) => (

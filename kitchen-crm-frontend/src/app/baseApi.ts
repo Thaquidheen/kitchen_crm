@@ -455,6 +455,23 @@ export const baseApi = createApi({
       providesTags: ['Reminders'],
     }),
 
+    // Reminders page: cross-customer list filtered by day bucket
+    getReminders: builder.query<any, { bucket?: string; search?: string; page?: number; size?: number }>({
+      query: ({ bucket = 'ALL', search, page = 0, size = 20 }) => ({
+        url: '/reminders',
+        params: { bucket, page, size, ...(search ? { search } : {}) },
+      }),
+      transformResponse: (response: any) => response?.data ?? { content: [], totalElements: 0, totalPages: 0 },
+      providesTags: ['Reminders'],
+    }),
+
+    // Reminders page: counts per bucket for the filter chips
+    getReminderStats: builder.query<any, void>({
+      query: () => '/reminders/stats',
+      transformResponse: (response: any) => response?.data ?? {},
+      providesTags: ['Reminders'],
+    }),
+
     createReminder: builder.mutation<any, { customerId: number; title: string; notes?: string; remindAt: string }>({
       query: (body) => ({ url: '/reminders', method: 'POST', body }),
       invalidatesTags: ['Reminders'],
@@ -603,6 +620,8 @@ export const {
   useGetCustomerRemindersQuery,
   useGetOpenRemindersQuery,
   useGetReminderNotificationsQuery,
+  useGetRemindersQuery,
+  useGetReminderStatsQuery,
   useCreateReminderMutation,
   useUpdateReminderMutation,
   useMarkReminderDoneMutation,

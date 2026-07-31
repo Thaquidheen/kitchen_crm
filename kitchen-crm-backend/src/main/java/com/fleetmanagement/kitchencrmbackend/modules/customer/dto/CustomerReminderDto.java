@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -33,4 +34,10 @@ public class CustomerReminderDto {
     private LocalDateTime notifiedAt;
     private String createdBy;
     private LocalDateTime createdAt;
+
+    // Derived server-side so the browser never re-does the date maths in its own timezone.
+    // A reminder belongs to the whole of its calendar day: the time of day is a note, not a trigger.
+    private LocalDate remindDate;
+    /** TODAY | OVERDUE | UPCOMING | DONE */
+    private String bucket;
 }

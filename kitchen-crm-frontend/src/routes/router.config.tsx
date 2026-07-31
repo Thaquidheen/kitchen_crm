@@ -29,6 +29,7 @@ import ProductsPage from '../pages/products/ProductsPage';
 // Quotations
 import QuotationsPage from '../pages/quotations/QuotationsPage';
 import ApplianceQuartzPage from '../pages/appliance/ApplianceQuartzPage';
+import RemindersPage from '../pages/reminders/RemindersPage';
 import QuotationDetailPage from '../pages/quotations/QuotationDetailPage';
 import QuotationBuilderPage from '../pages/quotations/QuotationBuilderPage';
 
@@ -170,6 +171,12 @@ const routes = [
           {
             path: ROUTES.APPLIANCE_QUARTZ,
             element: <ApplianceQuartzPage />,
+          },
+
+          // Reminders
+          {
+            path: ROUTES.REMINDERS,
+            element: <RemindersPage />,
           },
 
           // Projects

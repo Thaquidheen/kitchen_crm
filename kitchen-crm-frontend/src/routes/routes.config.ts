@@ -47,6 +47,9 @@ export const ROUTES = {
   // Appliance & Quartz routes
   APPLIANCE_QUARTZ: '/appliance-quartz',
 
+  // Reminder routes
+  REMINDERS: '/reminders',
+
   // Project routes
   PROJECTS: '/projects',
   PROJECTS_NEW: '/projects/new',

@@ -6,6 +6,7 @@ import com.fleetmanagement.kitchencrmbackend.modules.customer.service.CustomerRe
 import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -59,5 +60,21 @@ public class CustomerReminderController {
     @GetMapping("/notifications")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getNotifications() {
         return ResponseEntity.ok(reminderService.getNotifications());
+    }
+
+    // Reminders page: cross-customer list, filtered by day bucket
+    @GetMapping
+    public ResponseEntity<ApiResponse<Page<CustomerReminderDto>>> getReminders(
+            @RequestParam(defaultValue = "ALL") String bucket,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(reminderService.getReminders(bucket, search, page, size));
+    }
+
+    // Reminders page: counts for the filter chips
+    @GetMapping("/stats")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> getReminderStats() {
+        return ResponseEntity.ok(reminderService.getReminderStats());
     }
 }
