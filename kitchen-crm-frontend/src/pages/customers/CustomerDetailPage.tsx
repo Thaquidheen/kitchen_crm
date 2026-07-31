@@ -38,7 +38,7 @@ import { STATUS_PILL } from '../../features/customers/components/CustomerList';
 import { formatLeadSource } from '../../features/customers/leadSource';
 import type { CustomerStatus } from '../../features/customers/types';
 
-const TABS = ['Overview', 'Pipeline', 'Quotations', 'Projects', 'Design', 'Production', 'Timeline', 'Warranty'];
+const TABS = ['Overview', 'Reminders', 'Pipeline', 'Quotations', 'Projects', 'Design', 'Production', 'Timeline', 'Warranty'];
 
 const STATUS_OPTIONS: Array<{ value: CustomerStatus; label: string }> = [
   { value: 'LEAD', label: 'Lead' },
@@ -291,10 +291,13 @@ const CustomerDetailPage: React.FC = () => {
               ))}
             </div>
 
-            {/* Follow-ups + Reminders */}
+            {/* Follow-ups (reminders have their own tab) */}
             <CustomerFollowUps customerId={customer.id} />
-            <CustomerReminders customerId={customer.id} />
           </div>
+        </div>
+      ) : activeTab === 'Reminders' ? (
+        <div className="space-y-4">
+          <CustomerReminders customerId={customer.id} />
         </div>
       ) : (
         <div className="bg-background-800 border border-background-600 rounded-[14px] px-6 py-16 text-center">
