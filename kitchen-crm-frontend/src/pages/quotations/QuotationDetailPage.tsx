@@ -14,6 +14,7 @@ import {
   useGetFolderVersionsQuery,
 } from '@/app/baseApi';
 import SignatureManagement from '@/components/quotations/SignatureManagement';
+import { quotationLabel } from '@/features/quotations/components/QuotationList';
 import { ArrowLeft, Copy, Download, Edit, FileText, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -458,7 +459,19 @@ export function QuotationDetailPage() {
                     >
                       V{v.versionNumber ?? '?'}
                     </span>
-                    <span className="text-[13px] text-text-900 tabular-nums">{v.quotationNumber}</span>
+                    {(() => {
+                      const { primary, secondary } = quotationLabel(v);
+                      return (
+                        <span className="min-w-0 max-w-[45%]">
+                          <span className="block text-[13px] text-text-900 truncate" title={primary}>
+                            {primary}
+                          </span>
+                          {secondary && (
+                            <span className="block text-[11px] text-text-500 tabular-nums truncate">{secondary}</span>
+                          )}
+                        </span>
+                      );
+                    })()}
                     <span className="text-[12.5px] text-text-600 tabular-nums hidden sm:inline">{fmtDate(v.createdAt)}</span>
                     {current && <span className="text-[11px] font-semibold text-primary-600">current</span>}
                     <span className="flex-1" />

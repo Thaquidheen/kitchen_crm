@@ -29,6 +29,19 @@ export interface QuotationListProps {
   onFiltersChange: (filters: QuotationFilters) => void;
 }
 
+/**
+ * A quotation is identified by its project name; the generated number stays as a
+ * secondary reference. Quotations saved without a project name (everything created
+ * before the name became the label) fall back to showing the number on its own.
+ */
+export const quotationLabel = (q: { projectName?: string; quotationNumber?: string }) => {
+  const project = q.projectName?.trim();
+  return {
+    primary: project || q.quotationNumber || '—',
+    secondary: project ? q.quotationNumber : undefined,
+  };
+};
+
 export function QuotationList({ filters, onFiltersChange }: QuotationListProps) {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'folders' | 'all'>('folders');
@@ -327,11 +340,25 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
                             versions.map((q) => (
                               <tr key={`version-${q.id}`} className="bg-background-900/40 hover:bg-background-700 transition-colors">
                                 <td className="px-2 sm:px-4 py-2.5 sm:py-3">
-                                  <div className="flex items-center gap-2 pl-8 sm:pl-10">
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-semibold bg-primary-600/15 text-primary-600">
+                                  <div className="flex items-center gap-2 pl-8 sm:pl-10 min-w-0">
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-semibold bg-primary-600/15 text-primary-600 shrink-0">
                                       V{q.versionNumber ?? '?'}
                                     </span>
-                                    <span className="text-text-900 text-xs sm:text-sm">{q.quotationNumber}</span>
+                                    {(() => {
+                                      const { primary, secondary } = quotationLabel(q);
+                                      return (
+                                        <span className="min-w-0">
+                                          <span className="block text-text-900 text-xs sm:text-sm truncate" title={primary}>
+                                            {primary}
+                                          </span>
+                                          {secondary && (
+                                            <span className="block text-text-500 text-[10px] sm:text-[11px] tabular-nums truncate">
+                                              {secondary}
+                                            </span>
+                                          )}
+                                        </span>
+                                      );
+                                    })()}
                                   </div>
                                 </td>
                                 <td className="px-2 sm:px-4 py-2.5 sm:py-3 text-text-600 text-xs sm:text-sm">
@@ -362,9 +389,9 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
               <thead className="bg-background-900 text-primary-600 sticky top-0 z-10">
                 <tr>
                   <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm">
-                    <button onClick={() => handleSort('refNo')} className="flex items-center gap-1 hover:text-primary-500 transition-colors">
-                      Ref No
-                      {filters.sortBy === 'refNo' && (
+                    <button onClick={() => handleSort('quotationNumber')} className="flex items-center gap-1 hover:text-primary-500 transition-colors">
+                      Quotation
+                      {filters.sortBy === 'quotationNumber' && (
                         <span className="text-xs">{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </button>
@@ -416,20 +443,34 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
                   quotations.map((q) => (
                     <tr key={q.id} className="hover:bg-background-700 transition-colors">
                       <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-900 font-semibold text-xs sm:text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="tabular-nums tracking-tight">{q.quotationNumber}</span>
-                          {(q.versionNumber ?? 1) > 1 && (
-                            <span
-                              className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
-                              style={{
-                                background: 'color-mix(in oklab, var(--color-primary-600) 14%, transparent)',
-                                color: 'var(--color-primary-600)',
-                              }}
-                            >
-                              Rev {q.versionNumber}
-                            </span>
-                          )}
-                        </div>
+                        {(() => {
+                          const { primary, secondary } = quotationLabel(q);
+                          return (
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="truncate tracking-tight" title={primary}>
+                                  {primary}
+                                </span>
+                                {(q.versionNumber ?? 1) > 1 && (
+                                  <span
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold shrink-0"
+                                    style={{
+                                      background: 'color-mix(in oklab, var(--color-primary-600) 14%, transparent)',
+                                      color: 'var(--color-primary-600)',
+                                    }}
+                                  >
+                                    Rev {q.versionNumber}
+                                  </span>
+                                )}
+                              </div>
+                              {secondary && (
+                                <div className="text-text-500 font-normal text-[11px] tabular-nums truncate">
+                                  {secondary}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm">
                         <div className="flex items-center gap-2 min-w-0">

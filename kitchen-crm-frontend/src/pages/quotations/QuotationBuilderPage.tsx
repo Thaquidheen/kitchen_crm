@@ -1440,6 +1440,24 @@ export function QuotationBuilderPage() {
                     onSelect={handleCustomerSelect}
                   />
                 )}
+
+                {/* Project name — this is what labels the quotation in the list and in
+                    the folder's version history, so it is captured up front. */}
+                <div className="mt-5 pt-5 border-t border-background-600">
+                  <label className="block text-xs sm:text-sm font-medium text-text-700 mb-2">
+                    Project Name
+                  </label>
+                  <Input
+                    type="text"
+                    value={formData.projectName || ''}
+                    onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
+                    placeholder="e.g., Kitchen Renovation - Apartment 101"
+                  />
+                  <p className="text-xs text-text-500 mt-1.5">
+                    Shown as this quotation's name in the list. If left blank, the quotation number is used instead.
+                  </p>
+                </div>
+
                 <div className="mt-4 sm:mt-6 flex justify-end">
                   <Button variant="primary" onClick={handleNext} className="w-full sm:w-auto">
                     Next: Add Kitchens
@@ -1690,19 +1708,6 @@ export function QuotationBuilderPage() {
                 <Card className="p-4 sm:p-6 bg-background-800 border-background-600 rounded-xl">
                   <h3 className="text-sm font-[650] text-text-900 mb-4">Quotation Details</h3>
                   <div className="space-y-4">
-                    {/* Project Name */}
-                    <div>
-                      <label className="block text-xs sm:text-sm font-medium text-text-700 mb-2">
-                        Project Name (Optional)
-                      </label>
-                      <Input
-                        type="text"
-                        value={formData.projectName || ''}
-                        onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
-                        placeholder="e.g., Kitchen Renovation - Apartment 101"
-                      />
-                    </div>
-
                     {/* Notes */}
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-text-700 mb-2">
