@@ -21,7 +21,7 @@ import toast from 'react-hot-toast';
 const TABS = ['Overview', 'Line Items', 'Revisions', 'Activity'];
 
 const QSTATUS: Record<string, { st: string; label: string }> = {
-  DRAFT: { st: '', label: 'Draft' },
+  DRAFT: { st: 'draft', label: 'Draft' },
   SENT: { st: 'lead', label: 'Sent' },
   APPROVED: { st: 'confirmed', label: 'Approved' },
   REJECTED: { st: 'lost', label: 'Rejected' },

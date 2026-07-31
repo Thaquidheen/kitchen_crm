@@ -7,7 +7,6 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { QuotationFilters } from '@/features/quotations/components/QuotationFilters';
 import { QuotationList } from '@/features/quotations/components/QuotationList';
 import { useGetQuotationStatisticsQuery } from '@/app/baseApi';
 import { Plus } from 'lucide-react';
@@ -56,7 +55,7 @@ export function QuotationsPage() {
         }
       : { borderColor: 'var(--color-background-600)', background: 'var(--color-background-800)' };
 
-  const dotColor = (st: string) => (st === 'draft' ? 'var(--color-text-500)' : `var(--st-${st}-fg)`);
+  const dotColor = (st: string) => `var(--st-${st}-fg)`;
 
   return (
     <div className="w-full">
@@ -156,13 +155,8 @@ export function QuotationsPage() {
         </div>
       )}
 
-      {/* Filters (unchanged functionality) */}
-      <div className="mb-4">
-        <QuotationFilters filters={filters} onFiltersChange={setFilters} onReset={handleResetFilters} />
-      </div>
-
-      {/* List */}
-      <QuotationList filters={filters} onFiltersChange={setFilters} />
+      {/* List — search & filters now live inside the list card's toolbar */}
+      <QuotationList filters={filters} onFiltersChange={setFilters} onResetFilters={handleResetFilters} />
     </div>
   );
 }

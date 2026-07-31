@@ -17,6 +17,7 @@
   --st-nego-bg: rgba(255, 151, 88, 0.13);      --st-nego-fg: #FFA26B;
   --st-confirmed-bg: rgba(61, 214, 140, 0.13); --st-confirmed-fg: #52DB93;
   --st-lost-bg: rgba(240, 98, 98, 0.12);       --st-lost-fg: #F08A8A;
+  --st-draft-bg: rgba(139, 147, 163, 0.14);    --st-draft-fg: #A8B0BF;
 }
 /* Native UI (scrollbars, form controls) must match the active theme */
 :root,
@@ -84,6 +85,7 @@
   --st-nego-bg: #FDEEE2;      --st-nego-fg: #B25411;
   --st-confirmed-bg: #E2F6EA; --st-confirmed-fg: #137A43;
   --st-lost-bg: #FBE7E7;      --st-lost-fg: #B93838;
+  --st-draft-bg: #EDEFF3;     --st-draft-fg: #5A6373;
 }
 
 /* Hide number input spinner arrows globally */

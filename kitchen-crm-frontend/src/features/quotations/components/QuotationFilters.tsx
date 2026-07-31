@@ -4,9 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Search, Filter, X } from 'lucide-react';
 import type { QuotationListParams, QuotationStatus } from '../types';
@@ -40,52 +38,56 @@ export function QuotationFilters({ filters, onFiltersChange, onReset }: Quotatio
     { value: 'REVISED', label: 'Revised' },
   ];
 
+  const controlClass =
+    'inline-flex items-center gap-1.5 h-[34px] px-3 rounded-[10px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors';
+
   return (
-    <Card className="p-3 sm:p-4 bg-background-800 border-background-600">
-      <div className="space-y-3 sm:space-y-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-600" />
-              <Input
-                type="text"
-                placeholder="Search by customer name..."
-                value={localFilters.customerName || ''}
-                onChange={(e) => setLocalFilters({ ...localFilters, customerName: e.target.value })}
-                onKeyDown={(e) => e.key === 'Enter' && handleApply()}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setIsExpanded(!isExpanded)} className="flex-1 sm:flex-none">
-              <Filter className="h-4 w-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">{isExpanded ? 'Hide' : 'More'} Filters</span>
-              <span className="sm:hidden">{isExpanded ? 'Hide' : 'Filters'}</span>
-              {hasActiveFilters && !isExpanded && (
-                <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-primary-600 text-text-900 rounded-full text-xs">
-                  {Object.keys(filters).filter((k) => (filters as any)[k]).length - 2}
-                </span>
-              )}
-            </Button>
-
-            <Button variant="primary" size="sm" onClick={handleApply} className="flex-1 sm:flex-none">
-              <Search className="h-4 w-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Search</span>
-            </Button>
-
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={handleReset} className="flex-1 sm:flex-none">
-                <X className="h-4 w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Clear</span>
-              </Button>
-            )}
-          </div>
+    <div className="flex-1 min-w-0">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div className="relative flex-1 min-w-0 sm:max-w-[420px]">
+          <Search size={15} className="absolute left-[11px] top-1/2 -translate-y-1/2 text-text-500 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search by customer name…"
+            value={localFilters.customerName || ''}
+            onChange={(e) => setLocalFilters({ ...localFilters, customerName: e.target.value })}
+            onKeyDown={(e) => e.key === 'Enter' && handleApply()}
+            className="w-full h-[34px] pl-[34px] pr-3 rounded-[10px] border border-background-600 bg-background-900 text-text-900 text-[13px] outline-none focus:border-primary-600 transition-colors placeholder:text-text-500"
+          />
         </div>
 
-        {isExpanded && (
-          <div className="pt-3 sm:pt-4 border-t border-background-600">
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={handleApply} className={controlClass}>
+            <Search className="h-3.5 w-3.5" />
+            Search
+          </button>
+
+          <button type="button" onClick={() => setIsExpanded(!isExpanded)} className={controlClass}>
+            <Filter className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{isExpanded ? 'Hide' : 'More'} Filters</span>
+            <span className="sm:hidden">Filters</span>
+            {hasActiveFilters && !isExpanded && (
+              <span className="ml-0.5 px-1.5 py-px rounded-full text-[10px] font-semibold bg-primary-600/15 text-primary-600 tabular-nums">
+                {Object.keys(filters).filter((k) => (filters as any)[k]).length - 2}
+              </span>
+            )}
+          </button>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-[10px] text-[12.5px] font-medium text-text-600 hover:text-text-900 hover:bg-background-700 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {isExpanded && (
+          <div className="mt-3 pt-3 border-t border-background-600">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-text-700 mb-2">Status</label>
@@ -124,7 +126,7 @@ export function QuotationFilters({ filters, onFiltersChange, onReset }: Quotatio
               </div>
             </div>
 
-            <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row justify-end gap-2">
+            <div className="mt-3 flex flex-col sm:flex-row justify-end gap-2">
               <Button variant="secondary" size="sm" onClick={handleReset} className="w-full sm:w-auto">
                 Reset All
               </Button>
@@ -134,8 +136,7 @@ export function QuotationFilters({ filters, onFiltersChange, onReset }: Quotatio
             </div>
           </div>
         )}
-      </div>
-    </Card>
+    </div>
   );
 }
 

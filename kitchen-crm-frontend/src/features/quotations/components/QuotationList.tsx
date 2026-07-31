@@ -14,6 +14,7 @@ import SignatureStatusBadge from '@/components/quotations/SignatureStatusBadge';
 import { Eye, Edit, Trash2, Folder, FolderOpen, ChevronRight, ChevronDown, Pencil, List as ListIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { QuotationFilters, QuotationSummary, QuotationFolderSummary } from '../types';
+import { QuotationFilters as QuotationFiltersBar } from './QuotationFilters';
 import {
   useGetQuotationsQuery,
   useDeleteQuotationMutation,
@@ -27,6 +28,8 @@ import type { RootState } from '@/app/store';
 export interface QuotationListProps {
   filters: QuotationFilters;
   onFiltersChange: (filters: QuotationFilters) => void;
+  /** Restores the page's default filters; supplied by QuotationsPage. */
+  onResetFilters?: () => void;
 }
 
 /**
@@ -42,7 +45,7 @@ export const quotationLabel = (q: { projectName?: string; quotationNumber?: stri
   };
 };
 
-export function QuotationList({ filters, onFiltersChange }: QuotationListProps) {
+export function QuotationList({ filters, onFiltersChange, onResetFilters }: QuotationListProps) {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'folders' | 'all'>('folders');
   const [expandedFolderId, setExpandedFolderId] = useState<number | null>(null);
@@ -139,7 +142,7 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
   // Design-only: semantic status pills (gray draft, blue sent, green approved,
   // red rejected, violet revised) using the shared --st-* tokens.
   const QSTATUS: Record<string, { st: string; label: string }> = {
-    DRAFT: { st: '', label: 'Draft' },
+    DRAFT: { st: 'draft', label: 'Draft' },
     SENT: { st: 'lead', label: 'Sent' },
     APPROVED: { st: 'confirmed', label: 'Approved' },
     REJECTED: { st: 'lost', label: 'Rejected' },
@@ -161,6 +164,10 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
     );
   };
   const isOverdue = (d?: string) => !!d && new Date(d) < new Date(new Date().toDateString());
+
+  // Shared with the customers/appliance tables so every list reads the same
+  const thClass = 'px-3 py-[9px] text-left text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500';
+  const thClassRight = 'px-3 py-[9px] text-right text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500';
 
   const initialsOf = (name?: string) =>
     (name ?? '')
@@ -211,41 +218,54 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
   }
 
   return (
-    <Card className="bg-background-800 border-background-600 overflow-hidden">
-      {/* View toggle */}
-      <div className="flex items-center gap-2 px-3 sm:px-4 py-2 border-b border-background-600">
-        <Button
-          variant={viewMode === 'folders' ? 'primary' : 'ghost'}
-          size="sm"
-          onClick={() => switchView('folders')}
-          className="flex items-center gap-1.5"
-        >
-          <Folder className="h-3.5 w-3.5" />
-          Folders
-        </Button>
-        <Button
-          variant={viewMode === 'all' ? 'primary' : 'ghost'}
-          size="sm"
-          onClick={() => switchView('all')}
-          className="flex items-center gap-1.5"
-        >
-          <ListIcon className="h-3.5 w-3.5" />
-          All Versions
-        </Button>
+    <div className="bg-background-800 border border-background-600 rounded-[14px] overflow-hidden">
+      {/* Toolbar: view toggle + search/filters, all inside the card like the customers table */}
+      <div className="flex items-start gap-2.5 px-3.5 py-3">
+        <div className="inline-flex shrink-0 rounded-[10px] border border-background-500 bg-background-800 overflow-hidden shadow-sm">
+          <button
+            onClick={() => switchView('folders')}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[13px] font-medium transition-colors ${
+              viewMode === 'folders'
+                ? 'bg-primary-600/10 text-primary-600'
+                : 'text-text-700 hover:bg-background-700 hover:text-text-900'
+            }`}
+          >
+            <Folder className="h-3.5 w-3.5" />
+            Folders
+          </button>
+          <div className="w-px self-stretch bg-background-500" />
+          <button
+            onClick={() => switchView('all')}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[13px] font-medium transition-colors ${
+              viewMode === 'all'
+                ? 'bg-primary-600/10 text-primary-600'
+                : 'text-text-700 hover:bg-background-700 hover:text-text-900'
+            }`}
+          >
+            <ListIcon className="h-3.5 w-3.5" />
+            All Versions
+          </button>
+        </div>
+
+        <QuotationFiltersBar
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          onReset={onResetFilters ?? (() => onFiltersChange({ page: 0, size: 10, sortBy: 'createdAt', sortDir: 'desc' } as QuotationFilters))}
+        />
       </div>
 
       <div className="overflow-x-auto -mx-4 sm:mx-0">
         <div className="inline-block min-w-full align-middle">
           {viewMode === 'folders' ? (
             <table className="w-full">
-              <thead className="bg-background-900 text-primary-600 sticky top-0 z-10">
-                <tr>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm">Folder</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm">Versions</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm">Latest Amount</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm">Status</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm hidden md:table-cell">Date</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm w-24 sm:w-36">Actions</th>
+              <thead className="sticky top-0 z-10">
+                <tr className="border-t border-background-600 bg-background-700">
+                  <th className={`${thClass} pl-3.5`}>Folder</th>
+                  <th className={thClass}>Versions</th>
+                  <th className={thClassRight}>Latest Amount</th>
+                  <th className={thClass}>Status</th>
+                  <th className={`${thClass} hidden md:table-cell`}>Date</th>
+                  <th className={`${thClassRight} pr-3.5 w-24 sm:w-36`}>Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-background-600">
@@ -331,7 +351,7 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
                         </tr>
                         {isExpanded && (
                           versionsLoading ? (
-                            <tr key={`versions-loading-${f.id}`} className="bg-background-850">
+                            <tr key={`versions-loading-${f.id}`} className="bg-background-900/40">
                               <td colSpan={6} className="px-4 py-4 text-center text-text-600 text-xs sm:text-sm">
                                 Loading versions...
                               </td>
@@ -386,37 +406,37 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
             </table>
           ) : (
             <table className="w-full">
-              <thead className="bg-background-900 text-primary-600 sticky top-0 z-10">
-                <tr>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm">
-                    <button onClick={() => handleSort('quotationNumber')} className="flex items-center gap-1 hover:text-primary-500 transition-colors">
+              <thead className="sticky top-0 z-10">
+                <tr className="border-t border-background-600 bg-background-700">
+                  <th className={`${thClass} pl-3.5`}>
+                    <button onClick={() => handleSort('quotationNumber')} className="inline-flex items-center gap-1 uppercase tracking-[0.05em] hover:text-text-700 transition-colors">
                       Quotation
                       {filters.sortBy === 'quotationNumber' && (
-                        <span className="text-xs">{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
+                        <span className="text-primary-600">{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </button>
                   </th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm">Customer</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm">Amount</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm">
-                    <button onClick={() => handleSort('status')} className="flex items-center gap-1 hover:text-primary-500 transition-colors">
+                  <th className={thClass}>Customer</th>
+                  <th className={thClassRight}>Amount</th>
+                  <th className={thClass}>
+                    <button onClick={() => handleSort('status')} className="inline-flex items-center gap-1 uppercase tracking-[0.05em] hover:text-text-700 transition-colors">
                       Status
                       {filters.sortBy === 'status' && (
-                        <span className="text-xs">{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
+                        <span className="text-primary-600">{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </button>
                   </th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm hidden md:table-cell">
-                    <button onClick={() => handleSort('createdAt')} className="flex items-center gap-1 hover:text-primary-500 transition-colors">
+                  <th className={`${thClass} hidden md:table-cell`}>
+                    <button onClick={() => handleSort('createdAt')} className="inline-flex items-center gap-1 uppercase tracking-[0.05em] hover:text-text-700 transition-colors">
                       Date
                       {filters.sortBy === 'createdAt' && (
-                        <span className="text-xs">{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
+                        <span className="text-primary-600">{filters.sortDir === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </button>
                   </th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm hidden lg:table-cell">Valid till</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm hidden sm:table-cell">Signature</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm w-20 sm:w-32">Actions</th>
+                  <th className={`${thClass} hidden lg:table-cell`}>Valid till</th>
+                  <th className={`${thClass} hidden sm:table-cell`}>Signature</th>
+                  <th className={`${thClassRight} pr-3.5 w-20 sm:w-32`}>Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-background-600">
@@ -593,7 +613,7 @@ export function QuotationList({ filters, onFiltersChange }: QuotationListProps) 
           </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 
