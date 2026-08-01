@@ -33,6 +33,8 @@ import { useGetQuotationsByCustomerQuery } from '../../app/baseApi';
 import { CustomerFormModal } from '../../features/customers/components/CustomerFormModal';
 import { CustomerFollowUps } from '../../features/customers/components/CustomerFollowUps';
 import { CustomerReminders } from '../../features/customers/components/CustomerReminders';
+import { CustomerTimelineTab } from '../../features/customers/components/CustomerTimelineTab';
+import { StatusChangeModal } from '../../features/customers/components/StatusChangeModal';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { STATUS_PILL } from '../../features/customers/components/CustomerList';
 import { formatLeadSource } from '../../features/customers/leadSource';
@@ -81,6 +83,10 @@ const CustomerDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('Overview');
   const [editOpen, setEditOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  // Status changes go through a modal that requires a note, so the picked status is
+  // held here until the note is supplied rather than being applied on change.
+  const [pendingStatus, setPendingStatus] = useState<CustomerStatus | null>(null);
+  const [isSavingStatus, setIsSavingStatus] = useState(false);
 
   if (!customerId) {
     return <div className="p-4 text-error">Invalid customer ID</div>;
@@ -115,12 +121,17 @@ const CustomerDetailPage: React.FC = () => {
   );
   const projectCount: number = Array.isArray(projects) ? projects.length : 0;
 
-  const handleStatusChange = async (status: CustomerStatus) => {
+  const handleStatusChange = async (note: string) => {
+    if (!pendingStatus) return;
+    setIsSavingStatus(true);
     try {
-      await updateStatus({ id: customerId, status }).unwrap();
-      toast.success(`Status updated to ${STATUS_PILL[status]?.label ?? status}`);
+      await updateStatus({ id: customerId, status: pendingStatus, reason: note }).unwrap();
+      toast.success(`Status updated to ${STATUS_PILL[pendingStatus]?.label ?? pendingStatus}`);
+      setPendingStatus(null);
     } catch (e: any) {
       toast.error(e?.data?.message || 'Failed to update status');
+    } finally {
+      setIsSavingStatus(false);
     }
   };
 
@@ -217,7 +228,10 @@ const CustomerDetailPage: React.FC = () => {
           <div className="w-px h-6 bg-background-500 hidden sm:block" />
           <select
             value={customer.status}
-            onChange={(e) => handleStatusChange(e.target.value as CustomerStatus)}
+            onChange={(e) => {
+              const next = e.target.value as CustomerStatus;
+              if (next !== customer.status) setPendingStatus(next);
+            }}
             className="h-[34px] px-2.5 rounded-[10px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium outline-none cursor-pointer focus:border-primary-600"
           >
             {STATUS_OPTIONS.map((s) => (
@@ -299,6 +313,8 @@ const CustomerDetailPage: React.FC = () => {
         <div className="space-y-4">
           <CustomerReminders customerId={customer.id} />
         </div>
+      ) : activeTab === 'Timeline' ? (
+        <CustomerTimelineTab customerId={customer.id} />
       ) : (
         <div className="bg-background-800 border border-background-600 rounded-[14px] px-6 py-16 text-center">
           <div className="text-[14.5px] font-semibold text-text-900">{activeTab}</div>
@@ -307,6 +323,16 @@ const CustomerDetailPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Status change — note is mandatory and lands on the Timeline tab */}
+      <StatusChangeModal
+        isOpen={pendingStatus !== null}
+        onClose={() => setPendingStatus(null)}
+        onConfirm={handleStatusChange}
+        targetStatus={pendingStatus}
+        currentStatus={customer.status as CustomerStatus}
+        isSubmitting={isSavingStatus}
+      />
 
       {/* Edit modal */}
       <CustomerFormModal isOpen={editOpen} onClose={() => setEditOpen(false)} customerId={customerId} />

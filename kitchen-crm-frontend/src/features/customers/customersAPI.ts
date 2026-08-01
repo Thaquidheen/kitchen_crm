@@ -160,6 +160,9 @@ export const customersAPI = baseApi.injectEndpoints({
           { type: 'Customers', id: 'LIST' },
           { type: 'Customers', id: 'PAGE' },
           { type: 'Customers', id: 'STATS' },
+          // A status change writes a workflow-history row; without this the Timeline
+          // tab would keep serving the pre-change list from cache.
+          { type: 'Customers', id: `WORKFLOW-${id}` },
         ],
       }
     ),

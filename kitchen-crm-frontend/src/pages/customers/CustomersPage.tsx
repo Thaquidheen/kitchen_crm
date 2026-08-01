@@ -13,8 +13,9 @@ import {
   useGetCustomerStatisticsQuery,
   customersAPI,
 } from '@/features/customers/customersAPI';
-import { CustomerList } from '@/features/customers/components/CustomerList';
+import { CustomerList, STATUS_PILL } from '@/features/customers/components/CustomerList';
 import { CustomerFormModal } from '@/features/customers/components/CustomerFormModal';
+import { StatusChangeModal } from '@/features/customers/components/StatusChangeModal';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Plus, Download, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -48,6 +49,7 @@ export function CustomersPage() {
   const [selectedCustomers, setSelectedCustomers] = useState<number[]>([]);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [bulkStatusChange, setBulkStatusChange] = useState<CustomerStatus | null>(null);
+  const [isSavingStatus, setIsSavingStatus] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
   const [deleteCustomer] = useDeleteCustomerMutation();
@@ -73,16 +75,25 @@ export function CustomersPage() {
     }
   };
 
-  const handleBulkStatusChange = async (status: CustomerStatus) => {
-    if (selectedCustomers.length === 0) return;
+  // The same note is written to every selected customer's timeline.
+  const handleBulkStatusChange = async (note: string) => {
+    const status = bulkStatusChange;
+    if (!status || selectedCustomers.length === 0) return;
+    setIsSavingStatus(true);
     try {
-      await Promise.all(selectedCustomers.map((id) => updateStatus({ id, status }).unwrap()));
-      toast.success(`${selectedCustomers.length} customer(s) status updated to ${status}`);
+      await Promise.all(
+        selectedCustomers.map((id) => updateStatus({ id, status, reason: note }).unwrap())
+      );
+      toast.success(
+        `${selectedCustomers.length} customer(s) status updated to ${STATUS_PILL[status]?.label ?? status}`
+      );
       setSelectedCustomers([]);
       setBulkStatusChange(null);
     } catch (error) {
       toast.error('Failed to update some customers');
       console.error(error);
+    } finally {
+      setIsSavingStatus(false);
     }
   };
 
@@ -249,15 +260,14 @@ export function CustomersPage() {
         type="danger"
       />
 
-      {/* Bulk Status Change Confirmation */}
-      <ConfirmDialog
+      {/* Bulk status change — one mandatory note, written to every selected timeline */}
+      <StatusChangeModal
         isOpen={bulkStatusChange !== null}
         onClose={() => setBulkStatusChange(null)}
-        onConfirm={() => bulkStatusChange && handleBulkStatusChange(bulkStatusChange)}
-        title="Change Customer Status"
-        message={`Are you sure you want to change the status of ${selectedCustomers.length} customer(s) to ${bulkStatusChange}?`}
-        confirmText="Update Status"
-        type="info"
+        onConfirm={handleBulkStatusChange}
+        targetStatus={bulkStatusChange}
+        count={selectedCustomers.length}
+        isSubmitting={isSavingStatus}
       />
 
       {/* Customer Form Modal */}

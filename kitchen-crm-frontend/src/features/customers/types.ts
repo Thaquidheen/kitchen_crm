@@ -135,7 +135,8 @@ export interface PipelineDto {
 export interface WorkflowHistoryDto {
   id: number;
   customerId: number;
-  previousState: string;
+  /** Null on the customer-created row, which has no prior state. */
+  previousState: string | null;
   newState: string;
   changedBy: string;
   changeReason?: string;
