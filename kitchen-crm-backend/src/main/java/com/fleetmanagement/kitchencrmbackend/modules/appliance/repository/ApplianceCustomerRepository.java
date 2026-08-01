@@ -26,8 +26,12 @@ public interface ApplianceCustomerRepository extends JpaRepository<ApplianceCust
 
     Long countByCategory(ApplianceCustomer.Category category);
 
-    Long countByStatus(ApplianceCustomer.Status status);
+    @Query("SELECT COUNT(a) FROM ApplianceCustomer a WHERE " +
+            "(:category IS NULL OR a.category = :category) AND a.status = :status")
+    Long countByCategoryAndStatus(@Param("category") ApplianceCustomer.Category category,
+                                  @Param("status") ApplianceCustomer.Status status);
 
-    @Query("SELECT COALESCE(SUM(a.amount), 0) FROM ApplianceCustomer a")
-    BigDecimal getTotalAmount();
+    @Query("SELECT COALESCE(SUM(a.amount), 0) FROM ApplianceCustomer a WHERE " +
+            "(:category IS NULL OR a.category = :category)")
+    BigDecimal getTotalAmount(@Param("category") ApplianceCustomer.Category category);
 }

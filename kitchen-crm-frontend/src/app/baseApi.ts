@@ -533,8 +533,11 @@ export const baseApi = createApi({
       providesTags: ['ApplianceCustomers'],
     }),
 
-    getApplianceStatistics: builder.query<any, void>({
-      query: () => '/appliance-customers/statistics',
+    getApplianceStatistics: builder.query<any, { category?: string }>({
+      query: ({ category }) => ({
+        url: '/appliance-customers/statistics',
+        params: category ? { category } : {},
+      }),
       transformResponse: (response: any) => response?.data ?? {},
       providesTags: ['ApplianceCustomers'],
     }),

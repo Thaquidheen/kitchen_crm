@@ -70,15 +70,20 @@ public class ApplianceCustomerServiceImpl implements ApplianceCustomerService {
     }
 
     @Override
-    public ApiResponse<Map<String, Object>> getStatistics() {
+    public ApiResponse<Map<String, Object>> getStatistics(ApplianceCustomer.Category category) {
         Map<String, Object> stats = new HashMap<>();
+
+        // Category chips always show the full picture, so these stay unscoped.
         stats.put("total", repository.count());
         stats.put("appliance", repository.countByCategory(ApplianceCustomer.Category.APPLIANCE));
         stats.put("quartz", repository.countByCategory(ApplianceCustomer.Category.QUARTZ));
+
+        // Status chips and total value describe the rows currently listed, so they follow
+        // the selected category (null category = everything).
         for (ApplianceCustomer.Status s : ApplianceCustomer.Status.values()) {
-            stats.put(s.name().toLowerCase(), repository.countByStatus(s));
+            stats.put(s.name().toLowerCase(), repository.countByCategoryAndStatus(category, s));
         }
-        BigDecimal totalAmount = repository.getTotalAmount();
+        BigDecimal totalAmount = repository.getTotalAmount(category);
         stats.put("totalAmount", totalAmount != null ? totalAmount : BigDecimal.ZERO);
         return ApiResponse.success(stats);
     }
@@ -89,7 +94,7 @@ public class ApplianceCustomerServiceImpl implements ApplianceCustomerService {
         entity.setCategory(dto.getCategory() != null ? dto.getCategory() : ApplianceCustomer.Category.APPLIANCE);
         entity.setBrand(dto.getBrand());
         entity.setAmount(dto.getAmount());
-        entity.setStatus(dto.getStatus() != null ? dto.getStatus() : ApplianceCustomer.Status.ENQUIRY);
+        entity.setStatus(dto.getStatus() != null ? dto.getStatus() : ApplianceCustomer.Status.LEAD);
         entity.setNotes(dto.getNotes());
 
         // Replace the manual item rows (orphanRemoval clears removed ones)

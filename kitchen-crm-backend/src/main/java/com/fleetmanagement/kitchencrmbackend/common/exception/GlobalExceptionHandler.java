@@ -3,6 +3,7 @@ package com.fleetmanagement.kitchencrmbackend.common.exception;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -36,6 +37,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<String>> handleBadCredentialsException(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error("Invalid email or password"));
+    }
+
+    /**
+     * A record still referenced by another table. Without this it fell through to the
+     * generic 500 below, which hid the cause from the UI and left the user with a bare
+     * "Failed to load resource: 500" — see the quotation_folders case fixed in V90.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<String>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        logger.error("Data integrity violation: {}", ex.getMostSpecificCause().getMessage(), ex);
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(
+                        "This record is still linked to other data and could not be changed. "
+                                + "Remove the linked records first, then try again."));
     }
 
     @ExceptionHandler(RuntimeException.class)

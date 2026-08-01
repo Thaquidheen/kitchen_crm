@@ -40,8 +40,9 @@ public class ApplianceCustomerController {
     }
 
     @GetMapping("/statistics")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getStatistics() {
-        return ResponseEntity.ok(service.getStatistics());
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getStatistics(
+            @RequestParam(required = false) ApplianceCustomer.Category category) {
+        return ResponseEntity.ok(service.getStatistics(category));
     }
 
     @GetMapping("/{id}")

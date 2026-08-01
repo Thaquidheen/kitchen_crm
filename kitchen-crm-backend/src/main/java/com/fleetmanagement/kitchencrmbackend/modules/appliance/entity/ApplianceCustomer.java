@@ -45,7 +45,7 @@ public class ApplianceCustomer extends Auditable {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private Status status = Status.ENQUIRY;
+    private Status status = Status.LEAD;
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
@@ -61,7 +61,8 @@ public class ApplianceCustomer extends Auditable {
         APPLIANCE, QUARTZ
     }
 
+    /** Sales pipeline stage, mirroring the kitchen customer pipeline. */
     public enum Status {
-        ENQUIRY, ORDERED, DELIVERED
+        LEAD, POTENTIAL, QUOTATION, NEGOTIATION, CONFIRMED, LOST
     }
 }

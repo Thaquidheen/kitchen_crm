@@ -20,6 +20,8 @@ import {
   useDeleteApplianceCustomerMutation,
 } from '@/app/baseApi';
 
+type ApplianceStatus = 'LEAD' | 'POTENTIAL' | 'QUOTATION' | 'NEGOTIATION' | 'CONFIRMED' | 'LOST';
+
 interface ApplianceEntry {
   id: number;
   name: string;
@@ -27,22 +29,37 @@ interface ApplianceEntry {
   category: 'APPLIANCE' | 'QUARTZ';
   brand?: string;
   amount?: number;
-  status: 'ENQUIRY' | 'ORDERED' | 'DELIVERED';
+  status: ApplianceStatus;
   notes?: string;
   items: string[];
   createdBy?: string;
   createdAt?: string;
 }
 
+// Category uses the purple/pink tokens so it stays visually distinct from the six
+// status colours sitting two columns away.
 const CATEGORY_META: Record<string, { st: string; label: string }> = {
-  APPLIANCE: { st: 'lead', label: 'Appliance' },
-  QUARTZ: { st: 'quote', label: 'Quartz' },
+  APPLIANCE: { st: 'design', label: 'Appliance' },
+  QUARTZ: { st: 'follow', label: 'Quartz' },
 };
 
-const STATUS_META: Record<string, { st: string; label: string }> = {
-  ENQUIRY: { st: 'potential', label: 'Enquiry' },
-  ORDERED: { st: 'design', label: 'Ordered' },
-  DELIVERED: { st: 'confirmed', label: 'Delivered' },
+// Sales pipeline, same stages as the kitchen customer module.
+const STATUS_ORDER: ApplianceStatus[] = [
+  'LEAD',
+  'POTENTIAL',
+  'QUOTATION',
+  'NEGOTIATION',
+  'CONFIRMED',
+  'LOST',
+];
+
+const STATUS_META: Record<ApplianceStatus, { st: string; label: string }> = {
+  LEAD: { st: 'lead', label: 'Lead' },
+  POTENTIAL: { st: 'potential', label: 'Potential' },
+  QUOTATION: { st: 'quote', label: 'Quotation' },
+  NEGOTIATION: { st: 'nego', label: 'Negotiation' },
+  CONFIRMED: { st: 'confirmed', label: 'Confirmed' },
+  LOST: { st: 'lost', label: 'Lost' },
 };
 
 const initialsOf = (name?: string) =>
@@ -73,17 +90,20 @@ const pill = (st: string, label: string) => (
 
 export function ApplianceQuartzPage() {
   const [category, setCategory] = useState<string | undefined>(undefined);
+  const [status, setStatus] = useState<ApplianceStatus | undefined>(undefined);
   const [page, setPage] = useState(0);
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
 
   const { data: pageData, isLoading } = useGetApplianceCustomersQuery({
     category,
+    status,
     search: search || undefined,
     page,
     size: 10,
   });
-  const { data: stats } = useGetApplianceStatisticsQuery();
+  // Status counts follow the selected category so the chips match the rows listed.
+  const { data: stats } = useGetApplianceStatisticsQuery({ category });
 
   const [createEntry, { isLoading: isCreating }] = useCreateApplianceCustomerMutation();
   const [updateEntry, { isLoading: isUpdating }] = useUpdateApplianceCustomerMutation();
@@ -111,6 +131,10 @@ export function ApplianceQuartzPage() {
   const quartzCount = Number(stats?.quartz ?? 0);
   const totalAmount = Number(stats?.totalAmount ?? 0);
 
+  // Backend keys the per-status counts by the lowercased enum name.
+  const statusCount = (s: ApplianceStatus) => Number(stats?.[s.toLowerCase()] ?? 0);
+  const statusTotal = STATUS_ORDER.reduce((sum, s) => sum + statusCount(s), 0);
+
   // ===== Modal state =====
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ApplianceEntry | null>(null);
@@ -119,7 +143,7 @@ export function ApplianceQuartzPage() {
   const [fCategory, setFCategory] = useState<'APPLIANCE' | 'QUARTZ'>('APPLIANCE');
   const [fBrand, setFBrand] = useState('');
   const [fAmount, setFAmount] = useState('');
-  const [fStatus, setFStatus] = useState<'ENQUIRY' | 'ORDERED' | 'DELIVERED'>('ENQUIRY');
+  const [fStatus, setFStatus] = useState<ApplianceStatus>('LEAD');
   const [fNotes, setFNotes] = useState('');
   const [fItems, setFItems] = useState<string[]>([]);
   const [itemDraft, setItemDraft] = useState('');
@@ -133,7 +157,7 @@ export function ApplianceQuartzPage() {
     setFCategory('APPLIANCE');
     setFBrand('');
     setFAmount('');
-    setFStatus('ENQUIRY');
+    setFStatus('LEAD');
     setFNotes('');
     setFItems([]);
     setItemDraft('');
@@ -277,15 +301,79 @@ export function ApplianceQuartzPage() {
         )}
       </div>
 
-      {/* Distribution bar */}
-      {total > 0 && (
+      {/* Status pipeline filter */}
+      <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
+        <button
+          onClick={() => {
+            setStatus(undefined);
+            setPage(0);
+          }}
+          className="flex items-center gap-1.5 px-2.5 py-[5px] rounded-[9px] border transition-colors"
+          style={chipStyle(status === undefined)}
+        >
+          <span
+            className={`text-[12px] whitespace-nowrap ${
+              status === undefined ? 'font-semibold text-text-900' : 'font-medium text-text-700'
+            }`}
+          >
+            All stages
+          </span>
+        </button>
+        {STATUS_ORDER.map((s) => {
+          const active = status === s;
+          const meta = STATUS_META[s];
+          const count = statusCount(s);
+          return (
+            <button
+              key={s}
+              onClick={() => {
+                setStatus(active ? undefined : s);
+                setPage(0);
+              }}
+              title={`Filter by ${meta.label}`}
+              className="flex items-center gap-1.5 px-2.5 py-[5px] rounded-[9px] border transition-colors"
+              style={chipStyle(active)}
+            >
+              <span
+                className="w-[6px] h-[6px] rounded-full shrink-0"
+                style={{ background: `var(--st-${meta.st}-fg)` }}
+              />
+              <span
+                className={`text-[12px] whitespace-nowrap ${
+                  active ? 'font-semibold text-text-900' : 'font-medium text-text-700'
+                }`}
+              >
+                {meta.label}
+              </span>
+              <span
+                className={`text-[12px] font-[650] tabular-nums ${
+                  active ? 'text-primary-600' : count > 0 ? 'text-text-900' : 'text-text-500'
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Pipeline distribution bar */}
+      {statusTotal > 0 && (
         <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden mx-0.5 mb-5">
-          {applianceCount > 0 && (
-            <div title={`Appliance · ${applianceCount}`} style={{ width: `${(applianceCount / total) * 100}%`, background: 'var(--st-lead-fg)' }} />
-          )}
-          {quartzCount > 0 && (
-            <div title={`Quartz · ${quartzCount}`} style={{ width: `${(quartzCount / total) * 100}%`, background: 'var(--st-quote-fg)' }} />
-          )}
+          {STATUS_ORDER.map((s) => {
+            const count = statusCount(s);
+            if (count === 0) return null;
+            return (
+              <div
+                key={s}
+                title={`${STATUS_META[s].label} · ${count}`}
+                style={{
+                  width: `${(count / statusTotal) * 100}%`,
+                  background: `var(--st-${STATUS_META[s].st}-fg)`,
+                }}
+              />
+            );
+          })}
         </div>
       )}
 
@@ -334,16 +422,27 @@ export function ApplianceQuartzPage() {
               ) : entries.length === 0 ? (
                 <tr className="border-t border-background-600">
                   <td colSpan={9} className="px-5 py-14 text-center">
-                    <div className="text-[14.5px] font-semibold text-text-900">No entries yet</div>
-                    <div className="text-[12.5px] text-text-700 mt-1">
-                      Add your first appliance or quartz customer with the button above.
-                    </div>
+                    {category || status || search ? (
+                      <>
+                        <div className="text-[14.5px] font-semibold text-text-900">No matching entries</div>
+                        <div className="text-[12.5px] text-text-700 mt-1">
+                          Nothing here for the current filters — try a different stage or clear the search.
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-[14.5px] font-semibold text-text-900">No entries yet</div>
+                        <div className="text-[12.5px] text-text-700 mt-1">
+                          Add your first appliance or quartz customer with the button above.
+                        </div>
+                      </>
+                    )}
                   </td>
                 </tr>
               ) : (
                 entries.map((e) => {
                   const cat = CATEGORY_META[e.category] ?? CATEGORY_META.APPLIANCE;
-                  const st = STATUS_META[e.status] ?? STATUS_META.ENQUIRY;
+                  const st = STATUS_META[e.status] ?? STATUS_META.LEAD;
                   const itemsPreview = e.items?.slice(0, 2).join(', ');
                   const more = (e.items?.length ?? 0) - 2;
                   return (
@@ -551,10 +650,16 @@ export function ApplianceQuartzPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className={labelCls}>Status</label>
-                  <select className={inputCls} value={fStatus} onChange={(e) => setFStatus(e.target.value as any)}>
-                    <option value="ENQUIRY">Enquiry</option>
-                    <option value="ORDERED">Ordered</option>
-                    <option value="DELIVERED">Delivered</option>
+                  <select
+                    className={inputCls}
+                    value={fStatus}
+                    onChange={(e) => setFStatus(e.target.value as ApplianceStatus)}
+                  >
+                    {STATUS_ORDER.map((s) => (
+                      <option key={s} value={s}>
+                        {STATUS_META[s].label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
