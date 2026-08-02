@@ -28,10 +28,13 @@ export interface CabinetWithDimensions {
   materialName?: string;
   materialRate?: number;
   materialCalculationType?: string;
-  // Lighting cost (Width mm × 2)
+  // Lighting cost (Width mm × 2) — legacy, kept so existing lines keep their amount
   lightingCost?: number;
   // Accessories cost (BLUM standard accessories)
   accessoriesCost?: number;
+  // Powder coating: box surface area × the cabinet type's per-sqft rate
+  powderCoating?: boolean;
+  powderCoatingCost?: number;
   // Inner panel
   innerPanelTypeId?: number;
   innerPanelTypeName?: string;
@@ -89,7 +92,7 @@ export function AddCabinetModal({
   // New state for material, lighting, accessories, inner panel, and elevation
   const [selectedMaterialId, setSelectedMaterialId] = useState<number | string>('');
   const [includeAccessories, setIncludeAccessories] = useState<boolean>(true);
-  const [includeLighting, setIncludeLighting] = useState<boolean>(false);
+  const [powderCoating, setPowderCoating] = useState<boolean>(false);
   const [selectedInnerPanelId, setSelectedInnerPanelId] = useState<number | string>('');
   const [innerPanelQty, setInnerPanelQty] = useState<number>(0);
   const [selectedElevationId, setSelectedElevationId] = useState<number | string>('');
@@ -123,7 +126,7 @@ export function AddCabinetModal({
         setQuantityStr(String(editData.quantity || 1));
         setSelectedMaterialId(editData.materialId || '');
         setIncludeAccessories((editData.accessoriesCost ?? 0) > 0);
-        setIncludeLighting((editData.lightingCost ?? 0) > 0);
+        setPowderCoating(editData.powderCoating ?? (editData.powderCoatingCost ?? 0) > 0);
         setSelectedInnerPanelId(editData.innerPanelTypeId || '');
         setInnerPanelQty(editData.innerPanelQuantity || 0);
         setSelectedElevationId(editData.elevationId || '');
@@ -145,7 +148,7 @@ export function AddCabinetModal({
         setSelectedDoorId('');
         setSelectedMaterialId('');
         setIncludeAccessories(true);
-        setIncludeLighting(false);
+        setPowderCoating(false);
         setSelectedInnerPanelId('');
         setInnerPanelQty(0);
         setSelectedElevationId(availableElevations.length > 0 ? availableElevations[0].id || '' : '');
@@ -189,17 +192,25 @@ export function AddCabinetModal({
   // Calculate cabinet price: surfaceArea × materialRate
   const cabinetPrice = surfaceArea * materialRate;
 
-  // Calculate lighting cost: Width (mm) × 2
-  const lightingCost = includeLighting ? widthMm * 2 : 0;
+  // Legacy lighting cost, preserved when editing a line that already had it. The checkbox
+  // that produced it was replaced by powder coating, so nothing sets it on new lines.
+  const lightingCost = editData?.lightingCost ?? 0;
 
   // Accessories cost (cabinet's fixed price)
   const accessoriesCost = includeAccessories ? (cabinet.fixedPrice || 0) : 0;
+
+  // Powder coating: always the BOX surface area, whatever the material's calculation type,
+  // because the coating covers the whole carcass. The server recomputes this on save; the
+  // value here is only so the breakdown shows the right number as you type.
+  const powderCoatingRate = cabinet.powderCoatingRatePerSqft || 0;
+  const boxSurfaceArea = calculateCabinetSurfaceArea();
+  const powderCoatingCost = powderCoating ? boxSurfaceArea * powderCoatingRate : 0;
 
   // Inner panel cost
   const innerPanelCost = calculateInnerPanelCost();
 
   // Per-unit total
-  const perUnitTotal = cabinetPrice + lightingCost + accessoriesCost + innerPanelCost;
+  const perUnitTotal = cabinetPrice + lightingCost + accessoriesCost + innerPanelCost + powderCoatingCost;
 
   // Total cabinet price (with quantity)
   const totalCabinetPrice = perUnitTotal * quantity;
@@ -234,8 +245,10 @@ export function AddCabinetModal({
       materialName: selectedMaterial?.name,
       materialRate: materialRate,
       materialCalculationType: selectedMaterial?.calculationType || 'BOX_AREA',
-      lightingCost: includeLighting ? lightingCost : 0,
+      lightingCost,
       accessoriesCost: includeAccessories ? accessoriesCost : 0,
+      powderCoating,
+      powderCoatingCost,
       // Inner panel
       innerPanelTypeId: selectedInnerPanel?.id,
       innerPanelTypeName: selectedInnerPanel?.name,
@@ -398,9 +411,14 @@ export function AddCabinetModal({
           </div>
           <div className="flex items-center">
             <Checkbox
-              label="Include Lighting"
-              checked={includeLighting}
-              onChange={(e) => setIncludeLighting(e.target.checked)}
+              label={
+                powderCoatingRate > 0
+                  ? `Powder Coating - ₹${powderCoatingRate.toLocaleString('en-IN')}/sq.ft`
+                  : 'Powder Coating - no rate set'
+              }
+              checked={powderCoating}
+              disabled={powderCoatingRate <= 0}
+              onChange={(e) => setPowderCoating(e.target.checked)}
             />
           </div>
         </div>
@@ -450,11 +468,21 @@ export function AddCabinetModal({
               </div>
             )}
 
-            {/* Lighting */}
-            {includeLighting && (
+            {/* Legacy lighting, only shown when editing a line that already carries it */}
+            {lightingCost > 0 && (
               <div className="flex justify-between text-xs mb-1.5">
-                <span className="text-text-600">Lightings ({widthMm} × 2)</span>
+                <span className="text-text-600">Lightings (existing)</span>
                 <span className="text-text-900 font-medium tabular-nums">₹{lightingCost.toLocaleString('en-IN')}</span>
+              </div>
+            )}
+
+            {/* Powder coating — box area, whatever the material's calculation type */}
+            {powderCoating && (
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-text-600">
+                  Powder Coating ({boxSurfaceArea.toFixed(2)} sq.ft × ₹{powderCoatingRate})
+                </span>
+                <span className="text-text-900 font-medium tabular-nums">₹{powderCoatingCost.toFixed(2)}</span>
               </div>
             )}
 

@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -152,6 +153,7 @@ public class CabinetServiceImpl implements CabinetService {
         dto.setMaterialId(cabinet.getMaterial() != null ? cabinet.getMaterial().getId() : null);
         dto.setMaterialName(cabinet.getMaterial() != null ? cabinet.getMaterial().getName() : null);
         dto.setFixedPrice(cabinet.getFixedPrice());
+        dto.setPowderCoatingRatePerSqft(cabinet.getPowderCoatingRatePerSqft());
         dto.setActive(cabinet.getActive());
         dto.setCreatedAt(cabinet.getCreatedAt());
         dto.setUpdatedAt(cabinet.getUpdatedAt());
@@ -162,6 +164,8 @@ public class CabinetServiceImpl implements CabinetService {
         CabinetType cabinet = new CabinetType();
         cabinet.setName(dto.getName());
         cabinet.setFixedPrice(dto.getFixedPrice());
+        cabinet.setPowderCoatingRatePerSqft(
+                dto.getPowderCoatingRatePerSqft() != null ? dto.getPowderCoatingRatePerSqft() : BigDecimal.ZERO);
         cabinet.setActive(dto.getActive() != null ? dto.getActive() : true);
 
         // Set relationships
@@ -181,6 +185,9 @@ public class CabinetServiceImpl implements CabinetService {
     private void updateEntityFromDto(CabinetType cabinet, CabinetTypeDto dto) {
         cabinet.setName(dto.getName());
         cabinet.setFixedPrice(dto.getFixedPrice());
+        if (dto.getPowderCoatingRatePerSqft() != null) {
+            cabinet.setPowderCoatingRatePerSqft(dto.getPowderCoatingRatePerSqft());
+        }
         cabinet.setActive(dto.getActive());
 
         // Update relationships

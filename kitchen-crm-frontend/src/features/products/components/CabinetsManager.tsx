@@ -147,11 +147,19 @@ export const CabinetsManager = () => {
                 </button>
               </div>
 
-              <div className="bg-background-700 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
+              <div className="bg-background-700 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3 space-y-1">
                 <div className="flex justify-between items-center">
                   <span className="text-xs sm:text-sm font-medium text-text-700">Fixed Price:</span>
                   <span className="text-sm sm:text-base font-bold text-success">₹{(cabinet.fixedPrice ?? 0).toLocaleString()}</span>
                 </div>
+                {(cabinet.powderCoatingRatePerSqft ?? 0) > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs sm:text-sm font-medium text-text-700">Powder Coating:</span>
+                    <span className="text-xs sm:text-sm font-semibold text-text-900">
+                      ₹{(cabinet.powderCoatingRatePerSqft ?? 0).toLocaleString()}/sq.ft
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2 pt-2 sm:pt-3 border-t border-background-600">
@@ -191,6 +199,7 @@ function CabinetForm({ initialValues, categories, onSubmit, onCancel, isLoading 
     name: initialValues?.name || '',
     categoryId: initialValues?.categoryId,
     fixedPrice: initialValues?.fixedPrice || 0,
+    powderCoatingRatePerSqft: initialValues?.powderCoatingRatePerSqft || 0,
     active: initialValues?.active ?? true,
   });
 
@@ -235,19 +244,40 @@ function CabinetForm({ initialValues, categories, onSubmit, onCancel, isLoading 
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-            Fixed Price (₹) <span className="text-error">*</span>
-          </label>
-          <Input
-            type="number"
-            required
-            min="0"
-            step="0.01"
-            value={formData.fixedPrice}
-            onChange={(e) => setFormData({ ...formData, fixedPrice: Number(e.target.value) })}
-            className="text-sm sm:text-base max-w-xs"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
+              Fixed Price (₹) <span className="text-error">*</span>
+            </label>
+            <Input
+              type="number"
+              required
+              min="0"
+              step="0.01"
+              value={formData.fixedPrice}
+              onChange={(e) => setFormData({ ...formData, fixedPrice: Number(e.target.value) })}
+              className="text-sm sm:text-base"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
+              Powder Coating (₹ / sq.ft)
+            </label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.powderCoatingRatePerSqft}
+              onChange={(e) =>
+                setFormData({ ...formData, powderCoatingRatePerSqft: Number(e.target.value) })
+              }
+              className="text-sm sm:text-base"
+            />
+            <p className="text-[11.5px] text-text-600 mt-1">
+              Charged on the cabinet's box surface area. Leave at 0 to hide the option on quotations.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

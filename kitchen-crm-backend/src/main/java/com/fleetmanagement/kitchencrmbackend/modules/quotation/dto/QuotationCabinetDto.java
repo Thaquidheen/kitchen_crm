@@ -41,11 +41,19 @@ public class QuotationCabinetDto {
     private BigDecimal materialRate;
     private String materialCalculationType; // BOX_AREA or FACE_AREA
 
-    // Lighting cost = Width (mm) x 2
+    // Lighting cost = Width (mm) x 2. Legacy: the checkbox that set this was replaced by
+    // powder coating, but stored values are kept so existing quotations price unchanged.
     private BigDecimal lightingCost;
 
     // Accessories cost (BLUM standard accessories)
     private BigDecimal accessoriesCost;
+
+    // Powder coating: the client sends the choice, the server derives the cost from the
+    // cabinet type's per-sqft rate so it cannot be tampered with or drift out of date.
+    private Boolean powderCoating;
+    private BigDecimal powderCoatingCost;
+    /** Read-only echo of the catalog rate, so the UI can show the breakdown. */
+    private BigDecimal powderCoatingRatePerSqft;
 
     // Inner panel fields
     private Long innerPanelTypeId;

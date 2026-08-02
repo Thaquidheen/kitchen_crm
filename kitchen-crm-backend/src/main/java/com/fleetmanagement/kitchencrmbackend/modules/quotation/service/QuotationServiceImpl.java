@@ -642,6 +642,9 @@ public class QuotationServiceImpl implements QuotationService {
                 cabinet.setMaterialCalculationType(cabinetDto.getMaterialCalculationType());
                 cabinet.setLightingCost(cabinetDto.getLightingCost());
                 cabinet.setAccessoriesCost(cabinetDto.getAccessoriesCost());
+                // Only the choice is taken from the client; the cost is derived in
+                // PricingServiceImpl from the cabinet type's rate.
+                cabinet.setPowderCoating(Boolean.TRUE.equals(cabinetDto.getPowderCoating()));
 
                 // Set inner panel fields
                 cabinet.setInnerPanelTypeId(cabinetDto.getInnerPanelTypeId());
@@ -973,6 +976,9 @@ public class QuotationServiceImpl implements QuotationService {
                 cabinet.setMaterialCalculationType(cabinetDto.getMaterialCalculationType());
                 cabinet.setLightingCost(cabinetDto.getLightingCost());
                 cabinet.setAccessoriesCost(cabinetDto.getAccessoriesCost());
+                // Only the choice is taken from the client; the cost is derived in
+                // PricingServiceImpl from the cabinet type's rate.
+                cabinet.setPowderCoating(Boolean.TRUE.equals(cabinetDto.getPowderCoating()));
 
                 // Set inner panel fields
                 cabinet.setInnerPanelTypeId(cabinetDto.getInnerPanelTypeId());
@@ -1109,6 +1115,8 @@ public class QuotationServiceImpl implements QuotationService {
             copy.setMaterialRate(original.getMaterialRate());
             copy.setMaterialCalculationType(original.getMaterialCalculationType());
             copy.setLightingCost(original.getLightingCost());
+            copy.setPowderCoating(original.getPowderCoating());
+            copy.setPowderCoatingCost(original.getPowderCoatingCost());
             copy.setAccessoriesCost(original.getAccessoriesCost());
             // Copy inner panel fields
             copy.setInnerPanelTypeId(original.getInnerPanelTypeId());
@@ -1611,6 +1619,10 @@ public class QuotationServiceImpl implements QuotationService {
                 materialRepository.findById(cabinet.getMaterialId()).ifPresent(m -> dto.setMaterialName(m.getName()));
             }
             dto.setLightingCost(cabinet.getLightingCost());
+            dto.setPowderCoating(cabinet.getPowderCoating());
+            dto.setPowderCoatingCost(cabinet.getPowderCoatingCost());
+            dto.setPowderCoatingRatePerSqft(cabinet.getCabinetType() != null
+                    ? cabinet.getCabinetType().getPowderCoatingRatePerSqft() : null);
             dto.setAccessoriesCost(cabinet.getAccessoriesCost());
 
             // Set inner panel fields
@@ -1833,6 +1845,10 @@ public class QuotationServiceImpl implements QuotationService {
                 materialRepository.findById(cabinet.getMaterialId()).ifPresent(m -> dto.setMaterialName(m.getName()));
             }
             dto.setLightingCost(cabinet.getLightingCost());
+            dto.setPowderCoating(cabinet.getPowderCoating());
+            dto.setPowderCoatingCost(cabinet.getPowderCoatingCost());
+            dto.setPowderCoatingRatePerSqft(cabinet.getCabinetType() != null
+                    ? cabinet.getCabinetType().getPowderCoatingRatePerSqft() : null);
             dto.setAccessoriesCost(cabinet.getAccessoriesCost());
 
             // Set inner panel fields

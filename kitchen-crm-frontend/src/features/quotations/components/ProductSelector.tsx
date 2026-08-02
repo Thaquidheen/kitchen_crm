@@ -152,6 +152,8 @@ export function ProductSelector({
         materialCalculationType: item.materialCalculationType,
         lightingCost: item.lightingCost,
         accessoriesCost: item.accessoriesCost,
+        powderCoating: item.powderCoating,
+        powderCoatingCost: item.powderCoatingCost,
         // Inner panel fields
         innerPanelTypeId: item.innerPanelTypeId,
         innerPanelTypeName: item.innerPanelTypeName,

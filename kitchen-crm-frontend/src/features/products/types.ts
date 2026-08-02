@@ -37,6 +37,8 @@ export interface CabinetType {
   materialId?: number;
   materialName?: string;
   fixedPrice: number;
+  /** Powder coating price per sq.ft, charged on box surface area. 0 hides the option. */
+  powderCoatingRatePerSqft?: number;
   active: boolean;
   createdAt?: string;
   updatedAt?: string;

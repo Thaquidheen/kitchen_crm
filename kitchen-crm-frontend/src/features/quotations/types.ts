@@ -58,10 +58,14 @@ export interface QuotationCabinet extends QuotationLineItem {
   materialId?: number;
   materialRate?: number;
   materialCalculationType?: string; // BOX_AREA or FACE_AREA
-  // Lighting cost (Width mm × 2)
+  // Lighting cost (Width mm × 2) — legacy, replaced by powder coating
   lightingCost?: number;
   // Accessories cost (BLUM standard accessories)
   accessoriesCost?: number;
+  // Powder coating: box surface area × the cabinet type's per-sqft rate (server-computed)
+  powderCoating?: boolean;
+  powderCoatingCost?: number;
+  powderCoatingRatePerSqft?: number;
   // Inner panel fields
   innerPanelTypeId?: number;
   innerPanelTypeName?: string;

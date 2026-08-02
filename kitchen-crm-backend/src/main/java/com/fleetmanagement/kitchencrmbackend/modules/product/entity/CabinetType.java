@@ -39,6 +39,10 @@ public class CabinetType extends Auditable {
     @Column(name = "fixed_price", precision = 10, scale = 2, nullable = false)
     private BigDecimal fixedPrice;
 
+    /** Powder coating price per sqft. 0 means this cabinet type cannot be powder coated. */
+    @Column(name = "powder_coating_rate_per_sqft", precision = 10, scale = 2, nullable = false)
+    private BigDecimal powderCoatingRatePerSqft = BigDecimal.ZERO;
+
     @Column(nullable = false)
     private Boolean active = true;
 }

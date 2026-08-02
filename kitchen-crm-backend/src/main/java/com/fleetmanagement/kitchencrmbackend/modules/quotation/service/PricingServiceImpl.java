@@ -241,11 +241,28 @@ public class PricingServiceImpl implements PricingService {
         // Calculate cabinet price: surfaceArea × materialRate
         BigDecimal cabinetPrice = surfaceArea.multiply(materialRate);
 
-        // Get lighting cost (Width mm × 2)
+        // Legacy lighting cost (Width mm × 2). The checkbox that produced it was replaced by
+        // powder coating; existing lines keep their amount so their totals do not move.
         BigDecimal lightingCost = cabinet.getLightingCost() != null ? cabinet.getLightingCost() : BigDecimal.ZERO;
 
         // Get accessories cost (fixed BLUM accessories)
         BigDecimal accessoriesCost = cabinet.getAccessoriesCost() != null ? cabinet.getAccessoriesCost() : BigDecimal.ZERO;
+
+        // Powder coating = BOX surface area × the cabinet type's per-sqft rate.
+        // Box area regardless of the material's calculation type, because the coating covers
+        // the whole carcass rather than just the face. Derived here from the catalog rather
+        // than trusting a client-sent amount.
+        BigDecimal powderCoatingCost = BigDecimal.ZERO;
+        if (Boolean.TRUE.equals(cabinet.getPowderCoating())) {
+            BigDecimal rate = cabinet.getCabinetType() != null
+                    && cabinet.getCabinetType().getPowderCoatingRatePerSqft() != null
+                    ? cabinet.getCabinetType().getPowderCoatingRatePerSqft()
+                    : BigDecimal.ZERO;
+            BigDecimal boxArea = calculateCabinetSurfaceArea(
+                    cabinet.getWidthMm(), cabinet.getHeightMm(), cabinet.getDepthMm());
+            powderCoatingCost = boxArea.multiply(rate).setScale(2, RoundingMode.HALF_UP);
+        }
+        cabinet.setPowderCoatingCost(powderCoatingCost);
 
         // Calculate inner panel cost: (W × D / 92903) × rate × multiplier × quantity
         BigDecimal innerPanelCost = calculateInnerPanelCost(
@@ -257,8 +274,9 @@ public class PricingServiceImpl implements PricingService {
         innerPanelCost = innerPanelCost.multiply(BigDecimal.valueOf(ipQuantity));
         cabinet.setInnerPanelCost(innerPanelCost);
 
-        // Calculate per-unit total: cabinetPrice + lightingCost + accessoriesCost + innerPanelCost
-        BigDecimal perUnitTotal = cabinetPrice.add(lightingCost).add(accessoriesCost).add(innerPanelCost);
+        // Calculate per-unit total: cabinetPrice + lighting + accessories + inner panel + powder coating
+        BigDecimal perUnitTotal = cabinetPrice.add(lightingCost).add(accessoriesCost)
+                .add(innerPanelCost).add(powderCoatingCost);
 
         // Calculate base amount: perUnitTotal × quantity
         BigDecimal baseAmount = perUnitTotal

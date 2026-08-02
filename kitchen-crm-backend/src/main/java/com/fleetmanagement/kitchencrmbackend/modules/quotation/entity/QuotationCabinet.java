@@ -81,6 +81,14 @@ public class QuotationCabinet extends Auditable {
     @Column(name = "accessories_cost", precision = 10, scale = 2)
     private BigDecimal accessoriesCost;
 
+    /** Whether this line is powder coated. The cost is derived server-side from the rate. */
+    @Column(name = "powder_coating", nullable = false)
+    private Boolean powderCoating = false;
+
+    /** Box surface area x the cabinet type's per-sqft rate, computed in PricingServiceImpl. */
+    @Column(name = "powder_coating_cost", precision = 10, scale = 2)
+    private BigDecimal powderCoatingCost = BigDecimal.ZERO;
+
     // Inner panel fields
     @Column(name = "inner_panel_type_id")
     private Long innerPanelTypeId;

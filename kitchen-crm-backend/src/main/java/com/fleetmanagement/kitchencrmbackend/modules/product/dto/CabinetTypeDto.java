@@ -35,6 +35,10 @@ public class CabinetTypeDto {
     @DecimalMin(value = "0.0", inclusive = true, message = "Fixed price cannot be negative")
     private BigDecimal fixedPrice;
 
+    /** Powder coating price per sqft. Optional — omitted or 0 disables the option. */
+    @DecimalMin(value = "0.0", inclusive = true, message = "Powder coating rate cannot be negative")
+    private BigDecimal powderCoatingRatePerSqft;
+
     private Boolean active = true;
 
     private LocalDateTime createdAt;

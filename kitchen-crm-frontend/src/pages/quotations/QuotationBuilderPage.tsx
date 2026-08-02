@@ -251,6 +251,8 @@ export function QuotationBuilderPage() {
         materialCalculationType: c.materialCalculationType,
         lightingCost: c.lightingCost,
         accessoriesCost: c.accessoriesCost,
+        powderCoating: c.powderCoating,
+        powderCoatingCost: c.powderCoatingCost,
         innerPanelTypeId: c.innerPanelTypeId,
         innerPanelTypeName: c.innerPanelTypeName,
         innerPanelRate: c.innerPanelRate,
@@ -630,6 +632,8 @@ export function QuotationBuilderPage() {
         materialCalculationType: item.materialCalculationType,
         lightingCost: item.lightingCost,
         accessoriesCost: item.accessoriesCost,
+        powderCoating: item.powderCoating,
+        powderCoatingCost: item.powderCoatingCost,
         // Inner panel fields
         innerPanelTypeId: item.innerPanelTypeId,
         innerPanelTypeName: item.innerPanelTypeName,
@@ -710,6 +714,8 @@ export function QuotationBuilderPage() {
           materialCalculationType: item.materialCalculationType,
           lightingCost: item.lightingCost,
           accessoriesCost: item.accessoriesCost,
+          powderCoating: item.powderCoating,
+          powderCoatingCost: item.powderCoatingCost,
           // Inner panel fields
           innerPanelTypeId: item.innerPanelTypeId,
           innerPanelTypeName: item.innerPanelTypeName,
