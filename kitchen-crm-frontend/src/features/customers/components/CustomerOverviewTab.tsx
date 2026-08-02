@@ -11,7 +11,13 @@ import {
   UserCheck,
 } from 'lucide-react';
 import type { Customer, CustomerStatus } from '../types';
-import { leadSourceLabel, isReferralSource } from '../leadSource';
+import {
+  customerLeadSourceRows,
+  isLinkedSource,
+  leadSourceDetailLines,
+  leadSourceLabel,
+  leadSourceWho,
+} from '../leadSource';
 
 export interface CustomerOverviewTabProps {
   customer: Customer;
@@ -19,6 +25,7 @@ export interface CustomerOverviewTabProps {
 }
 
 export const CustomerOverviewTab: React.FC<CustomerOverviewTabProps> = ({ customer }) => {
+  const leadSourceRows = customerLeadSourceRows(customer);
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-IN', {
@@ -134,24 +141,27 @@ export const CustomerOverviewTab: React.FC<CustomerOverviewTabProps> = ({ custom
         />
       </div>
 
-      {/* Lead Source */}
+      {/* Lead Sources */}
       <div>
         <h2 className="text-lg font-semibold text-text-900 mb-4 flex items-center gap-2">
           <UserCheck className="w-5 h-5" />
-          Lead Source
+          Lead Sources
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <InfoCard icon={UserCheck} label="Source" value={leadSourceLabel(customer.leadSourceType)} />
-          {customer.leadSourceType === 'ARCHITECT' && (
-            <InfoCard icon={User} label="Architect" value={customer.architectName} />
-          )}
-          {isReferralSource(customer.leadSourceType) && (
-            <>
-              <InfoCard icon={User} label="Referrer Name" value={customer.referralName} />
-              <InfoCard icon={Phone} label="Referrer Number" value={customer.referralContact} />
-              <InfoCard icon={MapPin} label="Referrer Location" value={customer.referralLocation} />
-              <InfoCard icon={Tag} label="Referrer Designation" value={customer.referralDesignation} />
-            </>
+          {leadSourceRows.length === 0 ? (
+            <InfoCard icon={UserCheck} label="Source" value="No Lead" />
+          ) : (
+            leadSourceRows.map((row, i) => (
+              <InfoCard
+                key={row.id ?? i}
+                icon={isLinkedSource(row.sourceType) ? UserCheck : User}
+                label={leadSourceLabel(row.sourceType)}
+                value={
+                  [leadSourceWho(row), ...leadSourceDetailLines(row)].filter(Boolean).join(' · ') ||
+                  '—'
+                }
+              />
+            ))
           )}
         </div>
       </div>

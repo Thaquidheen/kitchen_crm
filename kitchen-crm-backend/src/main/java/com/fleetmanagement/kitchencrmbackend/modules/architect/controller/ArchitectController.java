@@ -6,6 +6,7 @@ import com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectDto;
 import com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectUpdateDto;
 import com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectVisitCreateDto;
 import com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectVisitDto;
+import com.fleetmanagement.kitchencrmbackend.modules.architect.entity.Architect;
 import com.fleetmanagement.kitchencrmbackend.modules.architect.service.ArchitectService;
 import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
 import jakarta.validation.Valid;
@@ -20,14 +21,31 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/architects")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class ArchitectController {
 
+    /**
+     * Sort keys are interpolated straight into Sort.by(), which throws
+     * PropertyReferenceException (a 500) for anything that is not a mapped property.
+     */
+    private static final Set<String> SORTABLE = Set.of(
+            "architectureName", "firm", "contactNumber", "principalArchitectName",
+            "partnerType", "lastVisitDate", "createdAt", "updatedAt");
+
     @Autowired
     private ArchitectService architectService;
+
+    private Pageable pageableOf(int page, int size, String sortBy, String sortDir) {
+        String safeSortBy = SORTABLE.contains(sortBy) ? sortBy : "architectureName";
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(safeSortBy).descending()
+                : Sort.by(safeSortBy).ascending();
+        return PageRequest.of(page, size, sort);
+    }
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ArchitectDto>>> getAllArchitects(
@@ -35,33 +53,30 @@ public class ArchitectController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "architectureName") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir,
-            @RequestParam(required = false) String visitStatus) {
-        
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? 
-                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-        
-        return ResponseEntity.ok(architectService.getAllArchitects(pageable, visitStatus));
+            @RequestParam(required = false) String visitStatus,
+            @RequestParam(required = false) Architect.PartnerType partnerType) {
+
+        return ResponseEntity.ok(architectService.getAllArchitects(
+                pageableOf(page, size, sortBy, sortDir), visitStatus, partnerType));
     }
 
     @GetMapping("/all")
-    public ResponseEntity<ApiResponse<List<ArchitectDto>>> getAllArchitectsList() {
-        return ResponseEntity.ok(architectService.getAllArchitects());
+    public ResponseEntity<ApiResponse<List<ArchitectDto>>> getAllArchitectsList(
+            @RequestParam(required = false) Architect.PartnerType partnerType) {
+        return ResponseEntity.ok(architectService.getAllArchitects(partnerType));
     }
 
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<Page<ArchitectDto>>> searchArchitects(
-            @RequestParam String searchTerm,
+            @RequestParam(required = false) String searchTerm,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "architectureName") String sortBy,
-            @RequestParam(defaultValue = "asc") String sortDir) {
-        
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? 
-                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-        
-        return ResponseEntity.ok(architectService.searchArchitects(searchTerm, pageable));
+            @RequestParam(defaultValue = "asc") String sortDir,
+            @RequestParam(required = false) Architect.PartnerType partnerType) {
+
+        return ResponseEntity.ok(architectService.searchArchitects(
+                searchTerm, pageableOf(page, size, sortBy, sortDir), partnerType));
     }
 
     @GetMapping("/{id}")

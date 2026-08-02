@@ -20,11 +20,21 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/customers")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class CustomerController {
+
+    /**
+     * Sort keys are interpolated straight into Sort.by(), which throws
+     * PropertyReferenceException — surfacing as a 500 — for anything that is not a mapped
+     * scalar property. That includes leadSourceType now it is a collection, and has always
+     * included any typo a client sends. Unknown keys fall back to createdAt.
+     */
+    private static final Set<String> SORTABLE = Set.of(
+            "name", "email", "contact", "status", "place", "sqft", "createdAt", "updatedAt");
 
     @Autowired
     private CustomerService customerService;
@@ -45,8 +55,9 @@ public class CustomerController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
 
+        String safeSortBy = SORTABLE.contains(sortBy) ? sortBy : "createdAt";
         Sort sort = sortDir.equalsIgnoreCase("desc") ?
-                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+                Sort.by(safeSortBy).descending() : Sort.by(safeSortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
         LocalDateTime createdFromDt = createdFrom != null ? createdFrom.atStartOfDay() : null;

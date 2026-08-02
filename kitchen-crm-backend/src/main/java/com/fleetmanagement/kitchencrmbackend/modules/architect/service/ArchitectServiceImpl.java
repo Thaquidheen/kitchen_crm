@@ -31,32 +31,28 @@ public class ArchitectServiceImpl implements ArchitectService {
     private ArchitectVisitRepository architectVisitRepository;
 
     @Override
-    public ApiResponse<Page<ArchitectDto>> getAllArchitects(Pageable pageable, String visitStatus) {
-        Page<Architect> architects;
-        
-        if (visitStatus != null && !visitStatus.isEmpty()) {
-            if ("VISITED".equalsIgnoreCase(visitStatus)) {
-                architects = architectRepository.findByLastVisitDateIsNotNull(pageable);
-            } else if ("NOT_VISITED".equalsIgnoreCase(visitStatus)) {
-                architects = architectRepository.findByLastVisitDateIsNull(pageable);
-            } else {
-                architects = architectRepository.findAll(pageable);
-            }
-        } else {
-            architects = architectRepository.findAll(pageable);
-        }
-        
-        Page<ArchitectDto> architectDtos = architects.map(this::convertToDto);
-        return ApiResponse.success(architectDtos);
+    public ApiResponse<Page<ArchitectDto>> getAllArchitects(Pageable pageable, String visitStatus,
+                                                            Architect.PartnerType partnerType) {
+        Page<Architect> architects = architectRepository.findByFilters(
+                partnerType, visitedFlag(visitStatus), null, pageable);
+        return ApiResponse.success(architects.map(this::convertToDto));
     }
 
     @Override
-    public ApiResponse<List<ArchitectDto>> getAllArchitects() {
-        List<Architect> architects = architectRepository.findAll();
-        List<ArchitectDto> architectDtos = architects.stream()
+    public ApiResponse<List<ArchitectDto>> getAllArchitects(Architect.PartnerType partnerType) {
+        List<ArchitectDto> architectDtos = architectRepository.findAllByPartnerType(partnerType)
+                .stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
         return ApiResponse.success(architectDtos);
+    }
+
+    /** VISITED / NOT_VISITED / anything else -> TRUE / FALSE / null (no filter). */
+    private Boolean visitedFlag(String visitStatus) {
+        if (visitStatus == null || visitStatus.isBlank()) return null;
+        if ("VISITED".equalsIgnoreCase(visitStatus)) return Boolean.TRUE;
+        if ("NOT_VISITED".equalsIgnoreCase(visitStatus)) return Boolean.FALSE;
+        return null;
     }
 
     @Override
@@ -70,14 +66,35 @@ public class ArchitectServiceImpl implements ArchitectService {
 
     @Override
     public ApiResponse<ArchitectDto> createArchitect(ArchitectCreateDto architectCreateDto) {
+        String name = architectCreateDto.getArchitectureName().trim();
+        Architect.PartnerType type = architectCreateDto.getPartnerType() != null
+                ? architectCreateDto.getPartnerType()
+                : Architect.PartnerType.ARCHITECT;
+
+        // Soft dedupe. The customer form's picker creates records inline from a typed name, and
+        // there is no unique constraint on this table, so without this the same architect would
+        // silently accumulate duplicate rows. Returning the existing record (rather than an
+        // error) is what the picker needs: the user typed a name, they get that record linked.
+        Architect existing = architectRepository
+                .findFirstByPartnerTypeAndArchitectureNameIgnoreCase(type, name)
+                .orElse(null);
+        if (existing != null) {
+            return ApiResponse.success(labelFor(type) + " already exists", convertToDto(existing));
+        }
+
         Architect architect = new Architect();
-        architect.setArchitectureName(architectCreateDto.getArchitectureName());
+        architect.setArchitectureName(name);
+        architect.setPartnerType(type);
         architect.setFirm(architectCreateDto.getFirm());
         architect.setContactNumber(architectCreateDto.getContactNumber());
         architect.setPrincipalArchitectName(architectCreateDto.getPrincipalArchitectName());
 
         Architect saved = architectRepository.save(architect);
-        return ApiResponse.success("Architect created successfully", convertToDto(saved));
+        return ApiResponse.success(labelFor(type) + " created successfully", convertToDto(saved));
+    }
+
+    private String labelFor(Architect.PartnerType type) {
+        return type == Architect.PartnerType.BUILDER ? "Builder" : "Architect";
     }
 
     @Override
@@ -99,6 +116,9 @@ public class ArchitectServiceImpl implements ArchitectService {
         if (architectUpdateDto.getPrincipalArchitectName() != null) {
             architect.setPrincipalArchitectName(architectUpdateDto.getPrincipalArchitectName());
         }
+        if (architectUpdateDto.getPartnerType() != null) {
+            architect.setPartnerType(architectUpdateDto.getPartnerType());
+        }
 
         Architect updated = architectRepository.save(architect);
         return ApiResponse.success("Architect updated successfully", convertToDto(updated));
@@ -116,14 +136,13 @@ public class ArchitectServiceImpl implements ArchitectService {
     }
 
     @Override
-    public ApiResponse<Page<ArchitectDto>> searchArchitects(String searchTerm, Pageable pageable) {
-        // Search in both architecture name and firm
-        Page<Architect> architects = architectRepository.findByArchitectureNameContainingIgnoreCase(searchTerm, pageable);
-        if (architects.isEmpty()) {
-            architects = architectRepository.findByFirmContainingIgnoreCase(searchTerm, pageable);
-        }
-        Page<ArchitectDto> architectDtos = architects.map(this::convertToDto);
-        return ApiResponse.success(architectDtos);
+    public ApiResponse<Page<ArchitectDto>> searchArchitects(String searchTerm, Pageable pageable,
+                                                            Architect.PartnerType partnerType) {
+        // A blank term means "no search filter" rather than an error — the picker mounts with an
+        // empty box, and this endpoint used to reject that outright.
+        String term = (searchTerm != null && !searchTerm.isBlank()) ? searchTerm.trim() : null;
+        Page<Architect> architects = architectRepository.findByFilters(partnerType, null, term, pageable);
+        return ApiResponse.success(architects.map(this::convertToDto));
     }
 
     @Override
@@ -188,6 +207,7 @@ public class ArchitectServiceImpl implements ArchitectService {
         ArchitectDto dto = new ArchitectDto();
         dto.setId(architect.getId());
         dto.setArchitectureName(architect.getArchitectureName());
+        dto.setPartnerType(architect.getPartnerType());
         dto.setFirm(architect.getFirm());
         dto.setContactNumber(architect.getContactNumber());
         dto.setPrincipalArchitectName(architect.getPrincipalArchitectName());

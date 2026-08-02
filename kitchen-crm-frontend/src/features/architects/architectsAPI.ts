@@ -5,12 +5,19 @@
 import { baseApi } from '../../app/baseApi';
 import { API_ENDPOINTS } from '../../services/endpoints';
 import type { ApiResponse, PaginatedApiResponse } from '../../types/api.types';
-import type { Architect, ArchitectCreate, ArchitectUpdate, ArchitectVisit, ArchitectVisitCreate } from './types';
+import type {
+  Architect,
+  ArchitectCreate,
+  ArchitectUpdate,
+  ArchitectVisit,
+  ArchitectVisitCreate,
+  PartnerType,
+} from './types';
 
 export const architectsAPI = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // List architects (paginated)
-    getArchitects: builder.query<any, { page?: number; size?: number; sortBy?: string; sortDir?: string; visitStatus?: string }>({
+    getArchitects: builder.query<any, { page?: number; size?: number; sortBy?: string; sortDir?: string; visitStatus?: string; partnerType?: PartnerType }>({
       query: (params = {}) => {
         const queryParams = new URLSearchParams();
         if (params.page !== undefined) queryParams.append('page', params.page.toString());
@@ -18,12 +25,22 @@ export const architectsAPI = baseApi.injectEndpoints({
         if (params.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params.sortDir) queryParams.append('sortDir', params.sortDir);
         if (params.visitStatus) queryParams.append('visitStatus', params.visitStatus);
+        if (params.partnerType) queryParams.append('partnerType', params.partnerType);
         const queryString = queryParams.toString();
         return {
           url: API_ENDPOINTS.ARCHITECTS.BASE + (queryString ? `?${queryString}` : ''),
         };
       },
-      providesTags: ['Architects'],
+      // Must be id-scoped. This used to be the bare string tag 'Architects', which no
+      // mutation's {type:'Architects', id:'LIST'} invalidation matched — so creating an
+      // architect never refreshed this list.
+      providesTags: (result) =>
+        result?.content?.length
+          ? [
+              ...result.content.map((a: Architect) => ({ type: 'Architects' as const, id: a.id })),
+              { type: 'Architects' as const, id: 'LIST' },
+            ]
+          : [{ type: 'Architects' as const, id: 'LIST' }],
       transformResponse: (response: any) => {
         if (response.success && response.data) {
           return response.data;
@@ -32,9 +49,12 @@ export const architectsAPI = baseApi.injectEndpoints({
       },
     }),
 
-    // Get all architects (without pagination)
-    getAllArchitects: builder.query<Architect[], void>({
-      query: () => API_ENDPOINTS.ARCHITECTS.ALL,
+    // Get all architects (without pagination) — backs the customer form's picker
+    getAllArchitects: builder.query<Architect[], { partnerType?: PartnerType } | void>({
+      query: (params) => ({
+        url: API_ENDPOINTS.ARCHITECTS.ALL,
+        params: params && params.partnerType ? { partnerType: params.partnerType } : {},
+      }),
       transformResponse: (response: ApiResponse<Architect[]>) => response.data ?? [],
       providesTags: [{ type: 'Architects', id: 'ALL' }],
     }),
@@ -55,6 +75,21 @@ export const architectsAPI = baseApi.injectEndpoints({
       }),
       transformResponse: (response: ApiResponse<Architect>) => response.data as Architect,
       invalidatesTags: [{ type: 'Architects', id: 'LIST' }, { type: 'Architects', id: 'ALL' }],
+      // The invalidation above refetches, but the picker creates records inline and needs the
+      // new row visible to its own duplicate guard immediately — otherwise adding the same
+      // builder to two lead-source rows in one modal session would create it twice.
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(
+            architectsAPI.util.updateQueryData('getAllArchitects', undefined, (draft) => {
+              if (!draft.some((a) => a.id === data.id)) draft.push(data);
+            })
+          );
+        } catch {
+          /* the invalidation refetch reconciles */
+        }
+      },
     }),
 
     // Update architect
@@ -92,14 +127,16 @@ export const architectsAPI = baseApi.injectEndpoints({
     }),
 
     // Search architects
-    searchArchitects: builder.query<Architect[], { searchTerm: string; page?: number; size?: number }>({
+    searchArchitects: builder.query<Architect[], { searchTerm: string; page?: number; size?: number; partnerType?: PartnerType }>({
       query: ({ searchTerm, ...params }) => ({
         url: API_ENDPOINTS.ARCHITECTS.SEARCH,
         params: { searchTerm, ...params },
       }),
       transformResponse: (response: PaginatedApiResponse<Architect>) =>
         response.data?.content ?? [],
-      providesTags: [{ type: 'Architects', id: 'SEARCH' }],
+      // LIST as well, so a create/update/delete refreshes search results too — no mutation
+      // invalidates the SEARCH tag on its own.
+      providesTags: [{ type: 'Architects', id: 'SEARCH' }, { type: 'Architects', id: 'LIST' }],
     }),
 
     // Record visit

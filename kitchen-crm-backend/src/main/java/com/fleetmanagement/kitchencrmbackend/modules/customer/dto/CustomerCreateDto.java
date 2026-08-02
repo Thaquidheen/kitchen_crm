@@ -1,12 +1,16 @@
 package com.fleetmanagement.kitchencrmbackend.modules.customer.dto;
 
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -33,13 +37,17 @@ public class CustomerCreateDto {
     // Initial status (defaults to LEAD if not provided)
     private Customer.CustomerStatus status;
 
-    // Lead tracking fields
+    /** All of this customer's lead sources. Null or empty means none. */
+    @Valid
+    @Size(max = 20, message = "At most 20 lead sources")
+    private List<LeadSourceDto> leadSources;
+
+    // Legacy single-lead-source fields, still accepted so an older cached bundle keeps working.
     private Customer.LeadSourceType leadSourceType;
     private Long architectId;
     private String manualLeadName;
     private String manualLeadContact;
 
-    // Source details (Architect / Builder / Consulted / Manual)
     private String referralName;
     private String referralContact;
     private String referralLocation;

@@ -1,5 +1,6 @@
 package com.fleetmanagement.kitchencrmbackend.modules.architect.dto;
 
+import com.fleetmanagement.kitchencrmbackend.modules.architect.entity.Architect;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 public class ArchitectDto {
     private Long id;
     private String architectureName;
+    private Architect.PartnerType partnerType;
     private String firm;
     private String contactNumber;
     private String principalArchitectName;

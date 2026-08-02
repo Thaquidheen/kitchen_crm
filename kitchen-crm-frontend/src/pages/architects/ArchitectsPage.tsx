@@ -11,7 +11,8 @@ import { Modal } from '@/components/ui/Modal';
 import { useGetArchitectsQuery, useDeleteArchitectMutation, useMarkAsVisitedMutation } from '@/features/architects/architectsAPI';
 import { Plus, Search, Building2, Trash2, Edit, Phone, User, CheckCircle, Calendar, History, Filter, ArrowUpDown } from 'lucide-react';
 import toast from 'react-hot-toast';
-import type { Architect } from '@/features/architects/types';
+import { partnerTypeLabel, partnerTypeOf } from '@/features/architects/types';
+import type { Architect, PartnerType } from '@/features/architects/types';
 import ArchitectFormModal from '@/features/architects/components/ArchitectFormModal';
 import ArchitectVisitFormModal from '@/features/architects/components/ArchitectVisitFormModal';
 import ArchitectVisitHistory from '@/features/architects/components/ArchitectVisitHistory';
@@ -21,6 +22,7 @@ export function ArchitectsPage() {
   const [page, setPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [visitStatusFilter, setVisitStatusFilter] = useState<string>('');
+  const [typeFilter, setTypeFilter] = useState<'' | PartnerType>('');
   const [sortBy, setSortBy] = useState<string>('architectureName');
   const [sortDir, setSortDir] = useState<string>('asc');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,12 +31,13 @@ export function ArchitectsPage() {
   const [editingArchitect, setEditingArchitect] = useState<Architect | null>(null);
   const [selectedArchitect, setSelectedArchitect] = useState<Architect | null>(null);
 
-  const { data, isLoading } = useGetArchitectsQuery({ 
-    page, 
-    size: 10, 
-    sortBy, 
+  const { data, isLoading } = useGetArchitectsQuery({
+    page,
+    size: 10,
+    sortBy,
     sortDir,
-    visitStatus: visitStatusFilter || undefined
+    visitStatus: visitStatusFilter || undefined,
+    partnerType: typeFilter || undefined
   });
   const [deleteArchitect] = useDeleteArchitectMutation();
   const [markAsVisited] = useMarkAsVisitedMutation();
@@ -83,13 +86,19 @@ export function ArchitectsPage() {
     setIsHistoryModalOpen(true);
   };
 
+  // The type filter is applied server-side too; this keeps the chips honest for any row the
+  // server returned before the param landed, and matches the existing client-side search.
+  const typedArchitects = typeFilter
+    ? architects.filter((a: Architect) => partnerTypeOf(a) === typeFilter)
+    : architects;
+
   const filteredArchitects = searchTerm
-    ? architects.filter((a: Architect) => 
+    ? typedArchitects.filter((a: Architect) =>
         a.architectureName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.firm?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.principalArchitectName?.toLowerCase().includes(searchTerm.toLowerCase())
       )
-    : architects;
+    : typedArchitects;
 
   return (
     <div className="min-h-screen bg-background-900 p-4 sm:p-6">
@@ -99,16 +108,53 @@ export function ArchitectsPage() {
           <div className="flex items-center gap-2 sm:gap-3">
             <Building2 className="h-6 w-6 sm:h-8 sm:w-8 text-primary-600" />
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-text-900">Architects</h1>
-              <p className="text-xs sm:text-sm text-text-600 mt-1">Manage architecture firms and architects</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-text-900">Architects &amp; Builders</h1>
+              <p className="text-xs sm:text-sm text-text-600 mt-1">Manage architecture firms, architects and builders</p>
             </div>
           </div>
 
           <Button variant="primary" size="sm" onClick={handleAddArchitect} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Add Architect</span>
+            <span className="hidden sm:inline">Add {typeFilter ? partnerTypeLabel(typeFilter) : 'Architect'}</span>
             <span className="sm:hidden">Add</span>
           </Button>
+        </div>
+
+        {/* Type filter chips */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {([
+            { value: '', label: 'All' },
+            { value: 'ARCHITECT', label: 'Architects' },
+            { value: 'BUILDER', label: 'Builders' },
+          ] as const).map((chip) => {
+            const active = typeFilter === chip.value;
+            return (
+              <button
+                key={chip.value || 'all'}
+                onClick={() => {
+                  setTypeFilter(chip.value as '' | PartnerType);
+                  setPage(0);
+                }}
+                className="flex items-center gap-2 px-[13px] py-2 rounded-[11px] border transition-colors"
+                style={
+                  active
+                    ? {
+                        borderColor: 'var(--color-primary-600)',
+                        background: 'color-mix(in oklab, var(--color-primary-600) 16%, transparent)',
+                      }
+                    : { borderColor: 'var(--color-background-600)', background: 'var(--color-background-800)' }
+                }
+              >
+                <span
+                  className={`text-[12.5px] whitespace-nowrap ${
+                    active ? 'font-semibold text-text-900' : 'font-medium text-text-700'
+                  }`}
+                >
+                  {chip.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Filters and Search */}
@@ -189,7 +235,9 @@ export function ArchitectsPage() {
           <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-text-600">Total Architects</p>
+                <p className="text-xs sm:text-sm text-text-600">
+                  {typeFilter ? `Total ${partnerTypeLabel(typeFilter)}s` : 'Total'}
+                </p>
                 <div className="text-xl sm:text-2xl font-bold text-text-900 mt-1">
                   {isLoading ? (
                     <div className="h-6 sm:h-8 w-20 sm:w-24 bg-background-700 rounded animate-pulse" />
@@ -206,7 +254,9 @@ export function ArchitectsPage() {
 
       {/* Architect List */}
       <Card className="p-4 sm:p-6 bg-background-800 border-background-600">
-        <h2 className="text-lg sm:text-xl font-bold text-text-900 mb-3 sm:mb-4">All Architects</h2>
+        <h2 className="text-lg sm:text-xl font-bold text-text-900 mb-3 sm:mb-4">
+          {typeFilter ? `All ${partnerTypeLabel(typeFilter)}s` : 'All Architects & Builders'}
+        </h2>
         
         {isLoading ? (
           <div className="space-y-3 sm:space-y-4">
@@ -230,8 +280,18 @@ export function ArchitectsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       <h3 className="text-base sm:text-lg font-semibold text-text-900 break-words">{architect.architectureName}</h3>
-                      <ArchitectVisitBadge 
-                        lastVisitDate={architect.lastVisitDate} 
+                      <span
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border"
+                        style={
+                          partnerTypeOf(architect) === 'BUILDER'
+                            ? { background: 'var(--st-nego-bg)', color: 'var(--st-nego-fg)', borderColor: 'transparent' }
+                            : { background: 'var(--st-design-bg)', color: 'var(--st-design-fg)', borderColor: 'transparent' }
+                        }
+                      >
+                        {partnerTypeLabel(partnerTypeOf(architect))}
+                      </span>
+                      <ArchitectVisitBadge
+                        lastVisitDate={architect.lastVisitDate}
                         hasVisits={architect.hasVisits}
                       />
                     </div>
@@ -349,6 +409,7 @@ export function ArchitectsPage() {
             setEditingArchitect(null);
           }}
           architect={editingArchitect}
+          defaultType={typeFilter || 'ARCHITECT'}
         />
       )}
 

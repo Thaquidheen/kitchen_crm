@@ -16,8 +16,22 @@ import {
   useGetCustomerByIdQuery,
 } from '../../customers/customersAPI';
 import { useCreateReminderMutation } from '@/app/baseApi';
-import type { Customer, CustomerCreate, CustomerStatus, LeadSourceType } from '../../customers/types';
-import { SELECTABLE_LEAD_SOURCES, LEAD_SOURCE_LABELS, isReferralSource } from '../../customers/leadSource';
+import { Plus } from 'lucide-react';
+import type {
+  Customer,
+  CustomerCreate,
+  CustomerLeadSource,
+  CustomerStatus,
+  LeadSourceType,
+} from '../../customers/types';
+import {
+  LEAD_SOURCE_LABELS,
+  customerLeadSourceRows,
+  isFreeTextSource,
+  isLinkedSource,
+} from '../../customers/leadSource';
+import { LeadSourceRow } from './LeadSourceRow';
+import type { LeadSourceRowDraft } from './LeadSourceRow';
 
 const customerSchema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -29,14 +43,8 @@ const customerSchema = z.object({
   status: z
     .enum(['LEAD', 'POTENTIAL', 'DESIGN_STAGE', 'QUOTE_GIVEN', 'FOLLOW_UP', 'NEGOTIATIONS', 'CONFIRMED', 'LOST'])
     .optional(),
-  leadSourceType: z
-    .enum(['NONE', 'ARCHITECT', 'MANUAL', 'ONLINE', 'WALK_IN', 'SCOUTING', 'BUILDER_REFERRAL', 'MANUAL_REFERRAL', 'CONSULTED'])
-    .optional(),
-  referralName: z.string().optional().or(z.literal('')),
-  referralFirm: z.string().optional().or(z.literal('')),
-  referralContact: z.string().optional().or(z.literal('')),
-  referralEmail: z.string().optional().or(z.literal('')),
-  referralLocation: z.string().optional().or(z.literal('')),
+  // Lead sources are a list, held in component state alongside the form (see leadSources
+  // below) exactly as kitchenTypes is — the zod schema stays flat.
   followUpNotes: z.string().optional().or(z.literal('')),
   nextFollowUpDate: z.string().optional().or(z.literal('')),
 });
@@ -71,6 +79,9 @@ const labelCls = 'block text-[12.5px] font-medium text-text-800 mb-1.5';
 const sectionLabelCls =
   'text-[10.5px] font-semibold tracking-[0.09em] uppercase text-text-500 mb-3';
 
+const newRowKey = () =>
+  globalThis.crypto?.randomUUID?.() ?? `ls-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
 export const CustomerForm: React.FC<CustomerFormProps> = ({
   customerId,
   onSuccess,
@@ -88,6 +99,8 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   const [createReminder] = useCreateReminderMutation();
 
   const [kitchenTypes, setKitchenTypes] = useState<string[]>([]);
+  const [leadSources, setLeadSources] = useState<LeadSourceRowDraft[]>([]);
+  const [leadSourceErrors, setLeadSourceErrors] = useState<Record<string, string>>({});
 
   const defaultValues: CustomerFormValues = useMemo(
     () => ({
@@ -98,12 +111,6 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
       place: existingCustomer?.place ?? '',
       sqft: existingCustomer?.sqft ?? '',
       status: existingCustomer?.status ?? 'LEAD',
-      leadSourceType: existingCustomer?.leadSourceType ?? 'NONE',
-      referralName: existingCustomer?.referralName ?? '',
-      referralFirm: existingCustomer?.referralFirm ?? '',
-      referralContact: existingCustomer?.referralContact ?? '',
-      referralEmail: existingCustomer?.referralEmail ?? '',
-      referralLocation: existingCustomer?.referralLocation ?? '',
       followUpNotes: existingCustomer?.followUpNotes ?? '',
       nextFollowUpDate: '',
     }),
@@ -115,18 +122,11 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
     handleSubmit,
     reset,
     formState: { errors },
-    watch,
   } = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
     defaultValues,
     mode: 'onBlur',
   });
-
-  const leadSourceType = watch('leadSourceType');
-  const showDetails = isReferralSource(leadSourceType as LeadSourceType);
-  const detailsLabel = leadSourceType
-    ? `${LEAD_SOURCE_LABELS[leadSourceType as LeadSourceType]} details`
-    : 'Source details';
 
   // Sync when existing customer loads (edit mode)
   useEffect(() => {
@@ -138,8 +138,46 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           .map((t) => t.trim())
           .filter(Boolean)
       );
+      setLeadSources(
+        customerLeadSourceRows(existingCustomer).map((r) => ({ ...r, key: newRowKey() }))
+      );
+      setLeadSourceErrors({});
     }
   }, [isEdit, existingCustomer, reset, defaultValues]);
+
+  const addLeadSource = () =>
+    setLeadSources((prev) => [...prev, { key: newRowKey(), sourceType: 'ARCHITECT' }]);
+
+  const updateLeadSource = (key: string, patch: Partial<CustomerLeadSource>) => {
+    setLeadSources((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+    setLeadSourceErrors(({ [key]: _drop, ...rest }) => rest);
+  };
+
+  const removeLeadSource = (key: string) => {
+    setLeadSources((prev) => prev.filter((r) => r.key !== key));
+    setLeadSourceErrors(({ [key]: _drop, ...rest }) => rest);
+  };
+
+  // Changing the type clears the row body, so an architect link can't survive a switch to
+  // Walk-in, and an architect id can't survive a switch to Builder.
+  const changeRowType = (key: string, sourceType: LeadSourceType) => {
+    setLeadSources((prev) =>
+      prev.map((r) => (r.key !== key ? r : { key: r.key, id: r.id, sourceType }))
+    );
+    setLeadSourceErrors(({ [key]: _drop, ...rest }) => rest);
+  };
+
+  const validateLeadSources = (rows: LeadSourceRowDraft[]): Record<string, string> => {
+    const errs: Record<string, string> = {};
+    rows.forEach((r) => {
+      if (isLinkedSource(r.sourceType) && !r.architectId) {
+        errs[r.key] = `Select an existing ${LEAD_SOURCE_LABELS[r.sourceType].toLowerCase()} or create a new one`;
+      } else if (isFreeTextSource(r.sourceType) && !r.referralName?.trim()) {
+        errs[r.key] = 'Name is required';
+      }
+    });
+    return errs;
+  };
 
   const toggleKitchenType = (t: string) => {
     setKitchenTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
@@ -148,8 +186,16 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   const extraKitchenTypes = kitchenTypes.filter((t) => !KITCHEN_TYPE_OPTIONS.includes(t));
 
   const onSubmit = async (values: CustomerFormValues) => {
+    const lsErrors = validateLeadSources(leadSources);
+    if (Object.keys(lsErrors).length) {
+      setLeadSourceErrors(lsErrors);
+      toast.error('Fix the highlighted lead sources');
+      return;
+    }
+
     try {
-      const withDetails = isReferralSource(values.leadSourceType as LeadSourceType);
+      const rows = leadSources.map(({ key: _key, ...row }, i) => ({ ...row, sortOrder: i }));
+
       const payloadBase = {
         name: values.name,
         contact: values.contact,
@@ -160,12 +206,10 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
         kitchenTypes: kitchenTypes.length ? kitchenTypes.join(', ') : undefined,
         followUpNotes: values.followUpNotes || undefined,
         status: values.status,
-        leadSourceType: values.leadSourceType,
-        referralName: withDetails ? values.referralName || undefined : undefined,
-        referralFirm: withDetails ? values.referralFirm || undefined : undefined,
-        referralContact: withDetails ? values.referralContact || undefined : undefined,
-        referralEmail: withDetails ? values.referralEmail || undefined : undefined,
-        referralLocation: withDetails ? values.referralLocation || undefined : undefined,
+        // Always sent, even when empty — an omitted key would leave the server's existing
+        // sources untouched, and updateCustomer's optimistic merge only copies keys present
+        // on the patch, so the UI would keep showing stale rows.
+        leadSources: rows,
       };
 
       if (isEdit) {
@@ -190,6 +234,8 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
         onSuccess?.(res as unknown as Customer);
         reset();
         setKitchenTypes([]);
+        setLeadSources([]);
+        setLeadSourceErrors({});
       }
     } catch (e: any) {
       toast.error(e?.data?.message || 'Operation failed');
@@ -284,46 +330,52 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           <div className={sectionLabelCls}>Lead</div>
           <div className="space-y-3.5">
             <div>
-              <label className={labelCls}>Lead source</label>
-              <select className={inputCls} {...register('leadSourceType')} disabled={disabled}>
-                {SELECTABLE_LEAD_SOURCES.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11.5px] text-text-500 mt-1">Used for filtering and sorting only.</p>
-            </div>
-
-            {showDetails && (
-              <div className="rounded-[12px] border border-background-600 bg-background-700 p-3.5 space-y-3">
-                <div className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-text-500">
-                  {detailsLabel}
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelCls}>Name</label>
-                    <input className={inputCls} placeholder="Name" {...register('referralName')} disabled={disabled} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Firm name</label>
-                    <input className={inputCls} placeholder="Firm / company" {...register('referralFirm')} disabled={disabled} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Phone</label>
-                    <input className={inputCls} placeholder="Phone number" {...register('referralContact')} disabled={disabled} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Email</label>
-                    <input className={inputCls} placeholder="name@example.com" {...register('referralEmail')} disabled={disabled} />
-                  </div>
-                </div>
-                <div>
-                  <label className={labelCls}>Location</label>
-                  <input className={inputCls} placeholder="Location" {...register('referralLocation')} disabled={disabled} />
-                </div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={`${labelCls} mb-0`}>Lead sources</label>
+                <button
+                  type="button"
+                  onClick={addLeadSource}
+                  disabled={disabled}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[9px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors disabled:opacity-60"
+                >
+                  <Plus size={13} /> Add lead source
+                </button>
               </div>
-            )}
+
+              {leadSources.length === 0 ? (
+                <button
+                  type="button"
+                  onClick={addLeadSource}
+                  disabled={disabled}
+                  className="w-full px-3 py-4 rounded-[12px] border border-dashed border-background-500 text-[12.5px] text-text-600 hover:text-text-900 hover:border-background-400 transition-colors"
+                >
+                  No lead sources yet — click to add the first one.
+                </button>
+              ) : (
+                <div className="space-y-2.5">
+                  {leadSources.map((row, i) => (
+                    <LeadSourceRow
+                      key={row.key}
+                      row={row}
+                      index={i}
+                      disabled={disabled}
+                      error={leadSourceErrors[row.key]}
+                      takenArchitectIds={leadSources
+                        .filter((r) => r.key !== row.key && r.architectId)
+                        .map((r) => r.architectId as number)}
+                      onChangeType={(t) => changeRowType(row.key, t)}
+                      onChange={(patch) => updateLeadSource(row.key, patch)}
+                      onRemove={() => removeLeadSource(row.key)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <p className="text-[11.5px] text-text-500 mt-1.5">
+                Add as many as apply — an architect and a builder, for example. Architects and
+                builders are saved to the Architects module and reusable across customers.
+              </p>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>

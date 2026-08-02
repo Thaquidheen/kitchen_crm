@@ -6,6 +6,7 @@ import com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectDto;
 import com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectUpdateDto;
 import com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectVisitCreateDto;
 import com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectVisitDto;
+import com.fleetmanagement.kitchencrmbackend.modules.architect.entity.Architect;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -14,14 +15,15 @@ import java.util.List;
 public interface ArchitectService {
 
     /**
-     * Get all architects with pagination
+     * Get architects with pagination, optionally filtered by partner type and visit status
      */
-    ApiResponse<Page<ArchitectDto>> getAllArchitects(Pageable pageable, String visitStatus);
+    ApiResponse<Page<ArchitectDto>> getAllArchitects(Pageable pageable, String visitStatus,
+                                                     Architect.PartnerType partnerType);
 
     /**
-     * Get all architects (without pagination)
+     * Get all architects (without pagination), optionally filtered by partner type
      */
-    ApiResponse<List<ArchitectDto>> getAllArchitects();
+    ApiResponse<List<ArchitectDto>> getAllArchitects(Architect.PartnerType partnerType);
 
     /**
      * Get architect by ID
@@ -44,9 +46,10 @@ public interface ArchitectService {
     ApiResponse<String> deleteArchitect(Long id);
 
     /**
-     * Search architects by name or firm
+     * Search architects across name, firm, principal and contact number
      */
-    ApiResponse<Page<ArchitectDto>> searchArchitects(String searchTerm, Pageable pageable);
+    ApiResponse<Page<ArchitectDto>> searchArchitects(String searchTerm, Pageable pageable,
+                                                     Architect.PartnerType partnerType);
 
     /**
      * Record a visit to an architect

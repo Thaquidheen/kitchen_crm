@@ -37,7 +37,7 @@ import { CustomerTimelineTab } from '../../features/customers/components/Custome
 import { StatusChangeModal } from '../../features/customers/components/StatusChangeModal';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { STATUS_PILL } from '../../features/customers/components/CustomerList';
-import { formatLeadSource } from '../../features/customers/leadSource';
+import { LeadSourceChips } from '../../features/customers/components/LeadSourceChips';
 import type { CustomerStatus } from '../../features/customers/types';
 
 const TABS = ['Overview', 'Reminders', 'Pipeline', 'Quotations', 'Projects', 'Design', 'Production', 'Timeline', 'Warranty'];
@@ -150,7 +150,7 @@ const CustomerDetailPage: React.FC = () => {
     { icon: <Mail size={15} />, label: 'Email', value: customer.email || '—' },
     { icon: <MapPin size={15} />, label: 'Address', value: customer.address || '—' },
     { icon: <LayoutGrid size={15} />, label: 'Kitchen types', value: customer.kitchenTypes || '—' },
-    { icon: <Target size={15} />, label: 'Lead source', value: formatLeadSource(customer) },
+    { icon: <Target size={15} />, label: 'Lead sources', value: <LeadSourceChips customer={customer} /> },
     { icon: <Calendar size={15} />, label: 'Created', value: fmtDate(customer.createdAt) },
     { icon: <Clock size={15} />, label: 'Last updated', value: fmtDate(customer.updatedAt) },
   ];

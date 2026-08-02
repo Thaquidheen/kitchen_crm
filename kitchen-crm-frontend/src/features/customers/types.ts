@@ -16,9 +16,31 @@ export type CustomerStatus =
   | 'LOST';
 
 // 'MANUAL' is legacy (replaced by 'MANUAL_REFERRAL'); kept so old records still type-check.
+/**
+ * One entry in a customer's lead-source list. ARCHITECT/BUILDER link an Architects-module
+ * record (the architect* fields are a read-only projection of it); the rest carry free text.
+ */
+export interface CustomerLeadSource {
+  id?: number;
+  sourceType: LeadSourceType;
+  architectId?: number;
+  architectName?: string;
+  architectFirm?: string;
+  architectContact?: string;
+  architectPartnerType?: 'ARCHITECT' | 'BUILDER';
+  referralName?: string;
+  referralContact?: string;
+  referralLocation?: string;
+  referralDesignation?: string;
+  referralFirm?: string;
+  referralEmail?: string;
+  sortOrder?: number;
+}
+
 export type LeadSourceType =
   | 'NONE'
   | 'ARCHITECT'
+  | 'BUILDER'
   | 'MANUAL'
   | 'ONLINE'
   | 'WALK_IN'
@@ -40,13 +62,14 @@ export interface Customer {
   contactPerson?: string;
   followUpNotes?: string;
   status: CustomerStatus;
-  // Lead tracking fields
+  /** All lead sources. Read through customerLeadSourceRows(), never directly. */
+  leadSources?: CustomerLeadSource[];
+  // Legacy single-lead-source fields, mirrored by the backend from leadSources[0].
   architectId?: number;
   architectName?: string;
   leadSourceType?: LeadSourceType;
   manualLeadName?: string;
   manualLeadContact?: string;
-  // Source details (Architect / Builder / Consulted / Manual)
   referralName?: string;
   referralContact?: string;
   referralLocation?: string;
@@ -69,12 +92,12 @@ export interface CustomerCreate {
   contactPerson?: string;
   followUpNotes?: string;
   status?: CustomerStatus;
-  // Lead tracking fields
+  leadSources?: CustomerLeadSource[];
+  // Legacy single-lead-source fields, still accepted by the backend.
   leadSourceType?: LeadSourceType;
   architectId?: number;
   manualLeadName?: string;
   manualLeadContact?: string;
-  // Source details (Architect / Builder / Consulted / Manual)
   referralName?: string;
   referralContact?: string;
   referralLocation?: string;
