@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Pencil, ChevronDown, ChevronRight, Layers, Receipt, X } from 'lucide-react';
 import { useState } from 'react';
+import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 import type { QuotationElevation, QuotationOtherExpense } from '../types';
 
 interface AccessoryItem {
@@ -119,6 +120,7 @@ export function SelectedProductsList({
   onEditCabinet,
   onEditDoor
 }: SelectedProductsListProps) {
+  const isSuperAdmin = useIsSuperAdmin();
   const [expandedElevations, setExpandedElevations] = useState<Record<string, boolean>>({});
 
   // Group all items by elevation
@@ -284,9 +286,12 @@ export function SelectedProductsList({
             )}
           </div>
           <div className="flex items-center gap-0.5 flex-shrink-0">
-            <span className="font-semibold whitespace-nowrap text-text-900 tabular-nums">
-              ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
-            </span>
+            {/* Pre-margin cost — hidden from staff. The Grand Total below is customer-facing. */}
+            {isSuperAdmin && (
+              <span className="font-semibold whitespace-nowrap text-text-900 tabular-nums">
+                ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
+              </span>
+            )}
             {showEdit && (
               <button
                 onClick={handleEdit}
@@ -375,9 +380,11 @@ export function SelectedProductsList({
                 </span>
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
-                <span className="text-xs font-semibold text-text-900 tabular-nums">
-                  ₹{group.subtotal.toLocaleString('en-IN')}
-                </span>
+                {isSuperAdmin && (
+                  <span className="text-xs font-semibold text-text-900 tabular-nums">
+                    ₹{group.subtotal.toLocaleString('en-IN')}
+                  </span>
+                )}
                 {isExpanded ? (
                   <ChevronDown className="h-3.5 w-3.5 text-text-600" />
                 ) : (

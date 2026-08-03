@@ -9,6 +9,7 @@ import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { Select } from '../../../components/ui/Select';
 import type { QuotationElevation } from '../types';
+import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 
 export interface AccessoryWithDetails {
   id: number;
@@ -44,6 +45,8 @@ export function AddAccessoryModal({
   availableElevations = [],
   onAdd,
 }: AddAccessoryModalProps) {
+  // Unit price here is the accessory's companyPrice — internal cost.
+  const isSuperAdmin = useIsSuperAdmin();
   const [quantityStr, setQuantityStr] = useState<string>('1');
   const quantity = quantityStr === '' ? 0 : parseInt(quantityStr) || 0;
   const [selectedElevationId, setSelectedElevationId] = useState<number | string>('');
@@ -95,9 +98,11 @@ export function AddAccessoryModal({
         {/* Accessory Info */}
         <div className="mb-4 sm:mb-5 p-3.5 bg-background-700/60 rounded-xl border border-background-600">
           <div className="text-text-900 font-[650] text-sm">{accessory.name}</div>
-          <div className="text-text-600 text-xs mt-0.5">
-            Unit price · <span className="font-semibold text-text-800 tabular-nums">₹{unitPrice.toLocaleString('en-IN')}</span>
-          </div>
+          {isSuperAdmin && (
+            <div className="text-text-600 text-xs mt-0.5">
+              Unit price · <span className="font-semibold text-text-800 tabular-nums">₹{unitPrice.toLocaleString('en-IN')}</span>
+            </div>
+          )}
         </div>
 
         {/* Quantity Input */}
@@ -136,10 +141,12 @@ export function AddAccessoryModal({
         {/* Price Preview */}
         {quantity > 0 && (
           <div className="p-3.5 bg-background-700/40 border border-background-600 rounded-xl">
-            <div className="flex justify-between text-xs mb-1.5">
-              <span className="text-text-600">Unit Price</span>
-              <span className="text-text-900 font-medium tabular-nums">₹{unitPrice.toLocaleString('en-IN')}</span>
-            </div>
+            {isSuperAdmin && (
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-text-600">Unit Price</span>
+                <span className="text-text-900 font-medium tabular-nums">₹{unitPrice.toLocaleString('en-IN')}</span>
+              </div>
+            )}
             <div className="flex justify-between text-xs mb-1.5">
               <span className="text-text-600">Quantity</span>
               <span className="text-text-900 font-medium tabular-nums">× {quantity}</span>

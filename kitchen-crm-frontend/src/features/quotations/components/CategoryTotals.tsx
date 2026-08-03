@@ -1,11 +1,13 @@
 /**
  * CategoryTotals Component
- * Displays category-wise breakdown of totals including base, margin, tax, and final amounts
+ * Category-wise breakdown of totals. Base and margin rows are internal and shown to super
+ * admins only; tax and the category total are what the customer pays, so everyone sees them.
  */
 
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Package, DoorClosed, Lightbulb, Wrench, Receipt } from 'lucide-react';
+import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 import type { QuotationOtherExpense } from '../types';
 
 export interface CategoryTotalsProps {
@@ -58,6 +60,8 @@ export function CategoryTotals({
   miscellaneousTaxPercentage = 18,
   kitchenName,
 }: CategoryTotalsProps) {
+  // Read the role here rather than threading a prop through every call site.
+  const isSuperAdmin = useIsSuperAdmin();
   const calculateCategoryTotal = (
     items: Array<{ totalPrice?: number; price?: number }>,
     marginPercentage: number,
@@ -166,18 +170,22 @@ export function CategoryTotals({
 
                 {hasItems ? (
                   <div className="space-y-1.5 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-text-600">Base Total</span>
-                      <span className="text-text-900 font-medium tabular-nums">
-                        ₹{category.breakdown.baseTotal.toLocaleString('en-IN')}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-text-600">Margin ({category.marginPercentage}%)</span>
-                      <span className="text-text-900 font-medium tabular-nums">
-                        ₹{category.breakdown.marginAmount.toLocaleString('en-IN')}
-                      </span>
-                    </div>
+                    {isSuperAdmin && (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-text-600">Base Total</span>
+                          <span className="text-text-900 font-medium tabular-nums">
+                            ₹{category.breakdown.baseTotal.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-text-600">Margin ({category.marginPercentage}%)</span>
+                          <span className="text-text-900 font-medium tabular-nums">
+                            ₹{category.breakdown.marginAmount.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-text-600">Tax ({category.taxPercentage}%)</span>
                       <span className="text-text-900 font-medium tabular-nums">
@@ -208,18 +216,22 @@ export function CategoryTotals({
                 </span>
               </div>
               <div className="space-y-1.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-text-600">Base Total</span>
-                  <span className="text-text-900 font-medium tabular-nums">
-                    ₹{otherExpensesBase.toLocaleString('en-IN')}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-text-600">Margin ({miscellaneousMarginPercentage}%)</span>
-                  <span className="text-text-900 font-medium tabular-nums">
-                    ₹{miscMargin.toLocaleString('en-IN')}
-                  </span>
-                </div>
+                {isSuperAdmin && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-text-600">Base Total</span>
+                      <span className="text-text-900 font-medium tabular-nums">
+                        ₹{otherExpensesBase.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-600">Margin ({miscellaneousMarginPercentage}%)</span>
+                      <span className="text-text-900 font-medium tabular-nums">
+                        ₹{miscMargin.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between">
                   <span className="text-text-600">Tax ({miscellaneousTaxPercentage}%)</span>
                   <span className="text-text-900 font-medium tabular-nums">

@@ -10,6 +10,7 @@ import { Button } from '../../../components/ui/Button';
 import { Select } from '../../../components/ui/Select';
 import type { DoorType } from '../../products/types';
 import type { QuotationElevation } from '../types';
+import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 
 export interface DoorWithDimensions {
   doorTypeId: number;
@@ -42,6 +43,8 @@ export function AddDoorModal({
   editData,
   editIndex,
 }: AddDoorModalProps) {
+  // companyPrice is the internal rate; staff see only the resulting total.
+  const isSuperAdmin = useIsSuperAdmin();
   const isEditMode = editData !== undefined && editIndex !== undefined;
   const [widthMm, setWidthMm] = useState<number>(0);
   const [heightMm, setHeightMm] = useState<number>(0);
@@ -121,7 +124,9 @@ export function AddDoorModal({
         <div className="mb-4 sm:mb-5 p-3.5 bg-background-700/60 rounded-xl border border-background-600">
           <div className="text-text-900 font-[650] text-sm">{door.name}</div>
           <div className="text-text-600 text-xs mt-0.5">
-            <span className="font-semibold text-text-800 tabular-nums">₹{door.companyPrice?.toLocaleString('en-IN')}/sqft</span>
+            {isSuperAdmin && (
+              <span className="font-semibold text-text-800 tabular-nums">₹{door.companyPrice?.toLocaleString('en-IN')}/sqft</span>
+            )}
             {door.brandName && <> · {door.brandName}</>}
             {door.material && <> · {door.material}</>}
           </div>
@@ -185,7 +190,7 @@ export function AddDoorModal({
           <div className="mb-4 p-3 bg-background-700/40 border border-background-600 rounded-xl">
             <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Door Calculation</div>
             <div className="text-text-900 font-medium mt-1 text-xs tabular-nums">
-              {faceArea.toFixed(2)} sqft × ₹{door.companyPrice?.toLocaleString('en-IN')} × {quantity} = ₹
+              {isSuperAdmin ? `${faceArea.toFixed(2)} sqft × ₹${door.companyPrice?.toLocaleString('en-IN')} × ${quantity} = ` : ''}₹
               {doorPrice.toFixed(2)}
             </div>
           </div>
@@ -194,7 +199,7 @@ export function AddDoorModal({
         {/* Total Preview */}
         {faceArea > 0 && (
           <div className="mt-4 p-3.5 bg-primary-600/[0.06] border border-primary-600/40 rounded-xl">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Estimated Total (before margin & tax)</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Estimated Total</div>
             <div className="text-primary-600 font-bold text-lg mt-0.5 tabular-nums">
               ₹{doorPrice.toFixed(2)}
             </div>

@@ -599,7 +599,7 @@ public class QuotationServiceImpl implements QuotationService {
                 QuotationAccessory accessory = new QuotationAccessory();
                 accessory.setQuotation(quotation);
                 accessory.setQuantity(accessoryDto.getQuantity());
-                accessory.setUnitPrice(accessoryDto.getUnitPrice());
+                accessory.setUnitPrice(resolveAccessoryUnitPrice(accessoryDto));
                 accessory.setDescription(accessoryDto.getDescription());
                 accessory.setCustomItem(accessoryDto.getCustomItem());
                 accessory.setCustomItemName(accessoryDto.getCustomItemName());
@@ -718,7 +718,7 @@ public class QuotationServiceImpl implements QuotationService {
                 lighting.setItemType(QuotationLighting.LightingItemType.valueOf(lightingDto.getItemType()));
                 lighting.setItemId(lightingDto.getItemId());
                 lighting.setQuantity(lightingDto.getQuantity());
-                lighting.setUnitPrice(lightingDto.getUnitPrice());
+                lighting.setUnitPrice(resolveLightingUnitPrice(lightingDto));
 
                 // CRITICAL FIX: Set the unit field based on item type
                 lighting.setUnit(determineUnit(lightingDto.getItemType()));
@@ -937,7 +937,7 @@ public class QuotationServiceImpl implements QuotationService {
                 accessory.setQuotation(quotation);
                 accessory.setKitchen(kitchen); // CRITICAL: Associate with kitchen
                 accessory.setQuantity(accessoryDto.getQuantity());
-                accessory.setUnitPrice(accessoryDto.getUnitPrice());
+                accessory.setUnitPrice(resolveAccessoryUnitPrice(accessoryDto));
                 accessory.setDescription(accessoryDto.getDescription());
                 accessory.setCustomItem(accessoryDto.getCustomItem());
                 accessory.setCustomItemName(accessoryDto.getCustomItemName());
@@ -1044,7 +1044,7 @@ public class QuotationServiceImpl implements QuotationService {
                 lighting.setItemType(QuotationLighting.LightingItemType.valueOf(lightingDto.getItemType()));
                 lighting.setItemId(lightingDto.getItemId());
                 lighting.setQuantity(lightingDto.getQuantity());
-                lighting.setUnitPrice(lightingDto.getUnitPrice());
+                lighting.setUnitPrice(resolveLightingUnitPrice(lightingDto));
 
                 // Set the unit field based on item type
                 lighting.setUnit(determineUnit(lightingDto.getItemType()));
@@ -1253,7 +1253,11 @@ public class QuotationServiceImpl implements QuotationService {
         dto.setMiscellaneousMrpMarginPercentage(quotation.getMiscellaneousMrpMarginPercentage());
         dto.setMiscellaneousMrpTaxPercentage(quotation.getMiscellaneousMrpTaxPercentage());
 
-        dto.setSubtotal(quotation.getSubtotal());
+        // Subtotal is the pre-margin cost base — internal. Tax and the total the customer pays
+        // stay visible to everyone.
+        if ("ROLE_SUPER_ADMIN".equals(userRole)) {
+            dto.setSubtotal(quotation.getSubtotal());
+        }
         dto.setTaxAmount(quotation.getTaxAmount());
         dto.setTotalAmount(quotation.getTotalAmount());
         dto.setStatus(quotation.getStatus());
@@ -1287,21 +1291,24 @@ public class QuotationServiceImpl implements QuotationService {
         dto.setPaymentDeliveryPct(quotation.getPaymentDeliveryPct());
         dto.setPaymentInstallationPct(quotation.getPaymentInstallationPct());
 
-        // Set category-wise totals if they exist
+        // Category-wise totals. The final totals are what the customer pays and stay visible to
+        // everyone; the base totals are pre-margin cost, so they go to a super admin only —
+        // a base total sitting next to a final total reveals the markup by subtraction.
+        boolean isAdmin = "ROLE_SUPER_ADMIN".equals(userRole);
         if (quotation.getAccessoriesBaseTotal() != null) {
-            dto.setAccessoriesBaseTotal(quotation.getAccessoriesBaseTotal());
+            if (isAdmin) dto.setAccessoriesBaseTotal(quotation.getAccessoriesBaseTotal());
             dto.setAccessoriesFinalTotal(quotation.getAccessoriesFinalTotal());
         }
         if (quotation.getCabinetsBaseTotal() != null) {
-            dto.setCabinetsBaseTotal(quotation.getCabinetsBaseTotal());
+            if (isAdmin) dto.setCabinetsBaseTotal(quotation.getCabinetsBaseTotal());
             dto.setCabinetsFinalTotal(quotation.getCabinetsFinalTotal());
         }
         if (quotation.getDoorsBaseTotal() != null) {
-            dto.setDoorsBaseTotal(quotation.getDoorsBaseTotal());
+            if (isAdmin) dto.setDoorsBaseTotal(quotation.getDoorsBaseTotal());
             dto.setDoorsFinalTotal(quotation.getDoorsFinalTotal());
         }
         if (quotation.getLightingBaseTotal() != null) {
-            dto.setLightingBaseTotal(quotation.getLightingBaseTotal());
+            if (isAdmin) dto.setLightingBaseTotal(quotation.getLightingBaseTotal());
             dto.setLightingFinalTotal(quotation.getLightingFinalTotal());
         }
 
@@ -1337,7 +1344,7 @@ public class QuotationServiceImpl implements QuotationService {
         dto.setOtherExpenses(loadOtherExpenses(quotation.getId()));
 
         // Load kitchens
-        dto.setKitchens(loadKitchens(quotation.getId()));
+        dto.setKitchens(loadKitchens(quotation.getId(), userRole));
 
         // MRP (list price) — per-category breakdown computed once here with the entity's
         // (always-available) per-category MRP margin/tax so it is correct for every role.
@@ -1387,7 +1394,7 @@ public class QuotationServiceImpl implements QuotationService {
             QuotationAccessoryDto dto = new QuotationAccessoryDto();
             dto.setId(quotationAccessory.getId());
             dto.setQuantity(quotationAccessory.getQuantity());
-            dto.setUnitPrice(quotationAccessory.getUnitPrice());
+            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(quotationAccessory.getUnitPrice());
             dto.setTotalPrice(quotationAccessory.getTotalPrice());
             dto.setDescription(quotationAccessory.getDescription());
             dto.setCustomItem(quotationAccessory.getCustomItem());
@@ -1430,7 +1437,56 @@ public class QuotationServiceImpl implements QuotationService {
         }).toList();
     }
 
-    private List<QuotationKitchenDto> loadKitchens(Long quotationId) {
+    /**
+     * Unit prices are withheld from non-admin responses, so an incoming line item may legitimately
+     * carry a null unitPrice when a staff member re-saves a quotation they were shown. Resolving it
+     * from the catalog keeps the total correct, and means the price no longer depends on whatever
+     * the client sends back.
+     *
+     * <p>Cabinets and doors do not need this — PricingServiceImpl recomputes their unit price from
+     * dimensions and rates on every save.
+     */
+    private BigDecimal resolveAccessoryUnitPrice(QuotationAccessoryDto dto) {
+        if (dto.getUnitPrice() != null) {
+            return dto.getUnitPrice();
+        }
+        if (dto.getAccessoryId() == null) {
+            return BigDecimal.ZERO;
+        }
+        return productAccessoryRepository.findById(dto.getAccessoryId())
+                .map(a -> a.getCompanyPrice() != null ? a.getCompanyPrice() : BigDecimal.ZERO)
+                .orElse(BigDecimal.ZERO);
+    }
+
+    /** See {@link #resolveAccessoryUnitPrice}. */
+    private BigDecimal resolveLightingUnitPrice(QuotationLightingDto dto) {
+        if (dto.getUnitPrice() != null) {
+            return dto.getUnitPrice();
+        }
+        if (dto.getItemType() == null || dto.getItemId() == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal price = switch (dto.getItemType()) {
+            case "LIGHT_PROFILE" -> lightProfileRepository.findById(dto.getItemId())
+                    .map(LightProfile::getCompanyPrice).orElse(null);
+            case "DRIVER" -> driverRepository.findById(dto.getItemId())
+                    .map(Driver::getCompanyPrice).orElse(null);
+            case "CONNECTOR" -> connectorRepository.findById(dto.getItemId())
+                    .map(Connector::getCompanyPrice).orElse(null);
+            case "SENSOR" -> sensorRepository.findById(dto.getItemId())
+                    .map(Sensor::getCompanyPrice).orElse(null);
+            default -> null; // CUSTOM items carry their own price and never reach here with null
+        };
+        return price != null ? price : BigDecimal.ZERO;
+    }
+
+    /**
+     * @param userRole ROLE_SUPER_ADMIN sees the full cost structure. Everyone else gets only the
+     *                 customer-facing figures: base totals and margin amounts are omitted, because
+     *                 a base total next to a final total gives the markup away.
+     */
+    private List<QuotationKitchenDto> loadKitchens(Long quotationId, String userRole) {
+        boolean isAdmin = "ROLE_SUPER_ADMIN".equals(userRole);
         List<QuotationKitchen> kitchens = kitchenRepository.findByQuotationIdOrderByKitchenOrderAsc(quotationId);
         return kitchens.stream().map(kitchen -> {
             QuotationKitchenDto dto = new QuotationKitchenDto();
@@ -1440,33 +1496,36 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setKitchenOrder(kitchen.getKitchenOrder());
             dto.setTransportationPrice(kitchen.getTransportationPrice());
             dto.setInstallationPrice(kitchen.getInstallationPrice());
-            
-            // Category totals
-            dto.setAccessoriesBaseTotal(kitchen.getAccessoriesBaseTotal());
-            dto.setAccessoriesMarginAmount(kitchen.getAccessoriesMarginAmount());
+
+            // Category totals. Final totals and tax are customer-facing; base totals and margin
+            // amounts are internal and only populated for a super admin.
             dto.setAccessoriesTaxAmount(kitchen.getAccessoriesTaxAmount());
             dto.setAccessoriesFinalTotal(kitchen.getAccessoriesFinalTotal());
-            
-            dto.setCabinetsBaseTotal(kitchen.getCabinetsBaseTotal());
-            dto.setCabinetsMarginAmount(kitchen.getCabinetsMarginAmount());
             dto.setCabinetsTaxAmount(kitchen.getCabinetsTaxAmount());
             dto.setCabinetsFinalTotal(kitchen.getCabinetsFinalTotal());
-            
-            dto.setDoorsBaseTotal(kitchen.getDoorsBaseTotal());
-            dto.setDoorsMarginAmount(kitchen.getDoorsMarginAmount());
             dto.setDoorsTaxAmount(kitchen.getDoorsTaxAmount());
             dto.setDoorsFinalTotal(kitchen.getDoorsFinalTotal());
-            
-            dto.setLightingBaseTotal(kitchen.getLightingBaseTotal());
-            dto.setLightingMarginAmount(kitchen.getLightingMarginAmount());
             dto.setLightingTaxAmount(kitchen.getLightingTaxAmount());
             dto.setLightingFinalTotal(kitchen.getLightingFinalTotal());
-            
+
+            if (isAdmin) {
+                dto.setAccessoriesBaseTotal(kitchen.getAccessoriesBaseTotal());
+                dto.setAccessoriesMarginAmount(kitchen.getAccessoriesMarginAmount());
+                dto.setCabinetsBaseTotal(kitchen.getCabinetsBaseTotal());
+                dto.setCabinetsMarginAmount(kitchen.getCabinetsMarginAmount());
+                dto.setDoorsBaseTotal(kitchen.getDoorsBaseTotal());
+                dto.setDoorsMarginAmount(kitchen.getDoorsMarginAmount());
+                dto.setLightingBaseTotal(kitchen.getLightingBaseTotal());
+                dto.setLightingMarginAmount(kitchen.getLightingMarginAmount());
+            }
+
             // Kitchen totals
-            dto.setSubtotal(kitchen.getSubtotal());
-            dto.setMarginAmount(kitchen.getMarginAmount());
             dto.setTaxAmount(kitchen.getTaxAmount());
             dto.setTotalAmount(kitchen.getTotalAmount());
+            if (isAdmin) {
+                dto.setSubtotal(kitchen.getSubtotal());
+                dto.setMarginAmount(kitchen.getMarginAmount());
+            }
             
             // Load scope details
             List<QuotationKitchenScopeDetail> scopeDetails = kitchenScopeDetailRepository.findByKitchenIdOrderByFieldOrderAsc(kitchen.getId());
@@ -1545,10 +1604,10 @@ public class QuotationServiceImpl implements QuotationService {
             System.out.println("Doors with kitchenId set: " + doorsWithKitchen);
             System.out.println("Lighting with kitchenId set: " + lightingWithKitchen);
             
-            List<QuotationAccessoryDto> accessories = loadAccessoriesForKitchen(kitchen.getId());
-            List<QuotationCabinetDto> cabinets = loadCabinetsForKitchen(kitchen.getId());
-            List<QuotationDoorDto> doors = loadDoorsForKitchen(kitchen.getId());
-            List<QuotationLightingDto> lighting = loadLightingForKitchen(kitchen.getId());
+            List<QuotationAccessoryDto> accessories = loadAccessoriesForKitchen(kitchen.getId(), userRole);
+            List<QuotationCabinetDto> cabinets = loadCabinetsForKitchen(kitchen.getId(), userRole);
+            List<QuotationDoorDto> doors = loadDoorsForKitchen(kitchen.getId(), userRole);
+            List<QuotationLightingDto> lighting = loadLightingForKitchen(kitchen.getId(), userRole);
             
             System.out.println("Loaded " + (accessories != null ? accessories.size() : 0) + " accessories for kitchen " + kitchen.getId());
             System.out.println("Loaded " + (cabinets != null ? cabinets.size() : 0) + " cabinets for kitchen " + kitchen.getId());
@@ -1575,7 +1634,7 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setHeightMm(cabinet.getHeightMm());
             dto.setDepthMm(cabinet.getDepthMm());
             dto.setCalculatedSqft(cabinet.getCalculatedSqft());
-            dto.setUnitPrice(cabinet.getUnitPrice());
+            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(cabinet.getUnitPrice());
             dto.setTotalPrice(cabinet.getTotalPrice());
 
             if (cabinet.getCustomDimensions() != null) {
@@ -1657,7 +1716,7 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setWidthMm(door.getWidthMm());
             dto.setHeightMm(door.getHeightMm());
             dto.setCalculatedSqft(door.getCalculatedSqft());
-            dto.setUnitPrice(door.getUnitPrice());
+            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(door.getUnitPrice());
             dto.setTotalPrice(door.getTotalPrice());
             dto.setDoorFinish(door.getDoorFinish());
             dto.setDoorStyle(door.getDoorStyle());
@@ -1713,7 +1772,7 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setItemName(lighting.getItemName()); // THIS IS KEY FOR PDF NAME DISPLAY
             dto.setQuantity(lighting.getQuantity());
             dto.setUnit(lighting.getUnit());
-            dto.setUnitPrice(lighting.getUnitPrice());
+            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(lighting.getUnitPrice());
             dto.setTotalPrice(lighting.getTotalPrice());
             dto.setSpecifications(lighting.getSpecifications());
             dto.setDescription(lighting.getDescription());
@@ -1766,7 +1825,7 @@ public class QuotationServiceImpl implements QuotationService {
     }
 
     // Helper methods to load products for a specific kitchen
-    private List<QuotationAccessoryDto> loadAccessoriesForKitchen(Long kitchenId) {
+    private List<QuotationAccessoryDto> loadAccessoriesForKitchen(Long kitchenId, String userRole) {
         System.out.println("loadAccessoriesForKitchen called with kitchenId: " + kitchenId);
         List<QuotationAccessory> accessories = accessoryRepository.findByKitchenId(kitchenId);
         System.out.println("Found " + (accessories != null ? accessories.size() : 0) + " accessories in database for kitchenId: " + kitchenId);
@@ -1774,7 +1833,7 @@ public class QuotationServiceImpl implements QuotationService {
             QuotationAccessoryDto dto = new QuotationAccessoryDto();
             dto.setId(quotationAccessory.getId());
             dto.setQuantity(quotationAccessory.getQuantity());
-            dto.setUnitPrice(quotationAccessory.getUnitPrice());
+            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(quotationAccessory.getUnitPrice());
             dto.setTotalPrice(quotationAccessory.getTotalPrice());
             dto.setDescription(quotationAccessory.getDescription());
             dto.setCustomItem(quotationAccessory.getCustomItem());
@@ -1805,7 +1864,7 @@ public class QuotationServiceImpl implements QuotationService {
         }).toList();
     }
 
-    private List<QuotationCabinetDto> loadCabinetsForKitchen(Long kitchenId) {
+    private List<QuotationCabinetDto> loadCabinetsForKitchen(Long kitchenId, String userRole) {
         System.out.println("loadCabinetsForKitchen called with kitchenId: " + kitchenId);
         List<QuotationCabinet> cabinets = cabinetRepository.findByKitchenId(kitchenId);
         System.out.println("Found " + (cabinets != null ? cabinets.size() : 0) + " cabinets in database for kitchenId: " + kitchenId);
@@ -1817,7 +1876,7 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setHeightMm(cabinet.getHeightMm());
             dto.setDepthMm(cabinet.getDepthMm());
             dto.setCalculatedSqft(cabinet.getCalculatedSqft());
-            dto.setUnitPrice(cabinet.getUnitPrice());
+            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(cabinet.getUnitPrice());
             dto.setTotalPrice(cabinet.getTotalPrice());
             dto.setKitchenId(kitchenId);
 
@@ -1869,7 +1928,7 @@ public class QuotationServiceImpl implements QuotationService {
         }).toList();
     }
 
-    private List<QuotationDoorDto> loadDoorsForKitchen(Long kitchenId) {
+    private List<QuotationDoorDto> loadDoorsForKitchen(Long kitchenId, String userRole) {
         System.out.println("loadDoorsForKitchen called with kitchenId: " + kitchenId);
         List<QuotationDoor> doors = doorRepository.findByKitchenId(kitchenId);
         System.out.println("Found " + (doors != null ? doors.size() : 0) + " doors in database for kitchenId: " + kitchenId);
@@ -1880,7 +1939,7 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setWidthMm(door.getWidthMm());
             dto.setHeightMm(door.getHeightMm());
             dto.setCalculatedSqft(door.getCalculatedSqft());
-            dto.setUnitPrice(door.getUnitPrice());
+            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(door.getUnitPrice());
             dto.setTotalPrice(door.getTotalPrice());
             dto.setDoorFinish(door.getDoorFinish());
             dto.setDoorStyle(door.getDoorStyle());
@@ -1905,7 +1964,7 @@ public class QuotationServiceImpl implements QuotationService {
         }).toList();
     }
 
-    private List<QuotationLightingDto> loadLightingForKitchen(Long kitchenId) {
+    private List<QuotationLightingDto> loadLightingForKitchen(Long kitchenId, String userRole) {
         System.out.println("loadLightingForKitchen called with kitchenId: " + kitchenId);
         List<QuotationLighting> lightingList = lightingRepository.findByKitchenId(kitchenId);
         System.out.println("Found " + (lightingList != null ? lightingList.size() : 0) + " lighting items in database for kitchenId: " + kitchenId);
@@ -1917,7 +1976,7 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setItemName(lighting.getItemName());
             dto.setQuantity(lighting.getQuantity());
             dto.setUnit(lighting.getUnit());
-            dto.setUnitPrice(lighting.getUnitPrice());
+            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(lighting.getUnitPrice());
             dto.setTotalPrice(lighting.getTotalPrice());
             dto.setSpecifications(lighting.getSpecifications());
             dto.setDescription(lighting.getDescription());

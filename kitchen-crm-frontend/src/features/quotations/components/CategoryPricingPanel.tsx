@@ -80,11 +80,14 @@ function CategorySection({
       </div>
 
       <div className="space-y-2 sm:space-y-3">
-        {/* Subtotal */}
-        <div className="flex justify-between text-xs">
-          <span className="text-text-600">Subtotal</span>
-          <span className="font-medium text-text-900 tabular-nums">₹{subtotal.toLocaleString('en-IN')}</span>
-        </div>
+        {/* Subtotal — pre-margin cost, so admin only. Shown next to Category Total it would
+            give the markup away by subtraction even with the margin field hidden. */}
+        {showMargins && (
+          <div className="flex justify-between text-xs">
+            <span className="text-text-600">Subtotal</span>
+            <span className="font-medium text-text-900 tabular-nums">₹{subtotal.toLocaleString('en-IN')}</span>
+          </div>
+        )}
 
         {/* Margin Input - Only visible to Super Admin */}
         {showMargins && (
@@ -217,7 +220,9 @@ export function CategoryPricingPanel({
   miscellaneousTaxPercentage = 18,
   onMiscellaneousMarginChange,
   onMiscellaneousTaxChange,
-  userRole = 'ROLE_SUPER_ADMIN',
+  // Fail closed. This defaulted to ROLE_SUPER_ADMIN, so any call site that forgot the optional
+  // prop would have shown staff the margins.
+  userRole = 'ROLE_STAFF',
   kitchenName,
 }: CategoryPricingPanelProps) {
 

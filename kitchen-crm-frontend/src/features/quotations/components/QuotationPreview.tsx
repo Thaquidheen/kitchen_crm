@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { User, Package, DollarSign, Calculator, Home, Image as ImageIcon } from 'lucide-react';
 import type { QuotationKitchenFormData, QuotationOtherExpense } from '@/features/quotations/types';
 import { getImageUrl } from '@/utils/imageUtils';
+import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 
 export interface QuotationPreviewProps {
   customer?: {
@@ -83,6 +84,7 @@ export function QuotationPreview({
   miscellaneousMrpTaxPercentage,
   kitchens,
 }: QuotationPreviewProps) {
+  const isSuperAdmin = useIsSuperAdmin();
   // Check if this is a multi-kitchen quotation
   const isMultiKitchen = kitchens && kitchens.length > 0;
   const calculations = useMemo(() => {
@@ -482,19 +484,23 @@ export function QuotationPreview({
               {/* Kitchen Totals */}
               <div className="border-t border-background-600 pt-3 sm:pt-4">
                 <div className="space-y-2 text-xs sm:text-sm">
-                  {/* Per-kitchen pricing breakdown (margin shown separately for each kitchen) */}
-                  <div className="flex justify-between">
-                    <span className="text-text-700">Subtotal (before margin &amp; tax)</span>
-                    <span className="font-medium text-text-900">
-                      ₹{kitchenCalc.productsBase.toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-text-700">Margin</span>
-                    <span className="font-medium text-text-900 tabular-nums">
-                      ₹{kitchenCalc.marginAmount.toLocaleString('en-IN')}
-                    </span>
-                  </div>
+                  {/* Pre-margin base and the margin itself are internal — super admin only. */}
+                  {isSuperAdmin && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-text-700">Subtotal (before margin &amp; tax)</span>
+                        <span className="font-medium text-text-900">
+                          ₹{kitchenCalc.productsBase.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-text-700">Margin</span>
+                        <span className="font-medium text-text-900 tabular-nums">
+                          ₹{kitchenCalc.marginAmount.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-text-700">Tax</span>
                     <span className="font-medium text-text-900 tabular-nums">
@@ -714,15 +720,17 @@ export function QuotationPreview({
             </div>
           </div>
 
-          <div className="p-3 rounded-xl border border-background-600 bg-background-700/40">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Total Margin</div>
-            <div className="text-lg font-bold text-text-900 tabular-nums mt-0.5">
-              ₹{(isMultiKitchen && kitchenCalculations
-                ? kitchenCalculations.reduce((sum, k) => sum + k.categoryTotals.accessories.marginAmount + k.categoryTotals.cabinets.marginAmount + k.categoryTotals.doors.marginAmount + k.categoryTotals.lighting.marginAmount, 0)
-                : calculations.totalMarginAmount
-              ).toLocaleString('en-IN')}
+          {isSuperAdmin && (
+            <div className="p-3 rounded-xl border border-background-600 bg-background-700/40">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Total Margin</div>
+              <div className="text-lg font-bold text-text-900 tabular-nums mt-0.5">
+                ₹{(isMultiKitchen && kitchenCalculations
+                  ? kitchenCalculations.reduce((sum, k) => sum + k.categoryTotals.accessories.marginAmount + k.categoryTotals.cabinets.marginAmount + k.categoryTotals.doors.marginAmount + k.categoryTotals.lighting.marginAmount, 0)
+                  : calculations.totalMarginAmount
+                ).toLocaleString('en-IN')}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="p-3 rounded-xl border border-background-600 bg-background-700/40">
             <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Total Tax</div>

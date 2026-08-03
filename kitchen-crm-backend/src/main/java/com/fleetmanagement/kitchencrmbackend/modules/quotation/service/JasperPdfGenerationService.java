@@ -27,7 +27,6 @@ public interface JasperPdfGenerationService {
      * @param userRole the role of the user requesting the PDF
      * @return ApiResponse containing the bill PDF as a Resource
      */
-    ApiResponse<Resource> generateBillPdf(Long quotationId, String userRole);
 
     /**
      * Create quotation PDF bytes from a QuotationDto.

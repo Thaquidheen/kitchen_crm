@@ -27,6 +27,7 @@ import { AddDoorModal } from './AddDoorModal';
 import { AddAccessoryModal } from './AddAccessoryModal';
 import type { CabinetType, DoorType } from '../../products/types';
 import type { QuotationElevation } from '../types';
+import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 
 export interface CategoryProductsProps {
   category: 'accessories' | 'cabinets' | 'doors' | 'lighting';
@@ -45,6 +46,7 @@ export interface CategoryProductsProps {
 }
 
 export function CategoryProducts({ category, search, onAdd, getQuantity, onIncrement, onDecrement, selectedAccessories = [], selectedCabinets = [], selectedDoors = [], selectedLighting = [], availableElevations = [] }: CategoryProductsProps) {
+  const isSuperAdmin = useIsSuperAdmin();
   // Modal state
   const [cabinetModalOpen, setCabinetModalOpen] = useState(false);
   const [doorModalOpen, setDoorModalOpen] = useState(false);
@@ -263,7 +265,10 @@ export function CategoryProducts({ category, search, onAdd, getQuantity, onIncre
               {item.price === -1 ? (
                 <span className="text-xs font-medium text-primary-600">Select to configure</span>
               ) : (
-                <span className="text-[13px] font-semibold text-text-900 tabular-nums">₹{item.price.toLocaleString('en-IN')}</span>
+                // item.price is companyPrice — the internal cost. Staff pick products by name.
+                isSuperAdmin && (
+                  <span className="text-[13px] font-semibold text-text-900 tabular-nums">₹{item.price.toLocaleString('en-IN')}</span>
+                )
               )}
             </div>
 

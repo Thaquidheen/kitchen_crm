@@ -87,36 +87,6 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
     }
 
     @Override
-    public ApiResponse<Resource> generateBillPdf(Long quotationId, String userRole) {
-        try {
-            ApiResponse<QuotationDto> quotationResponse = quotationService.getQuotationById(quotationId, userRole);
-            if (!quotationResponse.getSuccess()) {
-                return ApiResponse.error("Quotation not found");
-            }
-
-            QuotationDto quotation = quotationResponse.getData();
-
-            // Only generate bill for approved quotations
-            if (quotation.getStatus() != Quotation.QuotationStatus.APPROVED) {
-                return ApiResponse.error("Can only generate bill for approved quotations");
-            }
-
-            byte[] pdfBytes = createQuotationPdfBytes(quotation, userRole);
-
-            // Create temporary file
-            Path tempFile = Files.createTempFile("bill_" + quotation.getQuotationNumber(), ".pdf");
-            Files.write(tempFile, pdfBytes);
-
-            Resource resource = new FileSystemResource(tempFile.toFile());
-            return ApiResponse.success(resource);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ApiResponse.error("Failed to generate bill PDF: " + e.getMessage());
-        }
-    }
-
-    @Override
     public byte[] createQuotationPdfBytes(QuotationDto quotation, String userRole) {
         try {
             // Load and compile the main report
@@ -490,6 +460,46 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         return new JRBeanCollectionDataSource(kitchenData);
     }
 
+    /**
+     * Returns copies of the miscellaneous expense lines scaled so their amounts sum exactly to
+     * {@code target} (the figure printed as MISCELLANEOUS TOTAL). Returns the originals unchanged
+     * when there is nothing to scale, so a quotation with no misc margin is unaffected.
+     */
+    private List<QuotationOtherExpenseDto> scaleExpensesToTotal(
+            List<QuotationOtherExpenseDto> expenses, BigDecimal base, BigDecimal target) {
+
+        if (expenses.isEmpty()
+                || base == null || base.compareTo(BigDecimal.ZERO) <= 0
+                || target == null || target.compareTo(BigDecimal.ZERO) <= 0) {
+            return expenses;
+        }
+
+        List<QuotationOtherExpenseDto> scaled = new ArrayList<>(expenses.size());
+        BigDecimal running = BigDecimal.ZERO;
+
+        for (int i = 0; i < expenses.size(); i++) {
+            QuotationOtherExpenseDto source = expenses.get(i);
+            BigDecimal amount = source.getAmount() != null ? source.getAmount() : BigDecimal.ZERO;
+
+            BigDecimal adjusted;
+            if (i == expenses.size() - 1) {
+                adjusted = target.subtract(running); // last line absorbs the rounding remainder
+            } else {
+                adjusted = amount.multiply(target)
+                        .divide(base, 2, java.math.RoundingMode.HALF_UP);
+                running = running.add(adjusted);
+            }
+
+            QuotationOtherExpenseDto copy = new QuotationOtherExpenseDto();
+            copy.setId(source.getId());
+            copy.setName(source.getName());
+            copy.setIsDefault(source.getIsDefault());
+            copy.setAmount(adjusted);
+            scaled.add(copy);
+        }
+        return scaled;
+    }
+
     private Map<String, Object> convertKitchenToMap(QuotationKitchenDto kitchen, BigDecimal miscMarginPercentage, BigDecimal miscTaxPercentage) {
         Map<String, Object> map = new HashMap<>();
 
@@ -553,10 +563,17 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
 
         // Other expenses - apply miscellaneous margin and tax
         List<QuotationOtherExpenseDto> otherExpensesList = kitchen.getOtherExpenses() != null ? kitchen.getOtherExpenses() : Collections.emptyList();
-        map.put("otherExpenses", otherExpensesList);
         BigDecimal otherExpensesBase = otherExpensesList.stream()
                 .map(e -> e.getAmount() != null ? e.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // The itemised lines used to print the RAW pre-margin amount while the MISCELLANEOUS
+        // TOTAL row prints miscMrpTotal (margin + tax applied) — so the customer could divide the
+        // two and recover the markup. Scale each line so the printed lines sum exactly to the
+        // printed total. Scaling rather than re-deriving the rates avoids rounding drift; the
+        // last row absorbs any remainder so the arithmetic is exact.
+        map.put("otherExpenses", scaleExpensesToTotal(otherExpensesList, otherExpensesBase,
+                kitchen.getMiscMrpTotal()));
         // Apply margin and tax to miscellaneous total
         BigDecimal miscMargin = otherExpensesBase.multiply(miscMarginPercentage).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
         BigDecimal miscWithMargin = otherExpensesBase.add(miscMargin);

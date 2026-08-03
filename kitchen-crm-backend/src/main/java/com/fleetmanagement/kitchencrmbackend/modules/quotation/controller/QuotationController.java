@@ -214,43 +214,10 @@ public class QuotationController {
         }
     }
 
-    @GetMapping(value = "/{id}/bill/pdf", produces = {MediaType.APPLICATION_PDF_VALUE, MediaType.APPLICATION_JSON_VALUE})
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<?> downloadBillPdf(
-            @PathVariable Long id,
-            @AuthenticationPrincipal UserPrincipal currentUser) {
-
-        try {
-            String userRole = currentUser.getAuthorities().iterator().next().getAuthority();
-
-            if (pdfGenerationService == null) {
-                // Return JSON error response instead of PDF
-                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(ApiResponse.error("PDF generation service is not available"));
-            }
-
-            ApiResponse<Resource> response = pdfGenerationService.generateBillPdf(id, userRole);
-
-            if (response.getSuccess()) {
-                Resource resource = response.getData();
-                return ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"bill_" + id + ".pdf\"")
-                        .contentType(MediaType.APPLICATION_PDF)
-                        .body(resource);
-            } else {
-                // Return JSON error response with proper content type
-                return ResponseEntity.badRequest()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(response);
-            }
-        } catch (Exception e) {
-            // Return JSON error response with proper content type
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(ApiResponse.error("Failed to generate bill PDF: " + e.getMessage()));
-        }
-    }
+    // The /{id}/bill/pdf endpoint was removed. It carried @PreAuthorize("hasRole('SUPER_ADMIN')")
+    // but produced byte-identical output to the ungated /{id}/pdf above, so the annotation implied
+    // a protection that did not exist. It had no caller in the UI either. If an internal costing
+    // document is wanted later it needs its own template, not a second route to the same bytes.
 
     @GetMapping("/customer/{customerId}")
     public ResponseEntity<ApiResponse<Page<QuotationSummaryDto>>> getQuotationsByCustomer(

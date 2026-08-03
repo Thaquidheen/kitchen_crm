@@ -1616,7 +1616,7 @@ export function QuotationBuilderPage() {
                       onCabinetsMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, cabinetsMarginPercentage: val }) : undefined}
                       onDoorsMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, doorsMarginPercentage: val }) : undefined}
                       onLightingMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, lightingMarginPercentage: val }) : undefined}
-                      onMiscellaneousMarginChange={(val) => setFormData({ ...formData, miscellaneousMarginPercentage: val })}
+                      onMiscellaneousMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, miscellaneousMarginPercentage: val }) : undefined}
                       onMiscellaneousTaxChange={(val) => setFormData({ ...formData, miscellaneousTaxPercentage: val })}
                     />
                   </>
@@ -1633,7 +1633,7 @@ export function QuotationBuilderPage() {
                       onProductsChange={(products) => setFormData({ ...formData, ...products })}
                       miscellaneousMarginPercentage={formData.miscellaneousMarginPercentage ?? 0}
                       miscellaneousTaxPercentage={formData.miscellaneousTaxPercentage ?? 18}
-                      onMiscellaneousMarginChange={(v) => setFormData({ ...formData, miscellaneousMarginPercentage: v })}
+                      onMiscellaneousMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (v) => setFormData({ ...formData, miscellaneousMarginPercentage: v }) : undefined}
                       onMiscellaneousTaxChange={(v) => setFormData({ ...formData, miscellaneousTaxPercentage: v })}
                     />
 

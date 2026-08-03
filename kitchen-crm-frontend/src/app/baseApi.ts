@@ -568,16 +568,6 @@ export const baseApi = createApi({
       }),
     }),
 
-    // Download quotation bill PDF (SUPER_ADMIN only)
-    downloadQuotationBillPDF: builder.mutation<Blob, number>({
-      query: (id) => ({
-        url: `/quotations/${id}/bill/pdf`,
-        method: 'GET',
-        headers: { accept: 'application/pdf, application/json' },
-        responseHandler: (response) => response.blob(),
-      }),
-    }),
-
     // Get available plan images for a customer
     getCustomerAvailablePlanImages: builder.query<any, number>({
       query: (customerId) => `/quotations/customers/${customerId}/available-plan-images`,
@@ -645,7 +635,6 @@ export const {
   useUpdateApplianceCustomerMutation,
   useDeleteApplianceCustomerMutation,
   useDownloadQuotationPDFMutation,
-  useDownloadQuotationBillPDFMutation,
   useGetCustomerAvailablePlanImagesQuery,
   useUploadPlanImageMutation,
 } = baseApi;
