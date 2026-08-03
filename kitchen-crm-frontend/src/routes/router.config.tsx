@@ -7,12 +7,12 @@ import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 import { PublicRoute } from './PublicRoute';
 import { ROUTES } from './routes.config';
+import { UserRole } from '../types/common.types';
 import { AppLayout } from '../components/layout/AppLayout';
 import { RouterLayout } from '../components/RouterLayout';
 
 // Auth Pages
 import LoginPage from '../pages/auth/LoginPage';
-import SignupPage from '../pages/auth/SignupPage';
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 
@@ -86,14 +86,8 @@ const routes = [
           </PublicRoute>
         ),
       },
-      {
-        path: ROUTES.SIGNUP,
-        element: (
-          <PublicRoute>
-            <SignupPage />
-          </PublicRoute>
-        ),
-      },
+      // No public /signup route. Accounts are provisioned by a super admin from the Staff
+      // page; the backend endpoint is SUPER_ADMIN-only, so a public form could not work anyway.
       {
         path: ROUTES.FORGOT_PASSWORD,
         element: (
@@ -227,12 +221,6 @@ const routes = [
             element: <ProductionDetailPage />,
           },
 
-          // Settings
-          {
-            path: ROUTES.SETTINGS,
-            element: <SettingsPage />,
-          },
-
           // Vendors
           {
             path: ROUTES.VENDORS,
@@ -245,12 +233,6 @@ const routes = [
             element: <ArchitectsPage />,
           },
 
-          // Staff
-          {
-            path: ROUTES.STAFF,
-            element: <StaffPage />,
-          },
-
           // Component Showcases (dev only)
           {
             path: ROUTES.COMPONENTS,
@@ -259,6 +241,26 @@ const routes = [
           {
             path: ROUTES.COMPONENTS_ADVANCED,
             element: <AdvancedComponentShowcase />,
+          },
+
+          // Super-admin only. The sidebar already hides these, but they were still reachable
+          // by typing the URL — the page rendered and only the API calls failed.
+          {
+            element: (
+              <ProtectedRoute requireRole={UserRole.ROLE_SUPER_ADMIN}>
+                <Outlet />
+              </ProtectedRoute>
+            ),
+            children: [
+              {
+                path: ROUTES.SETTINGS,
+                element: <SettingsPage />,
+              },
+              {
+                path: ROUTES.STAFF,
+                element: <StaffPage />,
+              },
+            ],
           },
         ],
       },

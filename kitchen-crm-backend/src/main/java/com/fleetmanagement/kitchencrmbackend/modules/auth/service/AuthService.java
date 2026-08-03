@@ -1,5 +1,6 @@
 package com.fleetmanagement.kitchencrmbackend.modules.auth.service;
 
+import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.ChangePasswordRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.ForgotPasswordRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.LoginRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.LoginResponse;
@@ -13,6 +14,9 @@ public interface AuthService {
     ApiResponse<String> registerUser(SignupRequest signUpRequest);
     ApiResponse<String> logout(String accessToken, String refreshToken);
     ApiResponse<String> logoutAllDevices(Long userId);
+
+    /** Changes the signed-in user's own password after verifying the current one. */
+    ApiResponse<String> changePassword(Long userId, ChangePasswordRequest request);
     ApiResponse<String> forgotPassword(ForgotPasswordRequest request);
     ApiResponse<String> resetPassword(ResetPasswordRequest request);
     ApiResponse<Boolean> validateResetToken(String token);

@@ -204,10 +204,9 @@ const LoginPage = () => {
               </button>
             </form>
 
-            {/* Signup Link */}
+            {/* No self-registration: accounts are created by an administrator. */}
             <div className="signup-link">
-              <span>New to HOCH?</span>
-              <Link to={ROUTES.SIGNUP}>Create an account</Link>
+              <span>Need an account? Ask your administrator.</span>
             </div>
           </div>
 

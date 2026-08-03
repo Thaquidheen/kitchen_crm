@@ -14,6 +14,7 @@ export const API_ENDPOINTS = {
     LOGOUT_ALL: '/auth/logout-all',
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
+    CHANGE_PASSWORD: '/auth/change-password',
     VALIDATE_RESET_TOKEN: '/auth/validate-reset-token',
   },
 
@@ -194,7 +195,6 @@ export const API_ENDPOINTS = {
     UPDATE_STATUS: (id: number) => `/quotations/${id}/status`,
     DUPLICATE: (id: number) => `/quotations/${id}/duplicate`,
     PDF: (id: number) => `/quotations/${id}/pdf`,
-    BILL_PDF: (id: number) => `/quotations/${id}/bill/pdf`,
   },
 
   // Projects

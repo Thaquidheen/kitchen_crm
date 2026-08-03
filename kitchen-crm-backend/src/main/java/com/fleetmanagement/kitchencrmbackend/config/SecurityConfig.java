@@ -61,12 +61,23 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth ->
-                        auth.requestMatchers("/api/v1/auth/**").permitAll()
+                        // Only the endpoints that genuinely cannot carry a token are anonymous.
+                        // This used to be a blanket /api/v1/auth/**, which left /signup open to
+                        // the internet — and signup honours a client-supplied role, so anyone
+                        // could register themselves as a super admin.
+                        auth.requestMatchers(
+                                        "/api/v1/auth/signin",
+                                        "/api/v1/auth/refresh",
+                                        "/api/v1/auth/logout",
+                                        "/api/v1/auth/forgot-password",
+                                        "/api/v1/auth/reset-password",
+                                        "/api/v1/auth/validate-reset-token").permitAll()
                                 .requestMatchers("/api/public/**").permitAll()
                                 .requestMatchers("/uploads/**").permitAll() // Allow access to uploaded images and files
-                                .requestMatchers("/h2-console/**").permitAll()
                                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                                 .requestMatchers("/swagger-ui.html").permitAll()
+                                // Everything else — including /api/v1/auth/signup and
+                                // /api/v1/auth/logout-all — requires authentication.
                                 .anyRequest().authenticated()
                 );
 

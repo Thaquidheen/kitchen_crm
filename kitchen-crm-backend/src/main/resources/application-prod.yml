@@ -15,6 +15,14 @@ spring:
     validate-on-migrate: true
     out-of-order: true
 
+# API docs are for development only. springdoc has no configuration elsewhere, so it defaults
+# to enabled on every profile — which left /swagger-ui.html publicly readable in production.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 # File upload directories (Docker volume mounted)
 app:
   upload-dir: /app/uploads/plan-images

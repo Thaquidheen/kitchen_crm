@@ -1,5 +1,6 @@
 package com.fleetmanagement.kitchencrmbackend.modules.auth.service;
 
+import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.ChangePasswordRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.ForgotPasswordRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.LoginRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.LoginResponse;
@@ -184,6 +185,35 @@ public class AuthServiceImpl implements AuthService {
         } catch (Exception e) {
             logger.error("Logout failed", e);
             return ApiResponse.error("Logout failed");
+        }
+    }
+
+    @Override
+    public ApiResponse<String> changePassword(Long userId, ChangePasswordRequest request) {
+        try {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+                logger.warn("Change password rejected — wrong current password for user {}", user.getEmail());
+                return ApiResponse.error("Current password is incorrect");
+            }
+            if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+                return ApiResponse.error("New password must be different from the current one");
+            }
+
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            userRepository.save(user);
+
+            // Cut every other session: a password change should not leave old refresh tokens
+            // usable. The caller's access token stays valid until it expires (15 min).
+            refreshTokenService.revokeAllUserTokens(user);
+
+            logger.info("Password changed for user: {}", user.getEmail());
+            return ApiResponse.success("Password changed successfully. Please sign in again.", null);
+        } catch (Exception e) {
+            logger.error("Change password failed for user: {}", userId, e);
+            return ApiResponse.error("Could not change password");
         }
     }
 

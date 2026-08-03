@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Search, Settings, LogOut, User, Menu, AlarmClock, Check, Sun, Moon, ChevronDown } from 'lucide-react';
+import { Bell, Search, Settings, LogOut, KeyRound, Menu, AlarmClock, Check, Sun, Moon, ChevronDown } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { logout } from '../../features/auth/authSlice';
 import { useLogoutMutation } from '../../features/auth/authApi';
@@ -13,6 +13,7 @@ import { useGetReminderNotificationsQuery, useMarkReminderDoneMutation } from '.
 import { setTheme, selectCurrentTheme } from '../../features/theme/themeSlice';
 import { ROUTES } from '../../routes/routes.config';
 import { Dropdown } from '../ui';
+import { ChangePasswordModal } from '../../features/auth/components/ChangePasswordModal';
 import toast from 'react-hot-toast';
 
 export interface HeaderProps {
@@ -27,6 +28,7 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
   const currentTheme = useAppSelector(selectCurrentTheme);
   const [logoutApi] = useLogoutMutation();
   const [bellOpen, setBellOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   const isDay = currentTheme?.type === 'light';
 
@@ -51,7 +53,11 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
   };
 
   const userMenuItems = [
-    { label: 'Profile', icon: <User size={16} />, onClick: () => toast('Profile clicked') },
+    {
+      label: 'Change password',
+      icon: <KeyRound size={16} />,
+      onClick: () => setChangePasswordOpen(true),
+    },
     { label: 'Settings', icon: <Settings size={16} />, onClick: () => navigate(ROUTES.SETTINGS) },
     { label: 'Logout', icon: <LogOut size={16} />, onClick: handleLogout, danger: true },
   ];
@@ -207,6 +213,11 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
           </div>
         }
         items={userMenuItems}
+      />
+
+      <ChangePasswordModal
+        isOpen={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
       />
     </header>
   );

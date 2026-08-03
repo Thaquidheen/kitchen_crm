@@ -4,28 +4,19 @@ INSERT INTO roles (name, created_at, updated_at) VALUES
                                                      ('ROLE_STAFF', NOW(), NOW())
     ON DUPLICATE KEY UPDATE name = name;
 
--- Insert default super admin user (password: admin123)
-INSERT INTO users (name, email, password, phone_number, active, created_at, updated_at) VALUES
-    ('Super Admin', 'admin@kitchen-crm.com', '$2a$10$aaM//yBg8tVpEdVLBg//xOT8btkDO2DdJVDqqvYJvNDWPRt8hVepW', '1234567890', true, NOW(), NOW())
-    ON DUPLICATE KEY UPDATE email = email;
-
--- Insert default staff user (password: staff123)
-INSERT INTO users (name, email, password, phone_number, active, created_at, updated_at) VALUES
-    ('Staff User', 'staff@kitchen-crm.com', '$2a$10$GpRERA3CLywUuFVMlBYNTOPUVts6DQbeDZUkrKQEAuVGVyVRfM1pO', '0987654321', true, NOW(), NOW())
-    ON DUPLICATE KEY UPDATE email = email;
-
--- Assign roles to users
-INSERT INTO user_roles (user_id, role_id)
-SELECT u.id, r.id
-FROM users u, roles r
-WHERE u.email = 'admin@kitchen-crm.com' AND r.name = 'ROLE_SUPER_ADMIN'
-    ON DUPLICATE KEY UPDATE user_id = user_id;
-
-INSERT INTO user_roles (user_id, role_id)
-SELECT u.id, r.id
-FROM users u, roles r
-WHERE u.email = 'staff@kitchen-crm.com' AND r.name = 'ROLE_STAFF'
-    ON DUPLICATE KEY UPDATE user_id = user_id;
+-- NOTE: this file no longer seeds user accounts.
+--
+-- It used to create 'admin@kitchen-crm.com' and 'staff@kitchen-crm.com' with fixed bcrypt
+-- hashes whose plaintext was written in the comment above each INSERT — i.e. a known-password
+-- super admin on every deployment, with the credentials in version control.
+--
+-- Accounts are now provisioned deliberately: the first super admin is inserted by hand, and
+-- staff are created from the Staff page (POST /api/v1/users/staff, SUPER_ADMIN only), which
+-- emails the new user their credentials.
+--
+-- V6__Insert_initial_data.sql still contains those INSERTs and is deliberately NOT edited:
+-- Flyway runs with validate-on-migrate=true, so changing an applied migration's checksum
+-- would stop the application booting.
 
 -- Insert sample brands
 INSERT INTO brands (name, description, active, created_at, updated_at) VALUES

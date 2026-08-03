@@ -1,5 +1,6 @@
 package com.fleetmanagement.kitchencrmbackend.modules.auth.controller;
 
+import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.ChangePasswordRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.ForgotPasswordRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.LoginRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.LoginResponse;
@@ -16,6 +17,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -45,6 +47,16 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Provisions an account. Restricted to super admins: the request body accepts a role set,
+     * and {@code "admin"} maps to ROLE_SUPER_ADMIN, so leaving this anonymous allowed anyone
+     * reaching the server to make themselves a super admin. This is the enforcement point;
+     * SecurityConfig excluding it from the anonymous list is defence in depth.
+     *
+     * <p>Day-to-day staff creation goes through the Staff page (POST /api/v1/users/staff),
+     * which is also SUPER_ADMIN-only and always assigns ROLE_STAFF.
+     */
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<String>> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         ApiResponse<String> response = authService.registerUser(signUpRequest);
@@ -99,6 +111,29 @@ public class AuthController {
 
         ApiResponse<String> response = authService.logoutAllDevices(userPrincipal.getId());
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Changes the signed-in user's own password. Requires authentication (it is outside the
+     * anonymous list in SecurityConfig) and verifies the current password before applying the
+     * new one. Until this existed, a password could only be set at account creation or via an
+     * emailed reset link.
+     */
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<String>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        if (userPrincipal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Unauthorized"));
+        }
+
+        ApiResponse<String> response = authService.changePassword(userPrincipal.getId(), request);
+        if (response.getSuccess()) {
+            return ResponseEntity.ok(response);
+        }
+        return ResponseEntity.badRequest().body(response);
     }
 
     @PostMapping("/forgot-password")

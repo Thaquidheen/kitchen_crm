@@ -92,6 +92,19 @@ export const authApi = baseApi.injectEndpoints({
     validateResetToken: builder.query<ApiResponse<boolean>, string>({
       query: (token) => `${API_ENDPOINTS.AUTH.VALIDATE_RESET_TOKEN}?token=${token}`,
     }),
+
+    // Change your own password. Requires auth; the server verifies the current password and
+    // revokes every refresh token afterwards, so the user must sign in again.
+    changePassword: builder.mutation<
+      ApiResponse<string>,
+      { currentPassword: string; newPassword: string }
+    >({
+      query: (data) => ({
+        url: API_ENDPOINTS.AUTH.CHANGE_PASSWORD,
+        method: 'POST',
+        body: data,
+      }),
+    }),
   }),
 });
 
@@ -105,4 +118,5 @@ export const {
   useForgotPasswordMutation,
   useResetPasswordMutation,
   useValidateResetTokenQuery,
+  useChangePasswordMutation,
 } = authApi;
