@@ -37,13 +37,21 @@ public class CustomerCreateDto {
     // Initial status (defaults to LEAD if not provided)
     private Customer.CustomerStatus status;
 
-    /** All of this customer's lead sources. Null or empty means none. */
+    /** Everyone involved in this customer's project. Null or empty means nobody. */
     @Valid
-    @Size(max = 20, message = "At most 20 lead sources")
-    private List<LeadSourceDto> leadSources;
+    @Size(max = 20, message = "At most 20 project network members")
+    private List<ProjectNetworkMemberDto> projectNetwork;
 
-    // Legacy single-lead-source fields, still accepted so an older cached bundle keeps working.
+    /** The channel this customer arrived through — one choice, independent of the network. */
     private Customer.LeadSourceType leadSourceType;
+
+    /** @deprecated pre-V95 name for {@link #projectNetwork}; accepted for one release. */
+    @Deprecated
+    @Valid
+    @Size(max = 20, message = "At most 20 project network members")
+    private List<ProjectNetworkMemberDto> leadSources;
+
+    // Legacy flat referrer fields, still accepted so an older cached bundle keeps working.
     private Long architectId;
     private String manualLeadName;
     private String manualLeadContact;

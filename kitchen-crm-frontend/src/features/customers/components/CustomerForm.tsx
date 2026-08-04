@@ -1,7 +1,7 @@
 /**
  * CustomerForm
  * HOCH ERP New/Edit Customer form: grouped sections (Customer details / Project / Lead),
- * kitchen-type chips, lead-source details panel, status + next-follow-up row, notes.
+ * kitchen-type chips, lead source + status row, project network panel, notes.
  * Rendered inside CustomerFormModal's 580px panel; footer is sticky via the modal layout.
  */
 
@@ -20,18 +20,19 @@ import { Plus } from 'lucide-react';
 import type {
   Customer,
   CustomerCreate,
-  CustomerLeadSource,
   CustomerStatus,
-  LeadSourceType,
+  ProjectNetworkMember,
+  ProjectNetworkMemberType,
 } from '../../customers/types';
 import {
-  LEAD_SOURCE_LABELS,
-  customerLeadSourceRows,
-  isFreeTextSource,
-  isLinkedSource,
+  PROJECT_NETWORK_LABELS,
+  SELECTABLE_LEAD_SOURCES,
+  customerLeadSource,
+  customerProjectNetwork,
+  isLinkedMember,
 } from '../../customers/leadSource';
-import { LeadSourceRow } from './LeadSourceRow';
-import type { LeadSourceRowDraft } from './LeadSourceRow';
+import { ProjectNetworkRow } from './ProjectNetworkRow';
+import type { ProjectNetworkRowDraft } from './ProjectNetworkRow';
 
 const customerSchema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -43,8 +44,12 @@ const customerSchema = z.object({
   status: z
     .enum(['LEAD', 'POTENTIAL', 'DESIGN_STAGE', 'QUOTE_GIVEN', 'FOLLOW_UP', 'NEGOTIATIONS', 'CONFIRMED', 'LOST'])
     .optional(),
-  // Lead sources are a list, held in component state alongside the form (see leadSources
-  // below) exactly as kitchenTypes is — the zod schema stays flat.
+  // The channel they arrived through — one value, so it registers straight onto the form.
+  leadSourceType: z
+    .enum(['NONE', 'ARCHITECT', 'BUILDER', 'MANUAL', 'ONLINE', 'WALK_IN', 'SCOUTING', 'BUILDER_REFERRAL', 'MANUAL_REFERRAL', 'CONSULTED'])
+    .optional(),
+  // The project network is a list, held in component state alongside the form (see
+  // projectNetwork below) exactly as kitchenTypes is — the zod schema stays flat.
   followUpNotes: z.string().optional().or(z.literal('')),
   nextFollowUpDate: z.string().optional().or(z.literal('')),
 });
@@ -80,7 +85,7 @@ const sectionLabelCls =
   'text-[10.5px] font-semibold tracking-[0.09em] uppercase text-text-500 mb-3';
 
 const newRowKey = () =>
-  globalThis.crypto?.randomUUID?.() ?? `ls-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  globalThis.crypto?.randomUUID?.() ?? `pn-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 export const CustomerForm: React.FC<CustomerFormProps> = ({
   customerId,
@@ -99,8 +104,8 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   const [createReminder] = useCreateReminderMutation();
 
   const [kitchenTypes, setKitchenTypes] = useState<string[]>([]);
-  const [leadSources, setLeadSources] = useState<LeadSourceRowDraft[]>([]);
-  const [leadSourceErrors, setLeadSourceErrors] = useState<Record<string, string>>({});
+  const [projectNetwork, setProjectNetwork] = useState<ProjectNetworkRowDraft[]>([]);
+  const [networkErrors, setNetworkErrors] = useState<Record<string, string>>({});
 
   const defaultValues: CustomerFormValues = useMemo(
     () => ({
@@ -111,6 +116,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
       place: existingCustomer?.place ?? '',
       sqft: existingCustomer?.sqft ?? '',
       status: existingCustomer?.status ?? 'LEAD',
+      leadSourceType: existingCustomer ? customerLeadSource(existingCustomer) : 'NONE',
       followUpNotes: existingCustomer?.followUpNotes ?? '',
       nextFollowUpDate: '',
     }),
@@ -138,41 +144,41 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           .map((t) => t.trim())
           .filter(Boolean)
       );
-      setLeadSources(
-        customerLeadSourceRows(existingCustomer).map((r) => ({ ...r, key: newRowKey() }))
+      setProjectNetwork(
+        customerProjectNetwork(existingCustomer).map((r) => ({ ...r, key: newRowKey() }))
       );
-      setLeadSourceErrors({});
+      setNetworkErrors({});
     }
   }, [isEdit, existingCustomer, reset, defaultValues]);
 
-  const addLeadSource = () =>
-    setLeadSources((prev) => [...prev, { key: newRowKey(), sourceType: 'ARCHITECT' }]);
+  const addMember = () =>
+    setProjectNetwork((prev) => [...prev, { key: newRowKey(), memberType: 'ARCHITECT' }]);
 
-  const updateLeadSource = (key: string, patch: Partial<CustomerLeadSource>) => {
-    setLeadSources((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
-    setLeadSourceErrors(({ [key]: _drop, ...rest }) => rest);
+  const updateMember = (key: string, patch: Partial<ProjectNetworkMember>) => {
+    setProjectNetwork((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+    setNetworkErrors(({ [key]: _drop, ...rest }) => rest);
   };
 
-  const removeLeadSource = (key: string) => {
-    setLeadSources((prev) => prev.filter((r) => r.key !== key));
-    setLeadSourceErrors(({ [key]: _drop, ...rest }) => rest);
+  const removeMember = (key: string) => {
+    setProjectNetwork((prev) => prev.filter((r) => r.key !== key));
+    setNetworkErrors(({ [key]: _drop, ...rest }) => rest);
   };
 
   // Changing the type clears the row body, so an architect link can't survive a switch to
-  // Walk-in, and an architect id can't survive a switch to Builder.
-  const changeRowType = (key: string, sourceType: LeadSourceType) => {
-    setLeadSources((prev) =>
-      prev.map((r) => (r.key !== key ? r : { key: r.key, id: r.id, sourceType }))
+  // Referral, and an architect id can't survive a switch to Builder.
+  const changeRowType = (key: string, memberType: ProjectNetworkMemberType) => {
+    setProjectNetwork((prev) =>
+      prev.map((r) => (r.key !== key ? r : { key: r.key, id: r.id, memberType }))
     );
-    setLeadSourceErrors(({ [key]: _drop, ...rest }) => rest);
+    setNetworkErrors(({ [key]: _drop, ...rest }) => rest);
   };
 
-  const validateLeadSources = (rows: LeadSourceRowDraft[]): Record<string, string> => {
+  const validateNetwork = (rows: ProjectNetworkRowDraft[]): Record<string, string> => {
     const errs: Record<string, string> = {};
     rows.forEach((r) => {
-      if (isLinkedSource(r.sourceType) && !r.architectId) {
-        errs[r.key] = `Select an existing ${LEAD_SOURCE_LABELS[r.sourceType].toLowerCase()} or create a new one`;
-      } else if (isFreeTextSource(r.sourceType) && !r.referralName?.trim()) {
+      if (isLinkedMember(r.memberType) && !r.architectId) {
+        errs[r.key] = `Select an existing ${PROJECT_NETWORK_LABELS[r.memberType].toLowerCase()} or create a new one`;
+      } else if (!isLinkedMember(r.memberType) && !r.referralName?.trim()) {
         errs[r.key] = 'Name is required';
       }
     });
@@ -186,15 +192,15 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   const extraKitchenTypes = kitchenTypes.filter((t) => !KITCHEN_TYPE_OPTIONS.includes(t));
 
   const onSubmit = async (values: CustomerFormValues) => {
-    const lsErrors = validateLeadSources(leadSources);
-    if (Object.keys(lsErrors).length) {
-      setLeadSourceErrors(lsErrors);
-      toast.error('Fix the highlighted lead sources');
+    const pnErrors = validateNetwork(projectNetwork);
+    if (Object.keys(pnErrors).length) {
+      setNetworkErrors(pnErrors);
+      toast.error('Fix the highlighted project network entries');
       return;
     }
 
     try {
-      const rows = leadSources.map(({ key: _key, ...row }, i) => ({ ...row, sortOrder: i }));
+      const rows = projectNetwork.map(({ key: _key, ...row }, i) => ({ ...row, sortOrder: i }));
 
       const payloadBase = {
         name: values.name,
@@ -206,10 +212,11 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
         kitchenTypes: kitchenTypes.length ? kitchenTypes.join(', ') : undefined,
         followUpNotes: values.followUpNotes || undefined,
         status: values.status,
+        leadSourceType: values.leadSourceType ?? 'NONE',
         // Always sent, even when empty — an omitted key would leave the server's existing
-        // sources untouched, and updateCustomer's optimistic merge only copies keys present
+        // network untouched, and updateCustomer's optimistic merge only copies keys present
         // on the patch, so the UI would keep showing stale rows.
-        leadSources: rows,
+        projectNetwork: rows,
       };
 
       if (isEdit) {
@@ -234,8 +241,8 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
         onSuccess?.(res as unknown as Customer);
         reset();
         setKitchenTypes([]);
-        setLeadSources([]);
-        setLeadSourceErrors({});
+        setProjectNetwork([]);
+        setNetworkErrors({});
       }
     } catch (e: any) {
       toast.error(e?.data?.message || 'Operation failed');
@@ -329,55 +336,17 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
         <section>
           <div className={sectionLabelCls}>Lead</div>
           <div className="space-y-3.5">
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className={`${labelCls} mb-0`}>Lead sources</label>
-                <button
-                  type="button"
-                  onClick={addLeadSource}
-                  disabled={disabled}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[9px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors disabled:opacity-60"
-                >
-                  <Plus size={13} /> Add lead source
-                </button>
-              </div>
-
-              {leadSources.length === 0 ? (
-                <button
-                  type="button"
-                  onClick={addLeadSource}
-                  disabled={disabled}
-                  className="w-full px-3 py-4 rounded-[12px] border border-dashed border-background-500 text-[12.5px] text-text-600 hover:text-text-900 hover:border-background-400 transition-colors"
-                >
-                  No lead sources yet — click to add the first one.
-                </button>
-              ) : (
-                <div className="space-y-2.5">
-                  {leadSources.map((row, i) => (
-                    <LeadSourceRow
-                      key={row.key}
-                      row={row}
-                      index={i}
-                      disabled={disabled}
-                      error={leadSourceErrors[row.key]}
-                      takenArchitectIds={leadSources
-                        .filter((r) => r.key !== row.key && r.architectId)
-                        .map((r) => r.architectId as number)}
-                      onChangeType={(t) => changeRowType(row.key, t)}
-                      onChange={(patch) => updateLeadSource(row.key, patch)}
-                      onRemove={() => removeLeadSource(row.key)}
-                    />
-                  ))}
-                </div>
-              )}
-
-              <p className="text-[11.5px] text-text-500 mt-1.5">
-                Add as many as apply — an architect and a builder, for example. Architects and
-                builders are saved to the Architects module and reusable across customers.
-              </p>
-            </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className={labelCls}>Lead source</label>
+                <select className={inputCls} {...register('leadSourceType')} disabled={disabled}>
+                  {SELECTABLE_LEAD_SOURCES.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className={labelCls}>Status</label>
                 <select className={inputCls} {...register('status')} disabled={disabled}>
@@ -388,13 +357,64 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                   ))}
                 </select>
               </div>
-              {!isEdit && (
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={`${labelCls} mb-0`}>Project network</label>
+                <button
+                  type="button"
+                  onClick={addMember}
+                  disabled={disabled}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[9px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors disabled:opacity-60"
+                >
+                  <Plus size={13} /> Add
+                </button>
+              </div>
+
+              {projectNetwork.length === 0 ? (
+                <button
+                  type="button"
+                  onClick={addMember}
+                  disabled={disabled}
+                  className="w-full px-3 py-4 rounded-[12px] border border-dashed border-background-500 text-[12.5px] text-text-600 hover:text-text-900 hover:border-background-400 transition-colors"
+                >
+                  Nobody added yet — click to add an architect, builder or referral.
+                </button>
+              ) : (
+                <div className="space-y-2.5">
+                  {projectNetwork.map((row, i) => (
+                    <ProjectNetworkRow
+                      key={row.key}
+                      row={row}
+                      index={i}
+                      disabled={disabled}
+                      error={networkErrors[row.key]}
+                      takenArchitectIds={projectNetwork
+                        .filter((r) => r.key !== row.key && r.architectId)
+                        .map((r) => r.architectId as number)}
+                      onChangeType={(t) => changeRowType(row.key, t)}
+                      onChange={(patch) => updateMember(row.key, patch)}
+                      onRemove={() => removeMember(row.key)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <p className="text-[11.5px] text-text-500 mt-1.5">
+                Everyone involved in this project — add as many as apply. Architects and builders
+                are saved to the Architects module and reusable across customers.
+              </p>
+            </div>
+
+            {!isEdit && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className={labelCls}>Next follow-up</label>
                   <input type="date" className={inputCls} {...register('nextFollowUpDate')} disabled={disabled} />
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             <div>
               <label className={labelCls}>Notes</label>

@@ -14,10 +14,18 @@ import { Button } from '@/components/ui/Button';
 import toast from 'react-hot-toast';
 import type { Staff, StaffCreate } from '../types';
 
+// These rules mirror UserCreateDto on the backend exactly. Keep them in step: if the form is
+// looser, the server rejects the submission with an error the user cannot act on.
 const createStaffSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(50, 'Password must be at most 50 characters')
+    .regex(/[a-z]/, 'Password must contain a lowercase letter')
+    .regex(/[A-Z]/, 'Password must contain an uppercase letter')
+    .regex(/\d/, 'Password must contain a number'),
   phoneNumber: z.string().optional(),
 });
 
@@ -85,9 +93,9 @@ export default function StaffFormModal({ isOpen, onClose, staff }: StaffFormModa
         await updateStaff({ id: staff.id, data: updateData }).unwrap();
         toast.success('Staff updated successfully');
       } else {
-        // Create staff - password is required
-        if (!data.password || data.password.length < 6) {
-          toast.error('Password is required and must be at least 6 characters');
+        // Create staff - password is required (shape already enforced by createStaffSchema)
+        if (!data.password) {
+          toast.error('Password is required');
           return;
         }
 
@@ -134,7 +142,7 @@ export default function StaffFormModal({ isOpen, onClose, staff }: StaffFormModa
             type="password"
             {...register('password')}
             error={errors.password?.message}
-            placeholder="Enter password (min 6 characters)"
+            placeholder="At least 8 characters, with a capital, a small letter and a number"
           />
         )}
 

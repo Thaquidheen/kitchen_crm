@@ -23,7 +23,7 @@ import { CustomerQuotationsTab } from './CustomerQuotationsTab';
 import { CustomerProjectsTab } from './CustomerProjectsTab';
 import { CustomerDesignTab } from './CustomerDesignTab';
 import { CustomerProductionTab } from './CustomerProductionTab';
-import { CustomerTimelineTab } from './CustomerTimelineTab';
+import { CustomerActivityPanel } from './CustomerActivityPanel';
 import { CustomerRequirementsTab } from './CustomerRequirementsTab';
 import { CustomerWarrantyCardTab } from './CustomerWarrantyCardTab';
 import { CustomerFormModal } from './CustomerFormModal';
@@ -111,7 +111,7 @@ export const CustomerDetail: React.FC<CustomerDetailProps> = ({ customer }) => {
       case 'requirements':
         return <CustomerRequirementsTab customerId={customer.id} />;
       case 'timeline':
-        return <CustomerTimelineTab customerId={customer.id} />;
+        return <CustomerActivityPanel customerId={customer.id} />;
       case 'warranty':
         return <CustomerWarrantyCardTab customerId={customer.id} customerName={customer.name} customerEmail={customer.email} />;
       default:

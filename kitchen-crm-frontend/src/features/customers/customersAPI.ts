@@ -94,6 +94,10 @@ export const customersAPI = baseApi.injectEndpoints({
         { type: 'Customers', id: arg.id },
         { type: 'Customers', id: 'LIST' },
         { type: 'Customers', id: 'PAGE' },
+        // updateCustomer writes a "Customer Update" workflow-history row. The activity feed now
+        // sits on Overview next to the Edit button, so without this the user saves an edit and
+        // watches the feed not mention it.
+        { type: 'Customers', id: `WORKFLOW-${arg.id}` },
       ],
     }),
 
@@ -160,8 +164,8 @@ export const customersAPI = baseApi.injectEndpoints({
           { type: 'Customers', id: 'LIST' },
           { type: 'Customers', id: 'PAGE' },
           { type: 'Customers', id: 'STATS' },
-          // A status change writes a workflow-history row; without this the Timeline
-          // tab would keep serving the pre-change list from cache.
+          // A status change writes a workflow-history row; without this the activity feed
+          // would keep serving the pre-change list from cache.
           { type: 'Customers', id: `WORKFLOW-${id}` },
         ],
       }
@@ -212,6 +216,17 @@ export const customersAPI = baseApi.injectEndpoints({
       transformResponse: (response: ApiResponse<WorkflowHistoryDto[]>) =>
         (response.data as WorkflowHistoryDto[]) ?? [],
       providesTags: (r, e, customerId) => [{ type: 'Customers', id: `WORKFLOW-${customerId}` }],
+    }),
+
+    // A free-text note pinned to the customer's activity feed.
+    addCustomerNote: builder.mutation<WorkflowHistoryDto, { customerId: number; note: string }>({
+      query: ({ customerId, note }) => ({
+        url: `/workflow/customer/${customerId}/notes`,
+        method: 'POST',
+        body: { note },
+      }),
+      transformResponse: (response: ApiResponse<WorkflowHistoryDto>) => response.data as WorkflowHistoryDto,
+      invalidatesTags: (r, e, { customerId }) => [{ type: 'Customers', id: `WORKFLOW-${customerId}` }],
     }),
 
     // Customer Requirements
@@ -270,6 +285,7 @@ export const {
   useGetPipelineQuery,
   useUpdatePipelineMutation,
   useGetWorkflowHistoryByCustomerQuery,
+  useAddCustomerNoteMutation,
   useGetCustomerRequirementsQuery,
   useCreateCustomerRequirementsMutation,
   useUpdateCustomerRequirementsMutation,

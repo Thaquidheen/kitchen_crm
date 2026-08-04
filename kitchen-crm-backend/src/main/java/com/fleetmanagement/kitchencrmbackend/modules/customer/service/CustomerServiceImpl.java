@@ -15,9 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @Transactional
@@ -67,18 +69,22 @@ public class CustomerServiceImpl implements CustomerService {
 
         Customer customer = convertToEntity(customerCreateDto);
 
-        // Lead sources. On create, absent and empty both simply mean "none".
-        List<LeadSourceDto> sources = resolveIncomingSources(
+        customer.setLeadSourceType(customerCreateDto.getLeadSourceType() != null
+                ? customerCreateDto.getLeadSourceType()
+                : Customer.LeadSourceType.NONE);
+
+        // Project network. On create, absent and empty both simply mean "nobody".
+        List<ProjectNetworkMemberDto> members = resolveIncomingNetwork(
+                customerCreateDto.getProjectNetwork(),
                 customerCreateDto.getLeadSources(),
-                customerCreateDto.getLeadSourceType(),
                 customerCreateDto.getArchitectId(),
                 customerCreateDto.getReferralName(), customerCreateDto.getReferralContact(),
                 customerCreateDto.getReferralLocation(), customerCreateDto.getReferralDesignation(),
                 customerCreateDto.getReferralFirm(), customerCreateDto.getReferralEmail(),
                 customerCreateDto.getManualLeadName(), customerCreateDto.getManualLeadContact());
         try {
-            applyLeadSources(customer, sources != null ? sources : List.of());
-        } catch (LeadSourceException e) {
+            applyProjectNetwork(customer, members != null ? members : List.of());
+        } catch (ProjectNetworkException e) {
             return ApiResponse.error(e.getMessage());
         }
 
@@ -109,9 +115,11 @@ public class CustomerServiceImpl implements CustomerService {
             return ApiResponse.error("Customer not found");
         }
 
-        // Check email uniqueness
+        // Check email uniqueness. Objects.equals, not existingCustomer.getEmail().equals(...):
+        // email is optional, so the stored value is routinely null, and dereferencing it threw an
+        // NPE (HTTP 500) on every attempt to add an email to a customer that did not have one.
         if (customerDto.getEmail() != null &&
-                !existingCustomer.getEmail().equals(customerDto.getEmail()) &&
+                !Objects.equals(existingCustomer.getEmail(), customerDto.getEmail()) &&
                 customerRepository.existsByEmail(customerDto.getEmail())) {
             return ApiResponse.error("Email already exists");
         }
@@ -126,20 +134,27 @@ public class CustomerServiceImpl implements CustomerService {
         existingCustomer.setContactPerson(customerDto.getContactPerson());
         existingCustomer.setFollowUpNotes(customerDto.getFollowUpNotes());
 
-        // Lead sources: null means "not specified, leave them alone"; a list (including an
-        // empty one) replaces them wholesale.
-        List<LeadSourceDto> sources = resolveIncomingSources(
+        // Explicit, and easy to forget: without this the form's Lead source would appear to save
+        // and silently not, the way status still does (status is changed through
+        // updateCustomerStatus instead, which records the note and the history entry).
+        if (customerDto.getLeadSourceType() != null) {
+            existingCustomer.setLeadSourceType(customerDto.getLeadSourceType());
+        }
+
+        // Project network: null means "not specified, leave it alone"; a list (including an
+        // empty one) replaces it wholesale.
+        List<ProjectNetworkMemberDto> members = resolveIncomingNetwork(
+                customerDto.getProjectNetwork(),
                 customerDto.getLeadSources(),
-                customerDto.getLeadSourceType(),
                 customerDto.getArchitectId(),
                 customerDto.getReferralName(), customerDto.getReferralContact(),
                 customerDto.getReferralLocation(), customerDto.getReferralDesignation(),
                 customerDto.getReferralFirm(), customerDto.getReferralEmail(),
                 customerDto.getManualLeadName(), customerDto.getManualLeadContact());
-        if (sources != null) {
+        if (members != null) {
             try {
-                applyLeadSources(existingCustomer, sources);
-            } catch (LeadSourceException e) {
+                applyProjectNetwork(existingCustomer, members);
+            } catch (ProjectNetworkException e) {
                 return ApiResponse.error(e.getMessage());
             }
         }
@@ -225,14 +240,23 @@ public class CustomerServiceImpl implements CustomerService {
         dto.setCreatedAt(customer.getCreatedAt());
         dto.setUpdatedAt(customer.getUpdatedAt());
         
-        dto.setLeadSources(customer.getLeadSources().stream().map(this::toLeadSourceDto).toList());
+        // A null memberType means the row holds a pre-V95 channel value the converter cannot map
+        // to a person. V95 deletes those, so this only guards a database written by an older jar
+        // after the migration — dropping the row beats rendering a blank entry the form then
+        // refuses to save.
+        List<ProjectNetworkMemberDto> network = customer.getProjectNetwork().stream()
+                .filter(m -> m.getMemberType() != null)
+                .map(this::toMemberDto)
+                .toList();
+        dto.setProjectNetwork(network);
+        dto.setLeadSourceType(customer.getLeadSourceType());
 
-        // Legacy flat fields, still emitted so an older cached bundle keeps rendering.
+        // Legacy fields, still emitted so an older cached bundle keeps rendering.
+        dto.setLeadSources(network);
         if (customer.getArchitect() != null) {
             dto.setArchitectId(customer.getArchitect().getId());
             dto.setArchitectName(customer.getArchitect().getArchitectureName());
         }
-        dto.setLeadSourceType(customer.getLeadSourceType());
         dto.setManualLeadName(customer.getManualLeadName());
         dto.setManualLeadContact(customer.getManualLeadContact());
         dto.setReferralName(customer.getReferralName());
@@ -245,57 +269,68 @@ public class CustomerServiceImpl implements CustomerService {
         return dto;
     }
 
-    /** Thrown when an incoming lead source references an architect that does not exist. */
-    private static class LeadSourceException extends RuntimeException {
-        LeadSourceException(String message) {
+    /** Thrown when an incoming network member references an architect that does not exist. */
+    private static class ProjectNetworkException extends RuntimeException {
+        ProjectNetworkException(String message) {
             super(message);
         }
     }
 
     /**
-     * Replaces the customer's lead sources with exactly {@code incoming}.
+     * Replaces the customer's project network with exactly {@code incoming}.
      *
      * <p>Follows the same replace-children idiom as ApplianceCustomerServiceImpl.applyDto:
      * clear the existing collection in place (orphanRemoval deletes the rows) and re-add, with
      * sortOrder taken from list position. Never reassign the list — that breaks orphanRemoval.
      */
-    private void applyLeadSources(Customer customer, List<LeadSourceDto> incoming) {
-        customer.clearLeadSources();
+    private void applyProjectNetwork(Customer customer, List<ProjectNetworkMemberDto> incoming) {
+        // Build and fully validate the replacement list BEFORE touching the customer. The old
+        // order — clear first, resolve architects inside the loop — meant an unknown architect id
+        // threw half-way through, and because the caller catches that and returns an error
+        // response rather than rethrowing, this @Transactional method returned normally and
+        // COMMITTED: orphanRemoval had already deleted every existing row. The user saw "save
+        // failed" while their project network was destroyed.
+        List<CustomerProjectNetworkMember> replacement = new ArrayList<>();
 
-        int order = 0;
-        for (LeadSourceDto dto : incoming) {
-            Customer.LeadSourceType type = dto.getSourceType();
-            // NONE is never persisted — an empty list is how "no lead source" is represented.
-            if (type == null || type == Customer.LeadSourceType.NONE) {
+        for (ProjectNetworkMemberDto dto : incoming) {
+            CustomerProjectNetworkMember.MemberType type = dto.effectiveType();
+            // Null covers both a blank row and a stale bundle sending a channel value that is
+            // no longer a person; either way there is nobody to record.
+            if (type == null) {
                 continue;
             }
 
-            CustomerLeadSource source = new CustomerLeadSource();
-            source.setSourceType(type);
+            CustomerProjectNetworkMember member = new CustomerProjectNetworkMember();
 
             if (type.isLinked() && dto.getArchitectId() != null) {
                 Architect architect = architectRepository.findById(dto.getArchitectId())
-                        .orElseThrow(() -> new LeadSourceException(
+                        .orElseThrow(() -> new ProjectNetworkException(
                                 "Architect not found: " + dto.getArchitectId()));
-                source.setArchitect(architect);
+                member.setMemberType(type);
+                member.setArchitect(architect);
                 // Firm/phone live on the architects row; they are not duplicated here.
             } else {
-                // Free-text types, and linked types that have no record yet: keep whatever text
-                // came in. Without this, opening a legacy architect-sourced customer and saving
-                // an unrelated field would silently wipe the referrer's name and number.
-                source.setReferralName(trimToNull(dto.getReferralName()));
-                source.setReferralContact(trimToNull(dto.getReferralContact()));
-                source.setReferralLocation(trimToNull(dto.getReferralLocation()));
-                source.setReferralDesignation(trimToNull(dto.getReferralDesignation()));
-                source.setReferralFirm(trimToNull(dto.getReferralFirm()));
-                source.setReferralEmail(trimToNull(dto.getReferralEmail()));
+                // A linked type with no record behind it is a shape nothing can render or save,
+                // so it becomes a referral, which keeps the text and is a valid row. Without
+                // keeping the text, opening a legacy architect-sourced customer and saving an
+                // unrelated field would silently wipe the referrer's name and number.
+                member.setMemberType(CustomerProjectNetworkMember.MemberType.REFERRAL);
+                member.setReferralName(trimToNull(dto.getReferralName()));
+                member.setReferralContact(trimToNull(dto.getReferralContact()));
+                member.setReferralLocation(trimToNull(dto.getReferralLocation()));
+                member.setReferralDesignation(trimToNull(dto.getReferralDesignation()));
+                member.setReferralFirm(trimToNull(dto.getReferralFirm()));
+                member.setReferralEmail(trimToNull(dto.getReferralEmail()));
             }
 
-            source.setSortOrder(order++);
-            customer.addLeadSource(source);
+            member.setSortOrder(replacement.size());
+            replacement.add(member);
         }
 
-        applyLegacyLeadSourceMirror(customer);
+        // Nothing below can fail, so the collection is only ever cleared on a path that commits
+        // the full replacement. Clear in place — reassigning the list breaks orphanRemoval.
+        customer.clearProjectNetwork();
+        replacement.forEach(customer::addProjectNetworkMember);
     }
 
     private String trimToNull(String value) {
@@ -305,60 +340,45 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     /**
-     * Decides what an incoming payload means for the lead-source collection.
+     * Decides what an incoming payload means for the project network.
      *
-     * <p>Returns {@code null} for "not specified — leave them alone", or a list to replace them
-     * with (an empty list clears them). This removes the old guesswork where a customer whose
-     * only source had no details could never be changed through a partial update.
+     * <p>Returns {@code null} for "not specified — leave it alone", or a list to replace it with
+     * (an empty list clears it).
      *
-     * <p>When {@code leadSources} is absent but the legacy flat fields are present, they are
-     * folded into a single-element list so a cached older frontend bundle still saves correctly.
+     * <p>The two fallbacks exist only so a cached older frontend bundle still saves across a
+     * deploy: {@code leadSources} was this field's name before V95, and before V92 the referrer
+     * was a handful of flat columns, which fold into a single REFERRAL member.
      */
-    private List<LeadSourceDto> resolveIncomingSources(List<LeadSourceDto> leadSources,
-                                                       Customer.LeadSourceType legacyType,
-                                                       Long legacyArchitectId,
-                                                       String referralName, String referralContact,
-                                                       String referralLocation, String referralDesignation,
-                                                       String referralFirm, String referralEmail,
-                                                       String manualLeadName, String manualLeadContact) {
-        if (leadSources != null) {
-            return leadSources;
+    private List<ProjectNetworkMemberDto> resolveIncomingNetwork(
+            List<ProjectNetworkMemberDto> projectNetwork,
+            List<ProjectNetworkMemberDto> legacyLeadSources,
+            Long legacyArchitectId,
+            String referralName, String referralContact,
+            String referralLocation, String referralDesignation,
+            String referralFirm, String referralEmail,
+            String manualLeadName, String manualLeadContact) {
+        if (projectNetwork != null) {
+            return projectNetwork;
+        }
+        if (legacyLeadSources != null) {
+            return legacyLeadSources;
         }
 
-        boolean legacyProvided = legacyType != null
-                || legacyArchitectId != null
-                || StringUtils.hasText(manualLeadName)
-                || StringUtils.hasText(referralName);
-        if (!legacyProvided) {
+        if (legacyArchitectId == null
+                && !StringUtils.hasText(manualLeadName)
+                && !StringUtils.hasText(referralName)) {
             return null;
         }
 
-        Customer.LeadSourceType type = legacyType;
-        if (type == null) {
-            if (legacyArchitectId != null) {
-                type = Customer.LeadSourceType.ARCHITECT;
-            } else if (StringUtils.hasText(manualLeadName)) {
-                type = Customer.LeadSourceType.MANUAL_REFERRAL;
-                if (referralName == null) referralName = manualLeadName;
-                if (referralContact == null) referralContact = manualLeadContact;
-            } else {
-                type = Customer.LeadSourceType.NONE;
-            }
+        ProjectNetworkMemberDto dto = new ProjectNetworkMemberDto();
+        if (legacyArchitectId != null) {
+            dto.setMemberType(CustomerProjectNetworkMember.MemberType.ARCHITECT);
+            dto.setArchitectId(legacyArchitectId);
+        } else {
+            dto.setMemberType(CustomerProjectNetworkMember.MemberType.REFERRAL);
         }
-        if (type == Customer.LeadSourceType.NONE) {
-            return List.of();
-        }
-        if (type == Customer.LeadSourceType.MANUAL) {
-            type = Customer.LeadSourceType.MANUAL_REFERRAL;
-            if (referralName == null) referralName = manualLeadName;
-            if (referralContact == null) referralContact = manualLeadContact;
-        }
-
-        LeadSourceDto dto = new LeadSourceDto();
-        dto.setSourceType(type);
-        dto.setArchitectId(legacyArchitectId);
-        dto.setReferralName(referralName);
-        dto.setReferralContact(referralContact);
+        dto.setReferralName(StringUtils.hasText(referralName) ? referralName : manualLeadName);
+        dto.setReferralContact(StringUtils.hasText(referralContact) ? referralContact : manualLeadContact);
         dto.setReferralLocation(referralLocation);
         dto.setReferralDesignation(referralDesignation);
         dto.setReferralFirm(referralFirm);
@@ -366,59 +386,15 @@ public class CustomerServiceImpl implements CustomerService {
         return List.of(dto);
     }
 
-    /**
-     * Mirrors the first lead source back into the legacy flat columns for one release, so that
-     * rolling back to the previous jar still renders correct data. Deleted together with those
-     * columns in a later release.
-     */
-    private void applyLegacyLeadSourceMirror(Customer customer) {
-        CustomerLeadSource first = customer.getLeadSources().isEmpty()
-                ? null
-                : customer.getLeadSources().get(0);
+    private ProjectNetworkMemberDto toMemberDto(CustomerProjectNetworkMember member) {
+        ProjectNetworkMemberDto dto = new ProjectNetworkMemberDto();
+        dto.setId(member.getId());
+        dto.setMemberType(member.getMemberType());
+        // Legacy name, emitted so an older cached bundle still renders the entry.
+        dto.setSourceType(member.getMemberType() != null ? member.getMemberType().name() : null);
+        dto.setSortOrder(member.getSortOrder());
 
-        customer.setArchitect(null);
-        customer.setManualLeadName(null);
-        customer.setManualLeadContact(null);
-        customer.setReferralName(null);
-        customer.setReferralContact(null);
-        customer.setReferralLocation(null);
-        customer.setReferralDesignation(null);
-        customer.setReferralFirm(null);
-        customer.setReferralEmail(null);
-
-        if (first == null) {
-            customer.setLeadSourceType(Customer.LeadSourceType.NONE);
-            return;
-        }
-
-        // The previous jar's enum has no BUILDER constant, so write the value it understands.
-        customer.setLeadSourceType(first.getSourceType() == Customer.LeadSourceType.BUILDER
-                ? Customer.LeadSourceType.BUILDER_REFERRAL
-                : first.getSourceType());
-        customer.setArchitect(first.getArchitect());
-
-        if (first.getArchitect() != null) {
-            Architect a = first.getArchitect();
-            customer.setReferralName(a.getArchitectureName());
-            customer.setReferralFirm(a.getFirm());
-            customer.setReferralContact(a.getContactNumber());
-        } else {
-            customer.setReferralName(first.getReferralName());
-            customer.setReferralContact(first.getReferralContact());
-            customer.setReferralLocation(first.getReferralLocation());
-            customer.setReferralDesignation(first.getReferralDesignation());
-            customer.setReferralFirm(first.getReferralFirm());
-            customer.setReferralEmail(first.getReferralEmail());
-        }
-    }
-
-    private LeadSourceDto toLeadSourceDto(CustomerLeadSource source) {
-        LeadSourceDto dto = new LeadSourceDto();
-        dto.setId(source.getId());
-        dto.setSourceType(source.getSourceType());
-        dto.setSortOrder(source.getSortOrder());
-
-        Architect architect = source.getArchitect();
+        Architect architect = member.getArchitect();
         if (architect != null) {
             dto.setArchitectId(architect.getId());
             dto.setArchitectName(architect.getArchitectureName());
@@ -427,12 +403,12 @@ public class CustomerServiceImpl implements CustomerService {
             dto.setArchitectPartnerType(architect.getPartnerType());
         }
 
-        dto.setReferralName(source.getReferralName());
-        dto.setReferralContact(source.getReferralContact());
-        dto.setReferralLocation(source.getReferralLocation());
-        dto.setReferralDesignation(source.getReferralDesignation());
-        dto.setReferralFirm(source.getReferralFirm());
-        dto.setReferralEmail(source.getReferralEmail());
+        dto.setReferralName(member.getReferralName());
+        dto.setReferralContact(member.getReferralContact());
+        dto.setReferralLocation(member.getReferralLocation());
+        dto.setReferralDesignation(member.getReferralDesignation());
+        dto.setReferralFirm(member.getReferralFirm());
+        dto.setReferralEmail(member.getReferralEmail());
         return dto;
     }
 

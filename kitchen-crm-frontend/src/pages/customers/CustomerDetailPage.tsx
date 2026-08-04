@@ -14,6 +14,7 @@ import {
   MapPin,
   LayoutGrid,
   Target,
+  Users,
   Calendar,
   Clock,
   Pencil,
@@ -33,14 +34,16 @@ import { useGetQuotationsByCustomerQuery } from '../../app/baseApi';
 import { CustomerFormModal } from '../../features/customers/components/CustomerFormModal';
 import { CustomerFollowUps } from '../../features/customers/components/CustomerFollowUps';
 import { CustomerReminders } from '../../features/customers/components/CustomerReminders';
-import { CustomerTimelineTab } from '../../features/customers/components/CustomerTimelineTab';
+import { CustomerActivityPanel } from '../../features/customers/components/CustomerActivityPanel';
 import { StatusChangeModal } from '../../features/customers/components/StatusChangeModal';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { STATUS_PILL } from '../../features/customers/components/CustomerList';
-import { LeadSourceChips } from '../../features/customers/components/LeadSourceChips';
+import { ProjectNetworkChips } from '../../features/customers/components/ProjectNetworkChips';
+import { customerLeadSource, leadSourceLabel } from '../../features/customers/leadSource';
 import type { CustomerStatus } from '../../features/customers/types';
 
-const TABS = ['Overview', 'Reminders', 'Pipeline', 'Quotations', 'Projects', 'Design', 'Production', 'Timeline', 'Warranty'];
+// Timeline is gone as a tab — its feed now lives on Overview, where notes are written.
+const TABS = ['Overview', 'Reminders', 'Pipeline', 'Quotations', 'Projects', 'Design', 'Production', 'Warranty'];
 
 const STATUS_OPTIONS: Array<{ value: CustomerStatus; label: string }> = [
   { value: 'LEAD', label: 'Lead' },
@@ -150,7 +153,8 @@ const CustomerDetailPage: React.FC = () => {
     { icon: <Mail size={15} />, label: 'Email', value: customer.email || '—' },
     { icon: <MapPin size={15} />, label: 'Address', value: customer.address || '—' },
     { icon: <LayoutGrid size={15} />, label: 'Kitchen types', value: customer.kitchenTypes || '—' },
-    { icon: <Target size={15} />, label: 'Lead sources', value: <LeadSourceChips customer={customer} /> },
+    { icon: <Target size={15} />, label: 'Lead source', value: leadSourceLabel(customerLeadSource(customer)) },
+    { icon: <Users size={15} />, label: 'Project network', value: <ProjectNetworkChips customer={customer} /> },
     { icon: <Calendar size={15} />, label: 'Created', value: fmtDate(customer.createdAt) },
     { icon: <Clock size={15} />, label: 'Last updated', value: fmtDate(customer.updatedAt) },
   ];
@@ -307,14 +311,15 @@ const CustomerDetailPage: React.FC = () => {
 
             {/* Follow-ups (reminders have their own tab) */}
             <CustomerFollowUps customerId={customer.id} />
+
+            {/* Activity & notes — scrolls internally so Overview stays a fixed height */}
+            <CustomerActivityPanel customerId={customer.id} />
           </div>
         </div>
       ) : activeTab === 'Reminders' ? (
         <div className="space-y-4">
           <CustomerReminders customerId={customer.id} />
         </div>
-      ) : activeTab === 'Timeline' ? (
-        <CustomerTimelineTab customerId={customer.id} />
       ) : (
         <div className="bg-background-800 border border-background-600 rounded-[14px] px-6 py-16 text-center">
           <div className="text-[14.5px] font-semibold text-text-900">{activeTab}</div>
@@ -324,7 +329,7 @@ const CustomerDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* Status change — note is mandatory and lands on the Timeline tab */}
+      {/* Status change — note is mandatory and lands on the Overview activity feed */}
       <StatusChangeModal
         isOpen={pendingStatus !== null}
         onClose={() => setPendingStatus(null)}

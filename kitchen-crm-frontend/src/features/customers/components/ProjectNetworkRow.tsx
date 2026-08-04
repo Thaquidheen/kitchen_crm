@@ -1,40 +1,35 @@
 /**
- * LeadSourceRow
- * One entry in the customer form's lead-source list: a type selector, then either an
- * Architects-module picker (for Architect/Builder) or free-text referrer fields.
+ * ProjectNetworkRow
+ * One person in the customer form's project network: a type selector, then either an
+ * Architects-module picker (for Architect/Builder) or free-text details (for Referral).
  */
 
 import { X } from 'lucide-react';
 import { ArchitectPicker } from '../../architects/components/ArchitectPicker';
-import {
-  LEAD_SOURCE_ROW_TYPES,
-  isFreeTextSource,
-  isLinkedSource,
-  partnerTypeForSource,
-} from '../leadSource';
-import type { CustomerLeadSource, LeadSourceType } from '../types';
+import { PROJECT_NETWORK_MEMBER_TYPES, isLinkedMember, partnerTypeForMember } from '../leadSource';
+import type { ProjectNetworkMember, ProjectNetworkMemberType } from '../types';
 
 const inputCls =
   'w-full h-[38px] px-3 rounded-[10px] border border-background-600 bg-background-900 text-text-900 text-[13px] outline-none focus:border-primary-600 transition-colors placeholder:text-text-500';
 const labelCls = 'block text-[12.5px] font-medium text-text-800 mb-1.5';
 
-export interface LeadSourceRowDraft extends CustomerLeadSource {
+export interface ProjectNetworkRowDraft extends ProjectNetworkMember {
   /** Stable across removals and re-orders, so React keys don't reuse the wrong row. */
   key: string;
 }
 
-export interface LeadSourceRowProps {
-  row: LeadSourceRowDraft;
+export interface ProjectNetworkRowProps {
+  row: ProjectNetworkRowDraft;
   index: number;
   disabled?: boolean;
   error?: string;
   takenArchitectIds: number[];
-  onChangeType: (type: LeadSourceType) => void;
-  onChange: (patch: Partial<CustomerLeadSource>) => void;
+  onChangeType: (type: ProjectNetworkMemberType) => void;
+  onChange: (patch: Partial<ProjectNetworkMember>) => void;
   onRemove: () => void;
 }
 
-export function LeadSourceRow({
+export function ProjectNetworkRow({
   row,
   index,
   disabled = false,
@@ -43,15 +38,8 @@ export function LeadSourceRow({
   onChangeType,
   onChange,
   onRemove,
-}: LeadSourceRowProps) {
-  const linked = isLinkedSource(row.sourceType);
-  const freeText = isFreeTextSource(row.sourceType);
-
-  // A legacy row may carry a type no longer offered (BUILDER_REFERRAL, MANUAL). Keep it in the
-  // list so it stays selectable until deliberately changed, rather than silently switching.
-  const typeOptions = LEAD_SOURCE_ROW_TYPES.some((t) => t.value === row.sourceType)
-    ? LEAD_SOURCE_ROW_TYPES
-    : [...LEAD_SOURCE_ROW_TYPES, { value: row.sourceType, label: `${row.sourceType} (legacy)` }];
+}: ProjectNetworkRowProps) {
+  const linked = isLinkedMember(row.memberType);
 
   return (
     <div
@@ -65,12 +53,12 @@ export function LeadSourceRow({
         </span>
         <select
           className={`${inputCls} h-[34px] flex-1`}
-          value={row.sourceType}
-          onChange={(e) => onChangeType(e.target.value as LeadSourceType)}
+          value={row.memberType}
+          onChange={(e) => onChangeType(e.target.value as ProjectNetworkMemberType)}
           disabled={disabled}
-          aria-label={`Lead source ${index + 1} type`}
+          aria-label={`Project network entry ${index + 1} type`}
         >
-          {typeOptions.map((t) => (
+          {PROJECT_NETWORK_MEMBER_TYPES.map((t) => (
             <option key={t.value} value={t.value}>
               {t.label}
             </option>
@@ -80,16 +68,16 @@ export function LeadSourceRow({
           type="button"
           onClick={onRemove}
           disabled={disabled}
-          title="Remove lead source"
+          title="Remove from project network"
           className="shrink-0 w-[30px] h-[30px] rounded-[9px] flex items-center justify-center text-text-500 hover:text-error hover:bg-error/10 transition-colors"
         >
           <X size={14} />
         </button>
       </div>
 
-      {linked && (
+      {linked ? (
         <ArchitectPicker
-          type={partnerTypeForSource(row.sourceType)}
+          type={partnerTypeForMember(row.memberType)}
           valueId={row.architectId}
           valueName={row.architectName}
           valueFirm={row.architectFirm}
@@ -113,9 +101,7 @@ export function LeadSourceRow({
             })
           }
         />
-      )}
-
-      {freeText && (
+      ) : (
         <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -174,11 +160,9 @@ export function LeadSourceRow({
         </div>
       )}
 
-      {/* Walk-in / Scouting / Online carry no extra detail — nothing renders below the header. */}
-
       {error && <p className="text-error text-xs">{error}</p>}
     </div>
   );
 }
 
-export default LeadSourceRow;
+export default ProjectNetworkRow;

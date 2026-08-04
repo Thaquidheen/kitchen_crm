@@ -55,102 +55,99 @@ public class Customer extends Auditable {
     private CustomerStatus status = CustomerStatus.LEAD;
 
     /**
-     * How this customer came to us. An empty list means no lead source — {@code NONE} is never
-     * persisted as a row. Replaces the flat columns below; see V92/V93.
+     * Who is involved in this customer's project — architects, builders, whoever referred them.
+     * Independent of {@link #leadSourceType}: an online lead can still have an architect on the
+     * project. See V95.
      */
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("sortOrder ASC")
     @BatchSize(size = 50)
-    private List<CustomerLeadSource> leadSources = new ArrayList<>();
+    private List<CustomerProjectNetworkMember> projectNetwork = new ArrayList<>();
+
+    /**
+     * The channel this customer arrived through — one choice, set straight from the form.
+     *
+     * <p>V92 demoted this to a mirror of the first lead-source row; V95 made it authoritative
+     * again when the two ideas were split apart.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "lead_source_type")
+    private LeadSourceType leadSourceType = LeadSourceType.NONE;
 
     // ---------------------------------------------------------------------------------------
-    // Legacy single-lead-source columns. Superseded by leadSources, but kept for one release:
-    // production runs ddl-auto=validate, so dropping them would stop the previous jar booting
-    // and remove the rollback path. CustomerServiceImpl mirrors the first source into them.
+    // Legacy flat referrer columns. Superseded by projectNetwork, but kept: production runs
+    // ddl-auto=validate, so dropping them would stop the previous jar booting and remove the
+    // rollback path. Nothing writes them any more; they are read only as a fallback for rows
+    // last saved before V92.
     // ---------------------------------------------------------------------------------------
 
-    /** @deprecated use {@link #leadSources}. */
+    /** @deprecated use {@link #projectNetwork}. */
     @Deprecated
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "architect_id")
     private Architect architect;
 
-    /** @deprecated use {@link #leadSources}. */
-    @Deprecated
-    @Enumerated(EnumType.STRING)
-    @Column(name = "lead_source_type")
-    private LeadSourceType leadSourceType = LeadSourceType.NONE;
-
-    /** @deprecated use {@link #leadSources}. */
+    /** @deprecated use {@link #projectNetwork}. */
     @Deprecated
     @Column(name = "manual_lead_name")
     private String manualLeadName;
 
-    /** @deprecated use {@link #leadSources}. */
+    /** @deprecated use {@link #projectNetwork}. */
     @Deprecated
     @Column(name = "manual_lead_contact")
     private String manualLeadContact;
 
-    /** @deprecated use {@link #leadSources}. */
+    /** @deprecated use {@link #projectNetwork}. */
     @Deprecated
     @Column(name = "referral_name")
     private String referralName;
 
-    /** @deprecated use {@link #leadSources}. */
+    /** @deprecated use {@link #projectNetwork}. */
     @Deprecated
     @Column(name = "referral_contact")
     private String referralContact;
 
-    /** @deprecated use {@link #leadSources}. */
+    /** @deprecated use {@link #projectNetwork}. */
     @Deprecated
     @Column(name = "referral_location")
     private String referralLocation;
 
-    /** @deprecated use {@link #leadSources}. */
+    /** @deprecated use {@link #projectNetwork}. */
     @Deprecated
     @Column(name = "referral_designation")
     private String referralDesignation;
 
-    /** @deprecated use {@link #leadSources}. */
+    /** @deprecated use {@link #projectNetwork}. */
     @Deprecated
     @Column(name = "referral_firm")
     private String referralFirm;
 
-    /** @deprecated use {@link #leadSources}. */
+    /** @deprecated use {@link #projectNetwork}. */
     @Deprecated
     @Column(name = "referral_email")
     private String referralEmail;
 
     /** Keeps both sides of the association in step. Never reassign the list — that breaks orphanRemoval. */
-    public void addLeadSource(CustomerLeadSource source) {
-        source.setCustomer(this);
-        this.leadSources.add(source);
+    public void addProjectNetworkMember(CustomerProjectNetworkMember member) {
+        member.setCustomer(this);
+        this.projectNetwork.add(member);
     }
 
-    public void clearLeadSources() {
-        this.leadSources.clear();
+    public void clearProjectNetwork() {
+        this.projectNetwork.clear();
     }
 
     public enum CustomerStatus {
         LEAD, POTENTIAL, DESIGN_STAGE, QUOTE_GIVEN, FOLLOW_UP, NEGOTIATIONS, CONFIRMED, LOST
     }
 
+    /**
+     * The channel a customer arrived through. MANUAL and BUILDER_REFERRAL are superseded by
+     * MANUAL_REFERRAL and BUILDER but are kept so existing rows still deserialize — the form
+     * offers the current values only.
+     */
     public enum LeadSourceType {
-        // MANUAL is legacy (replaced by MANUAL_REFERRAL); kept so old rows still deserialize.
-        // BUILDER links an architects row with partner_type=BUILDER; BUILDER_REFERRAL is the
-        // older free-text builder and is no longer offered when creating a source.
         NONE, ARCHITECT, BUILDER, MANUAL, ONLINE, WALK_IN, SCOUTING,
-        BUILDER_REFERRAL, MANUAL_REFERRAL, CONSULTED;
-
-        /** Points at a reusable Architect/Builder record rather than carrying free text. */
-        public boolean isLinked() {
-            return this == ARCHITECT || this == BUILDER;
-        }
-
-        /** Carries free-text referrer details instead of a linked record. */
-        public boolean isFreeText() {
-            return this == BUILDER_REFERRAL || this == MANUAL_REFERRAL
-                    || this == CONSULTED || this == MANUAL;
-        }
+        BUILDER_REFERRAL, MANUAL_REFERRAL, CONSULTED
     }
 }

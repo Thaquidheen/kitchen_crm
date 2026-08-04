@@ -12,8 +12,8 @@ import { Pagination } from '@/components/shared/Pagination';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { CustomerFormModal } from './CustomerFormModal';
 import { CustomerFilters } from './CustomerFilters';
-import { LeadSourceChips } from './LeadSourceChips';
-import { formatLeadSources } from '../leadSource';
+import { ProjectNetworkChips } from './ProjectNetworkChips';
+import { customerLeadSource, formatProjectNetwork, leadSourceLabel } from '../leadSource';
 import { Eye, Edit, Trash2, Search, Filter, Columns3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -159,9 +159,19 @@ export function CustomerList({
     }
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const csv = [
-      ['Name', 'Phone', 'Email', 'Status', 'Lead sources', 'Place', 'Sqft', 'Created'].join(','),
+      ['Name', 'Phone', 'Email', 'Status', 'Lead source', 'Project network', 'Place', 'Sqft', 'Created'].join(','),
       ...rows.map((c) =>
-        [c.name, c.contact, c.email, c.status, formatLeadSources(c), c.place, c.sqft, formatCreated(c.createdAt)]
+        [
+          c.name,
+          c.contact,
+          c.email,
+          c.status,
+          leadSourceLabel(customerLeadSource(c)),
+          formatProjectNetwork(c),
+          c.place,
+          c.sqft,
+          formatCreated(c.createdAt),
+        ]
           .map(esc)
           .join(',')
       ),
@@ -297,7 +307,7 @@ export function CustomerList({
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px]">
+        <table className="w-full min-w-[1020px]">
           <thead>
             <tr className="border-t border-background-600 bg-background-700">
               <th className="w-11 pl-3.5 py-[9px]">
@@ -319,6 +329,7 @@ export function CustomerList({
               </th>
               <th className={thClass}>Contact</th>
               <th className={thClass}>Lead source</th>
+              <th className={thClass}>Project network</th>
               <th className={thClass}>
                 <button
                   onClick={() => handleSort('status')}
@@ -354,6 +365,7 @@ export function CustomerList({
                     </div>
                   </td>
                   <td className="px-3 py-[13px]"><div className="h-4 bg-background-600 rounded w-28" /></td>
+                  <td className="px-3 py-[13px]"><div className="h-4 bg-background-600 rounded w-20" /></td>
                   <td className="px-3 py-[13px]"><div className="h-5 bg-background-600 rounded-full w-24" /></td>
                   <td className="px-3 py-[13px]"><div className="h-5 bg-background-600 rounded-full w-20" /></td>
                   <td className="px-3 py-[13px]"><div className="h-4 bg-background-600 rounded w-20" /></td>
@@ -362,7 +374,7 @@ export function CustomerList({
               ))
             ) : customers.length === 0 ? (
               <tr className="border-t border-background-600">
-                <td colSpan={7} className="px-5 py-14 text-center">
+                <td colSpan={8} className="px-5 py-14 text-center">
                   <div className="text-[14.5px] font-semibold text-text-900">No customers found</div>
                   <div className="text-[12.5px] text-text-700 mt-1">
                     Try a different search or clear the active filters.
@@ -420,8 +432,11 @@ export function CustomerList({
                         {customer.email || '—'}
                       </div>
                     </td>
+                    <td className="px-3 py-[13px] whitespace-nowrap text-xs text-text-700">
+                      {leadSourceLabel(customerLeadSource(customer))}
+                    </td>
                     <td className="px-3 py-[13px] max-w-[220px]">
-                      <LeadSourceChips customer={customer} max={2} />
+                      <ProjectNetworkChips customer={customer} max={2} />
                     </td>
                     <td className="px-3 py-[13px]">
                       <span

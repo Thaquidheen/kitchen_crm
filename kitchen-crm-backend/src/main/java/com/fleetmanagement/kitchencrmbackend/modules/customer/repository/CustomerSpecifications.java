@@ -2,7 +2,7 @@ package com.fleetmanagement.kitchencrmbackend.modules.customer.repository;
 
 import com.fleetmanagement.kitchencrmbackend.modules.architect.entity.Architect;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
-import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.CustomerLeadSource;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.CustomerProjectNetworkMember;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -61,25 +61,25 @@ public final class CustomerSpecifications {
                     ors.add(cb.like(cb.lower(root.<String>get(field)), like));
                 }
 
-                // Lead-source details now live in a child table. Searching them also has to
-                // cover the linked architect/builder's own name and firm — a linked source
-                // stores no free text, so without this an architect-sourced customer would
-                // stop being findable by that architect's name.
+                // The project network lives in a child table. Searching it also has to cover the
+                // linked architect/builder's own name and firm — a linked member stores no free
+                // text, so without this an architect's customer would stop being findable by
+                // that architect's name.
                 Subquery<Integer> sq = query.subquery(Integer.class);
-                Root<CustomerLeadSource> ls = sq.from(CustomerLeadSource.class);
-                Join<CustomerLeadSource, Architect> arch = ls.join("architect", JoinType.LEFT);
+                Root<CustomerProjectNetworkMember> pn = sq.from(CustomerProjectNetworkMember.class);
+                Join<CustomerProjectNetworkMember, Architect> arch = pn.join("architect", JoinType.LEFT);
                 sq.select(cb.literal(1));
 
-                List<Predicate> sourceOrs = new ArrayList<>();
+                List<Predicate> memberOrs = new ArrayList<>();
                 for (String field : SEARCHABLE_SOURCE_FIELDS) {
-                    sourceOrs.add(cb.like(cb.lower(ls.<String>get(field)), like));
+                    memberOrs.add(cb.like(cb.lower(pn.<String>get(field)), like));
                 }
-                sourceOrs.add(cb.like(cb.lower(arch.<String>get("architectureName")), like));
-                sourceOrs.add(cb.like(cb.lower(arch.<String>get("firm")), like));
+                memberOrs.add(cb.like(cb.lower(arch.<String>get("architectureName")), like));
+                memberOrs.add(cb.like(cb.lower(arch.<String>get("firm")), like));
 
                 sq.where(cb.and(
-                        cb.equal(ls.get("customer"), root),
-                        cb.or(sourceOrs.toArray(new Predicate[0]))));
+                        cb.equal(pn.get("customer"), root),
+                        cb.or(memberOrs.toArray(new Predicate[0]))));
                 ors.add(cb.exists(sq));
 
                 predicates.add(cb.or(ors.toArray(new Predicate[0])));
@@ -100,20 +100,15 @@ public final class CustomerSpecifications {
             }
 
             if (leadSourceType != null) {
-                Subquery<Integer> sq = query.subquery(Integer.class);
-                Root<CustomerLeadSource> ls = sq.from(CustomerLeadSource.class);
-                sq.select(cb.literal(1));
-
+                // Since V95 the lead source is a single value on the customer again, so this is a
+                // plain column match rather than a subquery over the child table.
                 if (leadSourceType == Customer.LeadSourceType.NONE) {
-                    // NONE is never stored as a row, so "No Lead" means "has no sources at all".
-                    sq.where(cb.equal(ls.get("customer"), root));
-                    predicates.add(cb.not(cb.exists(sq)));
+                    // Rows predating the column's default still hold NULL; "No Lead" covers both.
+                    predicates.add(cb.or(
+                            cb.isNull(root.get("leadSourceType")),
+                            cb.equal(root.get("leadSourceType"), Customer.LeadSourceType.NONE)));
                 } else {
-                    // Match if ANY of the customer's sources is of this type.
-                    sq.where(cb.and(
-                            cb.equal(ls.get("customer"), root),
-                            cb.equal(ls.get("sourceType"), leadSourceType)));
-                    predicates.add(cb.exists(sq));
+                    predicates.add(cb.equal(root.get("leadSourceType"), leadSourceType));
                 }
             }
 

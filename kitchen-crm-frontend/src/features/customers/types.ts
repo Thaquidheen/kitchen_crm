@@ -15,14 +15,13 @@ export type CustomerStatus =
   | 'CONFIRMED'
   | 'LOST';
 
-// 'MANUAL' is legacy (replaced by 'MANUAL_REFERRAL'); kept so old records still type-check.
 /**
- * One entry in a customer's lead-source list. ARCHITECT/BUILDER link an Architects-module
- * record (the architect* fields are a read-only projection of it); the rest carry free text.
+ * One person in a customer's project network. ARCHITECT/BUILDER link an Architects-module
+ * record (the architect* fields are a read-only projection of it); REFERRAL carries free text.
  */
-export interface CustomerLeadSource {
+export interface ProjectNetworkMember {
   id?: number;
-  sourceType: LeadSourceType;
+  memberType: ProjectNetworkMemberType;
   architectId?: number;
   architectName?: string;
   architectFirm?: string;
@@ -37,6 +36,12 @@ export interface CustomerLeadSource {
   sortOrder?: number;
 }
 
+export type ProjectNetworkMemberType = 'ARCHITECT' | 'BUILDER' | 'REFERRAL';
+
+/**
+ * The channel a customer arrived through — one value per customer, independent of the project
+ * network. 'MANUAL' and 'BUILDER_REFERRAL' are legacy spellings kept so old records type-check.
+ */
 export type LeadSourceType =
   | 'NONE'
   | 'ARCHITECT'
@@ -62,12 +67,15 @@ export interface Customer {
   contactPerson?: string;
   followUpNotes?: string;
   status: CustomerStatus;
-  /** All lead sources. Read through customerLeadSourceRows(), never directly. */
-  leadSources?: CustomerLeadSource[];
-  // Legacy single-lead-source fields, mirrored by the backend from leadSources[0].
+  /** The channel they arrived through. Read through customerLeadSource(), never directly. */
+  leadSourceType?: LeadSourceType;
+  /** Who is on the project. Read through customerProjectNetwork(), never directly. */
+  projectNetwork?: ProjectNetworkMember[];
+  /** @deprecated pre-V95 name for projectNetwork; still sent by the backend for one release. */
+  leadSources?: ProjectNetworkMember[];
+  // Legacy flat referrer fields, still emitted by the backend for records saved before V92.
   architectId?: number;
   architectName?: string;
-  leadSourceType?: LeadSourceType;
   manualLeadName?: string;
   manualLeadContact?: string;
   referralName?: string;
@@ -92,9 +100,9 @@ export interface CustomerCreate {
   contactPerson?: string;
   followUpNotes?: string;
   status?: CustomerStatus;
-  leadSources?: CustomerLeadSource[];
-  // Legacy single-lead-source fields, still accepted by the backend.
   leadSourceType?: LeadSourceType;
+  projectNetwork?: ProjectNetworkMember[];
+  // Legacy fields, still accepted by the backend.
   architectId?: number;
   manualLeadName?: string;
   manualLeadContact?: string;

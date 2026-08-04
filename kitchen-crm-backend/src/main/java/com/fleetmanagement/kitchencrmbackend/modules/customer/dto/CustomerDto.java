@@ -39,19 +39,32 @@ public class CustomerDto {
     private String followUpNotes;
 
     /**
-     * All of this customer's lead sources. On update: omit (or null) to leave them untouched,
-     * send an empty list to clear them, send a list to replace them wholesale.
+     * Everyone involved in this customer's project. On update: omit (or null) to leave them
+     * untouched, send an empty list to clear them, send a list to replace them wholesale.
      * {@code @Valid} is required for the nested constraints to be checked.
      */
     @Valid
-    @Size(max = 20, message = "At most 20 lead sources")
-    private List<LeadSourceDto> leadSources;
+    @Size(max = 20, message = "At most 20 project network members")
+    private List<ProjectNetworkMemberDto> projectNetwork;
 
-    // Legacy single-lead-source fields, mirrored from the first entry of leadSources so older
-    // frontend bundles keep rendering during a deploy. Removed with the columns in a later release.
+    /** The channel this customer arrived through — one choice, independent of the network. */
+    private Customer.LeadSourceType leadSourceType;
+
+    /**
+     * Pre-V95 name for {@link #projectNetwork}, still read and written for one release so a
+     * cached older frontend bundle keeps working across the deploy.
+     *
+     * @deprecated use {@link #projectNetwork}.
+     */
+    @Deprecated
+    @Valid
+    @Size(max = 20, message = "At most 20 project network members")
+    private List<ProjectNetworkMemberDto> leadSources;
+
+    // Legacy flat referrer fields, still emitted so older frontend bundles keep rendering.
+    // Removed with the columns in a later release.
     private Long architectId;
     private String architectName;
-    private Customer.LeadSourceType leadSourceType;
     private String manualLeadName;
     private String manualLeadContact;
 

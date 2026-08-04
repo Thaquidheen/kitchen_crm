@@ -12,11 +12,13 @@ import {
 } from 'lucide-react';
 import type { Customer, CustomerStatus } from '../types';
 import {
-  customerLeadSourceRows,
-  isLinkedSource,
-  leadSourceDetailLines,
+  customerLeadSource,
+  customerProjectNetwork,
+  isLinkedMember,
   leadSourceLabel,
-  leadSourceWho,
+  memberDetailLines,
+  memberTypeLabel,
+  memberWho,
 } from '../leadSource';
 
 export interface CustomerOverviewTabProps {
@@ -25,7 +27,7 @@ export interface CustomerOverviewTabProps {
 }
 
 export const CustomerOverviewTab: React.FC<CustomerOverviewTabProps> = ({ customer }) => {
-  const leadSourceRows = customerLeadSourceRows(customer);
+  const networkRows = customerProjectNetwork(customer);
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-IN', {
@@ -141,24 +143,28 @@ export const CustomerOverviewTab: React.FC<CustomerOverviewTabProps> = ({ custom
         />
       </div>
 
-      {/* Lead Sources */}
+      {/* Lead source & project network */}
       <div>
         <h2 className="text-lg font-semibold text-text-900 mb-4 flex items-center gap-2">
           <UserCheck className="w-5 h-5" />
-          Lead Sources
+          Lead Source &amp; Project Network
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {leadSourceRows.length === 0 ? (
-            <InfoCard icon={UserCheck} label="Source" value="No Lead" />
+          <InfoCard
+            icon={Tag}
+            label="Lead source"
+            value={leadSourceLabel(customerLeadSource(customer))}
+          />
+          {networkRows.length === 0 ? (
+            <InfoCard icon={UserCheck} label="Project network" value="Nobody added" />
           ) : (
-            leadSourceRows.map((row, i) => (
+            networkRows.map((row, i) => (
               <InfoCard
                 key={row.id ?? i}
-                icon={isLinkedSource(row.sourceType) ? UserCheck : User}
-                label={leadSourceLabel(row.sourceType)}
+                icon={isLinkedMember(row.memberType) ? UserCheck : User}
+                label={memberTypeLabel(row.memberType)}
                 value={
-                  [leadSourceWho(row), ...leadSourceDetailLines(row)].filter(Boolean).join(' · ') ||
-                  '—'
+                  [memberWho(row), ...memberDetailLines(row)].filter(Boolean).join(' · ') || '—'
                 }
               />
             ))
