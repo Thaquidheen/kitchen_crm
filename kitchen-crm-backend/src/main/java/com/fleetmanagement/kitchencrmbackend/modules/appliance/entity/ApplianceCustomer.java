@@ -50,6 +50,16 @@ public class ApplianceCustomer extends Auditable {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    /** Public URL of the uploaded quotation PDF, set once the entry reaches QUOTATION. */
+    @Column(name = "quotation_file_url", length = 500)
+    private String quotationFileUrl;
+
+    @Column(name = "quotation_file_name")
+    private String quotationFileName;
+
+    @Column(name = "quotation_uploaded_at")
+    private java.time.LocalDateTime quotationUploadedAt;
+
     @Column(name = "created_by")
     private String createdBy;
 

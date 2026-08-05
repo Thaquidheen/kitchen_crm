@@ -16,6 +16,12 @@ public interface ApplianceCustomerService {
     ApiResponse<ApplianceCustomerDto> create(ApplianceCustomerDto dto, String createdBy);
     ApiResponse<ApplianceCustomerDto> update(Long id, ApplianceCustomerDto dto);
     ApiResponse<String> delete(Long id);
+
+    /** Attaches (or replaces) the quotation PDF for an entry. */
+    ApiResponse<ApplianceCustomerDto> uploadQuotation(Long id, org.springframework.web.multipart.MultipartFile file);
+
+    /** Removes the attached quotation PDF. */
+    ApiResponse<ApplianceCustomerDto> deleteQuotation(Long id);
     /** Category chip counts are always global; status counts and total value are scoped
      *  to {@code category} so they line up with what the table is showing. */
     ApiResponse<Map<String, Object>> getStatistics(ApplianceCustomer.Category category);

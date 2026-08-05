@@ -557,6 +557,21 @@ export const baseApi = createApi({
       invalidatesTags: ['ApplianceCustomers'],
     }),
 
+    // Attach / replace the quotation PDF on an appliance entry
+    uploadApplianceQuotation: builder.mutation<any, { id: number; file: File }>({
+      query: ({ id, file }) => {
+        const form = new FormData();
+        form.append('file', file);
+        return { url: `/appliance-customers/${id}/quotation`, method: 'POST', body: form };
+      },
+      invalidatesTags: ['ApplianceCustomers'],
+    }),
+
+    deleteApplianceQuotation: builder.mutation<any, number>({
+      query: (id) => ({ url: `/appliance-customers/${id}/quotation`, method: 'DELETE' }),
+      invalidatesTags: ['ApplianceCustomers'],
+    }),
+
     // Download quotation PDF
     downloadQuotationPDF: builder.mutation<Blob, number>({
       query: (id) => ({
@@ -634,6 +649,8 @@ export const {
   useCreateApplianceCustomerMutation,
   useUpdateApplianceCustomerMutation,
   useDeleteApplianceCustomerMutation,
+  useUploadApplianceQuotationMutation,
+  useDeleteApplianceQuotationMutation,
   useDownloadQuotationPDFMutation,
   useGetCustomerAvailablePlanImagesQuery,
   useUploadPlanImageMutation,

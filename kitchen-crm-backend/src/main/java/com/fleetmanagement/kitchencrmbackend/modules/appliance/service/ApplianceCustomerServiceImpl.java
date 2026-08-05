@@ -5,20 +5,33 @@ import com.fleetmanagement.kitchencrmbackend.modules.appliance.dto.ApplianceCust
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.entity.ApplianceCustomer;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.entity.ApplianceCustomerItem;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.repository.ApplianceCustomerRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 @Transactional
 public class ApplianceCustomerServiceImpl implements ApplianceCustomerService {
+
+    @Value("${app.appliance-quotation-upload-dir:uploads/appliance-quotations}")
+    private String quotationUploadDir;
 
     @Autowired
     private ApplianceCustomerRepository repository;
@@ -88,6 +101,66 @@ public class ApplianceCustomerServiceImpl implements ApplianceCustomerService {
         return ApiResponse.success(stats);
     }
 
+    @Override
+    public ApiResponse<ApplianceCustomerDto> uploadQuotation(Long id, MultipartFile file) {
+        ApplianceCustomer entity = repository.findById(id).orElse(null);
+        if (entity == null) {
+            return ApiResponse.error("Entry not found");
+        }
+        if (file == null || file.isEmpty()) {
+            return ApiResponse.error("Please choose a file to upload");
+        }
+        String original = file.getOriginalFilename() == null ? "quotation.pdf" : file.getOriginalFilename();
+        if (!original.toLowerCase().endsWith(".pdf")) {
+            return ApiResponse.error("Only PDF files can be attached as a quotation");
+        }
+        if (file.getSize() > 20L * 1024 * 1024) {
+            return ApiResponse.error("File is too large (maximum 20MB)");
+        }
+
+        try {
+            Path dir = Paths.get(quotationUploadDir);
+            Files.createDirectories(dir);
+
+            // Keep the stored name unique and free of anything from the client's filename.
+            String stored = "appliance-" + id + "-" + System.currentTimeMillis() + ".pdf";
+            Files.copy(file.getInputStream(), dir.resolve(stored), StandardCopyOption.REPLACE_EXISTING);
+
+            // Replacing an existing quotation leaves no orphan behind.
+            deleteStoredQuotation(entity.getQuotationFileUrl());
+
+            entity.setQuotationFileUrl("/uploads/appliance-quotations/" + stored);
+            entity.setQuotationFileName(original);
+            entity.setQuotationUploadedAt(LocalDateTime.now());
+            return ApiResponse.success("Quotation uploaded", convertToDto(repository.save(entity)));
+        } catch (IOException e) {
+            return ApiResponse.error("Failed to store the file: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public ApiResponse<ApplianceCustomerDto> deleteQuotation(Long id) {
+        ApplianceCustomer entity = repository.findById(id).orElse(null);
+        if (entity == null) {
+            return ApiResponse.error("Entry not found");
+        }
+        deleteStoredQuotation(entity.getQuotationFileUrl());
+        entity.setQuotationFileUrl(null);
+        entity.setQuotationFileName(null);
+        entity.setQuotationUploadedAt(null);
+        return ApiResponse.success("Quotation removed", convertToDto(repository.save(entity)));
+    }
+
+    private void deleteStoredQuotation(String url) {
+        if (url == null || url.isBlank()) return;
+        try {
+            Files.deleteIfExists(Paths.get(quotationUploadDir, Paths.get(url).getFileName().toString()));
+        } catch (Exception e) {
+            // A leftover file is not worth failing the request over.
+            log.warn("Could not delete previous quotation file {}: {}", url, e.getMessage());
+        }
+    }
+
     private void applyDto(ApplianceCustomer entity, ApplianceCustomerDto dto) {
         entity.setName(dto.getName());
         entity.setContact(dto.getContact());
@@ -122,6 +195,9 @@ public class ApplianceCustomerServiceImpl implements ApplianceCustomerService {
         dto.setAmount(entity.getAmount());
         dto.setStatus(entity.getStatus());
         dto.setNotes(entity.getNotes());
+        dto.setQuotationFileUrl(entity.getQuotationFileUrl());
+        dto.setQuotationFileName(entity.getQuotationFileName());
+        dto.setQuotationUploadedAt(entity.getQuotationUploadedAt());
         List<String> items = entity.getItems().stream().map(ApplianceCustomerItem::getItemName).toList();
         dto.setItems(items);
         dto.setCreatedBy(entity.getCreatedBy());

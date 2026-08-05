@@ -29,6 +29,10 @@ public class ApplianceCustomerDto {
     private BigDecimal amount;
     private ApplianceCustomer.Status status;
     private String notes;
+    // Set by the upload endpoint, never by create/update — see ApplianceCustomerServiceImpl.
+    private String quotationFileUrl;
+    private String quotationFileName;
+    private LocalDateTime quotationUploadedAt;
     private List<String> items;
     private String createdBy;
     private LocalDateTime createdAt;

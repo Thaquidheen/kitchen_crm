@@ -11,9 +11,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Page;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -67,5 +69,20 @@ public class ApplianceCustomerController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<String>> delete(@PathVariable Long id) {
         return ResponseEntity.ok(service.delete(id));
+    }
+
+    /** Attach or replace the quotation PDF for an entry. */
+    @PostMapping(value = "/{id}/quotation", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<ApplianceCustomerDto>> uploadQuotation(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        ApiResponse<ApplianceCustomerDto> response = service.uploadQuotation(id, file);
+        return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    @DeleteMapping("/{id}/quotation")
+    public ResponseEntity<ApiResponse<ApplianceCustomerDto>> deleteQuotation(@PathVariable Long id) {
+        ApiResponse<ApplianceCustomerDto> response = service.deleteQuotation(id);
+        return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 }

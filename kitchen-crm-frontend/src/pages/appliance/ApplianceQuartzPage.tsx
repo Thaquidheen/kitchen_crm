@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Search, Trash2, Pencil, X, BellRing } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, X, BellRing, FileText, Upload } from 'lucide-react';
 import { Modal, ModalBody } from '@/components/ui/Modal';
 import { CustomerReminders } from '@/features/customers/components/CustomerReminders';
 import toast from 'react-hot-toast';
@@ -18,6 +18,8 @@ import {
   useCreateApplianceCustomerMutation,
   useUpdateApplianceCustomerMutation,
   useDeleteApplianceCustomerMutation,
+  useUploadApplianceQuotationMutation,
+  useDeleteApplianceQuotationMutation,
 } from '@/app/baseApi';
 
 type ApplianceStatus = 'LEAD' | 'POTENTIAL' | 'QUOTATION' | 'NEGOTIATION' | 'CONFIRMED' | 'LOST';
@@ -32,9 +34,20 @@ interface ApplianceEntry {
   status: ApplianceStatus;
   notes?: string;
   items: string[];
+  quotationFileUrl?: string;
+  quotationFileName?: string;
+  quotationUploadedAt?: string;
   createdBy?: string;
   createdAt?: string;
 }
+
+/** Uploaded files are served from the API host, not the SPA origin. */
+const fileUrl = (path?: string) => {
+  if (!path) return '#';
+  if (/^https?:\/\//i.test(path)) return path;
+  const base = (import.meta as any).env?.VITE_API_BASE_URL || '';
+  return `${String(base).replace(/\/api\/v1\/?$/, '')}${path}`;
+};
 
 // Category uses the purple/pink tokens so it stays visually distinct from the six
 // status colours sitting two columns away.
@@ -108,6 +121,32 @@ export function ApplianceQuartzPage() {
   const [createEntry, { isLoading: isCreating }] = useCreateApplianceCustomerMutation();
   const [updateEntry, { isLoading: isUpdating }] = useUpdateApplianceCustomerMutation();
   const [deleteEntry] = useDeleteApplianceCustomerMutation();
+  const [uploadQuotation, { isLoading: isUploading }] = useUploadApplianceQuotationMutation();
+  const [removeQuotation] = useDeleteApplianceQuotationMutation();
+
+  const handleQuotationUpload = async (id: number, ev: React.ChangeEvent<HTMLInputElement>) => {
+    const file = ev.target.files?.[0];
+    ev.target.value = ''; // allow re-picking the same file
+    if (!file) return;
+    try {
+      const res: any = await uploadQuotation({ id, file }).unwrap();
+      // Keep the open modal in step with what was just stored.
+      if (res?.data) setEditing(res.data);
+      toast.success('Quotation uploaded');
+    } catch (e: any) {
+      toast.error(e?.data?.message || 'Failed to upload quotation');
+    }
+  };
+
+  const handleQuotationDelete = async (id: number) => {
+    try {
+      const res: any = await removeQuotation(id).unwrap();
+      if (res?.data) setEditing(res.data);
+      toast.success('Quotation removed');
+    } catch (e: any) {
+      toast.error(e?.data?.message || 'Failed to remove quotation');
+    }
+  };
 
   // Debounced live search
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -469,7 +508,23 @@ export function ApplianceQuartzPage() {
                           {more > 0 && <span className="text-text-500"> +{more} more</span>}
                         </span>
                       </td>
-                      <td className="px-3 py-[13px]">{pill(st.st, st.label)}</td>
+                      <td className="px-3 py-[13px]">
+                        <div className="flex items-center gap-2">
+                          {pill(st.st, st.label)}
+                          {e.quotationFileUrl && (
+                            <a
+                              href={fileUrl(e.quotationFileUrl)}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(ev) => ev.stopPropagation()}
+                              title={e.quotationFileName || 'View quotation PDF'}
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-primary-600 hover:bg-primary-600/10 transition-colors shrink-0"
+                            >
+                              <FileText size={14} />
+                            </a>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-3 py-[13px] text-[12.5px] text-text-700 tabular-nums whitespace-nowrap">{fmtDate(e.createdAt)}</td>
                       <td className="px-3.5 py-[13px]">
                         <div className="flex justify-end gap-0.5">
@@ -663,6 +718,58 @@ export function ApplianceQuartzPage() {
                   </select>
                 </div>
               </div>
+
+              {/* Quotation PDF — only relevant once the entry reaches the Quotation stage. */}
+              {fStatus === 'QUOTATION' && (
+                <div>
+                  <label className={labelCls}>Quotation PDF</label>
+                  {!editing ? (
+                    <p className="text-[12.5px] text-text-600">
+                      Save this entry first, then reopen it to attach the quotation.
+                    </p>
+                  ) : editing.quotationFileUrl ? (
+                    <div className="flex items-center gap-2.5 p-3 rounded-xl border border-background-600 bg-background-700/40">
+                      <FileText size={16} className="text-primary-600 shrink-0" />
+                      <a
+                        href={fileUrl(editing.quotationFileUrl)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 min-w-0 text-[13px] text-text-900 hover:text-primary-600 truncate"
+                      >
+                        {editing.quotationFileName || 'Quotation.pdf'}
+                      </a>
+                      <label className="text-[12px] font-semibold text-primary-600 cursor-pointer hover:underline whitespace-nowrap">
+                        Replace
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          className="hidden"
+                          onChange={(ev) => handleQuotationUpload(editing.id, ev)}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleQuotationDelete(editing.id)}
+                        title="Remove quotation"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:text-error hover:bg-error/10 transition-colors shrink-0"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex items-center justify-center gap-2 p-4 rounded-xl border border-dashed border-background-500 text-[13px] text-text-600 cursor-pointer hover:border-primary-600 hover:text-text-900 transition-colors">
+                      <Upload size={15} />
+                      {isUploading ? 'Uploading…' : 'Upload quotation PDF'}
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        className="hidden"
+                        onChange={(ev) => handleQuotationUpload(editing.id, ev)}
+                      />
+                    </label>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className={labelCls}>Notes</label>
