@@ -11,6 +11,8 @@ import com.fleetmanagement.kitchencrmbackend.modules.auth.repository.UserReposit
 import com.fleetmanagement.kitchencrmbackend.modules.notification.dto.EmailRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.notification.service.EmailService;
 import com.fleetmanagement.kitchencrmbackend.modules.notification.service.EmailTemplateService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +31,9 @@ import java.util.stream.Collectors;
 @Transactional
 @Slf4j
 public class UserServiceImpl implements UserService {
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Autowired
     private UserRepository userRepository;
@@ -248,6 +254,70 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             log.error("Failed to reset staff password: {}", e.getMessage(), e);
             return ApiResponse.error("Failed to reset password: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public ApiResponse<String> deleteStaffPermanently(Long id) {
+        try {
+            User user = userRepository.findById(id).orElse(null);
+            if (user == null) {
+                return ApiResponse.error("Staff user not found");
+            }
+
+            boolean isStaff = user.getRoles().stream()
+                    .anyMatch(role -> role.getName() == Role.RoleName.ROLE_STAFF);
+            if (!isStaff) {
+                return ApiResponse.error("User is not a staff member");
+            }
+
+            // Work records reference users(id) without a cascade. Deleting underneath them would
+            // either fail on the constraint or erase history, so report what blocks it instead.
+            List<String> blockers = new ArrayList<>();
+            long tasks = countRefs("SELECT COUNT(*) FROM employee_tasks WHERE assigned_to_user_id = ?1", id)
+                    + countRefs("SELECT COUNT(*) FROM employee_tasks WHERE assigned_by_user_id = ?1", id);
+            if (tasks > 0) blockers.add(tasks + (tasks == 1 ? " task" : " tasks"));
+
+            long designs = countRefs("SELECT COUNT(*) FROM design_phase WHERE staff_assigned_id = ?1", id);
+            if (designs > 0) blockers.add(designs + (designs == 1 ? " design phase" : " design phases"));
+
+            long prodTasks = countRefs("SELECT COUNT(*) FROM production_custom_tasks WHERE completed_by_user_id = ?1", id)
+                    + countRefs("SELECT COUNT(*) FROM production_custom_tasks WHERE created_by_user_id = ?1", id);
+            if (prodTasks > 0) blockers.add(prodTasks + (prodTasks == 1 ? " production task" : " production tasks"));
+
+            long todos = countRefs("SELECT COUNT(*) FROM admin_todos WHERE user_id = ?1", id);
+            if (todos > 0) blockers.add(todos + (todos == 1 ? " to-do" : " to-dos"));
+
+            if (!blockers.isEmpty()) {
+                return ApiResponse.error(
+                        user.getName() + " still owns " + String.join(", ", blockers)
+                                + ". Reassign or remove those first, or keep the account deactivated instead.");
+            }
+
+            // Sign-in artefacts are disposable and safe to clear.
+            entityManager.createNativeQuery("DELETE FROM refresh_tokens WHERE user_id = ?1")
+                    .setParameter(1, id).executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM password_reset_tokens WHERE user_id = ?1")
+                    .setParameter(1, id).executeUpdate();
+
+            String name = user.getName();
+            userRepository.delete(user);
+            log.info("Staff user permanently deleted by super admin: {} ({})", name, user.getEmail());
+            return ApiResponse.success(name + " deleted permanently");
+        } catch (Exception e) {
+            log.error("Failed to permanently delete staff: {}", e.getMessage(), e);
+            return ApiResponse.error("Failed to delete staff: " + e.getMessage());
+        }
+    }
+
+    private long countRefs(String sql, Long id) {
+        try {
+            Object result = entityManager.createNativeQuery(sql).setParameter(1, id).getSingleResult();
+            return result == null ? 0L : ((Number) result).longValue();
+        } catch (Exception e) {
+            // A missing table must not block the delete; treat it as "no references".
+            log.debug("Reference check skipped for [{}]: {}", sql, e.getMessage());
+            return 0L;
         }
     }
 

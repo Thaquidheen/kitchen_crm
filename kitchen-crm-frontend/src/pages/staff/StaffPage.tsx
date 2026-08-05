@@ -6,13 +6,14 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Plus, Search, Edit, Trash2, RotateCcw, KeyRound } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, RotateCcw, KeyRound, Ban } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   useGetStaffQuery,
   useDeleteStaffMutation,
   useUpdateStaffMutation,
   useResetStaffPasswordMutation,
+  useDeleteStaffPermanentlyMutation,
 } from '@/features/staff/staffAPI';
 import type { Staff } from '@/features/staff/types';
 import StaffFormModal from '@/features/staff/components/StaffFormModal';
@@ -51,11 +52,13 @@ export function StaffPage() {
   const [deactivateTarget, setDeactivateTarget] = useState<Staff | null>(null);
   const [pwdTarget, setPwdTarget] = useState<Staff | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [purgeTarget, setPurgeTarget] = useState<Staff | null>(null);
 
   const { data: staffList = [], isLoading, error } = useGetStaffQuery();
   const [deleteStaff, { isLoading: isDeleting }] = useDeleteStaffMutation();
   const [updateStaff] = useUpdateStaffMutation();
   const [resetStaffPassword, { isLoading: isResetting }] = useResetStaffPasswordMutation();
+  const [deleteStaffPermanently, { isLoading: isPurging }] = useDeleteStaffPermanentlyMutation();
 
   const activeCount = staffList.filter((s: Staff) => s.active).length;
   const inactiveCount = staffList.length - activeCount;
@@ -107,6 +110,18 @@ export function StaffPage() {
     : !/\d/.test(newPassword)
     ? 'Password must contain a number'
     : '';
+
+  const handlePurge = async () => {
+    if (!purgeTarget) return;
+    try {
+      await deleteStaffPermanently(purgeTarget.id).unwrap();
+      toast.success(`${purgeTarget.name} deleted permanently`);
+      setPurgeTarget(null);
+    } catch (e: any) {
+      // The server explains what still references the account (tasks, design phases…).
+      toast.error(e?.data?.message || e?.message || 'Failed to delete staff', { duration: 6000 });
+    }
+  };
 
   const handleResetPassword = async () => {
     if (!pwdTarget || pwdError) return;
@@ -376,9 +391,10 @@ export function StaffPage() {
                                 ev.currentTarget.style.color = '';
                               }}
                             >
-                              <Trash2 size={14} />
+                              <Ban size={14} />
                             </button>
                           ) : (
+                            <>
                             <button
                               onClick={() => handleReactivate(staff)}
                               title="Reactivate"
@@ -394,6 +410,22 @@ export function StaffPage() {
                             >
                               <RotateCcw size={14} />
                             </button>
+                            <button
+                              onClick={() => setPurgeTarget(staff)}
+                              title="Delete permanently"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 transition-colors"
+                              onMouseEnter={(ev) => {
+                                ev.currentTarget.style.background = 'var(--st-lost-bg)';
+                                ev.currentTarget.style.color = 'var(--st-lost-fg)';
+                              }}
+                              onMouseLeave={(ev) => {
+                                ev.currentTarget.style.background = 'transparent';
+                                ev.currentTarget.style.color = '';
+                              }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -438,6 +470,22 @@ export function StaffPage() {
         }
         confirmText={isDeleting ? 'Deactivating…' : 'Deactivate'}
         type="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={purgeTarget !== null}
+        onClose={() => setPurgeTarget(null)}
+        onConfirm={handlePurge}
+        title="Delete Permanently"
+        message={
+          purgeTarget
+            ? `Permanently delete ${purgeTarget.name}? The record is erased and cannot be recovered. If they still own tasks or design phases, the delete will be refused so that history is not lost.`
+            : ''
+        }
+        confirmText={isPurging ? 'Deleting…' : 'Delete permanently'}
+        type="danger"
+        confirmVariant="danger"
+        isLoading={isPurging}
       />
 
       {/* Super admin sets a staff password directly */}

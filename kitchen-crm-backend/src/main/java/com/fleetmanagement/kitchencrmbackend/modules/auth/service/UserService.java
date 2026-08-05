@@ -37,6 +37,12 @@ public interface UserService {
 
     /** Super-admin sets a staff member's password directly (e.g. the member forgot theirs). */
     ApiResponse<String> resetStaffPassword(Long id, String newPassword);
+
+    /**
+     * Permanently removes a staff record. Refuses when the member still owns work records
+     * (tasks, design phases, production tasks) rather than destroying that history.
+     */
+    ApiResponse<String> deleteStaffPermanently(Long id);
 }
 
 

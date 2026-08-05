@@ -91,6 +91,18 @@ public class UserController {
             return ResponseEntity.badRequest().body(response);
         }
     }
+
+    /** Irreversible: removes the record entirely. DELETE /{id} only deactivates. */
+    @DeleteMapping("/{id}/permanent")
+    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<String>> deleteStaffPermanently(@PathVariable Long id) {
+        ApiResponse<String> response = userService.deleteStaffPermanently(id);
+        if (response.getSuccess()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
 }
 
 

@@ -78,6 +78,21 @@ export const staffAPI = baseApi.injectEndpoints({
       },
     }),
 
+    // Permanently remove the record (DELETE /{id} only deactivates)
+    deleteStaffPermanently: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `${API_ENDPOINTS.STAFF.BY_ID(id)}/permanent`,
+        method: 'DELETE',
+      }),
+      transformResponse: (response: ApiResponse<string>) => {
+        if (response.success) {
+          return;
+        }
+        throw new Error(response.message || 'Failed to delete staff');
+      },
+      invalidatesTags: [{ type: 'Staff', id: 'LIST' }],
+    }),
+
     // Delete staff
     deleteStaff: builder.mutation<void, number>({
       query: (id) => ({
@@ -106,6 +121,7 @@ export const {
   useUpdateStaffMutation,
   useResetStaffPasswordMutation,
   useDeleteStaffMutation,
+  useDeleteStaffPermanentlyMutation,
 } = staffAPI;
 
 export default staffAPI;
