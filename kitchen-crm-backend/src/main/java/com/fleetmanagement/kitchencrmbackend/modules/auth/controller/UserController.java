@@ -1,6 +1,7 @@
 package com.fleetmanagement.kitchencrmbackend.modules.auth.controller;
 
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
+import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.ResetStaffPasswordDto;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.UserCreateDto;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.UserDto;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.UserUpdateDto;
@@ -60,6 +61,19 @@ public class UserController {
             @PathVariable Long id,
             @Valid @RequestBody UserUpdateDto userUpdateDto) {
         ApiResponse<UserDto> response = userService.updateStaff(id, userUpdateDto);
+        if (response.getSuccess()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PatchMapping("/{id}/password")
+    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<String>> resetStaffPassword(
+            @PathVariable Long id,
+            @Valid @RequestBody ResetStaffPasswordDto dto) {
+        ApiResponse<String> response = userService.resetStaffPassword(id, dto.getNewPassword());
         if (response.getSuccess()) {
             return ResponseEntity.ok(response);
         } else {

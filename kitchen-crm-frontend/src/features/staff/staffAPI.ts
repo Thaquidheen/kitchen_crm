@@ -63,6 +63,21 @@ export const staffAPI = baseApi.injectEndpoints({
       ],
     }),
 
+    // Super admin sets a staff member's password directly
+    resetStaffPassword: builder.mutation<void, { id: number; newPassword: string }>({
+      query: ({ id, newPassword }) => ({
+        url: `${API_ENDPOINTS.STAFF.BY_ID(id)}/password`,
+        method: 'PATCH',
+        body: { newPassword },
+      }),
+      transformResponse: (response: ApiResponse<string>) => {
+        if (response.success) {
+          return;
+        }
+        throw new Error(response.message || 'Failed to update password');
+      },
+    }),
+
     // Delete staff
     deleteStaff: builder.mutation<void, number>({
       query: (id) => ({
@@ -89,6 +104,7 @@ export const {
   useGetStaffByIdQuery,
   useCreateStaffMutation,
   useUpdateStaffMutation,
+  useResetStaffPasswordMutation,
   useDeleteStaffMutation,
 } = staffAPI;
 

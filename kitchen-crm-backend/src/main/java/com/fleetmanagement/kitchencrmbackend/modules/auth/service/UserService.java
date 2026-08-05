@@ -34,6 +34,9 @@ public interface UserService {
      * Delete/deactivate staff user
      */
     ApiResponse<String> deleteStaff(Long id);
+
+    /** Super-admin sets a staff member's password directly (e.g. the member forgot theirs). */
+    ApiResponse<String> resetStaffPassword(Long id, String newPassword);
 }
 
 

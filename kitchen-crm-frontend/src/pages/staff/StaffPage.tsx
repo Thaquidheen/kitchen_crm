@@ -6,12 +6,20 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Plus, Search, Edit, Trash2, RotateCcw } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, RotateCcw, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useGetStaffQuery, useDeleteStaffMutation } from '@/features/staff/staffAPI';
+import {
+  useGetStaffQuery,
+  useDeleteStaffMutation,
+  useUpdateStaffMutation,
+  useResetStaffPasswordMutation,
+} from '@/features/staff/staffAPI';
 import type { Staff } from '@/features/staff/types';
 import StaffFormModal from '@/features/staff/components/StaffFormModal';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 
 type StaffFilter = 'all' | 'active' | 'inactive';
 
@@ -41,9 +49,13 @@ export function StaffPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [deactivateTarget, setDeactivateTarget] = useState<Staff | null>(null);
+  const [pwdTarget, setPwdTarget] = useState<Staff | null>(null);
+  const [newPassword, setNewPassword] = useState('');
 
   const { data: staffList = [], isLoading, error } = useGetStaffQuery();
   const [deleteStaff, { isLoading: isDeleting }] = useDeleteStaffMutation();
+  const [updateStaff] = useUpdateStaffMutation();
+  const [resetStaffPassword, { isLoading: isResetting }] = useResetStaffPasswordMutation();
 
   const activeCount = staffList.filter((s: Staff) => s.active).length;
   const inactiveCount = staffList.length - activeCount;
@@ -70,6 +82,41 @@ export function StaffPage() {
       setDeactivateTarget(null);
     } catch (e: any) {
       toast.error(e?.data?.message || e?.message || 'Failed to deactivate staff');
+    }
+  };
+
+  /** Reactivation is a single field flip — the edit form never sent `active`, so it could not do it. */
+  const handleReactivate = async (staff: Staff) => {
+    try {
+      await updateStaff({ id: staff.id, data: { active: true } }).unwrap();
+      toast.success(`${staff.name} reactivated`);
+    } catch (e: any) {
+      toast.error(e?.data?.message || e?.message || 'Failed to reactivate staff');
+    }
+  };
+
+  // Mirrors UserCreateDto / ResetStaffPasswordDto on the backend.
+  const pwdError = !newPassword
+    ? 'Password is required'
+    : newPassword.length < 8
+    ? 'Password must be at least 8 characters'
+    : !/[a-z]/.test(newPassword)
+    ? 'Password must contain a lowercase letter'
+    : !/[A-Z]/.test(newPassword)
+    ? 'Password must contain an uppercase letter'
+    : !/\d/.test(newPassword)
+    ? 'Password must contain a number'
+    : '';
+
+  const handleResetPassword = async () => {
+    if (!pwdTarget || pwdError) return;
+    try {
+      await resetStaffPassword({ id: pwdTarget.id, newPassword }).unwrap();
+      toast.success(`Password updated for ${pwdTarget.name}`);
+      setPwdTarget(null);
+      setNewPassword('');
+    } catch (e: any) {
+      toast.error(e?.data?.message || e?.message || 'Failed to update password');
     }
   };
 
@@ -305,6 +352,16 @@ export function StaffPage() {
                           >
                             <Edit size={14} />
                           </button>
+                          <button
+                            onClick={() => {
+                              setPwdTarget(staff);
+                              setNewPassword('');
+                            }}
+                            title="Change password"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors"
+                          >
+                            <KeyRound size={14} />
+                          </button>
                           {staff.active ? (
                             <button
                               onClick={() => setDeactivateTarget(staff)}
@@ -323,12 +380,17 @@ export function StaffPage() {
                             </button>
                           ) : (
                             <button
-                              onClick={() => {
-                                setEditingStaff(staff);
-                                setIsModalOpen(true);
+                              onClick={() => handleReactivate(staff)}
+                              title="Reactivate"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 transition-colors"
+                              onMouseEnter={(ev) => {
+                                ev.currentTarget.style.background = 'var(--st-confirmed-bg)';
+                                ev.currentTarget.style.color = 'var(--st-confirmed-fg)';
                               }}
-                              title="Reactivate from the edit form"
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors"
+                              onMouseLeave={(ev) => {
+                                ev.currentTarget.style.background = 'transparent';
+                                ev.currentTarget.style.color = '';
+                              }}
                             >
                               <RotateCcw size={14} />
                             </button>
@@ -377,6 +439,37 @@ export function StaffPage() {
         confirmText={isDeleting ? 'Deactivating…' : 'Deactivate'}
         type="danger"
       />
+
+      {/* Super admin sets a staff password directly */}
+      <Modal
+        isOpen={pwdTarget !== null}
+        onClose={() => setPwdTarget(null)}
+        title={pwdTarget ? `Change password — ${pwdTarget.name}` : 'Change password'}
+        size="md"
+      >
+        <ModalBody>
+          <p className="text-[12.5px] text-text-600 mb-4">
+            Sets a new password immediately. Share it with {pwdTarget?.name ?? 'the staff member'} — they can change
+            it themselves after signing in.
+          </p>
+          <Input
+            label="New password *"
+            type="text"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="At least 8 characters, with a capital, a small letter and a number"
+            error={newPassword && pwdError ? pwdError : undefined}
+          />
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="outline" onClick={() => setPwdTarget(null)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleResetPassword} disabled={!!pwdError || isResetting}>
+            {isResetting ? 'Saving…' : 'Update password'}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }

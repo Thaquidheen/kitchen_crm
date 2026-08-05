@@ -227,6 +227,30 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    @Override
+    public ApiResponse<String> resetStaffPassword(Long id, String newPassword) {
+        try {
+            User user = userRepository.findById(id).orElse(null);
+            if (user == null) {
+                return ApiResponse.error("Staff user not found");
+            }
+
+            boolean isStaff = user.getRoles().stream()
+                    .anyMatch(role -> role.getName() == Role.RoleName.ROLE_STAFF);
+            if (!isStaff) {
+                return ApiResponse.error("User is not a staff member");
+            }
+
+            user.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+            log.info("Password reset by super admin for staff user: {}", user.getEmail());
+            return ApiResponse.success("Password updated successfully");
+        } catch (Exception e) {
+            log.error("Failed to reset staff password: {}", e.getMessage(), e);
+            return ApiResponse.error("Failed to reset password: " + e.getMessage());
+        }
+    }
+
     /**
      * Convert User entity to UserDto
      */
