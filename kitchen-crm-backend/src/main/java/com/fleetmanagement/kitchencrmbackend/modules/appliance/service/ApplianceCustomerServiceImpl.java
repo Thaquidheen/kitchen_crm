@@ -2,8 +2,10 @@ package com.fleetmanagement.kitchencrmbackend.modules.appliance.service;
 
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.dto.ApplianceCustomerDto;
+import com.fleetmanagement.kitchencrmbackend.modules.appliance.dto.ApplianceQuotationFileDto;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.entity.ApplianceCustomer;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.entity.ApplianceCustomerItem;
+import com.fleetmanagement.kitchencrmbackend.modules.appliance.entity.ApplianceQuotationFile;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.repository.ApplianceCustomerRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,52 +104,70 @@ public class ApplianceCustomerServiceImpl implements ApplianceCustomerService {
     }
 
     @Override
-    public ApiResponse<ApplianceCustomerDto> uploadQuotation(Long id, MultipartFile file) {
+    public ApiResponse<ApplianceCustomerDto> uploadQuotations(Long id, MultipartFile[] files) {
         ApplianceCustomer entity = repository.findById(id).orElse(null);
         if (entity == null) {
             return ApiResponse.error("Entry not found");
         }
-        if (file == null || file.isEmpty()) {
-            return ApiResponse.error("Please choose a file to upload");
+        if (files == null || files.length == 0) {
+            return ApiResponse.error("Please choose at least one file to upload");
         }
-        String original = file.getOriginalFilename() == null ? "quotation.pdf" : file.getOriginalFilename();
-        if (!original.toLowerCase().endsWith(".pdf")) {
-            return ApiResponse.error("Only PDF files can be attached as a quotation");
-        }
-        if (file.getSize() > 20L * 1024 * 1024) {
-            return ApiResponse.error("File is too large (maximum 20MB)");
+
+        // Validate everything up front so a bad file in the batch does not leave half of it stored.
+        for (MultipartFile file : files) {
+            if (file == null || file.isEmpty()) {
+                return ApiResponse.error("One of the selected files is empty");
+            }
+            String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename();
+            if (!name.toLowerCase().endsWith(".pdf")) {
+                return ApiResponse.error("Only PDF files can be attached — \"" + name + "\" is not a PDF");
+            }
+            if (file.getSize() > 20L * 1024 * 1024) {
+                return ApiResponse.error("\"" + name + "\" is too large (maximum 20MB)");
+            }
         }
 
         try {
             Path dir = Paths.get(quotationUploadDir);
             Files.createDirectories(dir);
 
-            // Keep the stored name unique and free of anything from the client's filename.
-            String stored = "appliance-" + id + "-" + System.currentTimeMillis() + ".pdf";
-            Files.copy(file.getInputStream(), dir.resolve(stored), StandardCopyOption.REPLACE_EXISTING);
+            int i = 0;
+            for (MultipartFile file : files) {
+                String original = file.getOriginalFilename() == null ? "quotation.pdf" : file.getOriginalFilename();
+                // Stored name is ours, never the client's, and unique within the batch.
+                String stored = "appliance-" + id + "-" + System.currentTimeMillis() + "-" + (i++) + ".pdf";
+                Files.copy(file.getInputStream(), dir.resolve(stored), StandardCopyOption.REPLACE_EXISTING);
 
-            // Replacing an existing quotation leaves no orphan behind.
-            deleteStoredQuotation(entity.getQuotationFileUrl());
+                ApplianceQuotationFile record = new ApplianceQuotationFile();
+                record.setApplianceCustomer(entity);
+                record.setFileUrl("/uploads/appliance-quotations/" + stored);
+                record.setFileName(original);
+                record.setUploadedAt(LocalDateTime.now());
+                entity.getQuotationFiles().add(record);
+            }
 
-            entity.setQuotationFileUrl("/uploads/appliance-quotations/" + stored);
-            entity.setQuotationFileName(original);
-            entity.setQuotationUploadedAt(LocalDateTime.now());
-            return ApiResponse.success("Quotation uploaded", convertToDto(repository.save(entity)));
+            String msg = files.length == 1 ? "Quotation uploaded" : files.length + " quotations uploaded";
+            return ApiResponse.success(msg, convertToDto(repository.save(entity)));
         } catch (IOException e) {
             return ApiResponse.error("Failed to store the file: " + e.getMessage());
         }
     }
 
     @Override
-    public ApiResponse<ApplianceCustomerDto> deleteQuotation(Long id) {
+    public ApiResponse<ApplianceCustomerDto> deleteQuotation(Long id, Long fileId) {
         ApplianceCustomer entity = repository.findById(id).orElse(null);
         if (entity == null) {
             return ApiResponse.error("Entry not found");
         }
-        deleteStoredQuotation(entity.getQuotationFileUrl());
-        entity.setQuotationFileUrl(null);
-        entity.setQuotationFileName(null);
-        entity.setQuotationUploadedAt(null);
+        ApplianceQuotationFile target = entity.getQuotationFiles().stream()
+                .filter(f -> f.getId().equals(fileId))
+                .findFirst()
+                .orElse(null);
+        if (target == null) {
+            return ApiResponse.error("Quotation file not found on this entry");
+        }
+        deleteStoredQuotation(target.getFileUrl());
+        entity.getQuotationFiles().remove(target); // orphanRemoval deletes the row
         return ApiResponse.success("Quotation removed", convertToDto(repository.save(entity)));
     }
 
@@ -195,9 +215,9 @@ public class ApplianceCustomerServiceImpl implements ApplianceCustomerService {
         dto.setAmount(entity.getAmount());
         dto.setStatus(entity.getStatus());
         dto.setNotes(entity.getNotes());
-        dto.setQuotationFileUrl(entity.getQuotationFileUrl());
-        dto.setQuotationFileName(entity.getQuotationFileName());
-        dto.setQuotationUploadedAt(entity.getQuotationUploadedAt());
+        dto.setQuotationFiles(entity.getQuotationFiles().stream()
+                .map(f -> new ApplianceQuotationFileDto(f.getId(), f.getFileUrl(), f.getFileName(), f.getUploadedAt()))
+                .toList());
         List<String> items = entity.getItems().stream().map(ApplianceCustomerItem::getItemName).toList();
         dto.setItems(items);
         dto.setCreatedBy(entity.getCreatedBy());

@@ -50,15 +50,10 @@ public class ApplianceCustomer extends Auditable {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
-    /** Public URL of the uploaded quotation PDF, set once the entry reaches QUOTATION. */
-    @Column(name = "quotation_file_url", length = 500)
-    private String quotationFileUrl;
-
-    @Column(name = "quotation_file_name")
-    private String quotationFileName;
-
-    @Column(name = "quotation_uploaded_at")
-    private java.time.LocalDateTime quotationUploadedAt;
+    /** Quotation PDFs attached to this entry; an entry may carry several. */
+    @OneToMany(mappedBy = "applianceCustomer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("uploadedAt ASC")
+    private List<ApplianceQuotationFile> quotationFiles = new ArrayList<>();
 
     @Column(name = "created_by")
     private String createdBy;

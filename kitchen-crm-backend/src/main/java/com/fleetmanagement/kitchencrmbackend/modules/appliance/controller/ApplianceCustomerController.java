@@ -71,18 +71,20 @@ public class ApplianceCustomerController {
         return ResponseEntity.ok(service.delete(id));
     }
 
-    /** Attach or replace the quotation PDF for an entry. */
-    @PostMapping(value = "/{id}/quotation", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<ApplianceCustomerDto>> uploadQuotation(
+    /** Attach one or more quotation PDFs to an entry. */
+    @PostMapping(value = "/{id}/quotations", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<ApplianceCustomerDto>> uploadQuotations(
             @PathVariable Long id,
-            @RequestParam("file") MultipartFile file) {
-        ApiResponse<ApplianceCustomerDto> response = service.uploadQuotation(id, file);
+            @RequestParam("files") MultipartFile[] files) {
+        ApiResponse<ApplianceCustomerDto> response = service.uploadQuotations(id, files);
         return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
-    @DeleteMapping("/{id}/quotation")
-    public ResponseEntity<ApiResponse<ApplianceCustomerDto>> deleteQuotation(@PathVariable Long id) {
-        ApiResponse<ApplianceCustomerDto> response = service.deleteQuotation(id);
+    @DeleteMapping("/{id}/quotations/{fileId}")
+    public ResponseEntity<ApiResponse<ApplianceCustomerDto>> deleteQuotation(
+            @PathVariable Long id,
+            @PathVariable Long fileId) {
+        ApiResponse<ApplianceCustomerDto> response = service.deleteQuotation(id, fileId);
         return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 }

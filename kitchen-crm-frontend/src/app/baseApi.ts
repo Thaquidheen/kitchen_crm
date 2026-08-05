@@ -557,18 +557,21 @@ export const baseApi = createApi({
       invalidatesTags: ['ApplianceCustomers'],
     }),
 
-    // Attach / replace the quotation PDF on an appliance entry
-    uploadApplianceQuotation: builder.mutation<any, { id: number; file: File }>({
-      query: ({ id, file }) => {
+    // Attach one or more quotation PDFs to an appliance entry
+    uploadApplianceQuotation: builder.mutation<any, { id: number; files: File[] }>({
+      query: ({ id, files }) => {
         const form = new FormData();
-        form.append('file', file);
-        return { url: `/appliance-customers/${id}/quotation`, method: 'POST', body: form };
+        files.forEach((f) => form.append('files', f));
+        return { url: `/appliance-customers/${id}/quotations`, method: 'POST', body: form };
       },
       invalidatesTags: ['ApplianceCustomers'],
     }),
 
-    deleteApplianceQuotation: builder.mutation<any, number>({
-      query: (id) => ({ url: `/appliance-customers/${id}/quotation`, method: 'DELETE' }),
+    deleteApplianceQuotation: builder.mutation<any, { id: number; fileId: number }>({
+      query: ({ id, fileId }) => ({
+        url: `/appliance-customers/${id}/quotations/${fileId}`,
+        method: 'DELETE',
+      }),
       invalidatesTags: ['ApplianceCustomers'],
     }),
 
