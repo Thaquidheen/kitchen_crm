@@ -16,6 +16,7 @@ import {
 import type { ProductionInstallation, ProductionCustomTask, ProductionTaskGroup, TaskPriority } from '../types';
 import {
   useGetTaskGroupsByCustomerQuery,
+  useApplyStandardStagesMutation,
   useCreateTaskGroupMutation,
   useUpdateTaskGroupMutation,
   useDeleteTaskGroupMutation,
@@ -23,6 +24,11 @@ import {
   useToggleCustomTaskMutation,
   useDeleteCustomTaskMutation,
 } from '../productionAPI';
+import { useCreateReminderMutation } from '@/app/baseApi';
+import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { BellRing, ListChecks } from 'lucide-react';
 
 const PRIORITY_COLORS: Record<string, string> = {
   LOW: 'text-gray-400',
@@ -69,6 +75,48 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
   const [createCustomTask, { isLoading: isCreatingTask }] = useCreateCustomTaskMutation();
   const [toggleCustomTask] = useToggleCustomTaskMutation();
   const [deleteCustomTask] = useDeleteCustomTaskMutation();
+  const [applyStandardStages, { isLoading: isApplying }] = useApplyStandardStagesMutation();
+  const [createReminder, { isLoading: isSettingReminder }] = useCreateReminderMutation();
+
+  // Set-reminder dialog: date-driven checklist items ("30th day", "5 days before delivery")
+  // create an ordinary customer-owned reminder, pre-filled from the task, so it lands in the
+  // notification bell and the global Reminders page like any other.
+  const [reminderTask, setReminderTask] = useState<ProductionCustomTask | null>(null);
+  const [remDate, setRemDate] = useState('');
+  const [remNotes, setRemNotes] = useState('');
+
+  const openReminderFor = (task: ProductionCustomTask) => {
+    setReminderTask(task);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    setRemDate(tomorrow.toISOString().split('T')[0]);
+    setRemNotes('');
+  };
+
+  const handleSetReminder = async () => {
+    if (!reminderTask || !remDate) return;
+    try {
+      await createReminder({
+        customerId,
+        title: reminderTask.taskTitle,
+        notes: remNotes.trim() || reminderTask.taskDescription || undefined,
+        remindAt: `${remDate}T10:00:00`,
+      }).unwrap();
+      toast.success('Reminder set — it will appear in the bell on that day');
+      setReminderTask(null);
+    } catch (e: any) {
+      toast.error(e?.data?.message || 'Failed to set reminder');
+    }
+  };
+
+  const handleApplyStandard = async () => {
+    try {
+      const res = await applyStandardStages(customerId).unwrap();
+      toast.success(res?.message || 'Standard checklist applied');
+    } catch (e: any) {
+      toast.error(e?.data?.message || 'Failed to apply the standard checklist');
+    }
+  };
 
   const taskGroups = taskGroupsResponse?.success ? taskGroupsResponse.data || [] : [];
 
@@ -253,6 +301,18 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
                 month: 'short',
               })}
             </span>
+          )}
+          {!task.completed && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                openReminderFor(task);
+              }}
+              className="p-1 text-text-500 hover:text-primary-500 transition-colors"
+              title="Set a reminder for this task"
+            >
+              <BellRing className="w-3.5 h-3.5" />
+            </button>
           )}
           <button
             onClick={(e) => {
@@ -460,16 +520,30 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
           <p className="mt-2 text-text-600">Loading tasks...</p>
         </div>
       ) : taskGroups.length === 0 && !showAddGroupForm ? (
-        /* Empty State */
-        <div className="p-8 text-center border border-background-600 rounded-lg">
-          <p className="text-text-600 mb-4">No task groups yet. Create your first group to get started.</p>
-          <button
-            onClick={() => setShowAddGroupForm(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            <FolderPlus className="w-4 h-4" />
-            Add Group
-          </button>
+        /* Empty state: jobs created before the checklist existed get it in one click. */
+        <div className="p-8 text-center border border-dashed border-background-500 rounded-xl">
+          <ListChecks className="w-8 h-8 text-text-500 mx-auto mb-2" />
+          <p className="text-text-900 font-semibold text-sm">This job has no stage checklist yet</p>
+          <p className="text-text-600 text-[12.5px] mt-1 mb-4">
+            Apply the standard 3-stage checklist (36 tasks), or build the groups by hand.
+          </p>
+          <div className="flex items-center justify-center gap-2">
+            <button
+              onClick={handleApplyStandard}
+              disabled={isApplying}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+            >
+              {isApplying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ListChecks className="w-4 h-4" />}
+              Apply standard stages
+            </button>
+            <button
+              onClick={() => setShowAddGroupForm(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-background-500 text-text-900 rounded-lg hover:bg-background-700 transition-colors"
+            >
+              <FolderPlus className="w-4 h-4" />
+              Add group manually
+            </button>
+          </div>
         </div>
       ) : (
         <>
@@ -531,16 +605,53 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
         <div className="p-4 bg-background-800 rounded-lg border border-background-600">
           <div className="flex items-center justify-between mb-2">
             <span className="text-text-600">Overall Progress</span>
-            <span className="text-lg font-bold text-text-900">{progressPercentage}%</span>
+            <span className="text-lg font-bold text-text-900 tabular-nums">
+              {completedTasks}/{totalTasks} · {progressPercentage}%
+            </span>
           </div>
           <div className="h-3 bg-background-700 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-primary-500 to-green-500 transition-all"
+              className="h-full bg-primary-500 transition-all"
               style={{ width: `${progressPercentage}%` }}
             />
           </div>
         </div>
       )}
+
+      {/* Set-reminder dialog (task title pre-filled; day-granularity reminder) */}
+      <Modal
+        isOpen={reminderTask !== null}
+        onClose={() => setReminderTask(null)}
+        title="Set Reminder"
+        size="md"
+      >
+        <ModalBody>
+          <p className="text-[12.5px] text-text-600 mb-4">
+            Shows for its whole day, from midnight — in the notification bell and on the Reminders page.
+          </p>
+          <div className="mb-4">
+            <Input label="What is this reminder for?" type="text" value={reminderTask?.taskTitle ?? ''} readOnly />
+          </div>
+          <div className="mb-4">
+            <Input label="Date *" type="date" value={remDate} onChange={(e) => setRemDate(e.target.value)} />
+          </div>
+          <Input
+            label="Notes"
+            type="text"
+            value={remNotes}
+            onChange={(e) => setRemNotes(e.target.value)}
+            placeholder={reminderTask?.taskDescription || 'Optional details…'}
+          />
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="outline" onClick={() => setReminderTask(null)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleSetReminder} disabled={!remDate || isSettingReminder}>
+            {isSettingReminder ? 'Saving…' : 'Set Reminder'}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 };

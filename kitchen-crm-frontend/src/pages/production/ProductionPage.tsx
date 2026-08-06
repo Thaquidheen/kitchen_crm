@@ -10,30 +10,39 @@ import { Hammer, Package, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
 export function ProductionPage() {
   const { data: statisticsResponse, isLoading: statsLoading } = useGetProductionStatisticsQuery();
-  const statistics = statisticsResponse?.data;
+  // The statistics endpoint returns snake_case keys; per-status counts are
+  // "<status>_installations" (see ProductionInstallationServiceImpl.getProductionStatistics).
+  const statistics: any = statisticsResponse?.data ?? {};
+  const num = (k: string) => Number(statistics[k] ?? 0);
+  const inProgress =
+    num('production_installations') +
+    num('site_preparation_installations') +
+    num('delivery_installations') +
+    num('installation_installations') +
+    num('quality_check_installations');
 
   const statsCards = [
     {
       title: 'Total Installations',
-      value: statistics?.totalInstallations || 0,
+      value: num('total_installations'),
       icon: <Package className="h-6 w-6 text-blue-500" />,
       color: 'bg-blue-500/10 border-blue-500/20',
     },
     {
       title: 'In Progress',
-      value: statistics?.installationsInProgress || 0,
+      value: inProgress,
       icon: <Clock className="h-6 w-6 text-yellow-500" />,
       color: 'bg-yellow-500/10 border-yellow-500/20',
     },
     {
       title: 'Ready for Installation',
-      value: statistics?.readyForInstallation || 0,
+      value: num('ready_for_installation'),
       icon: <Hammer className="h-6 w-6 text-orange-500" />,
       color: 'bg-orange-500/10 border-orange-500/20',
     },
     {
       title: 'Completed',
-      value: statistics?.completedInstallations || 0,
+      value: num('completed_installations'),
       icon: <CheckCircle className="h-6 w-6 text-green-500" />,
       color: 'bg-green-500/10 border-green-500/20',
     },

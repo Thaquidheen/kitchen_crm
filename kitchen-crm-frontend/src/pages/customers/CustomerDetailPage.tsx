@@ -35,6 +35,7 @@ import { CustomerFormModal } from '../../features/customers/components/CustomerF
 import { CustomerFollowUps } from '../../features/customers/components/CustomerFollowUps';
 import { CustomerReminders } from '../../features/customers/components/CustomerReminders';
 import { CustomerActivityPanel } from '../../features/customers/components/CustomerActivityPanel';
+import { CustomerProductionTab } from '../../features/customers/components/CustomerProductionTab';
 import { StatusChangeModal } from '../../features/customers/components/StatusChangeModal';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { STATUS_PILL } from '../../features/customers/components/CustomerList';
@@ -320,6 +321,8 @@ const CustomerDetailPage: React.FC = () => {
         <div className="space-y-4">
           <CustomerReminders customerId={customer.id} />
         </div>
+      ) : activeTab === 'Production' ? (
+        <CustomerProductionTab customerId={customer.id} />
       ) : (
         <div className="bg-background-800 border border-background-600 rounded-[14px] px-6 py-16 text-center">
           <div className="text-[14.5px] font-semibold text-text-900">{activeTab}</div>

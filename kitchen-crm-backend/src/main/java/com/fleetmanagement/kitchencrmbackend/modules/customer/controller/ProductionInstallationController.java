@@ -123,6 +123,16 @@ public class ProductionInstallationController {
         }
     }
 
+    /** Seeds the standard 3-stage checklist on an existing job that has none. */
+    @PostMapping("/customer/{customerId}/apply-standard-stages")
+    public ResponseEntity<ApiResponse<String>> applyStandardStages(
+            @PathVariable Long customerId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        ApiResponse<String> response = productionInstallationService
+                .applyStandardStages(customerId, currentUser != null ? currentUser.getName() : "System");
+        return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
     @PutMapping("/customer/{customerId}")
     public ResponseEntity<ApiResponse<ProductionInstallationDto>> updateProductionInstallation(
             @PathVariable Long customerId,

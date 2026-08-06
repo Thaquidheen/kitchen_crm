@@ -292,6 +292,21 @@ export const productionAPI = baseApi.injectEndpoints({
       ],
     }),
 
+    // Seed the standard 3-stage checklist on a job that has none yet
+    applyStandardStages: builder.mutation<ProductionApiResponse<string>, number>({
+      query: (customerId) => ({
+        url: `${API_ENDPOINTS.PRODUCTION.BY_CUSTOMER(customerId)}/apply-standard-stages`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_result, _error, customerId) => [
+        { type: 'TaskGroup', id: customerId },
+        'TaskGroup',
+        'CustomTask',
+        { type: 'Production', id: customerId },
+        'Production',
+      ],
+    }),
+
     // Create task group
     createTaskGroup: builder.mutation<ProductionApiResponse<ProductionTaskGroup>, ProductionTaskGroupCreateRequest>({
       query: (data) => ({
@@ -457,6 +472,7 @@ export const {
   useReorderCustomTasksMutation,
   // Task Groups hooks
   useGetTaskGroupsByCustomerQuery,
+  useApplyStandardStagesMutation,
   useCreateTaskGroupMutation,
   useUpdateTaskGroupMutation,
   useDeleteTaskGroupMutation,

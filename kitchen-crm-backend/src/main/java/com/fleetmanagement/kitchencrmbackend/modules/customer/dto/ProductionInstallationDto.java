@@ -96,6 +96,11 @@ public class ProductionInstallationDto {
     private String currentPhase;
     private Boolean readyForInstallation;
 
+    // Stage checklist rollup (null when the job predates the checklist and has no tasks)
+    private Integer checklistTotal;
+    private Integer checklistDone;
+    private String currentStageName;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

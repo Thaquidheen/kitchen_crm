@@ -2,10 +2,14 @@ package com.fleetmanagement.kitchencrmbackend.modules.customer.service;
 
 import com.fleetmanagement.kitchencrmbackend.modules.customer.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.ProductionCustomTask;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.ProductionInstallation;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.ProductionTaskGroup;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.WorkflowHistory;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.ProductionCustomTaskRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.ProductionInstallationRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.ProductionTaskGroupRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.WorkflowHistoryRepository;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +37,12 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
 
     @Autowired
     private WorkflowHistoryRepository workflowHistoryRepository;
+
+    @Autowired
+    private ProductionTaskGroupRepository productionTaskGroupRepository;
+
+    @Autowired
+    private ProductionCustomTaskRepository productionCustomTaskRepository;
 
     @Override
     public ApiResponse<Page<ProductionInstallationDto>> getAllProductionInstallations(
@@ -83,11 +93,60 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
 
         ProductionInstallation savedInstallation = productionInstallationRepository.save(installation);
 
+        // Every job starts with the company's standard 3-stage checklist pre-loaded.
+        seedStandardStages(savedInstallation, createdBy);
+
         // Create workflow history
         createWorkflowHistory(customer, "Production Installation Created", "NOT_STARTED",
-                createdBy, "Production installation phase initiated");
+                createdBy, "Production installation phase initiated with the standard 3-stage checklist");
 
         return ApiResponse.success("Production installation created successfully", convertToDto(savedInstallation));
+    }
+
+    @Override
+    public ApiResponse<String> applyStandardStages(Long customerId, String createdBy) {
+        ProductionInstallation installation = productionInstallationRepository.findByCustomerId(customerId).orElse(null);
+        if (installation == null) {
+            return ApiResponse.error("Production installation not found for customer");
+        }
+        // Never duplicate: a job that already has task groups keeps exactly what it has.
+        if (!productionTaskGroupRepository
+                .findByProductionInstallationIdOrderBySortOrderAsc(installation.getId()).isEmpty()) {
+            return ApiResponse.error("This job already has stages — the standard checklist was not re-applied");
+        }
+        int tasks = seedStandardStages(installation, createdBy);
+        return ApiResponse.success("Standard checklist applied — " + tasks + " tasks added across "
+                + ProductionStageTemplate.STAGES.size() + " stages");
+    }
+
+    /** Seeds the standard SOP as task groups. Returns the number of tasks created. */
+    private int seedStandardStages(ProductionInstallation installation, String createdBy) {
+        int stageOrder = 0;
+        int taskCount = 0;
+        for (ProductionStageTemplate.TemplateStage stage : ProductionStageTemplate.STAGES) {
+            ProductionTaskGroup group = new ProductionTaskGroup();
+            group.setProductionInstallation(installation);
+            group.setGroupTitle(stage.title());
+            group.setGroupDescription(stage.description());
+            group.setSortOrder(stageOrder++);
+            group.setIsExpanded(true);
+            ProductionTaskGroup savedGroup = productionTaskGroupRepository.save(group);
+
+            int taskOrder = 0;
+            for (ProductionStageTemplate.TemplateTask t : stage.tasks()) {
+                ProductionCustomTask task = new ProductionCustomTask();
+                task.setProductionInstallation(installation);
+                task.setTaskGroup(savedGroup);
+                task.setTaskTitle(t.title());
+                task.setTaskDescription(t.note());
+                task.setPhase(stage.phase());
+                task.setCompleted(false);
+                task.setSortOrder(taskOrder++);
+                productionCustomTaskRepository.save(task);
+                taskCount++;
+            }
+        }
+        return taskCount;
     }
 
     @Override
@@ -712,8 +771,21 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
         dto.setQualityCheckDate(installation.getQualityCheckDate());
         dto.setQualityCheckNotes(installation.getQualityCheckNotes());
 
-        // Calculated Fields
-        dto.setOverallProgressPercentage(installation.getOverallProgressPercentage());
+        // Calculated Fields.
+        // Progress comes from the stage checklist when the job has one — that is what staff
+        // actually tick. Jobs from before the checklist (no tasks) keep the legacy
+        // boolean-checkpoint calculation so their bar does not jump.
+        List<ProductionCustomTask> tasks = productionCustomTaskRepository
+                .findByProductionInstallationIdOrderBySortOrderAsc(installation.getId());
+        if (!tasks.isEmpty()) {
+            long done = tasks.stream().filter(t -> Boolean.TRUE.equals(t.getCompleted())).count();
+            dto.setOverallProgressPercentage((int) ((done * 100.0) / tasks.size()));
+            dto.setChecklistTotal(tasks.size());
+            dto.setChecklistDone((int) done);
+            dto.setCurrentStageName(currentStageName(installation.getId(), tasks));
+        } else {
+            dto.setOverallProgressPercentage(installation.getOverallProgressPercentage());
+        }
         dto.setCurrentPhase(installation.getCurrentPhase());
         dto.setReadyForInstallation(installation.isReadyForInstallation());
 
@@ -721,5 +793,19 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
         dto.setUpdatedAt(installation.getUpdatedAt());
 
         return dto;
+    }
+
+    /** The first stage (by sort order) that still has open tasks; the last stage when all done. */
+    private String currentStageName(Long installationId, List<ProductionCustomTask> tasks) {
+        List<ProductionTaskGroup> groups = productionTaskGroupRepository
+                .findByProductionInstallationIdOrderBySortOrderAsc(installationId);
+        if (groups.isEmpty()) return null;
+        for (ProductionTaskGroup g : groups) {
+            boolean open = tasks.stream().anyMatch(t ->
+                    t.getTaskGroup() != null && t.getTaskGroup().getId().equals(g.getId())
+                            && !Boolean.TRUE.equals(t.getCompleted()));
+            if (open) return g.getGroupTitle();
+        }
+        return groups.get(groups.size() - 1).getGroupTitle();
     }
 }

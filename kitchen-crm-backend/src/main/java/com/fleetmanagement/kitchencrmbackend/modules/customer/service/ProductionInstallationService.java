@@ -24,6 +24,9 @@ public interface ProductionInstallationService {
     ApiResponse<ProductionInstallationDto> createProductionInstallation(
             ProductionInstallationCreateDto createDto, String createdBy);
 
+    /** Seeds the standard 3-stage checklist on a job that has no task groups yet. */
+    ApiResponse<String> applyStandardStages(Long customerId, String createdBy);
+
     ApiResponse<ProductionInstallationDto> updateProductionInstallation(
             Long customerId, ProductionInstallationDto dto, String updatedBy);
 
