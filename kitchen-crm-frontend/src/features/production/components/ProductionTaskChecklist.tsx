@@ -273,11 +273,18 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
           onClick={() => !isLoading && handleToggleTask(task)}
         >
           {isLoading ? (
-            <Loader2 className="w-4 h-4 text-primary-500 animate-spin" />
-          ) : task.completed ? (
-            <CheckCircle className="w-4 h-4 text-green-500" />
+            <Loader2 className="w-5 h-5 text-primary-500 animate-spin shrink-0" />
           ) : (
-            <Circle className="w-4 h-4 text-text-600" />
+            <span
+              className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors"
+              style={
+                task.completed
+                  ? { background: 'var(--st-confirmed-bg)', color: 'var(--st-confirmed-fg)' }
+                  : { border: '1.5px solid var(--color-background-500)', color: 'transparent' }
+              }
+            >
+              <CheckCircle className="w-3.5 h-3.5" />
+            </span>
           )}
           <div className="flex flex-col flex-1">
             <div className="flex items-center gap-2">
@@ -378,21 +385,31 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
     </div>
   );
 
-  const renderGroup = (group: ProductionTaskGroup) => {
+  const STAGE_ST = ['s1', 's2', 's3'];
+  const STAGE_COLORS: Record<string, { bg: string; fg: string }> = {
+    s1: { bg: 'var(--st-lead-bg)', fg: 'var(--st-lead-fg)' },
+    s2: { bg: 'var(--st-design-bg)', fg: 'var(--st-design-fg)' },
+    s3: { bg: 'var(--st-quote-bg)', fg: 'var(--st-quote-fg)' },
+  };
+
+  const renderGroup = (group: ProductionTaskGroup, idx: number) => {
     const isExpanded = expandedGroups.has(group.id);
     const isEditing = editingGroupId === group.id;
     const groupProgress = group.totalTasks > 0 ? Math.round((group.completedTasks / group.totalTasks) * 100) : 0;
+    const allDone = group.totalTasks > 0 && group.completedTasks === group.totalTasks;
+    const stageColor = STAGE_COLORS[STAGE_ST[idx % 3]];
 
     return (
-      <div key={group.id} className="border border-background-600 rounded-lg overflow-hidden mb-3">
+      <div key={group.id} className="border border-background-600 rounded-xl overflow-hidden mb-3">
         {/* Group Header */}
-        <div className="flex items-center justify-between p-3 bg-background-800 cursor-pointer">
-          <div className="flex items-center gap-2 flex-1" onClick={() => toggleGroupExpanded(group.id)}>
-            {isExpanded ? (
-              <ChevronDown className="w-5 h-5 text-text-600" />
-            ) : (
-              <ChevronRight className="w-5 h-5 text-text-600" />
-            )}
+        <div className="flex items-center justify-between px-3.5 py-3 bg-background-800 cursor-pointer hover:bg-background-700 transition-colors">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0" onClick={() => toggleGroupExpanded(group.id)}>
+            <span
+              className="w-6 h-6 rounded-lg flex items-center justify-center text-[11.5px] font-bold shrink-0"
+              style={allDone ? { background: 'var(--st-confirmed-bg)', color: 'var(--st-confirmed-fg)' } : { background: stageColor.bg, color: stageColor.fg }}
+            >
+              {allDone ? '✓' : idx + 1}
+            </span>
             {isEditing ? (
               <input
                 type="text"
@@ -410,19 +427,31 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
                 autoFocus
               />
             ) : (
-              <span className="font-semibold text-text-900">{group.groupTitle}</span>
-            )}
-            <span className="text-xs text-text-500 ml-2">
-              {group.completedTasks}/{group.totalTasks}
-            </span>
-            {group.totalTasks > 0 && (
-              <div className="w-16 h-1.5 bg-background-700 rounded-full overflow-hidden ml-2">
-                <div
-                  className="h-full bg-primary-500 transition-all"
-                  style={{ width: `${groupProgress}%` }}
-                />
+              <div className="min-w-0">
+                <span className="block font-[650] text-[13.5px] text-text-900 truncate">{group.groupTitle}</span>
+                {group.groupDescription && (
+                  <span className="block text-[11.5px] text-text-500 truncate">{group.groupDescription}</span>
+                )}
               </div>
             )}
+            <span
+              className="text-[11px] font-[650] px-2 py-0.5 rounded-full tabular-nums whitespace-nowrap ml-1"
+              style={
+                allDone
+                  ? { background: 'var(--st-confirmed-bg)', color: 'var(--st-confirmed-fg)' }
+                  : { background: 'var(--color-background-700)', border: '1px solid var(--color-background-600)', color: 'var(--color-text-700)' }
+              }
+            >
+              {group.completedTasks}/{group.totalTasks} done
+            </span>
+            {group.totalTasks > 0 && !allDone && (
+              <div className="w-16 h-1.5 bg-background-700 rounded-full overflow-hidden ml-1 hidden sm:block">
+                <div className="h-full bg-primary-500 transition-all rounded-full" style={{ width: `${groupProgress}%` }} />
+              </div>
+            )}
+            <ChevronDown
+              className={`w-4 h-4 text-text-500 shrink-0 ml-1 transition-transform ${isExpanded ? '' : '-rotate-90'}`}
+            />
           </div>
           <div className="flex items-center gap-1">
             {isEditing ? (
@@ -548,7 +577,7 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
       ) : (
         <>
           {/* Task Groups */}
-          {taskGroups.map(group => renderGroup(group))}
+          {taskGroups.map((group, idx) => renderGroup(group, idx))}
 
           {/* Add Group Form */}
           {showAddGroupForm ? (

@@ -1,7 +1,22 @@
-import React, { useState } from 'react';
-import { Package, Users, Calendar, CheckSquare, TrendingUp, ListTodo, ChevronDown, AlertTriangle } from 'lucide-react';
+/**
+ * CustomerProductionTab
+ * The production job view in the HOCH design language: compact header with status control,
+ * a 3-segment stage strip, the stage checklist on the left, and a sticky right rail with
+ * job summary, upcoming reminders, open issues and recent activity.
+ */
+
+import React, { useMemo, useState } from 'react';
+import { Package, ChevronDown, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useGetProductionInstallationByCustomerQuery, useCreateProductionInstallationMutation, useUpdateTaskStatusMutation, useUpdateInstallationStatusMutation } from '../../production/productionAPI';
+import {
+  useGetProductionInstallationByCustomerQuery,
+  useCreateProductionInstallationMutation,
+  useUpdateTaskStatusMutation,
+  useUpdateInstallationStatusMutation,
+  useGetTaskGroupsByCustomerQuery,
+  useGetIssuesByCustomerQuery,
+} from '../../production/productionAPI';
+import { useGetCustomerRemindersQuery } from '@/app/baseApi';
 import { ProductionCreateModal } from '../../production/components/ProductionCreateModal';
 import { ProductionTaskChecklist } from '../../production/components/ProductionTaskChecklist';
 import { ReportIssueModal } from '../../production/components/ReportIssueModal';
@@ -12,61 +27,85 @@ export interface CustomerProductionTabProps {
   customerId: number;
 }
 
+const STATUS_META: Record<string, { st: string; label: string }> = {
+  NOT_STARTED: { st: 'draft', label: 'Not Started' },
+  PRODUCTION: { st: 'lead', label: 'Production' },
+  SITE_PREPARATION: { st: 'potential', label: 'Site Prep' },
+  DELIVERY: { st: 'nego', label: 'Delivery' },
+  INSTALLATION: { st: 'design', label: 'Installation' },
+  QUALITY_CHECK: { st: 'follow', label: 'Quality Check' },
+  COMPLETED: { st: 'confirmed', label: 'Completed' },
+  ON_HOLD: { st: 'potential', label: 'On Hold' },
+  CANCELLED: { st: 'lost', label: 'Cancelled' },
+};
+
+const STAGE_ST = ['lead', 'design', 'quote'];
+
+const initialsOf = (name?: string) =>
+  (name ?? '')
+    .replace(/^(mr|mrs|ms|dr)\.?\s+/i, '')
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase() || '?';
+
+const fmtDate = (iso?: string) =>
+  iso ? new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
 export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ customerId }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isReportIssueModalOpen, setIsReportIssueModalOpen] = useState(false);
-  const [showChecklist, setShowChecklist] = useState(true);
 
-  const {
-    data: productionResponse,
-    isLoading,
-    error,
-    refetch
-  } = useGetProductionInstallationByCustomerQuery(customerId);
-
+  const { data: productionResponse, isLoading, error, refetch } = useGetProductionInstallationByCustomerQuery(customerId);
   const [createProductionInstallation] = useCreateProductionInstallationMutation();
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
   const [updateInstallationStatus, { isLoading: isUpdatingStatus }] = useUpdateInstallationStatusMutation();
 
-  // Status options for dropdown
-  const statusOptions: { value: InstallationStatus; label: string }[] = [
-    { value: InstallationStatusEnum.NOT_STARTED, label: 'Not Started' },
-    { value: InstallationStatusEnum.PRODUCTION, label: 'Production' },
-    { value: InstallationStatusEnum.SITE_PREPARATION, label: 'Site Preparation' },
-    { value: InstallationStatusEnum.DELIVERY, label: 'Delivery' },
-    { value: InstallationStatusEnum.INSTALLATION, label: 'Installation' },
-    { value: InstallationStatusEnum.QUALITY_CHECK, label: 'Quality Check' },
-    { value: InstallationStatusEnum.COMPLETED, label: 'Completed' },
-    { value: InstallationStatusEnum.ON_HOLD, label: 'On Hold' },
-    { value: InstallationStatusEnum.CANCELLED, label: 'Cancelled' },
-  ];
+  const production: any = productionResponse?.success ? productionResponse?.data : null;
 
-  const production = productionResponse?.success ? productionResponse?.data : null;
+  // Same query the checklist uses — RTK dedupes, so this costs nothing extra.
+  const { data: groupsResponse } = useGetTaskGroupsByCustomerQuery(customerId, { skip: !production });
+  const taskGroups: any[] = groupsResponse?.success ? groupsResponse.data || [] : [];
 
-  // Check if response indicates no production exists (success: false with specific message)
-  // or if there's a 404 error from the API
-  const isNotFoundResponse = productionResponse && !productionResponse.success;
-  const isNotFoundError = error && 'status' in error && (error as any).status === 404;
-  const noProductionExists = isNotFoundResponse || isNotFoundError;
-  const isRealError = error && !isNotFoundError;
+  const { data: remindersData } = useGetCustomerRemindersQuery(customerId, { skip: !production });
+  const openReminders: any[] = useMemo(
+    () => (remindersData ?? []).filter((r: any) => r.status !== 'DONE').slice(0, 3),
+    [remindersData]
+  );
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      NOT_STARTED: 'bg-background-500/20 text-text-500 border-background-500',
-      PRODUCTION: 'bg-warning/20 text-warning border-warning',
-      SITE_PREPARATION: 'bg-info/20 text-info border-info',
-      DELIVERY: 'bg-primary-500/20 text-primary-400 border-primary-500',
-      INSTALLATION: 'bg-warning/20 text-warning border-warning',
-      QUALITY_CHECK: 'bg-info/20 text-info border-info',
-      COMPLETED: 'bg-success/20 text-success border-success',
-      ON_HOLD: 'bg-orange-500/20 text-orange-400 border-orange-500',
-      CANCELLED: 'bg-red-500/20 text-red-400 border-red-500',
-    };
-    return colors[status] || colors.NOT_STARTED;
-  };
+  const { data: issuesResponse } = useGetIssuesByCustomerQuery(customerId, { skip: !production });
+  const openIssues: any[] = useMemo(
+    () => (issuesResponse?.data ?? []).filter((i: any) => i.status !== 'RESOLVED' && i.status !== 'CLOSED'),
+    [issuesResponse]
+  );
 
+  /** Stage rollup: counts per group, which stage is current, recent completions. */
+  const stages = useMemo(() => {
+    return taskGroups.map((g: any, idx: number) => {
+      const total = Number(g.totalTasks ?? g.tasks?.length ?? 0);
+      const done = Number(g.completedTasks ?? (g.tasks ?? []).filter((t: any) => t.completed).length);
+      return { id: g.id, idx, title: g.groupTitle, total, done, complete: total > 0 && done === total };
+    });
+  }, [taskGroups]);
+  const currentStageIdx = stages.findIndex((s) => !s.complete && s.total > 0);
+  const totalTasks = stages.reduce((t, s) => t + s.total, 0);
+  const doneTasks = stages.reduce((t, s) => t + s.done, 0);
+  const pct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : Number(production?.overallProgressPercentage ?? 0);
 
-  // Handle create production installation
+  const activity = useMemo(() => {
+    const all: any[] = taskGroups.flatMap((g: any) => g.tasks ?? []);
+    return all
+      .filter((t) => t.completed && (t.completedAt || t.completionDate))
+      .sort((a, b) => String(b.completedAt ?? b.completionDate).localeCompare(String(a.completedAt ?? a.completionDate)))
+      .slice(0, 4);
+  }, [taskGroups]);
+
+  const statusOptions: { value: InstallationStatus; label: string }[] = Object.entries(STATUS_META).map(([k, v]) => ({
+    value: InstallationStatusEnum[k as keyof typeof InstallationStatusEnum],
+    label: v.label,
+  }));
+
   const handleCreateProductionInstallation = async (data: ProductionInstallationCreateRequest) => {
     try {
       const result = await createProductionInstallation({
@@ -76,120 +115,91 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
         estimatedCompletionDate: data.estimatedCompletionDate,
         installationNotes: data.installationNotes,
       }).unwrap();
-
       if (result.success) {
-        toast.success('Production installation created successfully!');
+        toast.success('Production started — standard checklist added');
         setIsCreateModalOpen(false);
-        refetch(); // Refresh the data
+        refetch();
       } else {
         toast.error(result.message || 'Failed to create production installation');
       }
-    } catch (error: any) {
-      console.error('Error creating production installation:', error);
-      toast.error(error?.data?.message || 'Failed to create production installation');
+    } catch (e: any) {
+      toast.error(e?.data?.message || 'Failed to create production installation');
     }
   };
 
-  // Handle installation status change
   const handleStatusChange = async (newStatus: InstallationStatus) => {
     try {
-      const result = await updateInstallationStatus({
-        customerId,
-        status: newStatus,
-      }).unwrap();
-
+      const result = await updateInstallationStatus({ customerId, status: newStatus }).unwrap();
       if (result.success) {
-        toast.success('Status updated successfully!');
+        toast.success('Status updated');
         refetch();
       } else {
         toast.error(result.message || 'Failed to update status');
       }
-    } catch (error: any) {
-      console.error('Error updating status:', error);
-      toast.error(error?.data?.message || 'Failed to update status');
+    } catch (e: any) {
+      toast.error(e?.data?.message || 'Failed to update status');
     }
   };
 
-  // Handle task status update
+  // Legacy checkpoint updates still flow through here (kept for compatibility).
   const handleTaskUpdate = async (data: { taskName: string; completed: boolean; completionDate?: string }) => {
-    try {
-      const result = await updateTaskStatus({
-        customerId,
-        taskName: data.taskName,
-        completed: data.completed,
-        completionDate: data.completionDate,
-      }).unwrap();
-
-      if (result.success) {
-        refetch(); // Refresh the data
-      } else {
-        throw new Error(result.message || 'Failed to update task');
-      }
-    } catch (error: any) {
-      console.error('Error updating task:', error);
-      throw error;
-    }
+    const result = await updateTaskStatus({
+      customerId,
+      taskName: data.taskName,
+      completed: data.completed,
+      completionDate: data.completionDate,
+    }).unwrap();
+    if (!result.success) throw new Error(result.message || 'Failed to update task');
+    refetch();
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
+  const isNotFoundResponse = productionResponse && !productionResponse.success;
+  const isNotFoundError = error && 'status' in error && (error as any).status === 404;
+  const noProductionExists = isNotFoundResponse || isNotFoundError;
+  const isRealError = error && !isNotFoundError;
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="bg-background-900 border border-background-700 rounded-lg p-4 animate-pulse">
-          <div className="h-6 bg-background-700 rounded w-1/3 mb-2"></div>
-          <div className="h-4 bg-background-700 rounded w-2/3"></div>
-        </div>
+      <div className="bg-background-800 border border-background-600 rounded-[14px] p-5 animate-pulse">
+        <div className="h-6 bg-background-700 rounded w-1/3 mb-3" />
+        <div className="h-4 bg-background-700 rounded w-2/3" />
       </div>
     );
   }
 
-  // Show error only for real errors (not 404)
   if (isRealError) {
     return (
-      <div className="bg-background-900 border border-background-700 rounded-lg p-12 text-center">
-        <Package className="w-12 h-12 text-primary-500 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-text-900 mb-2">Error Loading Production Phase</h3>
-        <p className="text-text-600 mb-6">
-          Failed to load production installation information
-        </p>
-        <button 
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-text-900 rounded-md transition-colors"
+      <div className="bg-background-800 border border-background-600 rounded-[14px] p-12 text-center">
+        <Package className="w-10 h-10 text-text-500 mx-auto mb-3" />
+        <h3 className="text-[14.5px] font-semibold text-text-900 mb-1">Could not load the production job</h3>
+        <p className="text-[12.5px] text-text-600 mb-5">Something went wrong while fetching it.</p>
+        <button
+          className="btn-raised-accent inline-flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] font-semibold"
           onClick={() => refetch()}
         >
-          <Package className="w-4 h-4" />
           Retry
         </button>
       </div>
     );
   }
 
-  // Show "no production" message if no production exists
   if (!production || noProductionExists) {
     return (
       <>
-        <div className="bg-background-900 border border-background-700 rounded-lg p-12 text-center">
-          <Package className="w-12 h-12 text-text-600 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-text-900 mb-2">No Production Phase Yet</h3>
-          <p className="text-text-600 mb-6">
-            Production and installation has not been initiated for this customer
+        <div className="bg-background-800 border border-dashed border-background-500 rounded-[14px] p-12 text-center">
+          <Package className="w-10 h-10 text-text-500 mx-auto mb-3" />
+          <h3 className="text-[14.5px] font-semibold text-text-900 mb-1">No production job yet</h3>
+          <p className="text-[12.5px] text-text-600 mb-5">
+            Starting production adds the standard 3-stage checklist (36 tasks) automatically.
           </p>
-          <button 
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-text-900 rounded-md transition-colors"
+          <button
+            className="btn-raised-accent inline-flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] font-semibold"
             onClick={() => setIsCreateModalOpen(true)}
           >
             <Package className="w-4 h-4" />
             Initiate Production Phase
           </button>
         </div>
-
-        {/* Production Create Modal */}
         <ProductionCreateModal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
@@ -201,214 +211,259 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
     );
   }
 
+  const meta = STATUS_META[production.overallStatus] ?? STATUS_META.NOT_STARTED;
+
   return (
-    <div className="space-y-6">
-      {/* Status Header */}
-      <div className="bg-background-900 border border-background-700 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Package className="w-6 h-6 text-primary-500" />
-            <div>
-              <h3 className="text-lg font-semibold text-text-900">Production & Installation</h3>
-              <p className="text-sm text-text-600">Customer #{customerId}</p>
+    <div className="w-full">
+      {/* Header */}
+      <div className="bg-background-800 border border-background-600 rounded-[14px] px-4 py-3.5 mb-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div
+            className="w-10 h-10 rounded-[11px] flex items-center justify-center text-[13px] font-bold shrink-0 text-primary-600"
+            style={{ background: 'color-mix(in oklab, var(--color-primary-600) 14%, transparent)' }}
+          >
+            {initialsOf(production.customerName)}
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h2 className="m-0 text-[16px] font-[650] text-text-900">
+                {production.customerName || `Customer #${customerId}`}
+              </h2>
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-[3.5px] rounded-full text-xs font-semibold"
+                style={{ background: `var(--st-${meta.st}-bg)`, color: `var(--st-${meta.st}-fg)` }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: `var(--st-${meta.st}-fg)` }} />
+                {meta.label}
+              </span>
+            </div>
+            <div className="text-[12px] text-text-600 mt-0.5">
+              Job #{production.id}
+              {production.productionStartDate && <> · Started {fmtDate(production.productionStartDate)}</>}
+              {production.estimatedCompletionDate && <> · Est. completion {fmtDate(production.estimatedCompletionDate)}</>}
+              {production.projectManagerAssigned && <> · PM {production.projectManagerAssigned}</>}
+              {production.installationTeamLead && <> · Lead {production.installationTeamLead}</>}
             </div>
           </div>
+          <div className="flex-1" />
+          <button
+            onClick={() => setIsReportIssueModalOpen(true)}
+            className="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-[10px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors"
+          >
+            <AlertTriangle className="w-3.5 h-3.5" style={{ color: 'var(--st-hold-fg, var(--st-potential-fg))' }} />
+            Report Issue
+          </button>
           <div className="relative">
             <select
               value={production.overallStatus}
               onChange={(e) => handleStatusChange(e.target.value as InstallationStatus)}
               disabled={isUpdatingStatus}
-              className={`appearance-none cursor-pointer px-4 py-1.5 pr-8 rounded-lg border font-medium bg-background-800 text-text-900 focus:outline-none focus:ring-2 focus:ring-primary-500 ${getStatusColor(
-                production.overallStatus
-              )} ${isUpdatingStatus ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className="appearance-none cursor-pointer h-[34px] pl-3 pr-8 rounded-[10px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-semibold outline-none focus:border-primary-600 disabled:opacity-50"
             >
-              {statusOptions.map((option) => (
-                <option key={option.value} value={option.value} className="bg-background-800 text-text-900">
-                  {option.label}
+              {statusOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
                 </option>
               ))}
             </select>
-            <ChevronDown className={`absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${isUpdatingStatus ? 'animate-spin' : ''}`} />
+            <ChevronDown
+              className={`absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-text-500 ${
+                isUpdatingStatus ? 'animate-spin' : ''
+              }`}
+            />
           </div>
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="bg-background-900 border border-background-700 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-semibold text-text-900 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
-            Overall Progress
-          </h3>
-          <span className="text-2xl font-bold text-text-900">{production.overallProgressPercentage || 0}%</span>
-        </div>
-        <div className="h-3 bg-background-800 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-indigo-600 via-purple-500 to-cyan-500 transition-all"
-            style={{ width: `${production.overallProgressPercentage || 0}%` }}
-          ></div>
-        </div>
-      </div>
-
-      {/* Team Information */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {production.projectManagerAssigned && (
-          <div className="bg-background-900 border border-background-700 rounded-lg p-4">
-            <div className="flex items-center gap-3">
-              <Users className="w-5 h-5 text-primary-500" />
-              <div>
-                <p className="text-sm text-text-600">Project Manager</p>
-                <p className="text-text-900 font-semibold">{production.projectManagerAssigned}</p>
+      {/* Stage strip */}
+      {stages.length > 0 && (
+        <div className="grid gap-2 mb-4" style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(0, 1fr))` }}>
+          {stages.map((s) => {
+            const isCurrent = s.idx === currentStageIdx;
+            return (
+              <div
+                key={s.id}
+                className="border rounded-xl bg-background-800 px-3.5 py-2.5 relative overflow-hidden"
+                style={{
+                  borderColor: isCurrent ? 'color-mix(in oklab, var(--color-primary-600) 45%, transparent)' : 'var(--color-background-600)',
+                }}
+              >
+                {(s.complete || isCurrent) && (
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      width: s.complete ? '100%' : `${s.total ? (s.done / s.total) * 100 : 0}%`,
+                      background: s.complete
+                        ? 'var(--st-confirmed-bg)'
+                        : 'color-mix(in oklab, var(--color-primary-600) 10%, transparent)',
+                    }}
+                  />
+                )}
+                <div className="relative">
+                  <div className="flex items-center gap-2 text-[12.5px] font-[650] text-text-900">
+                    <span
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-[10.5px] font-bold shrink-0"
+                      style={
+                        s.complete
+                          ? { background: 'var(--st-confirmed-bg)', color: 'var(--st-confirmed-fg)' }
+                          : isCurrent
+                          ? { background: 'var(--color-primary-600)', color: 'var(--on-accent)' }
+                          : { background: 'var(--color-background-700)', color: 'var(--color-text-500)' }
+                      }
+                    >
+                      {s.complete ? '✓' : s.idx + 1}
+                    </span>
+                    <span className="truncate">{s.title}</span>
+                  </div>
+                  <div className="text-[11.5px] text-text-600 mt-0.5 tabular-nums">
+                    {s.done}/{s.total}
+                    {s.complete ? ' done' : isCurrent ? ' · in progress' : ''}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            );
+          })}
+        </div>
+      )}
 
-        {production.installationTeamLead && (
-          <div className="bg-background-900 border border-background-700 rounded-lg p-4">
-            <div className="flex items-center gap-3">
-              <Users className="w-5 h-5 text-primary-500" />
-              <div>
-                <p className="text-sm text-text-600">Team Lead</p>
-                <p className="text-text-900 font-semibold">{production.installationTeamLead}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-4 items-start">
+        {/* Left: checklist + notes */}
+        <div className="space-y-4 min-w-0">
+          <div className="bg-background-800 border border-background-600 rounded-[14px] p-4">
+            <ProductionTaskChecklist production={production} customerId={customerId} onTaskUpdate={handleTaskUpdate} />
+          </div>
+
+          {production.installationNotes && (
+            <div className="bg-background-800 border border-background-600 rounded-[14px] p-4">
+              <div className="text-[11px] font-[650] tracking-[0.06em] uppercase text-text-500 mb-2">Installation notes</div>
+              <p className="m-0 text-[13px] text-text-800 whitespace-pre-wrap">{production.installationNotes}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Right rail */}
+        <div className="lg:sticky lg:top-4 space-y-3.5">
+          {/* Job summary */}
+          <div className="bg-background-800 border border-background-600 rounded-[14px] px-4 py-3.5">
+            <h4 className="m-0 mb-2.5 text-[13px] font-[650] text-text-900">Job summary</h4>
+            <div className="h-2 rounded-full bg-background-600 overflow-hidden mb-2.5">
+              <div
+                className="h-full rounded-full"
+                style={{ width: `${pct}%`, background: pct === 100 ? 'var(--st-confirmed-fg)' : 'var(--color-primary-600)' }}
+              />
+            </div>
+            <div className="flex justify-between text-[12.5px] py-1">
+              <span className="text-text-600">Overall</span>
+              <b className="tabular-nums text-text-900">{totalTasks > 0 ? `${doneTasks}/${totalTasks} · ${pct}%` : `${pct}%`}</b>
+            </div>
+            {stages.map((s) => (
+              <div key={s.id} className="flex justify-between text-[12.5px] py-1">
+                <span className="text-text-600 truncate pr-2">{s.title}</span>
+                <b className="tabular-nums text-text-900 shrink-0">
+                  {s.done}/{s.total}
+                </b>
               </div>
+            ))}
+            <div className="flex justify-between text-[12.5px] py-1 border-t border-background-600 mt-1 pt-2">
+              <span className="text-text-600">Quality check</span>
+              <b className="text-text-900">{production.qualityCheckPassed ? 'Passed' : 'Pending'}</b>
             </div>
+            {production.actualCompletionDate && (
+              <div className="flex justify-between text-[12.5px] py-1">
+                <span className="text-text-600">Completed</span>
+                <b className="tabular-nums text-text-900">{fmtDate(production.actualCompletionDate)}</b>
+              </div>
+            )}
+            {production.paymentsReceivedTotal != null && Number(production.paymentsReceivedTotal) > 0 && (
+              <div className="mt-2 pt-2 border-t border-background-600 text-[11.5px] text-text-600 leading-[1.5]">
+                <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5" style={{ background: 'var(--st-confirmed-fg)' }} />
+                Payments recorded:{' '}
+                <b className="text-text-900 tabular-nums">₹{Number(production.paymentsReceivedTotal).toLocaleString('en-IN')}</b>
+                {production.firstPaymentDate && <> · first on {fmtDate(production.firstPaymentDate)}</>} — reference for the
+                "Advance received" checkpoint.
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Timeline Dates */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {production.productionStartDate && (
-          <div className="bg-background-900 border border-background-700 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar className="w-4 h-4 text-info" />
-              <p className="text-sm text-text-600">Production Start</p>
+          {/* Upcoming reminders */}
+          <div className="bg-background-800 border border-background-600 rounded-[14px] px-4 py-3.5">
+            <div className="flex items-center gap-2 mb-1.5">
+              <h4 className="m-0 text-[13px] font-[650] text-text-900">Upcoming reminders</h4>
+              <span className="text-[11px] font-[650] px-2 py-0.5 rounded-full bg-background-700 border border-background-600 text-text-700 tabular-nums">
+                {openReminders.length}
+              </span>
             </div>
-            <p className="text-text-900 font-semibold">{formatDate(production.productionStartDate)}</p>
+            {openReminders.length === 0 ? (
+              <p className="m-0 text-[12px] text-text-500">None — use the bell on a task to set one.</p>
+            ) : (
+              openReminders.map((r: any) => (
+                <div key={r.id} className="flex items-center gap-2 py-1.5 border-t border-background-600 first:border-t-0 text-[12.5px]">
+                  <span className="flex-1 min-w-0 truncate text-text-800">{r.title}</span>
+                  <span
+                    className="text-[11px] font-semibold px-2 py-0.5 rounded-full tabular-nums shrink-0"
+                    style={{ background: 'var(--st-potential-bg)', color: 'var(--st-potential-fg)' }}
+                  >
+                    {fmtDate(r.remindAt)}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
-        )}
 
-        {production.estimatedCompletionDate && (
-          <div className="bg-background-900 border border-background-700 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar className="w-4 h-4 text-warning" />
-              <p className="text-sm text-text-600">Estimated Completion</p>
-            </div>
-            <p className="text-text-900 font-semibold">
-              {formatDate(production.estimatedCompletionDate)}
-            </p>
-          </div>
-        )}
-
-        {production.actualCompletionDate && (
-          <div className="bg-background-900 border border-background-700 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar className="w-4 h-4 text-success" />
-              <p className="text-sm text-text-600">Actual Completion</p>
-            </div>
-            <p className="text-text-900 font-semibold">
-              {formatDate(production.actualCompletionDate)}
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Quality Check Status */}
-      {production.qualityCheckPassed !== undefined && (
-        <div className="bg-background-900 border border-background-700 rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <CheckSquare className="w-5 h-5 text-success" />
-            <div>
-              <p className="text-sm text-text-600">Quality Check Status</p>
-              <p className="text-text-900 font-semibold">
-                {production.qualityCheckPassed ? 'Passed' : 'Pending'}
-              </p>
-              {production.qualityCheckDate && (
-                <p className="text-xs text-text-500 mt-1">
-                  Date: {formatDate(production.qualityCheckDate)}
-                </p>
+          {/* Issues */}
+          <div className="bg-background-800 border border-background-600 rounded-[14px] px-4 py-3.5">
+            <div className="flex items-center gap-2 mb-1.5">
+              <h4 className="m-0 text-[13px] font-[650] text-text-900">Issues</h4>
+              {openIssues.length > 0 && (
+                <span
+                  className="text-[11px] font-[650] px-2 py-0.5 rounded-full tabular-nums"
+                  style={{ background: 'var(--st-lost-bg)', color: 'var(--st-lost-fg)' }}
+                >
+                  {openIssues.length} open
+                </span>
               )}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Installation Notes */}
-      {production.installationNotes && (
-        <div className="bg-background-900 border border-background-700 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-text-900 mb-2">Installation Notes</h3>
-          <p className="text-text-700 whitespace-pre-wrap">{production.installationNotes}</p>
-        </div>
-      )}
-
-      {/* Payments context for the "Advance received" checkpoint — read-only, never auto-ticks */}
-      {(production as any).paymentsReceivedTotal != null && Number((production as any).paymentsReceivedTotal) > 0 && (
-        <div className="flex items-center gap-2.5 px-4 py-3 rounded-lg border border-background-700 bg-background-900 text-[13px]">
-          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: 'var(--st-confirmed-fg)' }} />
-          <span className="text-text-700">
-            Payments recorded for this customer:{' '}
-            <b className="text-text-900 tabular-nums">
-              ₹{Number((production as any).paymentsReceivedTotal).toLocaleString('en-IN')}
-            </b>
-            {(production as any).firstPaymentDate && (
-              <>
-                {' '}· first on{' '}
-                <b className="text-text-900 tabular-nums">
-                  {new Date((production as any).firstPaymentDate).toLocaleDateString('en-IN', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </b>
-              </>
+            {openIssues.length === 0 ? (
+              <p className="m-0 text-[12px] text-text-500">No open issues.</p>
+            ) : (
+              openIssues.slice(0, 3).map((i: any) => (
+                <div key={i.id} className="flex items-start gap-2 py-1.5 border-t border-background-600 first:border-t-0 text-[12.5px]">
+                  <span
+                    className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
+                    style={{
+                      background:
+                        i.priority === 'URGENT' || i.priority === 'HIGH' ? 'var(--st-lost-fg)' : 'var(--st-potential-fg)',
+                    }}
+                  />
+                  <span className="min-w-0 text-text-800">{i.title}</span>
+                </div>
+              ))
             )}
-            {' '}— reference for the "Advance received" checkpoint.
-          </span>
-        </div>
-      )}
-
-      {/* Task Checklist Section */}
-      <div className="bg-background-900 border border-background-700 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <ListTodo className="w-5 h-5 text-primary-500" />
-            <h3 className="text-lg font-semibold text-text-900">Production Tasks</h3>
           </div>
-          <button
-            onClick={() => setShowChecklist(!showChecklist)}
-            className="text-sm text-primary-400 hover:text-primary-300"
-          >
-            {showChecklist ? 'Hide Checklist' : 'Show Checklist'}
-          </button>
+
+          {/* Activity */}
+          <div className="bg-background-800 border border-background-600 rounded-[14px] px-4 py-3.5">
+            <h4 className="m-0 mb-1.5 text-[13px] font-[650] text-text-900">Recent activity</h4>
+            {activity.length === 0 ? (
+              <p className="m-0 text-[12px] text-text-500">No tasks completed yet.</p>
+            ) : (
+              activity.map((t: any) => (
+                <div key={t.id} className="flex gap-2.5 py-1.5 border-t border-background-600 first:border-t-0 text-[12px]">
+                  <span className="text-text-500 tabular-nums whitespace-nowrap shrink-0 w-12">
+                    {fmtDate(t.completedAt ?? t.completionDate).slice(0, 6)}
+                  </span>
+                  <span className="min-w-0 text-text-700 truncate">
+                    {t.taskTitle}
+                    {t.completedByName && <> · {t.completedByName}</>}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
         </div>
-
-        {showChecklist && (
-          <ProductionTaskChecklist
-            production={production}
-            customerId={customerId}
-            onTaskUpdate={handleTaskUpdate}
-          />
-        )}
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <button
-          onClick={() => setIsReportIssueModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 border border-warning/50 text-warning hover:bg-warning/10 rounded-md transition-colors"
-        >
-          <AlertTriangle className="w-4 h-4" />
-          Report Issue
-        </button>
-      </div>
-
-      {/* Report Issue Modal */}
-      <ReportIssueModal
-        isOpen={isReportIssueModalOpen}
-        onClose={() => setIsReportIssueModalOpen(false)}
-        customerId={customerId}
-      />
+      <ReportIssueModal isOpen={isReportIssueModalOpen} onClose={() => setIsReportIssueModalOpen(false)} customerId={customerId} />
     </div>
   );
 };
