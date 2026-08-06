@@ -49,5 +49,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @Query("SELECT p.paymentMethod, SUM(p.amount) FROM Payment p WHERE p.paymentStatus = 'COMPLETED' GROUP BY p.paymentMethod")
     List<Object[]> getPaymentMethodSummary();
 
+    // Production "advance received" hint: total and first payment across the customer's projects
+    @Query("SELECT SUM(p.amount), MIN(p.paymentDate) FROM Payment p "
+            + "WHERE p.project.customer.id = :customerId AND p.paymentStatus = 'COMPLETED'")
+    List<Object[]> getReceivedSummaryByCustomer(@Param("customerId") Long customerId);
+
     void deleteByProjectId(Long projectId);
 }

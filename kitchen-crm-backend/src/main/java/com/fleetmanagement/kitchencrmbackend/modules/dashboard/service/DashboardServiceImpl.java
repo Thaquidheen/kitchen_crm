@@ -47,6 +47,9 @@ public class DashboardServiceImpl implements DashboardService {
     @Autowired
     private ProductionInstallationRepository installationRepository;
 
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.customer.repository.ProductionCustomTaskRepository productionCustomTaskRepository;
+
     @Override
     public ApiResponse<DashboardSummaryDto> getDashboardSummary() {
         DashboardSummaryDto summary = new DashboardSummaryDto();
@@ -87,6 +90,7 @@ public class DashboardServiceImpl implements DashboardService {
         summary.setReadyForInstallation(Long.valueOf(installationRepository.findReadyForInstallation().size()));
         summary.setCompletedInstallations(installationRepository.countByOverallStatus(ProductionInstallation.InstallationStatus.COMPLETED));
         summary.setOverdueProjects(Long.valueOf(installationRepository.findOverdueProjects(LocalDate.now()).size()));
+        summary.setStalledProductionJobs(countStalledProductionJobs());
 
         // Performance Metrics
         summary.setConversionRate(calculateConversionRate());
@@ -353,6 +357,35 @@ public class DashboardServiceImpl implements DashboardService {
     private Long getActiveCustomersCount() {
         // Customers with active projects or recent activity
         return customerRepository.countActiveCustomers();
+    }
+
+    /**
+     * A production job is "stalled" when it is in flight, has a stage checklist, is older than
+     * 14 days, and no checklist task has been completed in the last 14 days. Computed from the
+     * checklist rather than the status column so it reflects what staff actually do.
+     */
+    private Long countStalledProductionJobs() {
+        try {
+            java.time.LocalDateTime cutoff = java.time.LocalDateTime.now().minusDays(14);
+            return installationRepository.findAll().stream()
+                    .filter(i -> i.getOverallStatus() != ProductionInstallation.InstallationStatus.COMPLETED
+                            && i.getOverallStatus() != ProductionInstallation.InstallationStatus.CANCELLED
+                            && i.getOverallStatus() != ProductionInstallation.InstallationStatus.ON_HOLD)
+                    .filter(i -> i.getCreatedAt() != null && i.getCreatedAt().isBefore(cutoff))
+                    .filter(i -> {
+                        var tasks = productionCustomTaskRepository
+                                .findByProductionInstallationIdOrderBySortOrderAsc(i.getId());
+                        if (tasks.isEmpty()) return false; // legacy jobs without a checklist are not judged
+                        boolean allDone = tasks.stream().allMatch(t -> Boolean.TRUE.equals(t.getCompleted()));
+                        if (allDone) return false;
+                        return tasks.stream()
+                                .filter(t -> t.getCompletedAt() != null)
+                                .noneMatch(t -> t.getCompletedAt().isAfter(cutoff));
+                    })
+                    .count();
+        } catch (Exception e) {
+            return 0L;
+        }
     }
 
     private BigDecimal getTotalQuotationValue() {

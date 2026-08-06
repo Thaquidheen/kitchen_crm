@@ -342,6 +342,32 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
         </div>
       )}
 
+      {/* Payments context for the "Advance received" checkpoint — read-only, never auto-ticks */}
+      {(production as any).paymentsReceivedTotal != null && Number((production as any).paymentsReceivedTotal) > 0 && (
+        <div className="flex items-center gap-2.5 px-4 py-3 rounded-lg border border-background-700 bg-background-900 text-[13px]">
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: 'var(--st-confirmed-fg)' }} />
+          <span className="text-text-700">
+            Payments recorded for this customer:{' '}
+            <b className="text-text-900 tabular-nums">
+              ₹{Number((production as any).paymentsReceivedTotal).toLocaleString('en-IN')}
+            </b>
+            {(production as any).firstPaymentDate && (
+              <>
+                {' '}· first on{' '}
+                <b className="text-text-900 tabular-nums">
+                  {new Date((production as any).firstPaymentDate).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </b>
+              </>
+            )}
+            {' '}— reference for the "Advance received" checkpoint.
+          </span>
+        </div>
+      )}
+
       {/* Task Checklist Section */}
       <div className="bg-background-900 border border-background-700 rounded-lg p-4">
         <div className="flex items-center justify-between mb-4">

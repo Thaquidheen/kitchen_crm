@@ -44,6 +44,12 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
     @Autowired
     private ProductionCustomTaskRepository productionCustomTaskRepository;
 
+    @Autowired
+    private CustomerReminderService customerReminderService;
+
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.project.repository.PaymentRepository paymentRepository;
+
     @Override
     public ApiResponse<Page<ProductionInstallationDto>> getAllProductionInstallations(
             ProductionInstallation.InstallationStatus status,
@@ -96,6 +102,10 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
         // Every job starts with the company's standard 3-stage checklist pre-loaded.
         seedStandardStages(savedInstallation, createdBy);
 
+        // Date-driven SOP items get reminders up front, on this new job only. A reminder
+        // failure must never fail job creation, so this is best-effort.
+        createSopReminders(savedInstallation, customer, createdBy);
+
         // Create workflow history
         createWorkflowHistory(customer, "Production Installation Created", "NOT_STARTED",
                 createdBy, "Production installation phase initiated with the standard 3-stage checklist");
@@ -117,6 +127,35 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
         int tasks = seedStandardStages(installation, createdBy);
         return ApiResponse.success("Standard checklist applied — " + tasks + " tasks added across "
                 + ProductionStageTemplate.STAGES.size() + " stages");
+    }
+
+    /**
+     * Reminders for the SOP's date-driven checkpoints. The 30th-day site verification is
+     * anchored to today; the accessories procurement reminder is anchored to the estimated
+     * completion date minus 5 days when that date is known and still in the future.
+     */
+    private void createSopReminders(ProductionInstallation installation, Customer customer, String createdBy) {
+        try {
+            CustomerReminderDto thirtieth = new CustomerReminderDto();
+            thirtieth.setCustomerId(customer.getId());
+            thirtieth.setTitle("30th-day site verification — " + customer.getName());
+            thirtieth.setNotes("Electrical, plumbing, floor & wall tiling — then inform client about installation");
+            thirtieth.setRemindAt(LocalDate.now().plusDays(30).atTime(10, 0));
+            customerReminderService.createReminder(thirtieth, createdBy);
+
+            LocalDate est = installation.getEstimatedCompletionDate();
+            if (est != null && est.minusDays(5).isAfter(LocalDate.now())) {
+                CustomerReminderDto procure = new CustomerReminderDto();
+                procure.setCustomerId(customer.getId());
+                procure.setTitle("Procure accessories & hardware — " + customer.getName());
+                procure.setNotes("5 days before delivery — accessories, light and wires (anchored to est. completion "
+                        + est + ")");
+                procure.setRemindAt(est.minusDays(5).atTime(10, 0));
+                customerReminderService.createReminder(procure, createdBy);
+            }
+        } catch (Exception e) {
+            // Best-effort: the job and checklist exist either way.
+        }
     }
 
     /** Seeds the standard SOP as task groups. Returns the number of tasks created. */
@@ -788,6 +827,18 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
         }
         dto.setCurrentPhase(installation.getCurrentPhase());
         dto.setReadyForInstallation(installation.isReadyForInstallation());
+
+        // Payments hint for the "Advance received" checkpoint — read-only context so staff can
+        // tick it with confidence; nothing is ever completed automatically.
+        try {
+            List<Object[]> rs = paymentRepository.getReceivedSummaryByCustomer(installation.getCustomer().getId());
+            if (!rs.isEmpty() && rs.get(0)[0] != null) {
+                dto.setPaymentsReceivedTotal((java.math.BigDecimal) rs.get(0)[0]);
+                dto.setFirstPaymentDate((LocalDate) rs.get(0)[1]);
+            }
+        } catch (Exception ignored) {
+            // Payments are optional context; their absence must not break production views.
+        }
 
         dto.setCreatedAt(installation.getCreatedAt());
         dto.setUpdatedAt(installation.getUpdatedAt());

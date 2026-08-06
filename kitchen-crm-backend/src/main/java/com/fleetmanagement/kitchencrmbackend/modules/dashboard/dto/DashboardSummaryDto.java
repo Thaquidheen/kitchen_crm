@@ -50,6 +50,8 @@ public class DashboardSummaryDto {
     private Long readyForInstallation;
     private Long completedInstallations;
     private Long overdueProjects;
+    /** In-flight production jobs whose stage checklist has had no completion for 14+ days. */
+    private Long stalledProductionJobs;
 
     // Performance Metrics
     private Double conversionRate; // Quotations to Projects

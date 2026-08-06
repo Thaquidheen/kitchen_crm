@@ -206,6 +206,14 @@ export function DashboardPage() {
       to: ROUTES.PROJECTS,
       show: Number(s.overdueProjects ?? 0) > 0,
     },
+    {
+      label: 'Production jobs stalled',
+      sub: 'No checklist progress for 14+ days',
+      count: String(s.stalledProductionJobs ?? 0),
+      st: 'follow',
+      to: ROUTES.PRODUCTION,
+      show: Number(s.stalledProductionJobs ?? 0) > 0,
+    },
   ].filter((a) => a.show);
 
   // ---- Band 2: sales pipeline -------------------------------------------

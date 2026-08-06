@@ -101,6 +101,10 @@ public class ProductionInstallationDto {
     private Integer checklistDone;
     private String currentStageName;
 
+    // Read-only payments hint for the "Advance received" checkpoint (never auto-ticks the task)
+    private java.math.BigDecimal paymentsReceivedTotal;
+    private LocalDate firstPaymentDate;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
