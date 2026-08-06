@@ -27,11 +27,11 @@ function ProductionDetailPage() {
             Back to Production
           </Button>
         </div>
-        <Card className="p-6 bg-black-800 border-black-600">
+        <Card className="p-6 bg-background-800 border-background-600">
           <div className="text-center py-8">
-            <Package className="w-12 h-12 text-white-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-white-900 mb-2">Invalid Customer ID</h3>
-            <p className="text-white-600">Please provide a valid customer ID.</p>
+            <Package className="w-12 h-12 text-text-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-text-900 mb-2">Invalid Customer ID</h3>
+            <p className="text-text-600">Please provide a valid customer ID.</p>
           </div>
         </Card>
       </div>
