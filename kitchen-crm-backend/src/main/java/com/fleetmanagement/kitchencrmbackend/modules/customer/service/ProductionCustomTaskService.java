@@ -24,4 +24,8 @@ public interface ProductionCustomTaskService {
     ApiResponse<Void> deleteTask(Long taskId);
 
     ApiResponse<List<ProductionCustomTaskDto>> reorderTasks(Long customerId, List<Long> taskIds);
+
+    /** Creates a customer reminder for the task and links it, so the task shows a chip. */
+    ApiResponse<ProductionCustomTaskDto> setTaskReminder(Long taskId, java.time.LocalDateTime remindAt,
+                                                         String notes, String createdBy);
 }

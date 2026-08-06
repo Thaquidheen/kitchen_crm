@@ -6,7 +6,8 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { Package, ChevronDown, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Package, ChevronDown, AlertTriangle, Plus, Check } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import {
   useGetProductionInstallationByCustomerQuery,
@@ -15,7 +16,13 @@ import {
   useUpdateInstallationStatusMutation,
   useGetTaskGroupsByCustomerQuery,
   useGetIssuesByCustomerQuery,
+  useCreateTaskGroupMutation,
+  useCompleteHandoverMutation,
 } from '../../production/productionAPI';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { useGetCustomerRemindersQuery } from '@/app/baseApi';
 import { ProductionCreateModal } from '../../production/components/ProductionCreateModal';
 import { ProductionTaskChecklist } from '../../production/components/ProductionTaskChecklist';
@@ -54,13 +61,52 @@ const fmtDate = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
 export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ customerId }) => {
+  const navigate = useNavigate();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isReportIssueModalOpen, setIsReportIssueModalOpen] = useState(false);
+  const [addStageOpen, setAddStageOpen] = useState(false);
+  const [newStageTitle, setNewStageTitle] = useState('');
+  const [handoverOpen, setHandoverOpen] = useState(false);
 
   const { data: productionResponse, isLoading, error, refetch } = useGetProductionInstallationByCustomerQuery(customerId);
   const [createProductionInstallation] = useCreateProductionInstallationMutation();
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
   const [updateInstallationStatus, { isLoading: isUpdatingStatus }] = useUpdateInstallationStatusMutation();
+  const [createTaskGroup, { isLoading: isAddingStage }] = useCreateTaskGroupMutation();
+  const [completeHandover, { isLoading: isHandingOver }] = useCompleteHandoverMutation();
+
+  const handleAddStage = async () => {
+    if (!newStageTitle.trim()) return;
+    try {
+      await createTaskGroup({ customerId, groupTitle: newStageTitle.trim(), groupDescription: '' }).unwrap();
+      toast.success('Stage added');
+      setAddStageOpen(false);
+      setNewStageTitle('');
+    } catch (e: any) {
+      toast.error(e?.data?.message || 'Failed to add stage');
+    }
+  };
+
+  const handleHandover = async () => {
+    try {
+      const today = new Date();
+      const p = (n: number) => String(n).padStart(2, '0');
+      const res = await completeHandover({
+        customerId,
+        handoverDate: `${today.getFullYear()}-${p(today.getMonth() + 1)}-${p(today.getDate())}`,
+      }).unwrap();
+      if ((res as any)?.success === false) {
+        toast.error((res as any)?.message || 'Failed to mark handover');
+      } else {
+        toast.success('Handover completed');
+        refetch();
+      }
+      setHandoverOpen(false);
+    } catch (e: any) {
+      toast.error(e?.data?.message || 'Failed to mark handover (super admin only)');
+      setHandoverOpen(false);
+    }
+  };
 
   const production: any = productionResponse?.success ? productionResponse?.data : null;
 
@@ -253,6 +299,22 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
             <AlertTriangle className="w-3.5 h-3.5" style={{ color: 'var(--st-hold-fg, var(--st-potential-fg))' }} />
             Report Issue
           </button>
+          <button
+            onClick={() => setAddStageOpen(true)}
+            className="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-[10px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Stage
+          </button>
+          {production.overallStatus !== 'COMPLETED' && (
+            <button
+              onClick={() => setHandoverOpen(true)}
+              className="btn-raised-accent inline-flex items-center gap-1.5 h-[34px] px-3.5 rounded-[10px] text-[12.5px] font-semibold"
+            >
+              <Check className="w-3.5 h-3.5" />
+              Mark Handover
+            </button>
+          )}
           <div className="relative">
             <select
               value={production.overallStatus}
@@ -290,10 +352,11 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
               >
                 {(s.complete || isCurrent) && (
                   <div
-                    className="absolute inset-0"
+                    className={`absolute inset-0 ${isCurrent && !s.complete ? 'hoch-stripes' : ''}`}
                     style={{
                       width: s.complete ? '100%' : `${s.total ? (s.done / s.total) * 100 : 0}%`,
-                      background: s.complete
+                      // backgroundColor (not the shorthand) so .hoch-stripes' background-image survives
+                      backgroundColor: s.complete
                         ? 'var(--st-confirmed-bg)'
                         : 'color-mix(in oklab, var(--color-primary-600) 10%, transparent)',
                     }}
@@ -346,15 +409,45 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
           {/* Job summary */}
           <div className="bg-background-800 border border-background-600 rounded-[14px] px-4 py-3.5">
             <h4 className="m-0 mb-2.5 text-[13px] font-[650] text-text-900">Job summary</h4>
-            <div className="h-2 rounded-full bg-background-600 overflow-hidden mb-2.5">
-              <div
-                className="h-full rounded-full"
-                style={{ width: `${pct}%`, background: pct === 100 ? 'var(--st-confirmed-fg)' : 'var(--color-primary-600)' }}
-              />
-            </div>
-            <div className="flex justify-between text-[12.5px] py-1">
-              <span className="text-text-600">Overall</span>
-              <b className="tabular-nums text-text-900">{totalTasks > 0 ? `${doneTasks}/${totalTasks} · ${pct}%` : `${pct}%`}</b>
+            <div className="flex items-center gap-3.5 mb-2">
+              {/* Progress ring */}
+              <svg width="64" height="64" viewBox="0 0 64 64" className="shrink-0" role="img" aria-label={`${pct}% complete`}>
+                <circle cx="32" cy="32" r="26" fill="none" stroke="var(--color-background-600)" strokeWidth="7" />
+                <circle
+                  cx="32"
+                  cy="32"
+                  r="26"
+                  fill="none"
+                  stroke={pct === 100 ? 'var(--st-confirmed-fg)' : 'var(--color-primary-600)'}
+                  strokeWidth="7"
+                  strokeLinecap="round"
+                  strokeDasharray={`${(pct / 100) * 163.4} 163.4`}
+                  transform="rotate(-90 32 32)"
+                />
+                <text
+                  x="32"
+                  y="36"
+                  textAnchor="middle"
+                  fontSize="14"
+                  fontWeight="700"
+                  fill="var(--color-text-900)"
+                  style={{ fontVariantNumeric: 'tabular-nums' }}
+                >
+                  {pct}%
+                </text>
+              </svg>
+              <div className="min-w-0 text-[12.5px] text-text-600 leading-[1.6]">
+                <b className="text-text-900 tabular-nums">
+                  {totalTasks > 0 ? `${doneTasks} of ${totalTasks} tasks done` : 'No checklist yet'}
+                </b>
+                {production.createdAt && (
+                  <div className="tabular-nums">
+                    {Math.max(0, Math.round((Date.now() - new Date(production.createdAt).getTime()) / 86400000))} days in
+                    production
+                  </div>
+                )}
+                {production.estimatedCompletionDate && <div>Est. {fmtDate(production.estimatedCompletionDate)}</div>}
+              </div>
             </div>
             {stages.map((s) => (
               <div key={s.id} className="flex justify-between text-[12.5px] py-1">
@@ -392,6 +485,13 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
               <span className="text-[11px] font-[650] px-2 py-0.5 rounded-full bg-background-700 border border-background-600 text-text-700 tabular-nums">
                 {openReminders.length}
               </span>
+              <span className="flex-1" />
+              <button
+                onClick={() => navigate('/reminders')}
+                className="text-[11.5px] font-semibold text-primary-600 hover:underline whitespace-nowrap"
+              >
+                View all
+              </button>
             </div>
             {openReminders.length === 0 ? (
               <p className="m-0 text-[12px] text-text-500">None — use the bell on a task to set one.</p>
@@ -435,7 +535,16 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
                         i.priority === 'URGENT' || i.priority === 'HIGH' ? 'var(--st-lost-fg)' : 'var(--st-potential-fg)',
                     }}
                   />
-                  <span className="min-w-0 text-text-800">{i.title}</span>
+                  <span className="min-w-0">
+                    <span className="block text-text-800">{i.title}</span>
+                    {(i.createdAt || i.reportedBy) && (
+                      <span className="block text-[11px] text-text-500 tabular-nums">
+                        {i.createdAt ? fmtDate(i.createdAt) : ''}
+                        {i.createdAt && i.reportedBy ? ' · ' : ''}
+                        {i.reportedBy ?? ''}
+                      </span>
+                    )}
+                  </span>
                 </div>
               ))
             )}
@@ -464,6 +573,43 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
       </div>
 
       <ReportIssueModal isOpen={isReportIssueModalOpen} onClose={() => setIsReportIssueModalOpen(false)} customerId={customerId} />
+
+      {/* Add Stage */}
+      <Modal isOpen={addStageOpen} onClose={() => setAddStageOpen(false)} title="Add Stage" size="sm">
+        <ModalBody>
+          <Input
+            label="Stage name *"
+            type="text"
+            value={newStageTitle}
+            onChange={(e) => setNewStageTitle(e.target.value)}
+            placeholder="e.g. Snag list & rework"
+          />
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="outline" onClick={() => setAddStageOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleAddStage} disabled={!newStageTitle.trim() || isAddingStage}>
+            {isAddingStage ? 'Adding…' : 'Add Stage'}
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Mark Handover */}
+      <ConfirmDialog
+        isOpen={handoverOpen}
+        onClose={() => setHandoverOpen(false)}
+        onConfirm={handleHandover}
+        title="Mark Handover"
+        message={
+          totalTasks > 0 && doneTasks < totalTasks
+            ? `${totalTasks - doneTasks} checklist tasks are still open. Mark this job as handed over anyway?`
+            : 'Mark this job as handed over to the client?'
+        }
+        confirmText={isHandingOver ? 'Saving…' : 'Mark Handover'}
+        type="warning"
+        isLoading={isHandingOver}
+      />
     </div>
   );
 };

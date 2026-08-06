@@ -292,6 +292,39 @@ export const productionAPI = baseApi.injectEndpoints({
       ],
     }),
 
+    // Create + link a reminder for a checklist task (shows as a chip on the task)
+    setTaskReminder: builder.mutation<
+      ProductionApiResponse<any>,
+      { taskId: number; customerId: number; remindAt: string; notes?: string }
+    >({
+      query: ({ taskId, remindAt, notes }) => ({
+        url: `/production-custom-tasks/${taskId}/reminder`,
+        method: 'POST',
+        body: { remindAt, notes },
+      }),
+      invalidatesTags: (_r, _e, { customerId }) => [
+        { type: 'TaskGroup', id: customerId },
+        'TaskGroup',
+        'CustomTask',
+        { type: 'Production', id: customerId },
+        'Production',
+        'Reminders',
+      ],
+    }),
+
+    // Mark the job handed over (super admin)
+    completeHandover: builder.mutation<
+      ProductionApiResponse<string>,
+      { customerId: number; handoverDate: string; handoverNotes?: string }
+    >({
+      query: ({ customerId, ...body }) => ({
+        url: API_ENDPOINTS.PRODUCTION.HANDOVER(customerId),
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_r, _e, { customerId }) => [{ type: 'Production', id: customerId }, 'Production'],
+    }),
+
     // Seed the standard 3-stage checklist on a job that has none yet
     applyStandardStages: builder.mutation<ProductionApiResponse<string>, number>({
       query: (customerId) => ({
@@ -473,6 +506,8 @@ export const {
   // Task Groups hooks
   useGetTaskGroupsByCustomerQuery,
   useApplyStandardStagesMutation,
+  useSetTaskReminderMutation,
+  useCompleteHandoverMutation,
   useCreateTaskGroupMutation,
   useUpdateTaskGroupMutation,
   useDeleteTaskGroupMutation,

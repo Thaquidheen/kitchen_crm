@@ -64,6 +64,11 @@ public class ProductionCustomTask extends Auditable {
     @JoinColumn(name = "created_by_user_id")
     private User createdByUser;
 
+    /** The reminder set for this task, if any — shows as a chip and feeds "next due". */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reminder_id")
+    private CustomerReminder reminder;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "task_group_id")
     private ProductionTaskGroup taskGroup;

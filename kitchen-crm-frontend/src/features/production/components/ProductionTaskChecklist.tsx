@@ -17,6 +17,7 @@ import type { ProductionInstallation, ProductionCustomTask, ProductionTaskGroup,
 import {
   useGetTaskGroupsByCustomerQuery,
   useApplyStandardStagesMutation,
+  useSetTaskReminderMutation,
   useCreateTaskGroupMutation,
   useUpdateTaskGroupMutation,
   useDeleteTaskGroupMutation,
@@ -24,7 +25,6 @@ import {
   useToggleCustomTaskMutation,
   useDeleteCustomTaskMutation,
 } from '../productionAPI';
-import { useCreateReminderMutation } from '@/app/baseApi';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -76,7 +76,7 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
   const [toggleCustomTask] = useToggleCustomTaskMutation();
   const [deleteCustomTask] = useDeleteCustomTaskMutation();
   const [applyStandardStages, { isLoading: isApplying }] = useApplyStandardStagesMutation();
-  const [createReminder, { isLoading: isSettingReminder }] = useCreateReminderMutation();
+  const [setTaskReminder, { isLoading: isSettingReminder }] = useSetTaskReminderMutation();
 
   // Set-reminder dialog: date-driven checklist items ("30th day", "5 days before delivery")
   // create an ordinary customer-owned reminder, pre-filled from the task, so it lands in the
@@ -96,11 +96,11 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
   const handleSetReminder = async () => {
     if (!reminderTask || !remDate) return;
     try {
-      await createReminder({
+      await setTaskReminder({
+        taskId: reminderTask.id,
         customerId,
-        title: reminderTask.taskTitle,
-        notes: remNotes.trim() || reminderTask.taskDescription || undefined,
         remindAt: `${remDate}T10:00:00`,
+        notes: remNotes.trim() || undefined,
       }).unwrap();
       toast.success('Reminder set — it will appear in the bell on that day');
       setReminderTask(null);
@@ -120,11 +120,13 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
 
   const taskGroups = taskGroupsResponse?.success ? taskGroupsResponse.data || [] : [];
 
-  // Initialize expanded groups
+  // Initially expand only the current stage (first with open tasks); everything else stays
+  // collapsed so a 36-task checklist opens at a readable height.
   React.useEffect(() => {
     if (taskGroups.length > 0 && expandedGroups.size === 0) {
-      const allGroupIds = new Set(taskGroups.map(g => g.id));
-      setExpandedGroups(allGroupIds);
+      const current =
+        taskGroups.find((g) => (g.completedTasks ?? 0) < (g.totalTasks ?? 0)) ?? taskGroups[0];
+      setExpandedGroups(new Set([current.id]));
     }
   }, [taskGroups]);
 
@@ -302,14 +304,24 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
         </div>
         <div className="flex items-center gap-2">
           {task.completionDate && (
-            <span className="text-xs text-text-500">
+            <span className="text-xs text-text-500 whitespace-nowrap">
               {new Date(task.completionDate).toLocaleDateString('en-IN', {
                 day: 'numeric',
                 month: 'short',
               })}
+              {(task as any).completedByUserName && <> · by {(task as any).completedByUserName}</>}
             </span>
           )}
-          {!task.completed && (
+          {!task.completed && (task as any).reminderDate ? (
+            <span
+              className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap tabular-nums"
+              style={{ background: 'var(--st-potential-bg)', color: 'var(--st-potential-fg)' }}
+              title="A reminder is set for this task"
+            >
+              <BellRing className="w-3 h-3" />
+              {new Date((task as any).reminderDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+            </span>
+          ) : !task.completed ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -320,7 +332,7 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
             >
               <BellRing className="w-3.5 h-3.5" />
             </button>
-          )}
+          ) : null}
           <button
             onClick={(e) => {
               e.stopPropagation();

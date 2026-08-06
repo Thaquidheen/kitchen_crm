@@ -822,6 +822,16 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
             dto.setChecklistTotal(tasks.size());
             dto.setChecklistDone((int) done);
             dto.setCurrentStageName(currentStageName(installation.getId(), tasks));
+
+            // Next due = first open task in stage order, then task order within the stage.
+            ProductionCustomTask next = firstOpenTask(installation.getId(), tasks);
+            if (next != null) {
+                dto.setNextDueTask(next.getTaskTitle());
+                dto.setNextDueHasReminder(next.getReminder() != null);
+                if (next.getReminder() != null) {
+                    dto.setNextDueDate(next.getReminder().getRemindAt());
+                }
+            }
         } else {
             dto.setOverallProgressPercentage(installation.getOverallProgressPercentage());
         }
@@ -844,6 +854,25 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
         dto.setUpdatedAt(installation.getUpdatedAt());
 
         return dto;
+    }
+
+    /** First open task in stage order, then task order within the stage; null when all done. */
+    private ProductionCustomTask firstOpenTask(Long installationId, List<ProductionCustomTask> tasks) {
+        List<ProductionTaskGroup> groups = productionTaskGroupRepository
+                .findByProductionInstallationIdOrderBySortOrderAsc(installationId);
+        for (ProductionTaskGroup g : groups) {
+            ProductionCustomTask candidate = tasks.stream()
+                    .filter(t -> t.getTaskGroup() != null && t.getTaskGroup().getId().equals(g.getId())
+                            && !Boolean.TRUE.equals(t.getCompleted()))
+                    .findFirst() // tasks arrive sorted by sortOrder
+                    .orElse(null);
+            if (candidate != null) return candidate;
+        }
+        // Tasks without a group (manually added) come last
+        return tasks.stream()
+                .filter(t -> t.getTaskGroup() == null && !Boolean.TRUE.equals(t.getCompleted()))
+                .findFirst()
+                .orElse(null);
     }
 
     /** The first stage (by sort order) that still has open tasks; the last stage when all done. */

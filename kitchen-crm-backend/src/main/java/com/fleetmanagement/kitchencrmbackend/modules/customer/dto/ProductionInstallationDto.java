@@ -105,6 +105,11 @@ public class ProductionInstallationDto {
     private java.math.BigDecimal paymentsReceivedTotal;
     private LocalDate firstPaymentDate;
 
+    // Next open checklist item (first by stage/task order), with its reminder date when set
+    private String nextDueTask;
+    private LocalDateTime nextDueDate;
+    private Boolean nextDueHasReminder;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

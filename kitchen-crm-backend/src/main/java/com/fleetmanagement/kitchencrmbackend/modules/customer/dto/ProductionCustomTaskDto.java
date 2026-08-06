@@ -33,6 +33,10 @@ public class ProductionCustomTaskDto {
     private Long taskGroupId;
     private String taskGroupTitle;
 
+    // Linked reminder (null when none is set)
+    private Long reminderId;
+    private LocalDateTime reminderDate;
+
     public static ProductionCustomTaskDto fromEntity(ProductionCustomTask entity) {
         ProductionCustomTaskDto dto = new ProductionCustomTaskDto();
         dto.setId(entity.getId());
@@ -60,6 +64,10 @@ public class ProductionCustomTaskDto {
         if (entity.getTaskGroup() != null) {
             dto.setTaskGroupId(entity.getTaskGroup().getId());
             dto.setTaskGroupTitle(entity.getTaskGroup().getGroupTitle());
+        }
+        if (entity.getReminder() != null) {
+            dto.setReminderId(entity.getReminder().getId());
+            dto.setReminderDate(entity.getReminder().getRemindAt());
         }
         return dto;
     }

@@ -64,6 +64,24 @@ public class ProductionCustomTaskController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/{taskId}/reminder")
+    @Operation(summary = "Create a reminder for this task and link it")
+    public ResponseEntity<ApiResponse<ProductionCustomTaskDto>> setTaskReminder(
+            @PathVariable Long taskId,
+            @RequestBody java.util.Map<String, String> body,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            com.fleetmanagement.kitchencrmbackend.security.UserPrincipal currentUser) {
+        java.time.LocalDateTime remindAt;
+        try {
+            remindAt = java.time.LocalDateTime.parse(body.get("remindAt"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("A valid reminder date is required"));
+        }
+        ApiResponse<ProductionCustomTaskDto> response = taskService.setTaskReminder(
+                taskId, remindAt, body.get("notes"), currentUser != null ? currentUser.getName() : "System");
+        return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
     @PatchMapping("/{taskId}/toggle")
     @Operation(summary = "Toggle task completion status")
     public ResponseEntity<ApiResponse<ProductionCustomTaskDto>> toggleTaskCompletion(

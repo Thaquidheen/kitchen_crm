@@ -88,6 +88,26 @@
   --st-draft-bg: #EDEFF3;     --st-draft-fg: #5A6373;
 }
 
+/* Animated diagonal fill for the current production stage segment */
+.hoch-stripes {
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in oklab, var(--color-primary-600) 14%, transparent) 0 8px,
+    color-mix(in oklab, var(--color-primary-600) 7%, transparent) 8px 16px
+  );
+  background-size: 22.6px 22.6px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hoch-stripes {
+    animation: hoch-stripe-move 1.4s linear infinite;
+  }
+  @keyframes hoch-stripe-move {
+    to {
+      background-position: 22.6px 0;
+    }
+  }
+}
+
 /* Hide number input spinner arrows globally */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {

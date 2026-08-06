@@ -35,6 +35,8 @@ public class ProductionCustomTaskServiceImpl implements ProductionCustomTaskServ
     private final ProductionInstallationRepository productionInstallationRepository;
     private final ProductionTaskGroupRepository taskGroupRepository;
     private final UserRepository userRepository;
+    private final CustomerReminderService customerReminderService;
+    private final com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerReminderRepository customerReminderRepository;
 
     @Override
     @Transactional
@@ -308,5 +310,34 @@ public class ProductionCustomTaskServiceImpl implements ProductionCustomTaskServ
             log.warn("Could not get current user: {}", e.getMessage());
         }
         return null;
+    }
+
+    @Override
+    public ApiResponse<ProductionCustomTaskDto> setTaskReminder(Long taskId, java.time.LocalDateTime remindAt,
+                                                                String notes, String createdBy) {
+        ProductionCustomTask task = taskRepository.findById(taskId).orElse(null);
+        if (task == null) {
+            return ApiResponse.error("Task not found");
+        }
+        if (remindAt == null) {
+            return ApiResponse.error("A reminder date is required");
+        }
+
+        com.fleetmanagement.kitchencrmbackend.modules.customer.dto.CustomerReminderDto reminderDto =
+                new com.fleetmanagement.kitchencrmbackend.modules.customer.dto.CustomerReminderDto();
+        reminderDto.setCustomerId(task.getProductionInstallation().getCustomer().getId());
+        reminderDto.setTitle(task.getTaskTitle());
+        reminderDto.setNotes(notes != null && !notes.isBlank() ? notes : task.getTaskDescription());
+        reminderDto.setRemindAt(remindAt);
+
+        ApiResponse<com.fleetmanagement.kitchencrmbackend.modules.customer.dto.CustomerReminderDto> created =
+                customerReminderService.createReminder(reminderDto, createdBy);
+        if (!Boolean.TRUE.equals(created.getSuccess()) || created.getData() == null) {
+            return ApiResponse.error(created.getMessage() != null ? created.getMessage() : "Failed to create reminder");
+        }
+
+        task.setReminder(customerReminderRepository.findById(created.getData().getId()).orElse(null));
+        ProductionCustomTask saved = taskRepository.save(task);
+        return ApiResponse.success("Reminder set", ProductionCustomTaskDto.fromEntity(saved));
     }
 }
