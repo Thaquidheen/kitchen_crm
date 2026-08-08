@@ -1,7 +1,6 @@
 package com.fleetmanagement.kitchencrmbackend.modules.task.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,7 +19,7 @@ public class AdminTodoCreateDto {
 
     private String todoDescription;
 
-    @NotNull(message = "Todo date is required")
+    // Optional: an undated to-do is a plain checklist item and never reaches the bell.
     private LocalDate todoDate;
 
     private String notes;

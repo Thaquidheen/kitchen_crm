@@ -9,12 +9,16 @@ import com.fleetmanagement.kitchencrmbackend.modules.task.dto.AdminTodoUpdateDto
 import com.fleetmanagement.kitchencrmbackend.modules.task.entity.AdminTodo;
 import com.fleetmanagement.kitchencrmbackend.modules.task.repository.AdminTodoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,6 +30,15 @@ public class AdminTodoServiceImpl implements AdminTodoService {
 
     @Autowired
     private UserRepository userRepository;
+
+    // Same day-granularity convention as customer reminders: the server runs UTC,
+    // but "today" is the business day in this zone.
+    @Value("${app.business-timezone:Asia/Kolkata}")
+    private String businessTimezone;
+
+    private LocalDate today() {
+        return LocalDate.now(ZoneId.of(businessTimezone));
+    }
 
     @Override
     public ApiResponse<AdminTodoDto> createTodo(AdminTodoCreateDto createDto, Long userId) {
@@ -71,6 +84,9 @@ public class AdminTodoServiceImpl implements AdminTodoService {
         }
         if (updateDto.getTodoDate() != null) {
             todo.setTodoDate(updateDto.getTodoDate());
+        }
+        if (Boolean.TRUE.equals(updateDto.getClearDate())) {
+            todo.setTodoDate(null);
         }
         if (updateDto.getNotes() != null) {
             todo.setNotes(updateDto.getNotes());
@@ -168,12 +184,23 @@ public class AdminTodoServiceImpl implements AdminTodoService {
     }
 
     @Override
-    public ApiResponse<AdminTodoDto> getTodoById(Long todoId) {
+    public ApiResponse<AdminTodoDto> getTodoById(Long todoId, Long userId) {
         AdminTodo todo = todoRepository.findById(todoId).orElse(null);
-        if (todo == null) {
+        // Same error for missing and foreign todos so existence is never leaked.
+        if (todo == null || !todo.getUser().getId().equals(userId)) {
             return ApiResponse.error("Todo not found");
         }
         return ApiResponse.success(convertToDto(todo));
+    }
+
+    @Override
+    public ApiResponse<Map<String, Object>> getDueTodos(Long userId) {
+        List<AdminTodo> due = todoRepository
+                .findByUserIdAndCompletedFalseAndTodoDateLessThanEqualOrderByTodoDateAsc(userId, today());
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("count", due.size());
+        payload.put("todos", due.stream().map(this::convertToDto).collect(Collectors.toList()));
+        return ApiResponse.success(payload);
     }
 
     private AdminTodoDto convertToDto(AdminTodo todo) {

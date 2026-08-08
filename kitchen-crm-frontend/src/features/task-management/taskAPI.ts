@@ -240,11 +240,19 @@ export const taskAPI = baseApi.injectEndpoints({
       transformResponse: (response: ApiResponse<AdminTodo[]>) => response.data ?? [],
     }),
 
-    // Get all todos for current user (SUPER_ADMIN only)
+    // Get all todos for the current user
     getMyTodos: builder.query<AdminTodo[], void>({
       query: () => '/tasks/admin-todo',
       providesTags: [{ type: 'Tasks', id: 'ADMIN_TODOS' }, 'Tasks'],
       transformResponse: (response: ApiResponse<AdminTodo[]>) => response.data ?? [],
+    }),
+
+    // Bell feed: the current user's open, dated todos due today or earlier
+    getMyDueTodos: builder.query<{ count: number; todos: AdminTodo[] }, void>({
+      query: () => '/tasks/admin-todo/due',
+      providesTags: [{ type: 'Tasks', id: 'ADMIN_TODOS_DUE' }, 'Tasks'],
+      transformResponse: (response: ApiResponse<{ count: number; todos: AdminTodo[] }>) =>
+        response.data ?? { count: 0, todos: [] },
     }),
 
     // Mark todo as complete
@@ -353,6 +361,7 @@ export const {
   useGetTodosByDateQuery,
   useGetTodosByDateRangeQuery,
   useGetMyTodosQuery,
+  useGetMyDueTodosQuery,
   useMarkTodoCompleteMutation,
   useMarkTodoIncompleteMutation,
   useUpdateAdminTodoMutation,

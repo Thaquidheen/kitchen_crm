@@ -33,7 +33,7 @@ public class AdminTodo extends Auditable {
     @Column(name = "todo_description", columnDefinition = "TEXT")
     private String todoDescription;
 
-    @Column(name = "todo_date", nullable = false)
+    @Column(name = "todo_date")
     private LocalDate todoDate;
 
     @Column(name = "completed", nullable = false)

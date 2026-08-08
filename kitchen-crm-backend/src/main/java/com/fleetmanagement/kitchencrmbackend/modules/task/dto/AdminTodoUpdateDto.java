@@ -19,6 +19,9 @@ public class AdminTodoUpdateDto {
 
     private LocalDate todoDate;
 
+    // Null fields mean "leave unchanged", so clearing a date needs an explicit flag.
+    private Boolean clearDate;
+
     private String notes;
 
     private String priority;

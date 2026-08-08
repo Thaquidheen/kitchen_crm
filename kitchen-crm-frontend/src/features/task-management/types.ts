@@ -50,7 +50,7 @@ export interface AdminTodo {
   userName: string;
   todoTitle: string;
   todoDescription?: string;
-  todoDate: string; // ISO date string
+  todoDate?: string; // ISO date string; absent = undated checklist item
   completed: boolean;
   completedAt?: string;
   notes?: string;
@@ -63,7 +63,7 @@ export interface AdminTodo {
 export interface AdminTodoCreate {
   todoTitle: string;
   todoDescription?: string;
-  todoDate: string; // ISO date string
+  todoDate?: string; // ISO date string; omit for an undated checklist item
   notes?: string;
   priority?: TaskPriority;
   category?: string;
@@ -73,6 +73,7 @@ export interface AdminTodoUpdate {
   todoTitle?: string;
   todoDescription?: string;
   todoDate?: string;
+  clearDate?: boolean; // null fields mean "unchanged", so clearing a date is explicit
   notes?: string;
   priority?: TaskPriority;
   category?: string;

@@ -7,6 +7,7 @@ import com.fleetmanagement.kitchencrmbackend.modules.task.dto.AdminTodoUpdateDto
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 public interface AdminTodoService {
 
@@ -51,9 +52,14 @@ public interface AdminTodoService {
     ApiResponse<String> deleteTodo(Long todoId, Long userId);
 
     /**
-     * Get todo by ID
+     * Get todo by ID (only the owner's own todo)
      */
-    ApiResponse<AdminTodoDto> getTodoById(Long todoId);
+    ApiResponse<AdminTodoDto> getTodoById(Long todoId, Long userId);
+
+    /**
+     * Bell feed: {count, todos[]} of the user's open, dated to-dos due today or earlier
+     */
+    ApiResponse<Map<String, Object>> getDueTodos(Long userId);
 }
 
 

@@ -49,5 +49,11 @@ public interface AdminTodoRepository extends JpaRepository<AdminTodo, Long> {
      * Find all todos for a specific date (across all users)
      */
     List<AdminTodo> findByTodoDate(LocalDate todoDate);
+
+    /**
+     * Bell feed: a user's open, dated to-dos due today or earlier.
+     * NULL dates never match <=, so undated checklist items stay out of the bell.
+     */
+    List<AdminTodo> findByUserIdAndCompletedFalseAndTodoDateLessThanEqualOrderByTodoDateAsc(Long userId, LocalDate date);
 }
 

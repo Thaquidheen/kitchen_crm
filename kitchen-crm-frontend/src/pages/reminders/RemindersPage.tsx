@@ -8,8 +8,9 @@
  */
 
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Check, Pencil, Trash2, BellRing } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Search, Plus, Check, Pencil, Trash2, BellRing, ListTodo } from 'lucide-react';
+import { MyTodosTab } from './MyTodosTab';
 import toast from 'react-hot-toast';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -91,6 +92,7 @@ const fmtTime = (iso?: string) => {
 
 export function RemindersPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [bucket, setBucket] = useState<string>('TODAY');
   const [search, setSearch] = useState('');
@@ -230,6 +232,10 @@ export function RemindersPage() {
   const chipCount = (key: string) => Number((stats as any)?.[key] ?? 0);
   const openTotal = chipCount('all');
 
+  const tab = searchParams.get('tab') === 'todos' ? 'todos' : 'reminders';
+  const setTab = (t: 'reminders' | 'todos') =>
+    setSearchParams(t === 'todos' ? { tab: 'todos' } : {}, { replace: true });
+
   return (
     <div className="w-full">
       {/* Page header */}
@@ -242,21 +248,61 @@ export function RemindersPage() {
             </span>
           </div>
           <p className="mt-[5px] mb-0 text-[13px] text-text-700">
-            A reminder shows for its whole day, from midnight — the time is just a note.
+            {tab === 'todos'
+              ? 'Your private task list — nobody else sees it.'
+              : 'A reminder shows for its whole day, from midnight — the time is just a note.'}
           </p>
         </div>
         <div className="flex-1" />
-        <button
-          onClick={openCreate}
-          className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold"
-        >
-          <span className="w-5 h-5 rounded-md bg-white/20 backdrop-blur-[2px] flex items-center justify-center shrink-0">
-            <Plus size={14} />
-          </span>
-          Add Reminder
-        </button>
+        {tab === 'reminders' && (
+          <button
+            onClick={openCreate}
+            className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold"
+          >
+            <span className="w-5 h-5 rounded-md bg-white/20 backdrop-blur-[2px] flex items-center justify-center shrink-0">
+              <Plus size={14} />
+            </span>
+            Add Reminder
+          </button>
+        )}
       </div>
 
+      {/* Section tabs: shared customer reminders vs the user's private to-dos */}
+      <div className="flex gap-2 flex-wrap mb-4">
+        {(
+          [
+            { key: 'reminders', label: 'Customer Reminders', icon: <BellRing size={14} /> },
+            { key: 'todos', label: 'My To-dos', icon: <ListTodo size={14} /> },
+          ] as const
+        ).map((t) => {
+          const active = tab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className="flex items-center gap-2 px-[13px] py-2 rounded-[11px] border transition-colors"
+              style={
+                active
+                  ? {
+                      borderColor: 'var(--color-primary-600)',
+                      background: 'color-mix(in oklab, var(--color-primary-600) 16%, transparent)',
+                    }
+                  : { borderColor: 'var(--color-background-600)', background: 'var(--color-background-800)' }
+              }
+            >
+              <span className={active ? 'text-primary-600' : 'text-text-500'}>{t.icon}</span>
+              <span className={`text-[12.5px] whitespace-nowrap ${active ? 'font-semibold text-text-900' : 'font-medium text-text-700'}`}>
+                {t.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === 'todos' ? (
+        <MyTodosTab />
+      ) : (
+        <>
       {/* Bucket chips */}
       <div className="flex gap-2 flex-wrap mb-5">
         {BUCKETS.map((b) => {
@@ -447,6 +493,9 @@ export function RemindersPage() {
           </div>
         )}
       </div>
+
+        </>
+      )}
 
       {/* Add / edit modal */}
       <Modal

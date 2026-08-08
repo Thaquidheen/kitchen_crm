@@ -5,11 +5,12 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Search, Settings, LogOut, KeyRound, Menu, AlarmClock, Check, Sun, Moon, ChevronDown } from 'lucide-react';
+import { Bell, Search, Settings, LogOut, KeyRound, Menu, AlarmClock, Check, Sun, Moon, ChevronDown, ListTodo } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { logout } from '../../features/auth/authSlice';
 import { useLogoutMutation } from '../../features/auth/authApi';
 import { useGetReminderNotificationsQuery, useMarkReminderDoneMutation } from '../../app/baseApi';
+import { useGetMyDueTodosQuery, useMarkTodoCompleteMutation } from '../../features/task-management/taskAPI';
 import { setTheme, selectCurrentTheme } from '../../features/theme/themeSlice';
 import { ROUTES } from '../../routes/routes.config';
 import { Dropdown } from '../ui';
@@ -32,14 +33,20 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
 
   const isDay = currentTheme?.type === 'light';
 
-  // Due customer reminders feed the bell; refreshed every 60s
+  // Due customer reminders (shared) + the user's own due to-dos feed the bell; refreshed every 60s
   const { data: notifData } = useGetReminderNotificationsQuery(undefined, {
     pollingInterval: 60000,
     skip: !user,
   });
+  const { data: todoNotif } = useGetMyDueTodosQuery(undefined, {
+    pollingInterval: 60000,
+    skip: !user,
+  });
   const [markReminderDone] = useMarkReminderDoneMutation();
+  const [markTodoComplete] = useMarkTodoCompleteMutation();
   const dueReminders: any[] = notifData?.reminders ?? [];
-  const notificationCount = notifData?.count ?? 0;
+  const dueTodos = todoNotif?.todos ?? [];
+  const notificationCount = (notifData?.count ?? 0) + (todoNotif?.count ?? 0);
 
   const handleLogout = async () => {
     try {
@@ -140,7 +147,53 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
                   View all
                 </button>
               </div>
-              {dueReminders.length === 0 ? (
+              {/* My to-dos (private to this user) */}
+              {dueTodos.length > 0 && (
+                <>
+                  <div className="px-4 py-2 border-b border-background-600 flex items-center gap-2 bg-background-700/50">
+                    <ListTodo size={13} className="text-text-500" />
+                    <span className="text-xs font-semibold text-text-700 uppercase tracking-[0.04em]">My to-dos</span>
+                    <span className="text-[11px] font-[650] px-1.5 py-px rounded-full bg-background-700 border border-background-600 text-text-700 tabular-nums">
+                      {dueTodos.length}
+                    </span>
+                  </div>
+                  <div className="divide-y divide-background-600 border-b border-background-600">
+                    {dueTodos.map((t) => (
+                      <div key={t.id} className="px-4 py-3 hover:bg-background-700 transition-colors">
+                        <button
+                          className="text-left w-full"
+                          onClick={() => {
+                            setBellOpen(false);
+                            navigate(`${ROUTES.REMINDERS}?tab=todos`);
+                          }}
+                        >
+                          <p className="text-sm text-text-900 font-medium">{t.todoTitle}</p>
+                          {t.todoDate && (
+                            <p className="text-xs text-text-600 mt-0.5">
+                              Due {t.todoDate.split('-').reverse().join('/')}
+                            </p>
+                          )}
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await markTodoComplete(t.id).unwrap();
+                              toast.success('To-do completed');
+                            } catch {
+                              toast.error('Failed to complete to-do');
+                            }
+                          }}
+                          className="mt-1.5 inline-flex items-center gap-1 text-xs text-success hover:underline"
+                        >
+                          <Check size={12} /> Mark done
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {dueReminders.length === 0 && dueTodos.length === 0 ? (
                 <p className="px-4 py-6 text-sm text-text-600 text-center">Nothing due today. All caught up!</p>
               ) : (
                 <div className="divide-y divide-background-600">
