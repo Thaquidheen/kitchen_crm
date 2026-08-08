@@ -154,8 +154,19 @@ export function RemindersPage() {
   };
 
   const handleSave = async () => {
-    if (!title.trim() || !date) return;
-    if (!editing && !customerId) return;
+    // Say exactly what's missing — a silently disabled button reads as "not allowed".
+    if (!editing && !customerId) {
+      toast.error('Pick the customer first');
+      return;
+    }
+    if (!title.trim()) {
+      toast.error('Enter the reminder text');
+      return;
+    }
+    if (!date) {
+      toast.error('Pick the reminder date');
+      return;
+    }
     const remindAt = `${date}T${time || '10:00'}:00`;
     try {
       if (editing) {
@@ -455,19 +466,40 @@ export function RemindersPage() {
                 placeholder="Search customers…"
                 className="w-full h-[34px] px-3 mb-2 rounded-[10px] border border-background-600 bg-background-900 text-text-900 text-[13px] outline-none focus:border-primary-600 transition-colors placeholder:text-text-500"
               />
-              <select
-                value={customerId}
-                onChange={(e) => setCustomerId(e.target.value ? Number(e.target.value) : '')}
-                className="w-full px-3 py-2 rounded-[10px] border border-background-600 bg-background-900 text-text-900 text-[13px] outline-none focus:border-primary-600"
-                size={5}
-              >
-                {customers.map((c: any) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                    {c.contact ? ` · ${c.contact}` : ''}
-                  </option>
-                ))}
-              </select>
+              <div className="border border-background-600 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+                {customers.length === 0 ? (
+                  <div className="px-3 py-4 text-center text-[12.5px] text-text-500">No customers found.</div>
+                ) : (
+                  customers.map((c: any) => {
+                    const sel = customerId === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setCustomerId(c.id)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 border-t border-background-600 first:border-t-0 text-left transition-colors ${
+                          sel ? 'bg-primary-600/[0.08]' : 'hover:bg-background-700'
+                        }`}
+                      >
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[13px] font-semibold text-text-900 truncate">{c.name}</span>
+                          {c.contact && <span className="block text-[11.5px] text-text-500 truncate">{c.contact}</span>}
+                        </span>
+                        <span
+                          className="w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0"
+                          style={
+                            sel
+                              ? { background: 'var(--color-primary-600)', color: 'var(--on-accent)' }
+                              : { border: '1.5px solid var(--color-background-500)', color: 'transparent' }
+                          }
+                        >
+                          <Check className="w-2.5 h-2.5" strokeWidth={3} />
+                        </span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
             </div>
           )}
 
@@ -499,11 +531,7 @@ export function RemindersPage() {
           <Button variant="outline" onClick={() => setModalOpen(false)}>
             Cancel
           </Button>
-          <Button
-            variant="primary"
-            onClick={handleSave}
-            disabled={isCreating || isUpdating || !title.trim() || !date || (!editing && !customerId)}
-          >
+          <Button variant="primary" onClick={handleSave} disabled={isCreating || isUpdating}>
             {isCreating || isUpdating ? 'Saving…' : editing ? 'Save Changes' : 'Add Reminder'}
           </Button>
         </ModalFooter>
