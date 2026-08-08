@@ -47,6 +47,10 @@ import DesignPhaseDetailPage from '../pages/design-phase/DesignPhaseDetailPage';
 import ProductionPage from '../pages/production/ProductionPage';
 import ProductionDetailPage from '../pages/production/ProductionDetailPage';
 
+// Finance (Income & Expenses, super-admin only)
+import FinancePage from '../pages/finance/FinancePage';
+import FinanceCustomerPage from '../pages/finance/FinanceCustomerPage';
+
 // Settings & Management
 import SettingsPage from '../pages/settings/SettingsPage';
 import VendorsPage from '../pages/vendors/VendorsPage';
@@ -250,6 +254,14 @@ const routes = [
               {
                 path: ROUTES.STAFF,
                 element: <StaffPage />,
+              },
+              {
+                path: ROUTES.FINANCE,
+                element: <FinancePage />,
+              },
+              {
+                path: ROUTES.FINANCE_DETAIL,
+                element: <FinanceCustomerPage />,
               },
             ],
           },

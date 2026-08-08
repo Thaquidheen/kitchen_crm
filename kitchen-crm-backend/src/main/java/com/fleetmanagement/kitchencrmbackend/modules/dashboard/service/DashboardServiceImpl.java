@@ -45,6 +45,9 @@ public class DashboardServiceImpl implements DashboardService {
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.customer.repository.ProductionCustomTaskRepository productionCustomTaskRepository;
 
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.finance.repository.FinanceIncomePaymentRepository financeIncomePaymentRepository;
+
     @Override
     public ApiResponse<DashboardSummaryDto> getDashboardSummary() {
         DashboardSummaryDto summary = new DashboardSummaryDto();
@@ -403,15 +406,16 @@ public class DashboardServiceImpl implements DashboardService {
         return result != null ? result : BigDecimal.ZERO;
     }
 
-    // Collections are read from the projects' received columns; date-bucketed figures
-    // (this month / today / monthly series) need dated payment records and stay at zero
-    // until the new payments module lands.
+    // Total collections stay on the projects' received columns for now; the dated figures
+    // below come from the Income & Expenses module's payment records.
     private BigDecimal getTotalPaymentsReceived() {
         return getTotalCashInHand().add(getTotalCashInAccount());
     }
 
     private BigDecimal getPaymentsThisMonth() {
-        return BigDecimal.ZERO;
+        LocalDate startOfMonth = LocalDate.now().withDayOfMonth(1);
+        BigDecimal result = financeIncomePaymentRepository.sumBetween(startOfMonth, LocalDate.now());
+        return result != null ? result : BigDecimal.ZERO;
     }
 
     private BigDecimal getPendingPayments() {
@@ -449,11 +453,18 @@ public class DashboardServiceImpl implements DashboardService {
         List<RevenueAnalyticsDto.MonthlyRevenueDto> monthlyData = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
 
+        // One grouped query for the whole window; looked up per month in the loop.
+        Map<String, BigDecimal> byMonth = new HashMap<>();
+        for (Object[] row : financeIncomePaymentRepository.sumGroupedByMonth(fromDate.withDayOfMonth(1), toDate)) {
+            byMonth.put(row[0] + "-" + row[1], (BigDecimal) row[2]);
+        }
+
         LocalDate current = fromDate.withDayOfMonth(1);
         while (!current.isAfter(toDate)) {
             LocalDate monthEnd = current.withDayOfMonth(current.lengthOfMonth());
 
-            BigDecimal monthlyRevenue = BigDecimal.ZERO;
+            BigDecimal monthlyRevenue = byMonth.getOrDefault(
+                    current.getYear() + "-" + current.getMonthValue(), BigDecimal.ZERO);
 
             // Mock target data - in real implementation, this would come from a targets table
             BigDecimal target = BigDecimal.valueOf(500000);
@@ -472,7 +483,12 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private Map<String, BigDecimal> getPaymentMethodBreakdown() {
-        return new HashMap<>();
+        Map<String, BigDecimal> breakdown = new HashMap<>();
+        for (Object[] row : financeIncomePaymentRepository.sumGroupedByMode()) {
+            String label = String.valueOf(row[0]).equals("CASH_IN_HAND") ? "Cash in Hand" : "Cash in Account";
+            breakdown.put(label, (BigDecimal) row[1]);
+        }
+        return breakdown;
     }
 
     private Map<String, BigDecimal> getRevenueByProjectStatus() {
@@ -780,7 +796,8 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private BigDecimal getPaymentsToday() {
-        return BigDecimal.ZERO;
+        BigDecimal result = financeIncomePaymentRepository.sumBetween(LocalDate.now(), LocalDate.now());
+        return result != null ? result : BigDecimal.ZERO;
     }
 
     private Long getOverdueQuotations() {

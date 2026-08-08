@@ -27,6 +27,9 @@ public class FileUploadConfig implements WebMvcConfigurer {
     @Value("${app.appliance-quotation-upload-dir:uploads/appliance-quotations}")
     private String applianceQuotationsUploadDir;
 
+    @Value("${app.finance-receipt-upload-dir:uploads/finance-receipts}")
+    private String financeReceiptsUploadDir;
+
     @Value("${file.upload-dir:./uploads}")
     private String baseUploadDir;
 
@@ -60,6 +63,10 @@ public class FileUploadConfig implements WebMvcConfigurer {
         // Make appliance quotation PDFs accessible via URL
         registry.addResourceHandler("/uploads/appliance-quotations/**")
                 .addResourceLocations("file:" + Paths.get(applianceQuotationsUploadDir).toAbsolutePath().toString() + "/");
+
+        // Make finance receipt files (income/expense/release proofs) accessible via URL
+        registry.addResourceHandler("/uploads/finance-receipts/**")
+                .addResourceLocations("file:" + Paths.get(financeReceiptsUploadDir).toAbsolutePath().toString() + "/");
 
         // Make root uploads folder accessible via URL (for background images, etc.)
         registry.addResourceHandler("/uploads/**")

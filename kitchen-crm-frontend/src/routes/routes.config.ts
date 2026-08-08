@@ -57,6 +57,10 @@ export const ROUTES = {
   PROJECTS_DETAIL: '/projects/:id',
   PROJECTS_EDIT: '/projects/:id/edit',
 
+  // Finance routes (Income & Expenses, super-admin only)
+  FINANCE: '/finance',
+  FINANCE_DETAIL: '/finance/:financeId',
+
   // Settings routes
   SETTINGS: '/settings',
   SETTINGS_MARGINS: '/settings/margins',
@@ -82,6 +86,7 @@ export const getQuotationDetailRoute = (id: number) => `/quotations/${id}`;
 export const getQuotationEditRoute = (id: number) => `/quotations/${id}/edit`;
 export const getProjectDetailRoute = (id: number) => `/projects/${id}`;
 export const getProjectEditRoute = (id: number) => `/projects/${id}/edit`;
+export const getFinanceDetailRoute = (financeId: number) => `/finance/${financeId}`;
 export const getApprovalRoute = (token: string) => `/sign/${token}`;
 
 export default ROUTES;

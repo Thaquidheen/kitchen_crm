@@ -32,9 +32,11 @@ interface VendorFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   vendor?: Vendor | null;
+  /** Called with the created vendor so callers (e.g. finance release form) can auto-select it. */
+  onCreated?: (vendor: Vendor) => void;
 }
 
-export default function VendorFormModal({ isOpen, onClose, vendor }: VendorFormModalProps) {
+export default function VendorFormModal({ isOpen, onClose, vendor, onCreated }: VendorFormModalProps) {
   const [createVendor, { isLoading: isCreating }] = useCreateVendorMutation();
   const [updateVendor, { isLoading: isUpdating }] = useUpdateVendorMutation();
 
@@ -78,8 +80,9 @@ export default function VendorFormModal({ isOpen, onClose, vendor }: VendorFormM
         await updateVendor({ id: vendor.id, vendor: vendorData }).unwrap();
         toast.success('Vendor updated successfully');
       } else {
-        await createVendor(vendorData).unwrap();
+        const created = await createVendor(vendorData).unwrap();
         toast.success('Vendor created successfully');
+        if (created && onCreated) onCreated(created);
       }
 
       onClose();

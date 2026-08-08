@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Store,
+  Wallet,
   Building2,
   IdCard,
   Refrigerator,
@@ -76,6 +77,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Finance',
     items: [
+      { label: 'Income & Expenses', path: ROUTES.FINANCE, icon: <Wallet size={18} />, adminOnly: true },
       { label: 'Vendors', path: ROUTES.VENDORS, icon: <Store size={18} /> },
     ],
   },

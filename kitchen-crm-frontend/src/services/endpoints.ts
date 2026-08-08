@@ -208,6 +208,14 @@ export const API_ENDPOINTS = {
     UPDATE_STATUS: (id: number) => `/projects/${id}/status`,
   },
 
+  // Finance (Income & Expenses)
+  FINANCE: {
+    BASE: '/customer-finance',
+    BY_ID: (id: number) => `/customer-finance/${id}`,
+    BY_CUSTOMER: (customerId: number) => `/customer-finance/by-customer/${customerId}`,
+    ELIGIBLE_CUSTOMERS: '/customer-finance/eligible-customers',
+  },
+
   // Dashboard
   DASHBOARD: {
     SUMMARY: '/dashboard/summary',
