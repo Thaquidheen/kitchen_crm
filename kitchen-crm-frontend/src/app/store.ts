@@ -16,7 +16,6 @@ import customersReducer from '../features/customers/customersSlice';
 import productsReducer from '../features/products/productsSlice';
 import quotationsReducer from '../features/quotations/quotationsSlice';
 import projectsReducer from '../features/projects/projectsSlice';
-import paymentsReducer from '../features/payments/paymentsSlice';
 import designPhaseReducer from '../features/design-phase/designPhaseSlice';
 import themeReducer from '../features/theme/themeSlice';
 
@@ -35,7 +34,6 @@ export const store = configureStore({
     products: productsReducer,
     quotations: quotationsReducer,
     projects: projectsReducer,
-    payments: paymentsReducer,
     designPhase: designPhaseReducer,
     theme: themeReducer,
   },

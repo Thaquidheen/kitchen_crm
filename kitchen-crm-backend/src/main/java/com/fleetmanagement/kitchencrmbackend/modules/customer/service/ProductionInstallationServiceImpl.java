@@ -47,9 +47,6 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
     @Autowired
     private CustomerReminderService customerReminderService;
 
-    @Autowired
-    private com.fleetmanagement.kitchencrmbackend.modules.project.repository.PaymentRepository paymentRepository;
-
     @Override
     public ApiResponse<Page<ProductionInstallationDto>> getAllProductionInstallations(
             ProductionInstallation.InstallationStatus status,
@@ -837,18 +834,6 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
         }
         dto.setCurrentPhase(installation.getCurrentPhase());
         dto.setReadyForInstallation(installation.isReadyForInstallation());
-
-        // Payments hint for the "Advance received" checkpoint — read-only context so staff can
-        // tick it with confidence; nothing is ever completed automatically.
-        try {
-            List<Object[]> rs = paymentRepository.getReceivedSummaryByCustomer(installation.getCustomer().getId());
-            if (!rs.isEmpty() && rs.get(0)[0] != null) {
-                dto.setPaymentsReceivedTotal((java.math.BigDecimal) rs.get(0)[0]);
-                dto.setFirstPaymentDate((LocalDate) rs.get(0)[1]);
-            }
-        } catch (Exception ignored) {
-            // Payments are optional context; their absence must not break production views.
-        }
 
         dto.setCreatedAt(installation.getCreatedAt());
         dto.setUpdatedAt(installation.getUpdatedAt());

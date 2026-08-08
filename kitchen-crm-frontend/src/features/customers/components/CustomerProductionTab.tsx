@@ -467,15 +467,6 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
                 <b className="tabular-nums text-text-900">{fmtDate(production.actualCompletionDate)}</b>
               </div>
             )}
-            {production.paymentsReceivedTotal != null && Number(production.paymentsReceivedTotal) > 0 && (
-              <div className="mt-2 pt-2 border-t border-background-600 text-[11.5px] text-text-600 leading-[1.5]">
-                <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5" style={{ background: 'var(--st-confirmed-fg)' }} />
-                Payments recorded:{' '}
-                <b className="text-text-900 tabular-nums">₹{Number(production.paymentsReceivedTotal).toLocaleString('en-IN')}</b>
-                {production.firstPaymentDate && <> · first on {fmtDate(production.firstPaymentDate)}</>} — reference for the
-                "Advance received" checkpoint.
-              </div>
-            )}
           </div>
 
           {/* Upcoming reminders */}

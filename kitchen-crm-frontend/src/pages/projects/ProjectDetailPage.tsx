@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/Button';
 import { Tabs } from '@/components/ui/Tabs';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { FinancialSummary } from '@/features/projects/components/FinancialSummary';
-import { PaymentSummary } from '@/features/payments/components/PaymentSummary';
 import ExpenseForm from '@/features/expenses/components/ExpenseForm';
 import ExpensesList from '@/features/expenses/components/ExpensesList';
 import { ProjectCashCalculation } from '@/features/projects/components/ProjectCashCalculation';
@@ -267,8 +266,6 @@ export function ProjectDetailPage() {
 
   const financialTab = <FinancialSummary project={project} />;
 
-  const paymentsTab = <PaymentSummary projectId={project.id!} project={project} />;
-
   const expensesTab = (
     <div className="space-y-4 sm:space-y-6">
       <Card
@@ -355,10 +352,6 @@ export function ProjectDetailPage() {
     {
       label: 'Cash Calculation',
       content: cashCalculationTab,
-    },
-    {
-      label: 'Payments',
-      content: paymentsTab,
     },
     {
       label: 'Expenses',

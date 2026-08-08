@@ -54,25 +54,6 @@ export const ProjectStatus = {
 
 export type ProjectStatus = typeof ProjectStatus[keyof typeof ProjectStatus];
 
-// Payment methods
-export const PaymentMethod = {
-  CASH: 'CASH',
-  BANK_TRANSFER: 'BANK_TRANSFER',
-  CHEQUE: 'CHEQUE',
-  UPI: 'UPI',
-} as const;
-
-export type PaymentMethod = typeof PaymentMethod[keyof typeof PaymentMethod];
-
-// Payment statuses
-export const PaymentStatus = {
-  PENDING: 'PENDING',
-  RECEIVED: 'RECEIVED',
-  FAILED: 'FAILED',
-} as const;
-
-export type PaymentStatus = typeof PaymentStatus[keyof typeof PaymentStatus];
-
 // Design phase statuses
 export const DesignStatus = {
   INITIAL: 'INITIAL',

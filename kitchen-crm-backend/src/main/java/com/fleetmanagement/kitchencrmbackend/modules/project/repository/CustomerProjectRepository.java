@@ -43,7 +43,9 @@ public interface CustomerProjectRepository extends JpaRepository<CustomerProject
     @Query("SELECT SUM(p.totalAmount) FROM CustomerProject p WHERE p.status = :status")
     BigDecimal getTotalValueByStatus(@Param("status") CustomerProject.ProjectStatus status);
 
-    @Query("SELECT SUM(p.totalAmount - COALESCE((SELECT SUM(pay.amount) FROM Payment pay WHERE pay.project.id = p.id AND pay.paymentStatus = 'COMPLETED'), 0)) FROM CustomerProject p WHERE p.status = :status")
+    // Pending = project value minus what the project has recorded as received; the project's
+    // received columns were kept in sync by payment entry and remain editable on the project.
+    @Query("SELECT SUM(p.totalAmount - COALESCE(p.receivedInHand, 0) - COALESCE(p.receivedInAccount, 0)) FROM CustomerProject p WHERE p.status = :status")
     BigDecimal getTotalPendingPayments(@Param("status") CustomerProject.ProjectStatus status);
 
     @Query("SELECT SUM(p.receivedInHand) FROM CustomerProject p")

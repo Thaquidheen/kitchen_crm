@@ -269,7 +269,6 @@ export const baseApi = createApi({
     'Lighting',
     'Quotations',
     'Projects',
-    'Payments',
     'Dashboard',
     'Architects',
     'ArchitectVisits',

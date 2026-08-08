@@ -171,7 +171,7 @@ export function DashboardPage() {
       sub: 'Outstanding across all projects',
       count: inr(s.pendingPayments),
       st: 'lost',
-      to: ROUTES.PAYMENTS,
+      to: ROUTES.PROJECTS,
       show: Number(s.pendingPayments ?? 0) > 0,
     },
     {
@@ -334,7 +334,7 @@ export function DashboardPage() {
           <div className="flex items-start gap-3 px-4 pt-3.5 pb-2.5 flex-wrap">
             <div className="min-w-0">
               <div className="text-[13.5px] font-[650] text-text-900">Revenue vs target</div>
-              <div className="text-xs text-text-600 mt-0.5">Payments received per month</div>
+              <div className="text-xs text-text-600 mt-0.5">Monthly collections (populates once the new payments module is live)</div>
             </div>
             <div className="flex-1" />
             <div className="flex gap-3 items-center flex-wrap">
@@ -411,7 +411,7 @@ export function DashboardPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-px mt-3.5 border-t border-background-600 bg-background-600">
+              <div className="grid grid-cols-2 gap-px mt-3.5 border-t border-background-600 bg-background-600">
                 <div className="bg-background-800 px-4 py-3 min-w-0">
                   <div className={`${MICRO} truncate`}>Total outstanding</div>
                   <div className="text-base font-[650] mt-[3px] tabular-nums text-text-900">
@@ -422,12 +422,6 @@ export function DashboardPage() {
                   <div className={`${MICRO} truncate`}>Collection efficiency</div>
                   <div className="text-base font-[650] mt-[3px] tabular-nums" style={{ color: 'var(--st-confirmed-fg)' }}>
                     {Number(rev.collectionEfficiency ?? 0).toFixed(1)}%
-                  </div>
-                </div>
-                <div className="bg-background-800 px-4 py-3 min-w-0">
-                  <div className={`${MICRO} truncate`}>Avg payment time</div>
-                  <div className="text-base font-[650] mt-[3px] tabular-nums text-text-900">
-                    {Math.round(Number(rev.averagePaymentTime ?? 0))} days
                   </div>
                 </div>
               </div>

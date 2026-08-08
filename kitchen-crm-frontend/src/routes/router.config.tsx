@@ -39,9 +39,6 @@ import ProjectDetailPage from '../pages/projects/ProjectDetailPage';
 import ProjectFormPage from '../pages/projects/ProjectFormPage';
 import ConvertQuotationPage from '../pages/projects/ConvertQuotationPage';
 
-// Payments
-import PaymentsPage from '../pages/payments/PaymentsPage';
-
 // Design Phase
 import DesignPhasePage from '../pages/design-phase/DesignPhasePage';
 import DesignPhaseDetailPage from '../pages/design-phase/DesignPhaseDetailPage';
@@ -193,12 +190,6 @@ const routes = [
           {
             path: ROUTES.PROJECTS_EDIT,
             element: <ProjectFormPage />,
-          },
-
-          // Payments
-          {
-            path: ROUTES.PAYMENTS,
-            element: <PaymentsPage />,
           },
 
           // Design Phase

@@ -57,10 +57,6 @@ export const ROUTES = {
   PROJECTS_DETAIL: '/projects/:id',
   PROJECTS_EDIT: '/projects/:id/edit',
 
-  // Payment routes
-  PAYMENTS: '/payments',
-  PAYMENTS_BY_PROJECT: '/payments/project/:projectId',
-
   // Settings routes
   SETTINGS: '/settings',
   SETTINGS_MARGINS: '/settings/margins',
@@ -86,8 +82,6 @@ export const getQuotationDetailRoute = (id: number) => `/quotations/${id}`;
 export const getQuotationEditRoute = (id: number) => `/quotations/${id}/edit`;
 export const getProjectDetailRoute = (id: number) => `/projects/${id}`;
 export const getProjectEditRoute = (id: number) => `/projects/${id}/edit`;
-export const getPaymentsByProjectRoute = (projectId: number) =>
-  `/payments/project/${projectId}`;
 export const getApprovalRoute = (token: string) => `/sign/${token}`;
 
 export default ROUTES;

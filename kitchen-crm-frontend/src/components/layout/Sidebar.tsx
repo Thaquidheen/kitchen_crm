@@ -13,7 +13,6 @@ import {
   Package,
   FileText,
   FolderKanban,
-  CreditCard,
   Palette,
   Hammer,
   Settings,
@@ -77,7 +76,6 @@ const navGroups: NavGroup[] = [
   {
     label: 'Finance',
     items: [
-      { label: 'Payments', path: ROUTES.PAYMENTS, icon: <CreditCard size={18} /> },
       { label: 'Vendors', path: ROUTES.VENDORS, icon: <Store size={18} /> },
     ],
   },

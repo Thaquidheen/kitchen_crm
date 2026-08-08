@@ -9,7 +9,6 @@ import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.QuotationKitchen;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.QuotationRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.QuotationKitchenRepository;
-import com.fleetmanagement.kitchencrmbackend.modules.project.repository.PaymentRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.expense.repository.ProjectExpenseRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.warranty.repository.WarrantyCardRepository;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
@@ -45,9 +44,6 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Autowired
     private QuotationKitchenRepository kitchenRepository;
-
-    @Autowired
-    private PaymentRepository paymentRepository;
 
     @Autowired
     private ProjectExpenseRepository projectExpenseRepository;
@@ -233,8 +229,8 @@ public class ProjectServiceImpl implements ProjectService {
             return ApiResponse.error("Project not found");
         }
 
-        // Delete related payments and expenses
-        paymentRepository.deleteByProjectId(id);
+        // Delete related expenses (legacy payments rows go with the project via the
+        // ON DELETE CASCADE FK on the payments table)
         projectExpenseRepository.deleteByProjectId(id);
 
         // Unlink quotations and warranty cards (set project_id to NULL)

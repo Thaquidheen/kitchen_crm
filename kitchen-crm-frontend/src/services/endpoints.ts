@@ -208,17 +208,6 @@ export const API_ENDPOINTS = {
     UPDATE_STATUS: (id: number) => `/projects/${id}/status`,
   },
 
-  // Payments
-  PAYMENTS: {
-    BASE: '/payments',
-    BY_ID: (id: number) => `/payments/${id}`,
-    STATISTICS: '/payments/statistics',
-    STATISTICS_DATE_RANGE: '/payments/statistics/date-range',
-    BY_PROJECT: (projectId: number) => `/payments/project/${projectId}`,
-    PROJECT_SUMMARY: (projectId: number) => `/payments/project/${projectId}/summary`,
-    ADD_TO_PROJECT: (projectId: number) => `/payments/project/${projectId}`,
-  },
-
   // Dashboard
   DASHBOARD: {
     SUMMARY: '/dashboard/summary',

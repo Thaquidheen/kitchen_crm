@@ -6,13 +6,11 @@ import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.DesignP
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.ProductionInstallationRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.QuotationRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.project.repository.CustomerProjectRepository;
-import com.fleetmanagement.kitchencrmbackend.modules.project.repository.PaymentRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.DesignPhase;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.ProductionInstallation;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import com.fleetmanagement.kitchencrmbackend.modules.project.entity.CustomerProject;
-import com.fleetmanagement.kitchencrmbackend.modules.project.entity.Payment;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,9 +35,6 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Autowired
     private CustomerProjectRepository projectRepository;
-
-    @Autowired
-    private PaymentRepository paymentRepository;
 
     @Autowired
     private DesignPhaseRepository designPhaseRepository;
@@ -408,15 +403,15 @@ public class DashboardServiceImpl implements DashboardService {
         return result != null ? result : BigDecimal.ZERO;
     }
 
+    // Collections are read from the projects' received columns; date-bucketed figures
+    // (this month / today / monthly series) need dated payment records and stay at zero
+    // until the new payments module lands.
     private BigDecimal getTotalPaymentsReceived() {
-        BigDecimal result = paymentRepository.getTotalPaymentsBetweenDates(LocalDate.of(2020, 1, 1), LocalDate.now());
-        return result != null ? result : BigDecimal.ZERO;
+        return getTotalCashInHand().add(getTotalCashInAccount());
     }
 
     private BigDecimal getPaymentsThisMonth() {
-        LocalDate startOfMonth = LocalDate.now().withDayOfMonth(1);
-        BigDecimal result = paymentRepository.getTotalPaymentsBetweenDates(startOfMonth, LocalDate.now());
-        return result != null ? result : BigDecimal.ZERO;
+        return BigDecimal.ZERO;
     }
 
     private BigDecimal getPendingPayments() {
@@ -458,8 +453,7 @@ public class DashboardServiceImpl implements DashboardService {
         while (!current.isAfter(toDate)) {
             LocalDate monthEnd = current.withDayOfMonth(current.lengthOfMonth());
 
-            BigDecimal monthlyRevenue = paymentRepository.getTotalPaymentsBetweenDates(current, monthEnd);
-            if (monthlyRevenue == null) monthlyRevenue = BigDecimal.ZERO;
+            BigDecimal monthlyRevenue = BigDecimal.ZERO;
 
             // Mock target data - in real implementation, this would come from a targets table
             BigDecimal target = BigDecimal.valueOf(500000);
@@ -478,16 +472,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private Map<String, BigDecimal> getPaymentMethodBreakdown() {
-        List<Object[]> methodSummary = paymentRepository.getPaymentMethodSummary();
-        Map<String, BigDecimal> breakdown = new HashMap<>();
-
-        for (Object[] row : methodSummary) {
-            Payment.PaymentMethod method = (Payment.PaymentMethod) row[0];
-            BigDecimal amount = (BigDecimal) row[1];
-            breakdown.put(method.name(), amount);
-        }
-
-        return breakdown;
+        return new HashMap<>();
     }
 
     private Map<String, BigDecimal> getRevenueByProjectStatus() {
@@ -519,12 +504,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private BigDecimal getCurrentMonthProjection() {
-        LocalDate startOfMonth = LocalDate.now().withDayOfMonth(1);
-        BigDecimal currentMonthRevenue = paymentRepository.getTotalPaymentsBetweenDates(startOfMonth, LocalDate.now());
-
-        if (currentMonthRevenue == null) {
-            return BigDecimal.ZERO;
-        }
+        BigDecimal currentMonthRevenue = getPaymentsThisMonth();
 
         // Simple projection based on current pace
         int daysInMonth = LocalDate.now().lengthOfMonth();
@@ -800,8 +780,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private BigDecimal getPaymentsToday() {
-        BigDecimal result = paymentRepository.getTotalPaymentsBetweenDates(LocalDate.now(), LocalDate.now());
-        return result != null ? result : BigDecimal.ZERO;
+        return BigDecimal.ZERO;
     }
 
     private Long getOverdueQuotations() {
@@ -853,7 +832,7 @@ public class DashboardServiceImpl implements DashboardService {
     private Map<String, Object> generateFinancialReport(LocalDate fromDate, LocalDate toDate) {
         Map<String, Object> report = new HashMap<>();
 
-        report.put("total_revenue", paymentRepository.getTotalPaymentsBetweenDates(fromDate, toDate));
+        report.put("total_revenue", getTotalPaymentsReceived());
         report.put("cash_in_hand", getTotalCashInHand());
         report.put("cash_in_account", getTotalCashInAccount());
         report.put("pending_payments", getPendingPayments());
