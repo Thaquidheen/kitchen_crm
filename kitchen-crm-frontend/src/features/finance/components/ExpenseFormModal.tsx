@@ -32,7 +32,15 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onCl
   const [note, setNote] = useState('');
 
   const { data: quotationsResp } = useGetQuotationsByCustomerQuery(customerId, { skip: !isOpen });
-  const quotations: any[] = (quotationsResp as any)?.data ?? (Array.isArray(quotationsResp) ? quotationsResp : []);
+  // /quotations/customer/{id} returns ApiResponse<Page<...>> — the array lives at data.content.
+  const quotations: any[] = (() => {
+    const raw: any = quotationsResp;
+    if (Array.isArray(raw?.data?.content)) return raw.data.content;
+    if (Array.isArray(raw?.data)) return raw.data;
+    if (Array.isArray(raw?.content)) return raw.content;
+    if (Array.isArray(raw)) return raw;
+    return [];
+  })();
 
   const [addExpense, { isLoading: isAdding }] = useAddFinanceExpenseMutation();
   const [updateExpense, { isLoading: isUpdating }] = useUpdateFinanceExpenseMutation();
