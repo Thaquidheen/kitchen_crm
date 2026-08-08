@@ -115,7 +115,11 @@ export function FinanceCustomerPage() {
       >
         {value}
       </div>
-      {sub && <div className="text-[11px] text-text-500 mt-0.5 tabular-nums truncate">{sub}</div>}
+      {sub && (
+        <div className="text-[11px] text-text-500 mt-0.5 tabular-nums leading-[1.5]" title={sub}>
+          {sub}
+        </div>
+      )}
       {warn && (
         <span
           className="inline-flex mt-1 px-2 py-[2px] rounded-full text-[10.5px] font-semibold"
