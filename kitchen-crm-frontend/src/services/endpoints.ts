@@ -34,28 +34,6 @@ export const API_ENDPOINTS = {
     HISTORY: '/workflow/history',
   },
 
-  // Design Phase
-  DESIGN_PHASE: {
-    BASE: '/design-phase',
-    BY_CUSTOMER: (customerId: number) => `/design-phase/customer/${customerId}`,
-    EXISTS: (customerId: number) => `/design-phase/customer/${customerId}/exists`,
-    STATISTICS: '/design-phase/statistics',
-    BY_STATUS: (status: string) => `/design-phase/status/${status}`,
-    BY_DESIGNER: (designer: string) => `/design-phase/designer/${designer}`,
-    MEETINGS_UPCOMING: '/design-phase/meetings/upcoming',
-    SUBMIT_TO_CLIENT: (customerId: number) => `/design-phase/customer/${customerId}/submit-to-client`,
-    CLIENT_FEEDBACK: (customerId: number) => `/design-phase/customer/${customerId}/client-feedback`,
-    SCHEDULE_MEETING: (customerId: number) => `/design-phase/customer/${customerId}/schedule-meeting`,
-    COMPLETE_MEETING: (customerId: number) => `/design-phase/customer/${customerId}/complete-meeting`,
-    FREEZE_AMOUNT: (customerId: number) => `/design-phase/customer/${customerId}/freeze-amount`,
-    CREATE_GROUP: (customerId: number) => `/design-phase/customer/${customerId}/create-group`,
-    UPDATE_STATUS: (customerId: number) => `/design-phase/customer/${customerId}/status`,
-    APPROVE: (customerId: number) => `/design-phase/customer/${customerId}/approve`,
-    SUBMIT_FOR_APPROVAL: (customerId: number) => `/design-phase/customer/${customerId}/submit-for-approval`,
-    APPROVE_STAFF_SUBMISSION: (customerId: number) => `/design-phase/customer/${customerId}/approve-staff-submission`,
-    BY_STAFF: (staffId: number) => `/design-phase/staff/${staffId}`,
-  },
-
   // Design Phase Files
   DESIGN_PHASE_FILES: {
     BASE: '/design-phase-files',
@@ -67,20 +45,6 @@ export const API_ENDPOINTS = {
     DELETE: (id: number) => `/design-phase-files/${id}`,
     UPDATE: (id: number) => `/design-phase-files/${id}`,
     FILE_CATEGORIES: '/design-phase-files/file-categories',
-  },
-
-  // Designers
-  DESIGNERS: {
-    BASE: '/designers',
-    BY_ID: (id: number) => `/designers/${id}`,
-    BY_EMAIL: (email: string) => `/designers/email/${email}`,
-    ACTIVE: '/designers/active',
-    AVAILABLE: '/designers/available',
-    STATISTICS: '/designers/statistics',
-    SEARCH: '/designers/search',
-    BY_DEPARTMENT: (department: string) => `/designers/department/${department}`,
-    BY_SPECIALIZATION: (specialization: string) => `/designers/specialization/${specialization}`,
-    TOGGLE_STATUS: (id: number) => `/designers/${id}/toggle-status`,
   },
 
   // Production & Installation
@@ -195,17 +159,6 @@ export const API_ENDPOINTS = {
     UPDATE_STATUS: (id: number) => `/quotations/${id}/status`,
     DUPLICATE: (id: number) => `/quotations/${id}/duplicate`,
     PDF: (id: number) => `/quotations/${id}/pdf`,
-  },
-
-  // Projects
-  PROJECTS: {
-    BASE: '/projects',
-    BY_ID: (id: number) => `/projects/${id}`,
-    STATISTICS: '/projects/statistics',
-    BY_CUSTOMER: (customerId: number) => `/projects/customer/${customerId}`,
-    FINANCIAL_SUMMARY: (id: number) => `/projects/${id}/financial-summary`,
-    CONVERT_QUOTATION: (quotationId: number) => `/projects/quotation/${quotationId}/convert`,
-    UPDATE_STATUS: (id: number) => `/projects/${id}/status`,
   },
 
   // Finance (Income & Expenses)

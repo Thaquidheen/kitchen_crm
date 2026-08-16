@@ -61,9 +61,10 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
     @Query("SELECT COUNT(q) FROM Quotation q WHERE q.createdAt BETWEEN :fromDate AND :toDate")
     Long countByCreatedAtBetween(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
 
-    @Modifying
-    @Query("UPDATE Quotation q SET q.project = null WHERE q.project.id = :projectId")
-    void unlinkFromProject(@Param("projectId") Long projectId);
+    // unlinkFromProject removed with the Projects module. It detached quotations when a project
+    // was deleted; there is no longer anything to detach from, and the JPQL referenced
+    // Quotation.project, which Hibernate parses at startup — leaving it stopped the app booting.
+    // The project_id column and its FK stay in the database, unmapped and permanently null.
 
     // Folder / version queries
     List<Quotation> findByFolderIdIn(List<Long> folderIds);

@@ -20,9 +20,6 @@ export const ROUTES = {
   CUSTOMERS: '/customers',
   CUSTOMERS_DETAIL: '/customers/:id',
 
-  // Design Phase routes
-  DESIGN_PHASE: '/design-phase',
-  DESIGN_PHASE_DETAIL: '/design-phase/customer/:customerId',
 
   // Production routes
   PRODUCTION: '/production',
@@ -50,12 +47,6 @@ export const ROUTES = {
   // Reminder routes
   REMINDERS: '/reminders',
 
-  // Project routes
-  PROJECTS: '/projects',
-  PROJECTS_NEW: '/projects/new',
-  PROJECTS_CONVERT: '/projects/convert-quotation',
-  PROJECTS_DETAIL: '/projects/:id',
-  PROJECTS_EDIT: '/projects/:id/edit',
 
   // Finance routes (Income & Expenses, super-admin only)
   FINANCE: '/finance',
@@ -78,14 +69,10 @@ export const ROUTES = {
 
 // Helper functions to generate dynamic routes
 export const getCustomerDetailRoute = (id: number) => `/customers/${id}`;
-export const getDesignPhaseDetailRoute = (customerId: number) =>
-  `/design-phase/customer/${customerId}`;
 export const getProductionDetailRoute = (customerId: number) =>
   `/production/customer/${customerId}`;
 export const getQuotationDetailRoute = (id: number) => `/quotations/${id}`;
 export const getQuotationEditRoute = (id: number) => `/quotations/${id}/edit`;
-export const getProjectDetailRoute = (id: number) => `/projects/${id}`;
-export const getProjectEditRoute = (id: number) => `/projects/${id}/edit`;
 export const getFinanceDetailRoute = (financeId: number) => `/finance/${financeId}`;
 export const getApprovalRoute = (token: string) => `/sign/${token}`;
 

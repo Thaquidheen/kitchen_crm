@@ -85,7 +85,7 @@ export function BusinessAlerts() {
         type: 'critical',
         title: 'Overdue Projects',
         message: `${data.overdueProjects} project(s) are overdue and require immediate attention.`,
-        actionUrl: '/projects?filter=overdue',
+        actionUrl: '/production',
       });
     }
 
@@ -95,7 +95,7 @@ export function BusinessAlerts() {
         type: 'warning',
         title: 'Pending Approvals',
         message: `${data.pendingApprovals} design(s) awaiting approval from SUPER_ADMIN.`,
-        actionUrl: '/design-phase?filter=pending-approval',
+        actionUrl: '/quotations',
       });
     }
 
@@ -115,7 +115,7 @@ export function BusinessAlerts() {
         type: 'info',
         title: 'Upcoming Deadlines',
         message: `${data.upcomingDeadlines} project(s) due in the next 7 days.`,
-        actionUrl: '/projects?filter=upcoming',
+        actionUrl: '/production',
       });
     }
 

@@ -33,15 +33,7 @@ import RemindersPage from '../pages/reminders/RemindersPage';
 import QuotationDetailPage from '../pages/quotations/QuotationDetailPage';
 import QuotationBuilderPage from '../pages/quotations/QuotationBuilderPage';
 
-// Projects
-import ProjectsPage from '../pages/projects/ProjectsPage';
-import ProjectDetailPage from '../pages/projects/ProjectDetailPage';
-import ProjectFormPage from '../pages/projects/ProjectFormPage';
-import ConvertQuotationPage from '../pages/projects/ConvertQuotationPage';
 
-// Design Phase
-import DesignPhasePage from '../pages/design-phase/DesignPhasePage';
-import DesignPhaseDetailPage from '../pages/design-phase/DesignPhaseDetailPage';
 
 // Production
 import ProductionPage from '../pages/production/ProductionPage';
@@ -172,38 +164,6 @@ const routes = [
           {
             path: ROUTES.REMINDERS,
             element: <RemindersPage />,
-          },
-
-          // Projects
-          {
-            path: ROUTES.PROJECTS,
-            element: <ProjectsPage />,
-          },
-          {
-            path: ROUTES.PROJECTS_NEW,
-            element: <ProjectFormPage />,
-          },
-          {
-            path: ROUTES.PROJECTS_CONVERT,
-            element: <ConvertQuotationPage />,
-          },
-          {
-            path: ROUTES.PROJECTS_DETAIL,
-            element: <ProjectDetailPage />,
-          },
-          {
-            path: ROUTES.PROJECTS_EDIT,
-            element: <ProjectFormPage />,
-          },
-
-          // Design Phase
-          {
-            path: ROUTES.DESIGN_PHASE,
-            element: <DesignPhasePage />,
-          },
-          {
-            path: ROUTES.DESIGN_PHASE_DETAIL,
-            element: <DesignPhaseDetailPage />,
           },
 
           // Production

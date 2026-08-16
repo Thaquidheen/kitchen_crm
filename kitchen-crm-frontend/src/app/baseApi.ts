@@ -251,9 +251,6 @@ export const baseApi = createApi({
   tagTypes: [
     'Auth',
     'Customers',
-    'DesignPhase',
-    'Designers',
-    'Designer',
     'Production',
     'CustomTask',
     'TaskGroup',
@@ -268,7 +265,6 @@ export const baseApi = createApi({
     'Doors',
     'Lighting',
     'Quotations',
-    'Projects',
     'Finance',
     'Dashboard',
     'Architects',

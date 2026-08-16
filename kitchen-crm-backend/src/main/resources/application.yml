@@ -1,6 +1,18 @@
 server:
   port: 8080
 
+# Actuator is present purely so the container HEALTHCHECK has a real endpoint. Expose health and
+# nothing else — a broad exposure would publish /actuator/env and /actuator/beans, and nginx
+# already proxies /actuator/. show-details: never keeps the body to {"status":"UP"}.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
 spring:
   application:
     name: kitchen-crm-backend

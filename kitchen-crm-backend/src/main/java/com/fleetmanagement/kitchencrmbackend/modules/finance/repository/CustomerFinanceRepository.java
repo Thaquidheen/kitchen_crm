@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,6 +17,10 @@ import java.util.Optional;
 public interface CustomerFinanceRepository extends JpaRepository<CustomerFinance, Long> {
 
     Optional<CustomerFinance> findByCustomerId(Long customerId);
+
+    /** Total value invoiced across every customer, for the dashboard's outstanding figure. */
+    @Query("SELECT COALESCE(SUM(f.totalAmount), 0) FROM CustomerFinance f")
+    BigDecimal sumTotalAmount();
 
     boolean existsByCustomerId(Long customerId);
 

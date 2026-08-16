@@ -5,12 +5,11 @@ import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.Custome
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.DesignPhaseRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.ProductionInstallationRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.QuotationRepository;
-import com.fleetmanagement.kitchencrmbackend.modules.project.repository.CustomerProjectRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.DesignPhase;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.ProductionInstallation;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
-import com.fleetmanagement.kitchencrmbackend.modules.project.entity.CustomerProject;
+import com.fleetmanagement.kitchencrmbackend.modules.finance.entity.FinanceIncomePayment;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -34,9 +33,6 @@ public class DashboardServiceImpl implements DashboardService {
     private QuotationRepository quotationRepository;
 
     @Autowired
-    private CustomerProjectRepository projectRepository;
-
-    @Autowired
     private DesignPhaseRepository designPhaseRepository;
 
     @Autowired
@@ -47,6 +43,9 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.finance.repository.FinanceIncomePaymentRepository financeIncomePaymentRepository;
+
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.finance.repository.CustomerFinanceRepository customerFinanceRepository;
 
     @Override
     public ApiResponse<DashboardSummaryDto> getDashboardSummary() {
@@ -65,9 +64,11 @@ public class DashboardServiceImpl implements DashboardService {
         summary.setAverageQuotationValue(getAverageQuotationValue());
 
         // Project Metrics
-        summary.setTotalProjects(projectRepository.count());
-        summary.setActiveProjects(projectRepository.countByStatus(CustomerProject.ProjectStatus.ACTIVE));
-        summary.setCompletedProjects(projectRepository.countByStatus(CustomerProject.ProjectStatus.COMPLETED));
+        // Projects were retired. These DTO fields stay so the response shape is unchanged for
+        // any cached client, but there is nothing left to count.
+        summary.setTotalProjects(0L);
+        summary.setActiveProjects(0L);
+        summary.setCompletedProjects(0L);
         summary.setTotalProjectValue(getTotalProjectValue());
         summary.setCompletedProjectValue(getCompletedProjectValue());
 
@@ -133,11 +134,7 @@ public class DashboardServiceImpl implements DashboardService {
         ProjectAnalyticsDto analytics = new ProjectAnalyticsDto();
 
         // Project Status Distribution
-        Map<String, Long> statusDistribution = new HashMap<>();
-        for (CustomerProject.ProjectStatus status : CustomerProject.ProjectStatus.values()) {
-            statusDistribution.put(status.name(), projectRepository.countByStatus(status));
-        }
-        analytics.setProjectStatusDistribution(statusDistribution);
+        analytics.setProjectStatusDistribution(new HashMap<>());
 
         // Installation Status Distribution
         Map<String, Long> installationDistribution = new HashMap<>();
@@ -193,7 +190,7 @@ public class DashboardServiceImpl implements DashboardService {
         // KPI Metrics
         Map<String, Object> kpiMetrics = new HashMap<>();
         kpiMetrics.put("total_revenue", getTotalPaymentsReceived());
-        kpiMetrics.put("active_projects", projectRepository.countByStatus(CustomerProject.ProjectStatus.ACTIVE));
+        kpiMetrics.put("active_projects", 0L);
         kpiMetrics.put("customer_satisfaction", 4.2); // Mock data
         kpiMetrics.put("on_time_delivery", 87.5); // Mock data
         metrics.setKpiMetrics(kpiMetrics);
@@ -235,7 +232,7 @@ public class DashboardServiceImpl implements DashboardService {
 
         // Current Active Metrics
         realTimeMetrics.put("active_quotations", quotationRepository.countByStatus(Quotation.QuotationStatus.DRAFT));
-        realTimeMetrics.put("active_projects", projectRepository.countByStatus(CustomerProject.ProjectStatus.ACTIVE));
+        realTimeMetrics.put("active_projects", 0L);
         realTimeMetrics.put("installations_today", getInstallationsToday());
         realTimeMetrics.put("payments_today", getPaymentsToday());
 
@@ -397,19 +394,27 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private BigDecimal getTotalProjectValue() {
-        BigDecimal result = projectRepository.getTotalProjectValue();
-        return result != null ? result : BigDecimal.ZERO;
+        return BigDecimal.ZERO;
     }
 
     private BigDecimal getCompletedProjectValue() {
-        BigDecimal result = projectRepository.getTotalValueByStatus(CustomerProject.ProjectStatus.COMPLETED);
-        return result != null ? result : BigDecimal.ZERO;
+        return BigDecimal.ZERO;
     }
 
-    // Total collections stay on the projects' received columns for now; the dated figures
-    // below come from the Income & Expenses module's payment records.
+    // Collections now come entirely from the Income & Expenses module, which is where payments
+    // have actually been recorded since V99 - the projects received columns are gone.
     private BigDecimal getTotalPaymentsReceived() {
         return getTotalCashInHand().add(getTotalCashInAccount());
+    }
+
+    /** Sums finance payments for one mode; sumGroupedByMode returns rows of [mode, total]. */
+    private BigDecimal sumFinanceByMode(FinanceIncomePayment.PaymentMode mode) {
+        for (Object[] row : financeIncomePaymentRepository.sumGroupedByMode()) {
+            if (row.length > 1 && mode.equals(row[0]) && row[1] instanceof BigDecimal) {
+                return (BigDecimal) row[1];
+            }
+        }
+        return BigDecimal.ZERO;
     }
 
     private BigDecimal getPaymentsThisMonth() {
@@ -419,17 +424,21 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private BigDecimal getPendingPayments() {
-        return projectRepository.getTotalPendingPayments(CustomerProject.ProjectStatus.ACTIVE);
+        // Outstanding is invoiced-minus-collected, both from the Income & Expenses module, which
+        // is where this has actually been recorded since V99.
+        BigDecimal invoiced = customerFinanceRepository.sumTotalAmount();
+        if (invoiced == null) {
+            invoiced = BigDecimal.ZERO;
+        }
+        return invoiced.subtract(getTotalPaymentsReceived()).max(BigDecimal.ZERO);
     }
 
     private BigDecimal getTotalCashInHand() {
-        BigDecimal result = projectRepository.getTotalCashInHand();
-        return result != null ? result : BigDecimal.ZERO;
+        return sumFinanceByMode(FinanceIncomePayment.PaymentMode.CASH_IN_HAND);
     }
 
     private BigDecimal getTotalCashInAccount() {
-        BigDecimal result = projectRepository.getTotalCashInAccount();
-        return result != null ? result : BigDecimal.ZERO;
+        return sumFinanceByMode(FinanceIncomePayment.PaymentMode.CASH_IN_ACCOUNT);
     }
 
     private Double calculateConversionRate() {
@@ -439,14 +448,11 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private Double calculateCompletionRate() {
-        long totalProjects = projectRepository.count();
-        long completedProjects = projectRepository.countByStatus(CustomerProject.ProjectStatus.COMPLETED);
-        return totalProjects > 0 ? (completedProjects * 100.0) / totalProjects : 0.0;
+        return 0.0;
     }
 
     private Integer calculateAverageProjectDuration() {
-        Integer duration = projectRepository.getAverageProjectDuration();
-        return duration != null ? duration : 0;
+        return 0;
     }
 
     private List<RevenueAnalyticsDto.MonthlyRevenueDto> getMonthlyRevenueData(LocalDate fromDate, LocalDate toDate) {
@@ -469,8 +475,7 @@ public class DashboardServiceImpl implements DashboardService {
             // Mock target data - in real implementation, this would come from a targets table
             BigDecimal target = BigDecimal.valueOf(500000);
 
-            Integer projectsCompletedCount = projectRepository.countCompletedProjectsBetweenDates(current, monthEnd);
-            int projectsCompleted = projectsCompletedCount != null ? projectsCompletedCount : 0;
+            int projectsCompleted = 0;
 
             RevenueAnalyticsDto.MonthlyRevenueDto monthlyDto = new RevenueAnalyticsDto.MonthlyRevenueDto(
                     current.format(formatter), monthlyRevenue, target, projectsCompleted);
@@ -493,11 +498,6 @@ public class DashboardServiceImpl implements DashboardService {
 
     private Map<String, BigDecimal> getRevenueByProjectStatus() {
         Map<String, BigDecimal> revenueByStatus = new HashMap<>();
-
-        for (CustomerProject.ProjectStatus status : CustomerProject.ProjectStatus.values()) {
-            BigDecimal revenue = projectRepository.getTotalValueByStatus(status);
-            revenueByStatus.put(status.name(), revenue != null ? revenue : BigDecimal.ZERO);
-        }
 
         return revenueByStatus;
     }
@@ -536,15 +536,12 @@ public class DashboardServiceImpl implements DashboardService {
 
     private BigDecimal getNextMonthProjection() {
         // Based on pipeline and historical data
-        long activeProjects = projectRepository.countByStatus(CustomerProject.ProjectStatus.ACTIVE);
-        BigDecimal avgProjectValue = getAverageQuotationValue();
-
-        // Simple projection - 30% of active projects expected to complete next month
-        return avgProjectValue.multiply(BigDecimal.valueOf(activeProjects * 0.3));
+        // Was projected from the active project count; that signal no longer exists.
+        return BigDecimal.ZERO;
     }
 
     private BigDecimal getTotalOutstanding() {
-        return projectRepository.getTotalPendingPayments(CustomerProject.ProjectStatus.ACTIVE);
+        return getPendingPayments();
     }
 
     private BigDecimal getAveragePaymentTime() {
@@ -565,30 +562,8 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private List<ProjectAnalyticsDto.ProjectTimelineDto> getProjectTimelineAnalysis() {
-        List<Object[]> projectTimelines = projectRepository.getProjectTimelineAnalysis();
-        List<ProjectAnalyticsDto.ProjectTimelineDto> timelineData = new ArrayList<>();
-
-        for (Object[] row : projectTimelines) {
-            String projectName = (String) row[0];
-            String customerName = (String) row[1];
-            Integer estimatedDays = (Integer) row[2];
-            Integer actualDays = (Integer) row[3];
-            // Handle enum status - convert to String
-            String status;
-            if (row[4] instanceof CustomerProject.ProjectStatus) {
-                status = ((CustomerProject.ProjectStatus) row[4]).name();
-            } else {
-                status = row[4] != null ? row[4].toString() : null;
-            }
-            BigDecimal projectValue = (BigDecimal) row[5];
-
-            timelineData.add(new ProjectAnalyticsDto.ProjectTimelineDto(
-                    projectName, customerName, estimatedDays, actualDays, status, projectValue));
-        }
-
-        return timelineData;
+        return new ArrayList<>();
     }
-
     private List<ProjectAnalyticsDto.TeamPerformanceDto> getTeamPerformanceAnalysis() {
         List<ProjectAnalyticsDto.TeamPerformanceDto> teamPerformance = new ArrayList<>();
 
@@ -624,11 +599,12 @@ public class DashboardServiceImpl implements DashboardService {
     private Map<String, Object> getProjectSizeAnalysis() {
         Map<String, Object> sizeAnalysis = new HashMap<>();
 
-        // Project value ranges
-        sizeAnalysis.put("small_projects", projectRepository.countProjectsByValueRange(BigDecimal.ZERO, BigDecimal.valueOf(100000)));
-        sizeAnalysis.put("medium_projects", projectRepository.countProjectsByValueRange(BigDecimal.valueOf(100000), BigDecimal.valueOf(500000)));
-        sizeAnalysis.put("large_projects", projectRepository.countProjectsByValueRange(BigDecimal.valueOf(500000), BigDecimal.valueOf(1000000)));
-        sizeAnalysis.put("enterprise_projects", projectRepository.countProjectsByValueRange(BigDecimal.valueOf(1000000), BigDecimal.valueOf(10000000)));
+        // Project value ranges came from the retired Projects module. The keys stay so the
+        // response shape is unchanged for any cached client.
+        sizeAnalysis.put("small_projects", 0L);
+        sizeAnalysis.put("medium_projects", 0L);
+        sizeAnalysis.put("large_projects", 0L);
+        sizeAnalysis.put("enterprise_projects", 0L);
 
         return sizeAnalysis;
     }
@@ -824,11 +800,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private Long getProjectsCompletedToday() {
-        return projectRepository.findAll().stream()
-                .filter(p -> p.getUpdatedAt() != null &&
-                        p.getUpdatedAt().toLocalDate().equals(LocalDate.now()) &&
-                        p.getStatus() == CustomerProject.ProjectStatus.COMPLETED)
-                .count();
+        return 0L;
     }
 
     // Custom report generators
@@ -861,14 +833,8 @@ public class DashboardServiceImpl implements DashboardService {
     private Map<String, Object> generateProjectStatusReport(LocalDate fromDate, LocalDate toDate) {
         Map<String, Object> report = new HashMap<>();
 
-        Map<String, Long> statusCounts = new HashMap<>();
-        for (CustomerProject.ProjectStatus status : CustomerProject.ProjectStatus.values()) {
-            statusCounts.put(status.name(), projectRepository.countByStatus(status));
-        }
-
-        report.put("project_status_distribution", statusCounts);
-        Integer completedProjects = projectRepository.countCompletedProjectsBetweenDates(fromDate, toDate);
-        report.put("completed_projects", completedProjects != null ? completedProjects : 0);
+        report.put("project_status_distribution", new HashMap<String, Long>());
+        report.put("completed_projects", 0);
         report.put("average_project_duration", calculateAverageProjectDuration());
 
         return report;

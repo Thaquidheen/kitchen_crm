@@ -39,7 +39,10 @@ public class QuotationDto {
     @PositiveOrZero(message = "Installation price must be zero or positive")
     private BigDecimal installationPrice = BigDecimal.ZERO;
 
-    private BigDecimal marginPercentage = BigDecimal.ZERO;
+    // Withheld-for-staff pricing fields carry NO default. A ZERO initialiser made a
+    // withheld field serialise as 0 — indistinguishable from real data, and the same
+    // artefact class that let a staff save wipe stored prices. Absent must mean null.
+    private BigDecimal marginPercentage;
     private BigDecimal taxPercentage = BigDecimal.ZERO;
     
     // Category-specific margin percentages
@@ -72,8 +75,8 @@ public class QuotationDto {
     private BigDecimal miscellaneousMrpMarginPercentage = BigDecimal.ZERO;
     private BigDecimal miscellaneousMrpTaxPercentage = BigDecimal.valueOf(18.00);
 
-    private BigDecimal subtotal = BigDecimal.ZERO;
-    private BigDecimal marginAmount = BigDecimal.ZERO;
+    private BigDecimal subtotal;
+    private BigDecimal marginAmount;
     private BigDecimal taxAmount = BigDecimal.ZERO;
     private BigDecimal totalAmount = BigDecimal.ZERO;
     // MRP ("list price"): per-category base prices with per-category MRP margin/tax.
@@ -109,26 +112,26 @@ public class QuotationDto {
     private String signerPhone;
 
     // ACCESSORIES CATEGORY TOTALS
-    private BigDecimal accessoriesBaseTotal = BigDecimal.ZERO;
-    private BigDecimal accessoriesMarginAmount = BigDecimal.ZERO;
+    private BigDecimal accessoriesBaseTotal;
+    private BigDecimal accessoriesMarginAmount;
     private BigDecimal accessoriesTaxAmount = BigDecimal.ZERO;
     private BigDecimal accessoriesFinalTotal = BigDecimal.ZERO;
 
     // CABINETS CATEGORY TOTALS
-    private BigDecimal cabinetsBaseTotal = BigDecimal.ZERO;
-    private BigDecimal cabinetsMarginAmount = BigDecimal.ZERO;
+    private BigDecimal cabinetsBaseTotal;
+    private BigDecimal cabinetsMarginAmount;
     private BigDecimal cabinetsTaxAmount = BigDecimal.ZERO;
     private BigDecimal cabinetsFinalTotal = BigDecimal.ZERO;
 
     // DOORS CATEGORY TOTALS
-    private BigDecimal doorsBaseTotal = BigDecimal.ZERO;
-    private BigDecimal doorsMarginAmount = BigDecimal.ZERO;
+    private BigDecimal doorsBaseTotal;
+    private BigDecimal doorsMarginAmount;
     private BigDecimal doorsTaxAmount = BigDecimal.ZERO;
     private BigDecimal doorsFinalTotal = BigDecimal.ZERO;
 
     // LIGHTING CATEGORY TOTALS
-    private BigDecimal lightingBaseTotal = BigDecimal.ZERO;
-    private BigDecimal lightingMarginAmount = BigDecimal.ZERO;
+    private BigDecimal lightingBaseTotal;
+    private BigDecimal lightingMarginAmount;
     private BigDecimal lightingTaxAmount = BigDecimal.ZERO;
     private BigDecimal lightingFinalTotal = BigDecimal.ZERO;
 

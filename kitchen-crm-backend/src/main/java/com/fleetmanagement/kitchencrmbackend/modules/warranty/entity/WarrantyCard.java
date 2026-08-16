@@ -1,7 +1,6 @@
 package com.fleetmanagement.kitchencrmbackend.modules.warranty.entity;
 
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
-import com.fleetmanagement.kitchencrmbackend.modules.project.entity.CustomerProject;
 import com.fleetmanagement.kitchencrmbackend.shared.audit.Auditable;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -27,10 +26,6 @@ public class WarrantyCard extends Auditable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "project_id")
-    private CustomerProject project;
 
     @Column(name = "certificate_number", unique = true, length = 50)
     private String certificateNumber;

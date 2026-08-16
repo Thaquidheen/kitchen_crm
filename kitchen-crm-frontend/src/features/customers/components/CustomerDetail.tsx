@@ -7,8 +7,6 @@ import {
   Phone,
   FileText,
   Layers,
-  Briefcase,
-  Palette,
   Package,
   Clock,
   ClipboardList,
@@ -20,8 +18,6 @@ import { useDeleteCustomerMutation, useUpdateCustomerStatusMutation } from '../c
 import { CustomerOverviewTab } from './CustomerOverviewTab';
 import { CustomerPipelineTab } from './CustomerPipelineTab';
 import { CustomerQuotationsTab } from './CustomerQuotationsTab';
-import { CustomerProjectsTab } from './CustomerProjectsTab';
-import { CustomerDesignTab } from './CustomerDesignTab';
 import { CustomerProductionTab } from './CustomerProductionTab';
 import { CustomerActivityPanel } from './CustomerActivityPanel';
 import { CustomerRequirementsTab } from './CustomerRequirementsTab';
@@ -32,7 +28,7 @@ export interface CustomerDetailProps {
   customer: Customer;
 }
 
-type TabType = 'overview' | 'pipeline' | 'quotations' | 'projects' | 'design' | 'production' | 'timeline' | 'requirements' | 'warranty';
+type TabType = 'overview' | 'pipeline' | 'quotations' | 'production' | 'timeline' | 'requirements' | 'warranty';
 
 export const CustomerDetail: React.FC<CustomerDetailProps> = ({ customer }) => {
   const navigate = useNavigate();
@@ -45,8 +41,6 @@ export const CustomerDetail: React.FC<CustomerDetailProps> = ({ customer }) => {
     { id: 'overview', label: 'Overview', icon: FileText },
     { id: 'pipeline', label: 'Pipeline', icon: Layers },
     { id: 'quotations', label: 'Quotations', icon: FileText },
-    { id: 'projects', label: 'Projects', icon: Briefcase },
-    { id: 'design', label: 'Design', icon: Palette },
     { id: 'production', label: 'Production', icon: Package },
     { id: 'requirements', label: 'Requirements', icon: ClipboardList },
     { id: 'timeline', label: 'Timeline', icon: Clock },
@@ -102,10 +96,6 @@ export const CustomerDetail: React.FC<CustomerDetailProps> = ({ customer }) => {
         return <CustomerPipelineTab customerId={customer.id} />;
       case 'quotations':
         return <CustomerQuotationsTab customerId={customer.id} />;
-      case 'projects':
-        return <CustomerProjectsTab customerId={customer.id} />;
-      case 'design':
-        return <CustomerDesignTab customerId={customer.id} />;
       case 'production':
         return <CustomerProductionTab customerId={customer.id} />;
       case 'requirements':

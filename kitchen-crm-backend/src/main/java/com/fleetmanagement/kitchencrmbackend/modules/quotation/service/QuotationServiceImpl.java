@@ -228,7 +228,7 @@ public class QuotationServiceImpl implements QuotationService {
             // Save kitchens first (if any)
             boolean hasKitchens = dto.getKitchens() != null && !dto.getKitchens().isEmpty();
             if (hasKitchens) {
-                saveKitchens(savedQuotation, dto.getKitchens());
+                saveKitchens(savedQuotation, dto.getKitchens(), userRole);
             } else {
                 // Legacy (no kitchens): products live at the quotation level. When kitchens
                 // exist, every product is inside a kitchen — saving the top-level lists too
@@ -262,11 +262,20 @@ public class QuotationServiceImpl implements QuotationService {
             return ApiResponse.error("Cannot update approved or rejected quotations");
         }
 
+        // A field withheld from the caller must never be writable by that caller. convertToDto
+        // strips marginPercentage (and the base totals) for anyone who is not a super admin, and
+        // the builder sends the whole DTO straight back on save — so without this guard a staff
+        // save silently writes the withheld value away. That is exactly how margin_percentage
+        // reached 0.00 on the quotations whose accessory prices were wiped.
+        boolean callerSeesPricing = "ROLE_SUPER_ADMIN".equals(userRole);
+
         // Update quotation fields
         existingQuotation.setProjectName(quotationDto.getProjectName());
         existingQuotation.setTransportationPrice(quotationDto.getTransportationPrice());
         existingQuotation.setInstallationPrice(quotationDto.getInstallationPrice());
-        existingQuotation.setMarginPercentage(quotationDto.getMarginPercentage());
+        if (callerSeesPricing && quotationDto.getMarginPercentage() != null) {
+            existingQuotation.setMarginPercentage(quotationDto.getMarginPercentage());
+        }
         existingQuotation.setTaxPercentage(quotationDto.getTaxPercentage());
         existingQuotation.setValidUntil(LocalDate.now().plusDays(30));
         existingQuotation.setNotes(quotationDto.getNotes());
@@ -353,7 +362,7 @@ public class QuotationServiceImpl implements QuotationService {
                 kdto.setOtherExpenses(k.getOtherExpenses());
                 return kdto;
             }).toList();
-            saveKitchens(existingQuotation, kitchenCreateDtos);
+            saveKitchens(existingQuotation, kitchenCreateDtos, userRole);
         }
 
         // Legacy (no kitchens) only: products live at the quotation level. When kitchens exist,
@@ -599,7 +608,7 @@ public class QuotationServiceImpl implements QuotationService {
                 QuotationAccessory accessory = new QuotationAccessory();
                 accessory.setQuotation(quotation);
                 accessory.setQuantity(accessoryDto.getQuantity());
-                accessory.setUnitPrice(resolveAccessoryUnitPrice(accessoryDto));
+                accessory.setUnitPrice(resolveAccessoryUnitPrice(accessoryDto, userRole));
                 accessory.setDescription(accessoryDto.getDescription());
                 accessory.setCustomItem(accessoryDto.getCustomItem());
                 accessory.setCustomItemName(accessoryDto.getCustomItemName());
@@ -718,7 +727,7 @@ public class QuotationServiceImpl implements QuotationService {
                 lighting.setItemType(QuotationLighting.LightingItemType.valueOf(lightingDto.getItemType()));
                 lighting.setItemId(lightingDto.getItemId());
                 lighting.setQuantity(lightingDto.getQuantity());
-                lighting.setUnitPrice(resolveLightingUnitPrice(lightingDto));
+                lighting.setUnitPrice(resolveLightingUnitPrice(lightingDto, userRole));
 
                 // CRITICAL FIX: Set the unit field based on item type
                 lighting.setUnit(determineUnit(lightingDto.getItemType()));
@@ -869,7 +878,7 @@ public class QuotationServiceImpl implements QuotationService {
         }
     }
 
-    private void saveKitchens(Quotation quotation, List<QuotationKitchenCreateDto> kitchenDtos) {
+    private void saveKitchens(Quotation quotation, List<QuotationKitchenCreateDto> kitchenDtos, String userRole) {
         for (QuotationKitchenCreateDto kitchenDto : kitchenDtos) {
             QuotationKitchen kitchen = new QuotationKitchen();
             kitchen.setQuotation(quotation);
@@ -925,11 +934,11 @@ public class QuotationServiceImpl implements QuotationService {
             }
 
             // Save products for this kitchen
-            saveKitchenProducts(savedKitchen, quotation, kitchenDto);
+            saveKitchenProducts(savedKitchen, quotation, kitchenDto, userRole);
         }
     }
     
-    private void saveKitchenProducts(QuotationKitchen kitchen, Quotation quotation, QuotationKitchenCreateDto kitchenDto) {
+    private void saveKitchenProducts(QuotationKitchen kitchen, Quotation quotation, QuotationKitchenCreateDto kitchenDto, String userRole) {
         // Save accessories for this kitchen
         if (kitchenDto.getAccessories() != null) {
             for (QuotationAccessoryDto accessoryDto : kitchenDto.getAccessories()) {
@@ -937,7 +946,7 @@ public class QuotationServiceImpl implements QuotationService {
                 accessory.setQuotation(quotation);
                 accessory.setKitchen(kitchen); // CRITICAL: Associate with kitchen
                 accessory.setQuantity(accessoryDto.getQuantity());
-                accessory.setUnitPrice(resolveAccessoryUnitPrice(accessoryDto));
+                accessory.setUnitPrice(resolveAccessoryUnitPrice(accessoryDto, userRole));
                 accessory.setDescription(accessoryDto.getDescription());
                 accessory.setCustomItem(accessoryDto.getCustomItem());
                 accessory.setCustomItemName(accessoryDto.getCustomItemName());
@@ -1044,7 +1053,7 @@ public class QuotationServiceImpl implements QuotationService {
                 lighting.setItemType(QuotationLighting.LightingItemType.valueOf(lightingDto.getItemType()));
                 lighting.setItemId(lightingDto.getItemId());
                 lighting.setQuantity(lightingDto.getQuantity());
-                lighting.setUnitPrice(resolveLightingUnitPrice(lightingDto));
+                lighting.setUnitPrice(resolveLightingUnitPrice(lightingDto, userRole));
 
                 // Set the unit field based on item type
                 lighting.setUnit(determineUnit(lightingDto.getItemType()));
@@ -1446,25 +1455,46 @@ public class QuotationServiceImpl implements QuotationService {
      * <p>Cabinets and doors do not need this — PricingServiceImpl recomputes their unit price from
      * dimensions and rates on every save.
      */
-    private BigDecimal resolveAccessoryUnitPrice(QuotationAccessoryDto dto) {
-        if (dto.getUnitPrice() != null) {
+    /**
+     * Unit price for a saved accessory line, falling back to the catalogue when the client did
+     * not supply one.
+     *
+     * <p>Non-positive counts as "not supplied", not as a real price. Staff never receive
+     * unitPrice (it is withheld in loadAccessories), and the builder used to send the withheld
+     * value back as 0 — which passed a plain null check and silently overwrote the real price
+     * with zero. A catalogued accessory is never genuinely free, so resolving from the catalogue
+     * is always the better answer; a custom line with no accessoryId can still be zero.
+     */
+    private BigDecimal resolveAccessoryUnitPrice(QuotationAccessoryDto dto, String userRole) {
+        // Staff are never shown unitPrice, so whatever their payload carries is an artefact of the
+        // withheld field, not an intention. Ignore it outright and use the catalogue.
+        boolean callerSeesPricing = "ROLE_SUPER_ADMIN".equals(userRole);
+        if (callerSeesPricing && dto.getUnitPrice() != null && dto.getUnitPrice().signum() > 0) {
             return dto.getUnitPrice();
         }
         if (dto.getAccessoryId() == null) {
-            return BigDecimal.ZERO;
+            // A custom line has no catalogue entry to fall back on, so an admin's figure stands
+            // and a staff save keeps whatever was already stored (resolved by the caller).
+            return callerSeesPricing && dto.getUnitPrice() != null ? dto.getUnitPrice() : BigDecimal.ZERO;
         }
         return productAccessoryRepository.findById(dto.getAccessoryId())
-                .map(a -> a.getCompanyPrice() != null ? a.getCompanyPrice() : BigDecimal.ZERO)
+                .map(a -> {
+                    if (a.getCompanyPrice() != null && a.getCompanyPrice().signum() > 0) {
+                        return a.getCompanyPrice();
+                    }
+                    return a.getMrp() != null ? a.getMrp() : BigDecimal.ZERO;
+                })
                 .orElse(BigDecimal.ZERO);
     }
 
-    /** See {@link #resolveAccessoryUnitPrice}. */
-    private BigDecimal resolveLightingUnitPrice(QuotationLightingDto dto) {
-        if (dto.getUnitPrice() != null) {
+    /** See {@link #resolveAccessoryUnitPrice} — same non-positive-means-unsupplied rule. */
+    private BigDecimal resolveLightingUnitPrice(QuotationLightingDto dto, String userRole) {
+        boolean callerSeesPricing = "ROLE_SUPER_ADMIN".equals(userRole);
+        if (callerSeesPricing && dto.getUnitPrice() != null && dto.getUnitPrice().signum() > 0) {
             return dto.getUnitPrice();
         }
         if (dto.getItemType() == null || dto.getItemId() == null) {
-            return BigDecimal.ZERO;
+            return callerSeesPricing && dto.getUnitPrice() != null ? dto.getUnitPrice() : BigDecimal.ZERO;
         }
         BigDecimal price = switch (dto.getItemType()) {
             case "LIGHT_PROFILE" -> lightProfileRepository.findById(dto.getItemId())

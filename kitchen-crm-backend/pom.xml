@@ -28,6 +28,13 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Actuator: only /actuator/health is exposed, and only so the container's
+             HEALTHCHECK (Dockerfile) has something real to probe. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- Env (.env) -->
         <dependency>
             <groupId>me.paulschwarz</groupId>

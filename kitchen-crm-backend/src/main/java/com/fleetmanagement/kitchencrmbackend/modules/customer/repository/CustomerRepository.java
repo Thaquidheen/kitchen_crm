@@ -26,27 +26,36 @@ public interface CustomerRepository extends JpaRepository<Customer, Long>, JpaSp
     @Query("SELECT COUNT(c) FROM Customer c WHERE c.createdAt < :beforeDate")
     Long countByCreatedAtBefore(@Param("beforeDate") LocalDateTime beforeDate);
 
-    @Query(value = "SELECT COUNT(DISTINCT c.id) FROM customers c INNER JOIN customer_projects p ON c.id = p.customer_id WHERE p.status = 'ACTIVE'", nativeQuery = true)
+    // Was: customers with an ACTIVE project. Projects are gone; a CONFIRMED customer is the
+    // surviving signal that work is actually under way.
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.status = com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer.CustomerStatus.CONFIRMED")
     Long countActiveCustomers();
 
-    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT DISTINCT p.customer.id FROM CustomerProject p WHERE p.totalAmount > 500000)")
+    // Value bands now come from quotation totals — the surviving record of what a customer is worth.
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT q.customer.id FROM Quotation q GROUP BY q.customer.id HAVING SUM(q.totalAmount) > 500000)")
     Long countPremiumCustomers();
 
-    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT DISTINCT p.customer.id FROM CustomerProject p WHERE p.totalAmount BETWEEN 100000 AND 500000)")
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT q.customer.id FROM Quotation q GROUP BY q.customer.id HAVING SUM(q.totalAmount) BETWEEN 100000 AND 500000)")
     Long countStandardCustomers();
 
-    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT DISTINCT p.customer.id FROM CustomerProject p WHERE p.totalAmount < 100000)")
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT q.customer.id FROM Quotation q GROUP BY q.customer.id HAVING SUM(q.totalAmount) < 100000)")
     Long countBudgetCustomers();
 
-    @Query("SELECT COUNT(c) FROM Customer c WHERE c.id NOT IN (SELECT DISTINCT p.customer.id FROM CustomerProject p)")
+    // A prospect is now simply a customer nobody has quoted yet. NOT EXISTS rather than NOT IN:
+    // NOT IN against an empty or null-bearing subquery does not behave the way you would expect.
+    @Query("SELECT COUNT(c) FROM Customer c WHERE NOT EXISTS (SELECT 1 FROM Quotation q WHERE q.customer.id = c.id)")
     Long countProspects();
 
     @Query("SELECT COUNT(c) FROM Customer c WHERE c.id IN (SELECT DISTINCT q.customer.id FROM Quotation q)")
     Long countLeads();
 
-    @Query(value = "SELECT COUNT(DISTINCT c.id) FROM customers c INNER JOIN customer_projects p ON c.id = p.customer_id WHERE p.status = 'COMPLETED'", nativeQuery = true)
+    // Was: customers with a COMPLETED project. A warranty card is issued at handover, so it is
+    // the surviving marker that a customer's job finished.
+    @Query("SELECT COUNT(c) FROM Customer c WHERE EXISTS (SELECT 1 FROM WarrantyCard w WHERE w.customer.id = c.id)")
     Long countCompletedCustomers();
 
-    @Query("SELECT c.id, c.name, SUM(p.receivedAmountTotal), COUNT(p) FROM Customer c JOIN CustomerProject p ON c.id = p.customer.id GROUP BY c.id, c.name ORDER BY SUM(p.receivedAmountTotal) DESC")
+    // Revenue per customer now sums their quotations. NOTE: the `limit` parameter was already
+    // unused before this change — the query has never applied it.
+    @Query("SELECT c.id, c.name, SUM(q.totalAmount), COUNT(q) FROM Customer c JOIN Quotation q ON c.id = q.customer.id GROUP BY c.id, c.name ORDER BY SUM(q.totalAmount) DESC")
     List<Object[]> getTopCustomersByRevenue(@Param("limit") int limit);
 }

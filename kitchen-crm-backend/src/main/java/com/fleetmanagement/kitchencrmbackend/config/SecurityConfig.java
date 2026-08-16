@@ -72,6 +72,10 @@ public class SecurityConfig {
                                         "/api/v1/auth/forgot-password",
                                         "/api/v1/auth/reset-password",
                                         "/api/v1/auth/validate-reset-token").permitAll()
+                                // Exactly /actuator/health, never /actuator/** — the container's
+                                // HEALTHCHECK needs it unauthenticated, and a wildcard here would
+                                // publish /actuator/env and /actuator/beans.
+                                .requestMatchers("/actuator/health").permitAll()
                                 .requestMatchers("/api/public/**").permitAll()
                                 .requestMatchers("/uploads/**").permitAll() // Allow access to uploaded images and files
                                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()

@@ -18,9 +18,7 @@ public interface WarrantyCardRepository extends JpaRepository<WarrantyCard, Long
     
     boolean existsByCustomerId(Long customerId);
 
-    @Modifying
-    @Query("UPDATE WarrantyCard w SET w.project = null WHERE w.project.id = :projectId")
-    void unlinkFromProject(@Param("projectId") Long projectId);
+    // unlinkFromProject removed with the Projects module — see the note in QuotationRepository.
 }
 
 

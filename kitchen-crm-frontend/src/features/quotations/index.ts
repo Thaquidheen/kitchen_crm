@@ -14,13 +14,6 @@ export * from './quotationsSlice';
 // Utilities
 export * from './utils/pricingCalculations';
 export * from './utils/quotationHelpers';
-export { 
-  useQuotationConversion,
-  canConvertToProject,
-  getConversionStatusMessage,
-  getConversionButtonText,
-  getConversionButtonVariant
-} from './utils/quotationConversion';
 
 // Re-export commonly used types for convenience
 export type {

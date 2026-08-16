@@ -1,7 +1,6 @@
 package com.fleetmanagement.kitchencrmbackend.modules.quotation.entity;
 
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
-import com.fleetmanagement.kitchencrmbackend.modules.project.entity.CustomerProject;
 import com.fleetmanagement.kitchencrmbackend.modules.signature.entity.SignedDocument;
 import com.fleetmanagement.kitchencrmbackend.shared.audit.Auditable;
 import jakarta.persistence.*;
@@ -34,10 +33,6 @@ public class Quotation extends Auditable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "project_id")
-    private CustomerProject project;
 
     @Column(name = "quotation_number", unique = true, nullable = false)
     private String quotationNumber;

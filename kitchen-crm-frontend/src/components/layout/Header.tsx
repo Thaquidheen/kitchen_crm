@@ -97,7 +97,7 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
           className="absolute left-[11px] top-1/2 -translate-y-1/2 text-text-500 pointer-events-none"
         />
         <input
-          placeholder="Search customers, projects, invoices…"
+          placeholder="Search customers, quotations, invoices…"
           className="w-full h-[34px] pl-[34px] pr-3 rounded-[10px] border border-background-600 bg-background-900 text-text-900 text-[13px] outline-none focus:border-primary-600 transition-colors placeholder:text-text-500"
         />
       </div>

@@ -57,16 +57,20 @@ type BuilderStep = 'customer' | 'kitchens' | 'products' | 'review';
 // Map a saved accessory row into the builder's shape, preserving identity (accessoryId)
 // and elevation so later adds of the same accessory merge instead of duplicating.
 function mapLoadedAccessory(a: any) {
+  // Staff are not sent unitPrice at all. Coercing that absence to 0 was silently destroying the
+  // price: the 0 came back on the next save, passed the backend's null check, and overwrote the
+  // real figure. Keep it undefined so "withheld" stays distinguishable from "actually zero".
+  const unit = a.unitPrice == null ? undefined : Number(a.unitPrice);
   return {
     id: a.accessoryId || a.id,
     accessoryId: a.accessoryId || a.id,
     quantity: a.quantity,
-    unitPrice: Number(a.unitPrice || 0),
+    unitPrice: unit,
     // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
-    totalPrice: Number(a.unitPrice || 0) * (a.quantity || 1),
+    totalPrice: unit == null ? undefined : unit * (a.quantity || 1),
     name: a.description || a.accessoryName || 'Accessory',
     description: a.description || a.accessoryName || 'Accessory',
-    price: Number(a.unitPrice || 0),
+    price: unit,
     brandName: a.brandName,
     elevationId: a.elevationId,
     elevationName: a.elevationName,

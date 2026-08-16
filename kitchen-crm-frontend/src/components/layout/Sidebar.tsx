@@ -12,8 +12,6 @@ import {
   Users,
   Package,
   FileText,
-  FolderKanban,
-  Palette,
   Hammer,
   Settings,
   ChevronLeft,
@@ -63,13 +61,11 @@ const navGroups: NavGroup[] = [
       { label: 'Quotations', path: ROUTES.QUOTATIONS, icon: <FileText size={18} /> },
       { label: 'Appliance & Quartz', path: ROUTES.APPLIANCE_QUARTZ, icon: <Refrigerator size={18} /> },
       { label: 'Reminders', path: ROUTES.REMINDERS, icon: <BellRing size={18} /> },
-      { label: 'Projects', path: ROUTES.PROJECTS, icon: <FolderKanban size={18} /> },
     ],
   },
   {
     label: 'Operations',
     items: [
-      { label: 'Design Phase', path: ROUTES.DESIGN_PHASE, icon: <Palette size={18} /> },
       { label: 'Production', path: ROUTES.PRODUCTION, icon: <Hammer size={18} /> },
       { label: 'Products', path: ROUTES.PRODUCTS, icon: <Package size={18} /> },
     ],

@@ -6,8 +6,6 @@ import com.fleetmanagement.kitchencrmbackend.modules.notification.dto.EmailReque
 import com.fleetmanagement.kitchencrmbackend.modules.notification.dto.EmailResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.notification.service.EmailService;
 import com.fleetmanagement.kitchencrmbackend.modules.notification.service.EmailTemplateService;
-import com.fleetmanagement.kitchencrmbackend.modules.project.entity.CustomerProject;
-import com.fleetmanagement.kitchencrmbackend.modules.project.repository.CustomerProjectRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.settings.entity.SystemSetting;
 import com.fleetmanagement.kitchencrmbackend.modules.settings.repository.SystemSettingRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.warranty.dto.WarrantyCardDto;
@@ -41,9 +39,6 @@ public class WarrantyCardServiceImpl implements WarrantyCardService {
 
     @Autowired
     private CustomerRepository customerRepository;
-
-    @Autowired
-    private CustomerProjectRepository projectRepository;
 
     @Autowired
     private WarrantyCardPdfService pdfService;
@@ -112,12 +107,6 @@ public class WarrantyCardServiceImpl implements WarrantyCardService {
         WarrantyCard warrantyCard = new WarrantyCard();
         warrantyCard.setCustomer(customer);
         
-        if (dto.getProjectId() != null) {
-            CustomerProject project = projectRepository.findById(dto.getProjectId())
-                    .orElse(null);
-            warrantyCard.setProject(project);
-        }
-
         updateWarrantyCardFields(warrantyCard, dto);
         warrantyCard.setCreatedBy(createdBy);
         
@@ -135,12 +124,6 @@ public class WarrantyCardServiceImpl implements WarrantyCardService {
     public WarrantyCardResponse updateWarrantyCard(Long warrantyCardId, WarrantyCardDto dto, String updatedBy) {
         WarrantyCard warrantyCard = warrantyCardRepository.findById(warrantyCardId)
                 .orElseThrow(() -> new RuntimeException("Warranty card not found: " + warrantyCardId));
-
-        if (dto.getProjectId() != null && !dto.getProjectId().equals(warrantyCard.getProject() != null ? warrantyCard.getProject().getId() : null)) {
-            CustomerProject project = projectRepository.findById(dto.getProjectId())
-                    .orElse(null);
-            warrantyCard.setProject(project);
-        }
 
         updateWarrantyCardFields(warrantyCard, dto);
         warrantyCard.setUpdatedBy(updatedBy);
@@ -329,15 +312,16 @@ public class WarrantyCardServiceImpl implements WarrantyCardService {
 
     private WarrantyCardResponse convertToResponse(WarrantyCard warrantyCard) {
         Customer customer = warrantyCard.getCustomer();
-        CustomerProject project = warrantyCard.getProject();
 
         return WarrantyCardResponse.builder()
                 .id(warrantyCard.getId())
                 .customerId(customer.getId())
                 .customerName(customer.getName())
                 .customerEmail(customer.getEmail())
-                .projectId(project != null ? project.getId() : null)
-                .projectName(project != null ? project.getProjectName() : null)
+                // Projects were retired; the response keeps these fields so the shape is
+                // unchanged for any client still reading them.
+                .projectId(null)
+                .projectName(null)
                 .certificateNumber(warrantyCard.getCertificateNumber())
                 .issueDate(warrantyCard.getIssueDate())
                 .projectCompletionDate(warrantyCard.getProjectCompletionDate())

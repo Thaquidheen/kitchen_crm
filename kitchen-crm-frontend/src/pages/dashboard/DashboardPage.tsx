@@ -168,10 +168,10 @@ export function DashboardPage() {
   const alerts = [
     {
       label: 'Payments pending',
-      sub: 'Outstanding across all projects',
+      sub: 'Outstanding across all customers',
       count: inr(s.pendingPayments),
       st: 'lost',
-      to: ROUTES.PROJECTS,
+      to: ROUTES.FINANCE,
       show: Number(s.pendingPayments ?? 0) > 0,
     },
     {
@@ -197,14 +197,6 @@ export function DashboardPage() {
       st: 'nego',
       to: ROUTES.REMINDERS,
       show: Number((remStats as any)?.overdue ?? 0) > 0,
-    },
-    {
-      label: 'Projects behind schedule',
-      sub: 'Installation slipped past plan',
-      count: String(s.overdueProjects ?? 0),
-      st: 'lead',
-      to: ROUTES.PROJECTS,
-      show: Number(s.overdueProjects ?? 0) > 0,
     },
     {
       label: 'Production jobs stalled',

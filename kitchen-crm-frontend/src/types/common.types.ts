@@ -43,29 +43,6 @@ export const QuotationStatus = {
 
 export type QuotationStatus = typeof QuotationStatus[keyof typeof QuotationStatus];
 
-// Project statuses
-export const ProjectStatus = {
-  ACTIVE: 'ACTIVE',
-  IN_PROGRESS: 'IN_PROGRESS',
-  COMPLETED: 'COMPLETED',
-  CANCELLED: 'CANCELLED',
-  ON_HOLD: 'ON_HOLD',
-} as const;
-
-export type ProjectStatus = typeof ProjectStatus[keyof typeof ProjectStatus];
-
-// Design phase statuses
-export const DesignStatus = {
-  INITIAL: 'INITIAL',
-  IN_PROGRESS: 'IN_PROGRESS',
-  SUBMITTED: 'SUBMITTED',
-  APPROVED: 'APPROVED',
-  REJECTED: 'REJECTED',
-  REVISED: 'REVISED',
-} as const;
-
-export type DesignStatus = typeof DesignStatus[keyof typeof DesignStatus];
-
 // Installation statuses
 export const InstallationStatus = {
   PLANNING: 'PLANNING',

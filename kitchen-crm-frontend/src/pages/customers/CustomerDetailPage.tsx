@@ -20,7 +20,6 @@ import {
   Pencil,
   Trash2,
   FileText,
-  FolderKanban,
   IndianRupee,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -29,7 +28,6 @@ import {
   useUpdateCustomerStatusMutation,
   useDeleteCustomerMutation,
 } from '../../features/customers/customersAPI';
-import { useGetProjectsByCustomerQuery } from '../../features/projects/projectsAPI';
 import { useGetQuotationsByCustomerQuery } from '../../app/baseApi';
 import { CustomerFormModal } from '../../features/customers/components/CustomerFormModal';
 import { CustomerFollowUps } from '../../features/customers/components/CustomerFollowUps';
@@ -44,7 +42,7 @@ import { customerLeadSource, leadSourceLabel } from '../../features/customers/le
 import type { CustomerStatus } from '../../features/customers/types';
 
 // Timeline is gone as a tab — its feed now lives on Overview, where notes are written.
-const TABS = ['Overview', 'Reminders', 'Pipeline', 'Quotations', 'Projects', 'Design', 'Production', 'Warranty'];
+const TABS = ['Overview', 'Reminders', 'Pipeline', 'Quotations', 'Production', 'Warranty'];
 
 const STATUS_OPTIONS: Array<{ value: CustomerStatus; label: string }> = [
   { value: 'LEAD', label: 'Lead' },
@@ -79,7 +77,6 @@ const CustomerDetailPage: React.FC = () => {
 
   const { data: customer, isLoading, error } = useGetCustomerByIdQuery(customerId!, { skip: !customerId });
   const { data: quotationsRaw } = useGetQuotationsByCustomerQuery(customerId!, { skip: !customerId });
-  const { data: projects } = useGetProjectsByCustomerQuery(customerId!, { skip: !customerId });
 
   const [updateStatus] = useUpdateCustomerStatusMutation();
   const [deleteCustomer, { isLoading: isDeleting }] = useDeleteCustomerMutation();
@@ -123,7 +120,6 @@ const CustomerDetailPage: React.FC = () => {
     (sum: number, q: any) => sum + (Number(q.totalAmount) || 0),
     0
   );
-  const projectCount: number = Array.isArray(projects) ? projects.length : 0;
 
   const handleStatusChange = async (note: string) => {
     if (!pendingStatus) return;
@@ -162,7 +158,6 @@ const CustomerDetailPage: React.FC = () => {
 
   const stats = [
     { icon: <FileText size={16} />, label: 'Quotations', value: String(quotationCount) },
-    { icon: <FolderKanban size={16} />, label: 'Projects', value: String(projectCount) },
     {
       icon: <IndianRupee size={16} />,
       label: 'Total Value',
@@ -291,7 +286,7 @@ const CustomerDetailPage: React.FC = () => {
           {/* Right column */}
           <div className="space-y-4 min-w-0">
             {/* Stat cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {stats.map((s) => (
                 <div key={s.label} className="bg-background-800 border border-background-600 rounded-[14px] px-4 py-3.5 flex items-center gap-3">
                   <div

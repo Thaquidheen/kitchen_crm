@@ -19,29 +19,32 @@ public class QuotationKitchenDto {
     private Integer kitchenOrder;
 
     // Category totals
-    private BigDecimal accessoriesBaseTotal = BigDecimal.ZERO;
-    private BigDecimal accessoriesMarginAmount = BigDecimal.ZERO;
+    // Withheld-for-staff pricing fields carry NO default. A ZERO initialiser made a
+    // withheld field serialise as 0 — indistinguishable from real data, and the same
+    // artefact class that let a staff save wipe stored prices. Absent must mean null.
+    private BigDecimal accessoriesBaseTotal;
+    private BigDecimal accessoriesMarginAmount;
     private BigDecimal accessoriesTaxAmount = BigDecimal.ZERO;
     private BigDecimal accessoriesFinalTotal = BigDecimal.ZERO;
 
-    private BigDecimal cabinetsBaseTotal = BigDecimal.ZERO;
-    private BigDecimal cabinetsMarginAmount = BigDecimal.ZERO;
+    private BigDecimal cabinetsBaseTotal;
+    private BigDecimal cabinetsMarginAmount;
     private BigDecimal cabinetsTaxAmount = BigDecimal.ZERO;
     private BigDecimal cabinetsFinalTotal = BigDecimal.ZERO;
 
-    private BigDecimal doorsBaseTotal = BigDecimal.ZERO;
-    private BigDecimal doorsMarginAmount = BigDecimal.ZERO;
+    private BigDecimal doorsBaseTotal;
+    private BigDecimal doorsMarginAmount;
     private BigDecimal doorsTaxAmount = BigDecimal.ZERO;
     private BigDecimal doorsFinalTotal = BigDecimal.ZERO;
 
-    private BigDecimal lightingBaseTotal = BigDecimal.ZERO;
-    private BigDecimal lightingMarginAmount = BigDecimal.ZERO;
+    private BigDecimal lightingBaseTotal;
+    private BigDecimal lightingMarginAmount;
     private BigDecimal lightingTaxAmount = BigDecimal.ZERO;
     private BigDecimal lightingFinalTotal = BigDecimal.ZERO;
 
     // Kitchen totals
-    private BigDecimal subtotal = BigDecimal.ZERO;
-    private BigDecimal marginAmount = BigDecimal.ZERO;
+    private BigDecimal subtotal;
+    private BigDecimal marginAmount;
     private BigDecimal taxAmount = BigDecimal.ZERO;
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
