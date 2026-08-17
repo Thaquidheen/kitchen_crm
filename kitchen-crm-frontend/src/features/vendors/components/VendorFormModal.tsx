@@ -1,12 +1,14 @@
 /**
  * VendorFormModal
- * Modal for adding/editing vendors
+ * Add/edit vendor. Also embedded by the finance release form via `onCreated`, which keeps the
+ * modal mounted — so defaults must re-sync whenever `vendor` changes (see the reset effect).
  */
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useCreateVendorMutation, useUpdateVendorMutation } from '@/features/vendors/vendorsAPI';
+import { useCreateVendorMutation, useUpdateVendorMutation, VENDOR_TYPES, VENDOR_TYPE_LABELS } from '@/features/vendors/vendorsAPI';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
@@ -21,12 +23,38 @@ const vendorSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   address: z.string().optional(),
-  vendorType: z.string().min(1, 'Vendor type is required'),
-  active: z.boolean().default(true),
+  vendorType: z.enum(VENDOR_TYPES),
+  // A <select> yields the STRING "true"/"false"; the old plain z.boolean() failed on it, which
+  // silently blocked submit whenever the Status dropdown had been touched. Model it as the
+  // string it really is and convert once, at submit.
+  active: z.enum(['true', 'false']),
   notes: z.string().optional(),
 });
 
 type VendorFormData = z.infer<typeof vendorSchema>;
+
+const defaultsFor = (vendor?: Vendor | null): VendorFormData =>
+  vendor
+    ? {
+        vendorName: vendor.vendorName,
+        contactPerson: vendor.contactPerson || '',
+        phone: vendor.phone || '',
+        email: vendor.email || '',
+        address: vendor.address || '',
+        vendorType: vendor.vendorType,
+        active: vendor.active ? 'true' : 'false',
+        notes: vendor.notes || '',
+      }
+    : {
+        vendorName: '',
+        contactPerson: '',
+        phone: '',
+        email: '',
+        address: '',
+        vendorType: 'MATERIAL_SUPPLIER',
+        active: 'true',
+        notes: '',
+      };
 
 interface VendorFormModalProps {
   isOpen: boolean;
@@ -47,21 +75,14 @@ export default function VendorFormModal({ isOpen, onClose, vendor, onCreated }: 
     reset,
   } = useForm<VendorFormData>({
     resolver: zodResolver(vendorSchema),
-    defaultValues: vendor ? {
-      vendorName: vendor.vendorName,
-      contactPerson: vendor.contactPerson || '',
-      phone: vendor.phone || '',
-      email: vendor.email || '',
-      address: vendor.address || '',
-      vendorType: vendor.vendorType,
-      active: vendor.active,
-      notes: vendor.notes || '',
-    } : {
-      vendorName: '',
-      vendorType: 'MATERIAL_SUPPLIER',
-      active: true,
-    },
+    defaultValues: defaultsFor(vendor),
   });
+
+  // defaultValues are only read on mount. Without this, a modal kept mounted across "edit A,
+  // close, edit B" keeps showing (and saving!) A's values.
+  useEffect(() => {
+    if (isOpen) reset(defaultsFor(vendor));
+  }, [isOpen, vendor, reset]);
 
   const onSubmit = async (data: VendorFormData) => {
     try {
@@ -72,23 +93,22 @@ export default function VendorFormModal({ isOpen, onClose, vendor, onCreated }: 
         email: data.email || undefined,
         address: data.address || undefined,
         vendorType: data.vendorType,
-        active: data.active,
+        active: data.active === 'true',
         notes: data.notes || undefined,
       };
 
       if (vendor) {
         await updateVendor({ id: vendor.id, vendor: vendorData }).unwrap();
-        toast.success('Vendor updated successfully');
+        toast.success('Vendor updated');
       } else {
         const created = await createVendor(vendorData).unwrap();
-        toast.success('Vendor created successfully');
+        toast.success('Vendor created');
         if (created && onCreated) onCreated(created);
       }
 
       onClose();
-      reset();
+      reset(defaultsFor(null));
     } catch (error: any) {
-      console.error('Error saving vendor:', error);
       toast.error(error?.data?.message || 'Failed to save vendor');
     }
   };
@@ -96,82 +116,41 @@ export default function VendorFormModal({ isOpen, onClose, vendor, onCreated }: 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={vendor ? 'Edit Vendor' : 'Add Vendor'}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <Input
-          label="Vendor Name *"
-          {...register('vendorName')}
-          error={errors.vendorName?.message}
-        />
+        <Input label="Vendor Name *" {...register('vendorName')} error={errors.vendorName?.message} />
 
-        <Input
-          label="Contact Person"
-          {...register('contactPerson')}
-          error={errors.contactPerson?.message}
-        />
+        <Input label="Contact Person" {...register('contactPerson')} error={errors.contactPerson?.message} />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            label="Phone"
-            {...register('phone')}
-            error={errors.phone?.message}
-          />
-
-          <Input
-            label="Email"
-            type="email"
-            {...register('email')}
-            error={errors.email?.message}
-          />
+          <Input label="Phone" {...register('phone')} error={errors.phone?.message} />
+          <Input label="Email" type="email" {...register('email')} error={errors.email?.message} />
         </div>
 
-        <TextArea
-          label="Address"
-          {...register('address')}
-          error={errors.address?.message}
-          rows={3}
-        />
+        <TextArea label="Address" {...register('address')} error={errors.address?.message} rows={3} />
 
-        <Select
-          label="Vendor Type *"
-          {...register('vendorType')}
-          error={errors.vendorType?.message}
-        >
-          <option value="MATERIAL_SUPPLIER">Material Supplier</option>
-          <option value="LABOR_CONTRACTOR">Labor Contractor</option>
-          <option value="TRANSPORT_SERVICE">Transport Service</option>
-          <option value="APPLIANCE_VENDOR">Appliance Vendor</option>
-          <option value="OTHER">Other</option>
+        <Select label="Vendor Type *" {...register('vendorType')} error={errors.vendorType?.message}>
+          {VENDOR_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {VENDOR_TYPE_LABELS[t]}
+            </option>
+          ))}
         </Select>
 
-        <Select
-          label="Status"
-          {...register('active')}
-        >
+        <Select label="Status" {...register('active')} error={errors.active?.message}>
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </Select>
 
-        <TextArea
-          label="Notes"
-          {...register('notes')}
-          error={errors.notes?.message}
-          rows={3}
-        />
+        <TextArea label="Notes" {...register('notes')} error={errors.notes?.message} rows={3} />
 
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-2 mt-6">
           <Button type="button" variant="secondary" onClick={onClose} className="w-full sm:w-auto">
             Cancel
           </Button>
           <Button type="submit" variant="primary" disabled={isCreating || isUpdating} className="w-full sm:w-auto">
-            {vendor ? (isUpdating ? 'Updating...' : 'Update Vendor') : (isCreating ? 'Creating...' : 'Create Vendor')}
+            {vendor ? (isUpdating ? 'Updating…' : 'Update Vendor') : (isCreating ? 'Creating…' : 'Create Vendor')}
           </Button>
         </div>
       </form>
     </Modal>
   );
 }
-
-
-
-
-
-

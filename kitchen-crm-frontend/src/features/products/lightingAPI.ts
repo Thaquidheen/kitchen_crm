@@ -1,6 +1,9 @@
 /**
  * Lighting API
  * RTK Query API for managing lighting products
+ *
+ * Delete mutations return the raw ApiResponse (not just .data) so managers can surface the
+ * 200-with-success:false "in use" refusal with the server's message.
  */
 
 import { baseApi } from '../../app/baseApi';
@@ -55,13 +58,12 @@ export const lightingApi = baseApi.injectEndpoints({
       }),
     }),
 
-    deleteLightProfile: builder.mutation<string, number>({
+    deleteLightProfile: builder.mutation<ApiResponse<string>, number>({
       query: (id) => ({
         url: `/lighting/profiles/${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['Lighting'],
-      transformResponse: (response: any) => response.data,
     }),
 
     // Drivers
@@ -111,13 +113,12 @@ export const lightingApi = baseApi.injectEndpoints({
       }),
     }),
 
-    deleteDriver: builder.mutation<string, number>({
+    deleteDriver: builder.mutation<ApiResponse<string>, number>({
       query: (id) => ({
         url: `/lighting/drivers/${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['Lighting'],
-      transformResponse: (response: any) => response.data,
     }),
 
     // Connectors
@@ -167,13 +168,12 @@ export const lightingApi = baseApi.injectEndpoints({
       }),
     }),
 
-    deleteConnector: builder.mutation<string, number>({
+    deleteConnector: builder.mutation<ApiResponse<string>, number>({
       query: (id) => ({
         url: `/lighting/connectors/${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['Lighting'],
-      transformResponse: (response: any) => response.data,
     }),
 
     // Sensors
@@ -223,13 +223,12 @@ export const lightingApi = baseApi.injectEndpoints({
       }),
     }),
 
-    deleteSensor: builder.mutation<string, number>({
+    deleteSensor: builder.mutation<ApiResponse<string>, number>({
       query: (id) => ({
         url: `/lighting/sensors/${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['Lighting'],
-      transformResponse: (response: ApiResponse<string>) => response.data,
     }),
   }),
 });

@@ -134,6 +134,7 @@ const baseQuery = fetchBaseQuery({
     // Allow multipart/form-data requests to control their own Content-Type
     // If a request sets this flag, we skip forcing JSON so the browser can set a proper boundary
     const skipJsonContentType = headers.get('X-Skip-Json-Content-Type') === 'true';
+    headers.delete('X-Skip-Json-Content-Type'); // internal marker, never send it
     if (!skipJsonContentType) {
       headers.set('Content-Type', 'application/json');
     }

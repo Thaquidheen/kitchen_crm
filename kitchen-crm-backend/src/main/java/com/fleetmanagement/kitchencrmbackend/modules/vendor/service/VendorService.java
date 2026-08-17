@@ -12,9 +12,12 @@ import java.util.List;
 public interface VendorService {
 
     /**
-     * Get all vendors with pagination
+     * Get vendors with pagination and optional filters. Every filter may be null:
+     * search matches name/contact person/phone/email, vendorType is an exact match,
+     * active narrows to active or inactive only.
      */
-    ApiResponse<Page<VendorDto>> getAllVendors(Pageable pageable);
+    ApiResponse<Page<VendorDto>> getAllVendors(String search, String vendorType, Boolean active,
+                                               Pageable pageable);
 
     /**
      * Get all active vendors

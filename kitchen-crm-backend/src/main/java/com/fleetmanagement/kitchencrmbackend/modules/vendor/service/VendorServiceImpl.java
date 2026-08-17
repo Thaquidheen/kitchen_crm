@@ -6,12 +6,16 @@ import com.fleetmanagement.kitchencrmbackend.modules.vendor.dto.VendorDto;
 import com.fleetmanagement.kitchencrmbackend.modules.vendor.dto.VendorUpdateDto;
 import com.fleetmanagement.kitchencrmbackend.modules.vendor.entity.Vendor;
 import com.fleetmanagement.kitchencrmbackend.modules.vendor.repository.VendorRepository;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,10 +27,45 @@ public class VendorServiceImpl implements VendorService {
     private VendorRepository vendorRepository;
 
     @Override
-    public ApiResponse<Page<VendorDto>> getAllVendors(Pageable pageable) {
-        Page<Vendor> vendors = vendorRepository.findAll(pageable);
+    public ApiResponse<Page<VendorDto>> getAllVendors(String search, String vendorType,
+                                                      Boolean active, Pageable pageable) {
+        // Vendor is a flat entity — plain predicates, no joins, so the count query that Spring
+        // Data derives from this same specification cannot inflate totalElements.
+        Specification<Vendor> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (StringUtils.hasText(search)) {
+                String like = "%" + search.trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("vendorName")), like),
+                        cb.like(cb.lower(root.get("contactPerson")), like),
+                        cb.like(cb.lower(root.get("phone")), like),
+                        cb.like(cb.lower(root.get("email")), like)));
+            }
+            if (StringUtils.hasText(vendorType)) {
+                Vendor.VendorType type = parseVendorType(vendorType);
+                if (type != null) {
+                    predicates.add(cb.equal(root.get("vendorType"), type));
+                }
+            }
+            if (active != null) {
+                predicates.add(cb.equal(root.get("active"), active));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Vendor> vendors = vendorRepository.findAll(spec, pageable);
         Page<VendorDto> vendorDtos = vendors.map(this::convertToDto);
         return ApiResponse.success(vendorDtos);
+    }
+
+    /** Unknown values filter nothing rather than throwing 500 on a mistyped query param. */
+    private Vendor.VendorType parseVendorType(String value) {
+        try {
+            return Vendor.VendorType.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     @Override

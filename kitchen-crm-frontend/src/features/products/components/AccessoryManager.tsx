@@ -1,43 +1,96 @@
 /**
- * AccessoryManager Component
- * Manage special accessories with CRUD operations
+ * AccessoryManager — the Accessories tab of the product catalog in the HOCH table idiom
+ * (VendorsPage reference). The page shell renders the H1 and tab chips; this manager renders
+ * only the count/Add row, one table card, and its modals.
+ *
+ * Fixes over the old card grid:
+ * - THE TRUNCATION BUG: the old tab wired `page` into the query but rendered no pagination, so
+ *   only the first 20 accessories were ever reachable. Now uses the paginated query + footer.
+ * - Search is debounced server-side (the backend filters by `name`) and resets the page.
+ * - Fetch failures show an error row — before, they looked like an empty catalog.
+ * - Delete confirms via ConfirmDialog (no window.confirm) and surfaces a 200-with-
+ *   success:false "in use" response instead of toasting success.
+ * - Write controls (Add / edit / delete / toggle) render only for SUPER_ADMIN — every write
+ *   endpoint is admin-only and staff used to get a 403 after filling the whole form.
+ * - Inactive rows show a status pill instead of 60% opacity.
  */
 
-import { useState, useRef } from 'react';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Search, Package, DollarSign, Upload, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Plus, Search, Edit, Trash2, Eye, EyeOff, Package, Upload, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useGetCategoriesQuery, useGetActiveBrandsQuery, useGetAccessoriesQuery, useCreateAccessoryMutation, useUpdateAccessoryMutation, useDeleteAccessoryMutation, useUploadAccessoryImageMutation } from '../productsAPI';
-import type { Accessory } from '../types';
+import {
+  useGetCategoriesQuery,
+  useGetActiveBrandsQuery,
+  useGetAccessoriesPaginatedQuery,
+  useCreateAccessoryMutation,
+  useUpdateAccessoryMutation,
+  useDeleteAccessoryMutation,
+  useUploadAccessoryImageMutation,
+} from '../productsAPI';
+import type { Accessory, Category } from '../types';
+import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
-import { Card } from '@/components/ui/Card';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 import { getImageUrl } from '@/utils/imageUtils';
+import {
+  thClass,
+  thActionsClass,
+  iconBtn,
+  searchInputCls,
+  cardCls,
+  inputCls,
+  labelCls,
+  ActivePill,
+  SkeletonRows,
+  ErrorRow,
+  EmptyRow,
+  TableFooter,
+  useDebouncedSearch,
+} from './tableKit';
+
+/** Keep in sync with the header row below — skeleton/error/empty rows span every column. */
+const COL_COUNT = 9;
+
+const PAGE_SIZE = 20;
+
+/** Grey "No Image" placeholder for broken thumbnails/previews (same data URI the old form used). */
+const IMG_FALLBACK =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="128" height="128"%3E%3Crect fill="%23333" width="128" height="128"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-size="12"%3ENo Image%3C/text%3E%3C/svg%3E';
 
 export const AccessoryManager = () => {
+  const isSuperAdmin = useIsSuperAdmin();
   const [page, setPage] = useState(0);
-  const [search, setSearch] = useState('');
-  const [showForm, setShowForm] = useState(false);
+  const { draft, setDraft, search } = useDebouncedSearch(() => setPage(0));
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAccessory, setEditingAccessory] = useState<Accessory | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Accessory | null>(null);
 
-  // API hooks
-  const { data: accessoriesData, isLoading } = useGetAccessoriesQuery({
+  const { data, isLoading, isError } = useGetAccessoriesPaginatedQuery({
     name: search || undefined,
     page,
-    size: 20,
+    size: PAGE_SIZE,
     sortBy: 'name',
     sortDir: 'asc',
   });
 
-  const { data: categoriesResponse } = useGetCategoriesQuery();
+  // Deleting the last row of the last page leaves the page index past the end — walk back.
+  useEffect(() => {
+    if (data && page > 0 && page >= data.totalPages) {
+      setPage(Math.max(0, data.totalPages - 1));
+    }
+  }, [data, page]);
+  const { data: categoriesData } = useGetCategoriesQuery();
 
   const [createAccessory, { isLoading: isCreating }] = useCreateAccessoryMutation();
   const [updateAccessory, { isLoading: isUpdating }] = useUpdateAccessoryMutation();
   const [deleteAccessory, { isLoading: isDeleting }] = useDeleteAccessoryMutation();
   const [uploadImage, { isLoading: isUploading }] = useUploadAccessoryImageMutation();
 
-  const accessories = accessoriesData || [];
-  const categories = categoriesResponse || [];
+  const accessories = data?.content ?? [];
+  const totalElements = data?.totalElements ?? 0;
+  const totalPages = data?.totalPages ?? 0;
+  const categories = categoriesData ?? [];
 
   const handleSubmit = async (values: Partial<Accessory>, imageFile?: File) => {
     try {
@@ -51,7 +104,7 @@ export const AccessoryManager = () => {
         toast.success('Accessory created successfully');
       }
 
-      // Upload image if provided
+      // Two-step save: the image goes up separately; its failure must not undo the entity save.
       if (imageFile && savedAccessory?.id) {
         try {
           await uploadImage({ id: savedAccessory.id, file: imageFile }).unwrap();
@@ -61,21 +114,26 @@ export const AccessoryManager = () => {
         }
       }
 
-      setShowForm(false);
+      setIsModalOpen(false);
       setEditingAccessory(null);
     } catch (e: any) {
       toast.error(e?.data?.message || 'Failed to save accessory');
     }
   };
 
-  const handleDelete = async (id: number, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${name}"?`)) {
-      return;
-    }
-
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteAccessory(id).unwrap();
+      // deleteAccessory returns the raw ApiResponse: the backend answers 200 with
+      // success:false when the accessory is referenced by quotations.
+      const response = await deleteAccessory(deleteTarget.id).unwrap();
+      if (response.success === false) {
+        toast.error(response.message || `"${deleteTarget.name}" is in use and cannot be deleted`);
+        setDeleteTarget(null);
+        return;
+      }
       toast.success('Accessory deleted successfully');
+      setDeleteTarget(null);
     } catch (e: any) {
       toast.error(e?.data?.message || 'Failed to delete accessory');
     }
@@ -90,194 +148,249 @@ export const AccessoryManager = () => {
     }
   };
 
-  if (showForm || editingAccessory) {
-    return (
-      <AccessoryForm
-        initialValues={editingAccessory || undefined}
-        categories={categories}
-        onSubmit={handleSubmit}
-        onCancel={() => {
-          setShowForm(false);
-          setEditingAccessory(null);
-        }}
-        isLoading={isCreating || isUpdating || isUploading}
-      />
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="space-y-3 sm:space-y-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-background-800 border border-background-600 rounded-lg p-3 sm:p-4 animate-pulse">
-            <div className="h-5 sm:h-6 bg-background-700 rounded w-1/3 mb-2"></div>
-            <div className="h-3 sm:h-4 bg-background-700 rounded w-2/3"></div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4 sm:space-y-5 lg:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-semibold text-text-900">Accessories</h2>
-          <p className="text-xs sm:text-sm text-text-600 mt-1">{accessories.length} accessory item{accessories.length === 1 ? '' : 's'}</p>
-        </div>
-        <Button onClick={() => setShowForm(true)} className="w-full sm:w-auto">
-          <Plus className="w-4 h-4 mr-2" />
-          <span className="hidden xs:inline">Add Accessory</span>
-          <span className="xs:hidden">Add</span>
-        </Button>
+    <div className="w-full">
+      {/* Count + Add row (the page shell owns the H1 and tab chips) */}
+      <div className="flex items-center gap-3 flex-wrap mb-3">
+        <span className="text-[13px] text-text-700">
+          {isLoading ? 'Loading…' : `${totalElements} accessor${totalElements === 1 ? 'y' : 'ies'}`}
+        </span>
+        <div className="flex-1" />
+        {isSuperAdmin && (
+          <button
+            onClick={() => {
+              setEditingAccessory(null);
+              setIsModalOpen(true);
+            }}
+            className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold whitespace-nowrap"
+          >
+            <span className="w-5 h-5 rounded-md bg-white/20 backdrop-blur-[2px] flex items-center justify-center shrink-0">
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </span>
+            Add Accessory
+          </button>
+        )}
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-text-500 w-4 h-4 sm:w-5 sm:h-5" />
-        <Input
-          type="text"
-          placeholder="Search accessories..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-8 sm:pl-10 text-sm sm:text-base"
+      {/* Table card */}
+      <div className={cardCls}>
+        {/* Toolbar */}
+        <div className="flex items-center gap-2.5 px-3.5 py-3 flex-wrap">
+          <div className="relative flex-1 min-w-[220px] max-w-[480px]">
+            <Search
+              size={15}
+              className="absolute left-[11px] top-1/2 -translate-y-1/2 text-text-500 pointer-events-none"
+            />
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="Search accessories…"
+              className={searchInputCls}
+            />
+          </div>
+          <div className="flex-1" />
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1100px]">
+            <thead>
+              <tr className="border-t border-background-600 bg-background-700">
+                <th className={thClass}>Item</th>
+                <th className={thClass}>Category</th>
+                <th className={thClass}>Brand</th>
+                <th className={thClass}>MRP</th>
+                <th className={thClass}>Discount %</th>
+                <th className={thClass}>Company Price</th>
+                <th className={thClass}>Width (mm)</th>
+                <th className={thClass}>Status</th>
+                <th className={thActionsClass}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <SkeletonRows cols={COL_COUNT} />
+              ) : isError ? (
+                <ErrorRow cols={COL_COUNT} entity="accessories" />
+              ) : accessories.length === 0 ? (
+                <EmptyRow
+                  cols={COL_COUNT}
+                  filtered={!!search}
+                  title="No accessories yet"
+                  sub="Add your first accessory with the button above."
+                />
+              ) : (
+                accessories.map((accessory) => (
+                  <tr
+                    key={accessory.id}
+                    className="border-t border-background-600 hover:bg-background-700 transition-colors"
+                  >
+                    <td className="px-3 py-[13px]">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {accessory.imageUrl ? (
+                          <img
+                            src={getImageUrl(accessory.imageUrl)}
+                            alt={accessory.name}
+                            className="w-12 h-12 rounded-[9px] border border-background-600 object-cover bg-background-700 shrink-0"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = IMG_FALLBACK;
+                            }}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-[9px] border border-background-600 bg-background-700 flex items-center justify-center shrink-0">
+                            <Package size={18} className="text-text-500" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div className="text-[13.5px] font-semibold text-text-900 whitespace-nowrap overflow-hidden text-ellipsis max-w-[240px]">
+                            {accessory.name}
+                          </div>
+                          {accessory.materialCode && (
+                            <div className="text-xs text-text-700 whitespace-nowrap overflow-hidden text-ellipsis max-w-[240px]">
+                              {accessory.materialCode}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 py-[13px] text-[13px] text-text-800 whitespace-nowrap">
+                      {accessory.categoryName || '—'}
+                    </td>
+                    <td className="px-3 py-[13px] text-[13px] text-text-800 whitespace-nowrap">
+                      {accessory.brandName || '—'}
+                    </td>
+                    <td className="px-3 py-[13px] text-[13px] text-text-900 tabular-nums whitespace-nowrap">
+                      ₹{accessory.mrp.toLocaleString()}
+                    </td>
+                    <td className="px-3 py-[13px] text-[13px] tabular-nums whitespace-nowrap">
+                      {accessory.discountPercentage && accessory.discountPercentage > 0 ? (
+                        <span className="text-success">{accessory.discountPercentage}%</span>
+                      ) : (
+                        <span className="text-text-700">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-[13px] text-[13px] font-[650] text-text-900 tabular-nums whitespace-nowrap">
+                      {accessory.companyPrice != null ? `₹${accessory.companyPrice.toLocaleString()}` : '—'}
+                    </td>
+                    <td className="px-3 py-[13px] text-[13px] text-text-800 tabular-nums whitespace-nowrap">
+                      {accessory.widthMm ? `${accessory.widthMm} mm` : '—'}
+                    </td>
+                    <td className="px-3 py-[13px]">
+                      <ActivePill active={accessory.active} />
+                    </td>
+                    <td className="px-3.5 py-[13px]">
+                      {isSuperAdmin && (
+                        <div className="flex justify-end gap-0.5">
+                          <button
+                            onClick={() => {
+                              setEditingAccessory(accessory);
+                              setIsModalOpen(true);
+                            }}
+                            title="Edit"
+                            className={iconBtn}
+                            disabled={isDeleting}
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleToggleActive(accessory)}
+                            title={accessory.active ? 'Deactivate' : 'Activate'}
+                            className={iconBtn}
+                            disabled={isUpdating || isDeleting}
+                          >
+                            {accessory.active ? <Eye size={14} /> : <EyeOff size={14} />}
+                          </button>
+                          <button
+                            onClick={() => setDeleteTarget(accessory)}
+                            title="Delete"
+                            className={iconBtn}
+                            disabled={isDeleting}
+                            onMouseEnter={(ev) => {
+                              ev.currentTarget.style.background = 'var(--st-lost-bg)';
+                              ev.currentTarget.style.color = 'var(--st-lost-fg)';
+                            }}
+                            onMouseLeave={(ev) => {
+                              ev.currentTarget.style.background = 'transparent';
+                              ev.currentTarget.style.color = '';
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer — the pagination the old tab never rendered */}
+        <TableFooter
+          shown={accessories.length}
+          total={totalElements}
+          page={page}
+          totalPages={totalPages}
+          onPage={setPage}
         />
       </div>
 
-      {/* Accessories Grid */}
-      {accessories.length === 0 ? (
-        <Card className="p-8 sm:p-12 text-center">
-          <Package className="w-12 h-12 sm:w-16 sm:h-16 text-text-500 mx-auto mb-4" />
-          <p className="text-sm sm:text-base text-text-600 mb-4">No accessories found</p>
-          <Button onClick={() => setShowForm(true)} className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Create First Accessory
-          </Button>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          {accessories.map((accessory) => (
-            <Card
-              key={accessory.id}
-              className={`p-3 sm:p-4 transition-colors ${
-                accessory.active ? 'hover:border-primary-600' : 'opacity-60'
-              }`}
-            >
-              <div className="flex items-start justify-between mb-2 sm:mb-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base sm:text-lg font-semibold text-text-900 mb-1 line-clamp-1">{accessory.name}</h3>
-                  {accessory.categoryName && (
-                    <p className="text-xs sm:text-sm text-text-600 line-clamp-1">{accessory.categoryName}</p>
-                  )}
-                  {accessory.materialCode && (
-                    <p className="text-xs text-text-500 mt-1 line-clamp-1">Code: {accessory.materialCode}</p>
-                  )}
-                </div>
-                <button
-                  onClick={() => handleToggleActive(accessory)}
-                  className={`p-1.5 sm:p-2 rounded-md transition-colors flex-shrink-0 ${
-                    accessory.active
-                      ? 'text-success hover:bg-success/20'
-                      : 'text-text-500 hover:bg-background-700'
-                  }`}
-                  title={accessory.active ? 'Active' : 'Inactive'}
-                  disabled={isUpdating || isDeleting}
-                >
-                  {accessory.active ? <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                </button>
-              </div>
-
-              {/* Pricing */}
-              <div className="bg-background-700 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
-                <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-                  <span className="text-xs sm:text-sm text-text-600">MRP:</span>
-                  <span className="text-xs sm:text-sm font-semibold text-text-900">
-                    ₹{accessory.mrp.toLocaleString()}
-                  </span>
-                </div>
-                {accessory.discountPercentage && accessory.discountPercentage > 0 && (
-                  <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-                    <span className="text-xs sm:text-sm text-text-600">Discount:</span>
-                    <span className="text-xs sm:text-sm text-success">
-                      {accessory.discountPercentage}%
-                    </span>
-                  </div>
-                )}
-                {accessory.companyPrice && (
-                  <div className="flex items-center justify-between pt-1.5 sm:pt-2 border-t border-background-600">
-                    <span className="text-xs sm:text-sm font-medium text-text-700">Company Price:</span>
-                    <span className="text-sm sm:text-base font-bold text-success">
-                      ₹{accessory.companyPrice.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Width */}
-              {accessory.widthMm && (
-                <div className="text-xs text-text-500 mb-2 sm:mb-3">
-                  Width: {accessory.widthMm} mm
-                </div>
-              )}
-
-              {/* Image */}
-              {accessory.imageUrl && (
-                <div className="mb-2 sm:mb-3">
-                  <img
-                    src={getImageUrl(accessory.imageUrl)}
-                    alt={accessory.name}
-                    className="w-full h-24 object-cover rounded-md"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex items-center gap-2 pt-2 sm:pt-3 border-t border-background-600">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setEditingAccessory(accessory)}
-                  disabled={isDeleting}
-                  className="flex-1 text-xs sm:text-sm"
-                >
-                  <Edit2 className="w-3 h-3 mr-1" />
-                  <span className="hidden xs:inline">Edit</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(accessory.id, accessory.name)}
-                  disabled={isDeleting}
-                  className="text-error hover:text-error/80 flex-1 text-xs sm:text-sm"
-                >
-                  <Trash2 className="w-3 h-3 mr-1" />
-                  <span className="hidden xs:inline">Delete</span>
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
+      {/* Add/Edit modal (mounted per open so the form state resets between targets) */}
+      {isSuperAdmin && isModalOpen && (
+        <AccessoryFormModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingAccessory(null);
+          }}
+          accessory={editingAccessory}
+          categories={categories}
+          onSubmit={handleSubmit}
+          isSaving={isCreating || isUpdating || isUploading}
+        />
       )}
 
-      {/* Pagination removed for now since this data source returns an array. */}
+      {/* Delete confirmation — replaces the window.confirm the old tab used */}
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Accessory"
+        message={
+          deleteTarget
+            ? `Delete "${deleteTarget.name}"? This removes it from the catalog permanently — quotations that already use it keep their prices, but it cannot be added to new ones.`
+            : ''
+        }
+        confirmText={isDeleting ? 'Deleting…' : 'Delete'}
+        type="danger"
+        isLoading={isDeleting}
+      />
     </div>
   );
 };
 
-// Accessory Form Component
-interface AccessoryFormProps {
-  initialValues?: Accessory;
-  categories: any[];
+// ---------------------------------------------------------------------------
+// Form modal
+// ---------------------------------------------------------------------------
+
+interface AccessoryFormModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  accessory: Accessory | null;
+  categories: Category[];
   onSubmit: (values: Partial<Accessory>, imageFile?: File) => void;
-  onCancel: () => void;
-  isLoading: boolean;
+  isSaving: boolean;
 }
 
-function AccessoryForm({ initialValues, categories, onSubmit, onCancel, isLoading }: AccessoryFormProps) {
+function AccessoryFormModal({
+  isOpen,
+  onClose,
+  accessory,
+  categories,
+  onSubmit,
+  isSaving,
+}: AccessoryFormModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -285,27 +398,25 @@ function AccessoryForm({ initialValues, categories, onSubmit, onCancel, isLoadin
   const { data: brands } = useGetActiveBrandsQuery();
 
   const [formData, setFormData] = useState<Partial<Accessory>>({
-    name: initialValues?.name || '',
-    materialCode: initialValues?.materialCode || '',
-    categoryId: initialValues?.categoryId,
-    brandId: initialValues?.brandId,
-    mrp: initialValues?.mrp || 0,
-    discountPercentage: initialValues?.discountPercentage || 0,
-    widthMm: initialValues?.widthMm,
-    color: initialValues?.color || '',
-    active: initialValues?.active ?? true,
-    imageUrl: initialValues?.imageUrl || '',
+    name: accessory?.name || '',
+    materialCode: accessory?.materialCode || '',
+    categoryId: accessory?.categoryId,
+    brandId: accessory?.brandId,
+    mrp: accessory?.mrp || 0,
+    discountPercentage: accessory?.discountPercentage || 0,
+    widthMm: accessory?.widthMm,
+    color: accessory?.color || '',
+    active: accessory?.active ?? true,
+    imageUrl: accessory?.imageUrl || '',
   });
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         toast.error('Please select an image file');
         return;
       }
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast.error('Image size must be less than 5MB');
         return;
@@ -321,6 +432,8 @@ function AccessoryForm({ initialValues, categories, onSubmit, onCancel, isLoadin
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    // Also clears a previously saved image so the PUT drops it (old form behaviour).
+    setFormData((prev) => ({ ...prev, imageUrl: '' }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -328,57 +441,48 @@ function AccessoryForm({ initialValues, categories, onSubmit, onCancel, isLoadin
     onSubmit(formData, imageFile || undefined);
   };
 
-  const companyPrice = formData.mrp && formData.discountPercentage
-    ? formData.mrp - (formData.mrp * (formData.discountPercentage / 100))
-    : formData.mrp;
+  // Display only — the backend recomputes company price from MRP and discount.
+  const companyPrice =
+    formData.mrp && formData.discountPercentage
+      ? formData.mrp - formData.mrp * (formData.discountPercentage / 100)
+      : formData.mrp;
 
   return (
-    <Card className="p-4 sm:p-6">
-      <div className="mb-4 sm:mb-6">
-        <h2 className="text-lg sm:text-xl font-semibold text-text-900">
-          {initialValues ? 'Edit Accessory' : 'New Accessory'}
-        </h2>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-        {/* Basic Info */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+    <Modal isOpen={isOpen} onClose={onClose} title={accessory ? 'Edit Accessory' : 'Add Accessory'} size="md">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
+            <label className={labelCls}>
               Accessory Name <span className="text-error">*</span>
             </label>
-            <Input
+            <input
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="e.g., Mullboy Wastebin"
-              className="text-sm sm:text-base"
+              className={inputCls}
             />
           </div>
-
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-              Material Code
-            </label>
-            <Input
+            <label className={labelCls}>Material Code</label>
+            <input
               value={formData.materialCode}
               onChange={(e) => setFormData({ ...formData, materialCode: e.target.value })}
               placeholder="e.g., ACC-001"
-              className="text-sm sm:text-base"
+              className={inputCls}
             />
           </div>
         </div>
 
-        {/* Category & Brand */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-              Category
-            </label>
+            <label className={labelCls}>Category</label>
             <select
               value={formData.categoryId || ''}
-              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value ? Number(e.target.value) : undefined })}
-              className="w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-background-900 border border-background-600 rounded-md text-text-900 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary-600"
+              onChange={(e) =>
+                setFormData({ ...formData, categoryId: e.target.value ? Number(e.target.value) : undefined })
+              }
+              className={`${inputCls} cursor-pointer`}
             >
               <option value="">-- Select Category --</option>
               {categories.map((cat) => (
@@ -388,18 +492,17 @@ function AccessoryForm({ initialValues, categories, onSubmit, onCancel, isLoadin
               ))}
             </select>
           </div>
-
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-              Brand
-            </label>
+            <label className={labelCls}>Brand</label>
             <select
               value={formData.brandId || ''}
-              onChange={(e) => setFormData({ ...formData, brandId: e.target.value ? Number(e.target.value) : undefined })}
-              className="w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-background-900 border border-background-600 rounded-md text-text-900 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary-600"
+              onChange={(e) =>
+                setFormData({ ...formData, brandId: e.target.value ? Number(e.target.value) : undefined })
+              }
+              className={`${inputCls} cursor-pointer`}
             >
               <option value="">-- Select Brand --</option>
-              {(brands || []).map((brand: any) => (
+              {(brands || []).map((brand) => (
                 <option key={brand.id} value={brand.id}>
                   {brand.name}
                 </option>
@@ -408,13 +511,12 @@ function AccessoryForm({ initialValues, categories, onSubmit, onCancel, isLoadin
           </div>
         </div>
 
-        {/* Pricing */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
+            <label className={labelCls}>
               MRP (₹) <span className="text-error">*</span>
             </label>
-            <Input
+            <input
               type="number"
               required
               min="0"
@@ -422,15 +524,12 @@ function AccessoryForm({ initialValues, categories, onSubmit, onCancel, isLoadin
               value={formData.mrp}
               onChange={(e) => setFormData({ ...formData, mrp: Number(e.target.value) })}
               placeholder="2600"
-              className="text-sm sm:text-base"
+              className={inputCls}
             />
           </div>
-
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-              Discount (%)
-            </label>
-            <Input
+            <label className={labelCls}>Discount (%)</label>
+            <input
               type="number"
               min="0"
               max="100"
@@ -438,42 +537,37 @@ function AccessoryForm({ initialValues, categories, onSubmit, onCancel, isLoadin
               value={formData.discountPercentage}
               onChange={(e) => setFormData({ ...formData, discountPercentage: Number(e.target.value) })}
               placeholder="0"
-              className="text-sm sm:text-base"
+              className={inputCls}
             />
           </div>
+        </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-              Company Price (₹)
-            </label>
-            <div className="px-2 sm:px-3 py-1.5 sm:py-2 bg-background-800 border border-background-600 rounded-md text-success font-semibold text-sm sm:text-base">
+            <label className={labelCls}>Company Price (₹)</label>
+            <div className="h-[38px] px-3 rounded-[10px] border border-background-600 bg-background-700 text-[13px] font-semibold text-success flex items-center">
               {companyPrice ? `₹${companyPrice.toLocaleString()}` : '₹0'}
             </div>
           </div>
+          <div>
+            <label className={labelCls}>Width (mm)</label>
+            <input
+              type="number"
+              min="0"
+              value={formData.widthMm || ''}
+              onChange={(e) =>
+                setFormData({ ...formData, widthMm: e.target.value ? Number(e.target.value) : undefined })
+              }
+              placeholder="e.g., 300"
+              className={inputCls}
+            />
+          </div>
         </div>
 
-        {/* Width */}
+        {/* Image upload — two-step save: the file goes up after the entity POST/PUT succeeds */}
         <div>
-          <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-            Width (mm)
-          </label>
-          <Input
-            type="number"
-            min="0"
-            value={formData.widthMm || ''}
-            onChange={(e) => setFormData({ ...formData, widthMm: e.target.value ? Number(e.target.value) : undefined })}
-            placeholder="e.g., 300"
-            className="text-sm sm:text-base w-full sm:w-1/3"
-          />
-        </div>
-
-        {/* Image Upload */}
-        <div>
-          <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-            Accessory Image
-          </label>
+          <label className={labelCls}>Accessory Image</label>
           <div className="space-y-3">
-            {/* Image Preview */}
             {(imagePreview || formData.imageUrl) && (
               <div className="relative inline-block">
                 <img
@@ -481,25 +575,19 @@ function AccessoryForm({ initialValues, categories, onSubmit, onCancel, isLoadin
                   alt="Preview"
                   className="w-32 h-32 object-cover rounded-lg border border-background-600"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="128" height="128"%3E%3Crect fill="%23333" width="128" height="128"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-size="12"%3ENo Image%3C/text%3E%3C/svg%3E';
+                    (e.target as HTMLImageElement).src = IMG_FALLBACK;
                   }}
                 />
-                {(imagePreview || formData.imageUrl) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleRemoveImage();
-                      setFormData({ ...formData, imageUrl: '' });
-                    }}
-                    className="absolute -top-2 -right-2 bg-error text-white rounded-full p-1 hover:bg-error/80"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="absolute -top-2 -right-2 bg-error text-white rounded-full p-1 hover:bg-error/80"
+                  title="Remove image"
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </div>
             )}
-
-            {/* File Input */}
             <div className="flex items-center gap-3">
               <input
                 ref={fileInputRef}
@@ -522,44 +610,39 @@ function AccessoryForm({ initialValues, categories, onSubmit, onCancel, isLoadin
           </div>
         </div>
 
-        {/* Color */}
         <div>
-          <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-            Color
-          </label>
-          <Input
+          <label className={labelCls}>Color</label>
+          <input
             value={formData.color}
             onChange={(e) => setFormData({ ...formData, color: e.target.value })}
             placeholder="e.g., Silver, Black"
-            className="text-sm sm:text-base"
+            className={inputCls}
           />
         </div>
 
-        {/* Active Status */}
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
-            id="active"
+            id="accessory-active"
             checked={formData.active}
             onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
             className="w-4 h-4 text-primary-600 bg-background-900 border-background-600 rounded focus:ring-primary-600"
           />
-          <label htmlFor="active" className="text-xs sm:text-sm font-medium text-text-700">
+          <label htmlFor="accessory-active" className="text-[12.5px] font-medium text-text-800">
             Active
           </label>
         </div>
 
-        {/* Form Actions */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-background-600">
-          <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
-            {isLoading ? 'Saving...' : initialValues ? 'Update Accessory' : 'Create Accessory'}
-          </Button>
-          <Button type="button" variant="ghost" onClick={onCancel} disabled={isLoading} className="w-full sm:w-auto">
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4 border-t border-background-600">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving} className="w-full sm:w-auto">
             Cancel
+          </Button>
+          <Button type="submit" variant="primary" disabled={isSaving} className="w-full sm:w-auto">
+            {isSaving ? 'Saving...' : accessory ? 'Update Accessory' : 'Create Accessory'}
           </Button>
         </div>
       </form>
-    </Card>
+    </Modal>
   );
 }
 

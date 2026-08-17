@@ -130,9 +130,13 @@ const routes = [
             element: <CustomerDetailPage />,
           },
 
-          // Products
+          // Products — the second entry carries the active tab in the URL
           {
             path: ROUTES.PRODUCTS,
+            element: <ProductsPage />,
+          },
+          {
+            path: `${ROUTES.PRODUCTS}/:tab`,
             element: <ProductsPage />,
           },
 

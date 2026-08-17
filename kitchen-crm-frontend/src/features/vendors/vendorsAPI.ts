@@ -15,6 +15,26 @@ const baseQuery = fetchBaseQuery({
   },
 });
 
+export const VENDOR_TYPES = [
+  'MATERIAL_SUPPLIER',
+  'LABOR_CONTRACTOR',
+  'TRANSPORT_SERVICE',
+  'APPLIANCE_VENDOR',
+  'OTHER',
+] as const;
+export type VendorType = (typeof VENDOR_TYPES)[number];
+
+export const VENDOR_TYPE_LABELS: Record<VendorType, string> = {
+  MATERIAL_SUPPLIER: 'Material Supplier',
+  LABOR_CONTRACTOR: 'Labor Contractor',
+  TRANSPORT_SERVICE: 'Transport Service',
+  APPLIANCE_VENDOR: 'Appliance Vendor',
+  OTHER: 'Other',
+};
+
+export const vendorTypeLabel = (t?: string): string =>
+  VENDOR_TYPE_LABELS[t as VendorType] ?? (t ? t.replace(/_/g, ' ') : '—');
+
 export interface Vendor {
   id: number;
   vendorName: string;
@@ -22,11 +42,33 @@ export interface Vendor {
   phone?: string;
   email?: string;
   address?: string;
-  vendorType: string;
+  vendorType: VendorType;
   active: boolean;
   notes?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface VendorPage {
+  content: Vendor[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+}
+
+export interface VendorListParams {
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+  /** Server-side, matches name / contact person / phone / email. */
+  search?: string;
+  vendorType?: VendorType;
+  /** Omit for all; delete is a soft delete, so the default view should be active-only. */
+  active?: boolean;
 }
 
 export interface VendorCreate {
@@ -56,14 +98,17 @@ export const vendorsApi = createApi({
   baseQuery,
   tagTypes: ['Vendor', 'VendorList'],
   endpoints: (builder) => ({
-    // Get all vendors
-    getVendors: builder.query<any, { page?: number; size?: number; sortBy?: string; sortDir?: string }>({
+    // Get vendors — paging, sorting and the three server-side filters
+    getVendors: builder.query<VendorPage, VendorListParams>({
       query: (params) => {
         const queryParams = new URLSearchParams();
         if (params.page !== undefined) queryParams.append('page', params.page.toString());
         if (params.size !== undefined) queryParams.append('size', params.size.toString());
         if (params.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params.sortDir) queryParams.append('sortDir', params.sortDir);
+        if (params.search) queryParams.append('search', params.search);
+        if (params.vendorType) queryParams.append('vendorType', params.vendorType);
+        if (params.active !== undefined) queryParams.append('active', String(params.active));
         return { url: queryParams.toString() ? `?${queryParams.toString()}` : '' };
       },
       providesTags: ['VendorList'],

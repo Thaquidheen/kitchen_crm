@@ -1,4 +1,14 @@
-import React, { useState } from 'react';
+/**
+ * ProductsPage
+ * Product catalog shell in the HOCH idiom: compact page header, then a chip-style tab row
+ * (matching the filter chips on Customers/Vendors), each tab a self-contained manager.
+ *
+ * The active tab lives in the URL (/products/:tab) so refresh and deep links keep their place —
+ * the old useState version always snapped back to Categories.
+ */
+
+import React from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Layers, Package, Wrench, Archive, DoorOpen, Lightbulb, PanelTop } from 'lucide-react';
 import { CategoryManager } from '../../features/products/components/CategoryManager';
 import { BrandManager } from '../../features/products/components/BrandManager';
@@ -9,94 +19,89 @@ import { CabinetsManager } from '../../features/products/components/CabinetsMana
 import { DoorsManager } from '../../features/products/components/DoorsManager';
 import { LightingManager } from '../../features/products/components/LightingManager';
 
-type TabType = 'categories' | 'brands' | 'materials' | 'inner_panels' | 'accessories' | 'cabinets' | 'doors' | 'lighting';
+type TabType =
+  | 'categories'
+  | 'brands'
+  | 'materials'
+  | 'inner-panels'
+  | 'accessories'
+  | 'cabinets'
+  | 'doors'
+  | 'lighting';
+
+const TABS: Array<{ id: TabType; label: string; icon: React.ElementType; el: React.ReactNode }> = [
+  { id: 'categories', label: 'Categories', icon: Layers, el: <CategoryManager /> },
+  { id: 'brands', label: 'Brands', icon: Package, el: <BrandManager /> },
+  { id: 'materials', label: 'Materials', icon: Box, el: <MaterialManager /> },
+  { id: 'inner-panels', label: 'Inner Panels', icon: PanelTop, el: <InnerPanelManager /> },
+  { id: 'accessories', label: 'Accessories', icon: Wrench, el: <AccessoryManager /> },
+  { id: 'cabinets', label: 'Cabinets', icon: Archive, el: <CabinetsManager /> },
+  { id: 'doors', label: 'Doors', icon: DoorOpen, el: <DoorsManager /> },
+  { id: 'lighting', label: 'Lighting', icon: Lightbulb, el: <LightingManager /> },
+];
+
+const isTab = (v: string | undefined): v is TabType => TABS.some((t) => t.id === v);
 
 const ProductsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('categories');
-
-  const tabs: Array<{ id: TabType; label: string; icon: React.ElementType }> = [
-    { id: 'categories', label: 'Categories', icon: Layers },
-    { id: 'brands', label: 'Brands', icon: Package },
-    { id: 'materials', label: 'Materials', icon: Box },
-    { id: 'inner_panels', label: 'Inner Panels', icon: PanelTop },
-    { id: 'accessories', label: 'Accessories', icon: Wrench },
-    { id: 'cabinets', label: 'Cabinets', icon: Archive },
-    { id: 'doors', label: 'Doors', icon: DoorOpen },
-    { id: 'lighting', label: 'Lighting', icon: Lightbulb },
-  ];
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'categories':
-        return <CategoryManager />;
-      case 'brands':
-        return <BrandManager />;
-      case 'materials':
-        return <MaterialManager />;
-      case 'inner_panels':
-        return <InnerPanelManager />;
-      case 'accessories':
-        return <AccessoryManager />;
-      case 'cabinets':
-        return <CabinetsManager />;
-      case 'doors':
-        return <DoorsManager />;
-      case 'lighting':
-        return <LightingManager />;
-      default:
-        return null;
-    }
-  };
+  const navigate = useNavigate();
+  const { tab } = useParams();
+  const activeTab: TabType = isTab(tab) ? tab : 'categories';
+  const active = TABS.find((t) => t.id === activeTab)!;
 
   return (
-    <div className="min-h-screen bg-background-900 p-2 sm:p-3 lg:p-4">
-      <div className="w-full space-y-4 sm:space-y-5 lg:space-y-6">
-        {/* Header */}
-        <div className="mb-4 sm:mb-5 lg:mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-2">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 sm:p-3 bg-primary-600/10 rounded-lg sm:rounded-xl">
-                <Package className="w-6 h-6 sm:w-8 sm:h-8 text-primary-600" />
-              </div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-text-900">Product Catalog Management</h1>
-            </div>
-          </div>
-          <p className="text-sm sm:text-base text-text-600 mt-1 sm:mt-2">
-            Manage categories, brands, and materials for your product catalog
+    <div className="w-full">
+      {/* Page header */}
+      <div className="flex items-end gap-4 flex-wrap mb-[18px]">
+        <div>
+          <h1 className="m-0 text-[22px] font-[650] tracking-[-0.01em] text-text-900">Products</h1>
+          <p className="mt-[5px] mb-0 text-[13px] text-text-700">
+            The catalog behind quotations — categories, brands, materials, cabinets, doors,
+            accessories and lighting.
           </p>
         </div>
-
-        {/* Tab Navigation */}
-        <div className="border-b border-background-600 mb-4 sm:mb-5 lg:mb-6">
-          <div className="flex gap-1 sm:gap-2 overflow-x-auto scrollbar-hide pb-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`
-                    flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap
-                    ${
-                      isActive
-                        ? 'text-primary-600 border-b-2 border-primary-600'
-                        : 'text-text-600 hover:text-text-900 border-b-2 border-transparent'
-                    }
-                  `}
-                >
-                  <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span className="hidden xs:inline">{tab.label}</span>
-                  <span className="xs:hidden">{tab.label.split(' ')[0]}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Tab Content */}
-        <div className="w-full">{renderTabContent()}</div>
+        <div className="flex-1" />
       </div>
+
+      {/* Tab chips */}
+      <div className="flex items-center gap-2 flex-wrap mb-5">
+        {TABS.map((t) => {
+          const Icon = t.icon;
+          const isActive = t.id === activeTab;
+          return (
+            <button
+              key={t.id}
+              onClick={() => navigate(`/products/${t.id}`, { replace: false })}
+              className="flex items-center gap-2 px-[13px] py-2 rounded-[11px] border transition-colors"
+              style={
+                isActive
+                  ? {
+                      borderColor: 'var(--color-primary-600)',
+                      background: 'color-mix(in oklab, var(--color-primary-600) 16%, transparent)',
+                    }
+                  : {
+                      borderColor: 'var(--color-background-600)',
+                      background: 'var(--color-background-800)',
+                    }
+              }
+            >
+              <Icon
+                size={14}
+                className={isActive ? 'text-primary-600' : 'text-text-500'}
+              />
+              <span
+                className={`text-[12.5px] whitespace-nowrap ${
+                  isActive ? 'font-semibold text-text-900' : 'font-medium text-text-700'
+                }`}
+              >
+                {t.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active tab */}
+      <div className="w-full">{active.el}</div>
     </div>
   );
 };

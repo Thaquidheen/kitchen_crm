@@ -1,60 +1,112 @@
 /**
- * CabinetsManager Component
- * Manage cabinet types with material rates
+ * CabinetsManager — the Cabinets tab of the product catalog in the HOCH table idiom
+ * (tableKit pieces, one table card, modal form, ConfirmDialog).
+ *
+ * Server-side pagination via useGetCabinetsPaginatedQuery (size 20) — the old tab hardcoded
+ * size:100 and threw the page metadata away, silently capping the list. Search stays
+ * server-side on the `name` param, now debounced. Writes are SUPER_ADMIN-only on the backend,
+ * so every write control is hidden from staff instead of letting them fill a form into a 403.
+ * powderCoatingRatePerSqft is consumed by the quotation builder — the field name is load-bearing.
  */
 
-import { useState } from 'react';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Search, Archive } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Plus, Search, Edit2, Trash2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useGetCategoriesQuery, useGetCabinetsQuery, useCreateCabinetMutation, useUpdateCabinetMutation, useDeleteCabinetMutation } from '../productsAPI';
-import type { CabinetType } from '../types';
+import {
+  useGetCategoriesQuery,
+  useGetCabinetsPaginatedQuery,
+  useCreateCabinetMutation,
+  useUpdateCabinetMutation,
+  useDeleteCabinetMutation,
+} from '../productsAPI';
+import type { CabinetType, Category } from '../types';
+import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Card } from '@/components/ui/Card';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
+import {
+  thClass,
+  thActionsClass,
+  iconBtn,
+  searchInputCls,
+  cardCls,
+  inputCls,
+  labelCls,
+  ActivePill,
+  SkeletonRows,
+  ErrorRow,
+  EmptyRow,
+  TableFooter,
+  useDebouncedSearch,
+} from './tableKit';
+
+/** Keep in sync with the header row below — Actions is dropped entirely for staff. */
+const COL_COUNT = 7;
+
+const PAGE_SIZE = 20;
+
+const fmtInr = (n: number | undefined) => `₹${(n ?? 0).toLocaleString('en-IN')}`;
 
 export const CabinetsManager = () => {
-  const [search, setSearch] = useState('');
-  const [showForm, setShowForm] = useState(false);
+  const isSuperAdmin = useIsSuperAdmin();
+  const [page, setPage] = useState(0);
+  const { draft, setDraft, search } = useDebouncedSearch(() => setPage(0));
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCabinet, setEditingCabinet] = useState<CabinetType | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CabinetType | null>(null);
 
-  const { data: cabinetsData, isLoading } = useGetCabinetsQuery({
+  const { data, isLoading, isError } = useGetCabinetsPaginatedQuery({
+    page,
+    size: PAGE_SIZE,
     name: search || undefined,
-    page: 0,
-    size: 100,
   });
-
-  const { data: categoriesResponse } = useGetCategoriesQuery();
+  const { data: categoriesData } = useGetCategoriesQuery();
 
   const [createCabinet, { isLoading: isCreating }] = useCreateCabinetMutation();
   const [updateCabinet, { isLoading: isUpdating }] = useUpdateCabinetMutation();
   const [deleteCabinet, { isLoading: isDeleting }] = useDeleteCabinetMutation();
 
-  const cabinets = cabinetsData || [];
-  const categories = categoriesResponse || [];
+  const cabinets = data?.content ?? [];
+  const totalElements = data?.totalElements ?? 0;
+  const totalPages = data?.totalPages ?? 0;
+  const categories = categoriesData ?? [];
 
-  const handleSubmit = async (values: Partial<CabinetType>) => {
-    try {
-      if (editingCabinet) {
-        await updateCabinet({ ...editingCabinet, ...values } as CabinetType).unwrap();
-        toast.success('Cabinet updated successfully');
-      } else {
-        await createCabinet(values as Omit<CabinetType, 'id'>).unwrap();
-        toast.success('Cabinet created successfully');
-      }
-      setShowForm(false);
-      setEditingCabinet(null);
-    } catch (e: any) {
-      toast.error(e?.data?.message || 'Failed to save cabinet');
+  // Deleting the last row of the last page leaves the page index past the end — walk back.
+  useEffect(() => {
+    if (data && page > 0 && page >= data.totalPages) {
+      setPage(Math.max(0, data.totalPages - 1));
     }
+  }, [data, page]);
+
+  // Staff see no Actions column at all — every action in it is a SUPER_ADMIN-only write.
+  const cols = isSuperAdmin ? COL_COUNT : COL_COUNT - 1;
+
+  const openCreate = () => {
+    setEditingCabinet(null);
+    setIsFormOpen(true);
+  };
+  const openEdit = (cabinet: CabinetType) => {
+    setEditingCabinet(cabinet);
+    setIsFormOpen(true);
+  };
+  const closeForm = () => {
+    setIsFormOpen(false);
+    setEditingCabinet(null);
   };
 
-  const handleDelete = async (id: number, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${name}"?`)) return;
+  const handleSubmit = async (values: Omit<CabinetType, 'id'>) => {
     try {
-      await deleteCabinet(id).unwrap();
-      toast.success('Cabinet deleted successfully');
+      if (editingCabinet) {
+        // Full-object PUT: spread the original so brandId/materialId etc. survive untouched.
+        await updateCabinet({ ...editingCabinet, ...values }).unwrap();
+        toast.success('Cabinet updated successfully');
+      } else {
+        await createCabinet(values).unwrap();
+        toast.success('Cabinet created successfully');
+      }
+      closeForm();
     } catch (e: any) {
-      toast.error(e?.data?.message || 'Failed to delete cabinet');
+      toast.error(e?.data?.message || 'Failed to save cabinet');
     }
   };
 
@@ -67,240 +119,329 @@ export const CabinetsManager = () => {
     }
   };
 
-  if (showForm || editingCabinet) {
-    return (
-      <CabinetForm
-        initialValues={editingCabinet || undefined}
-        categories={categories}
-        onSubmit={handleSubmit}
-        onCancel={() => {
-          setShowForm(false);
-          setEditingCabinet(null);
-        }}
-        isLoading={isCreating || isUpdating}
-      />
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="text-text-900 text-center py-8">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-        <p className="mt-2 text-text-600">Loading...</p>
-      </div>
-    );
-  }
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      const response = await deleteCabinet(deleteTarget.id).unwrap();
+      // The backend answers 200 with success:false when the cabinet type is referenced
+      // (e.g. by quotation line items) — surface its message instead of claiming success.
+      if (response?.success === false) {
+        toast.error(response.message || 'Cabinet type is in use and cannot be deleted');
+      } else {
+        toast.success(`"${deleteTarget.name}" deleted`);
+      }
+      setDeleteTarget(null);
+    } catch (e: any) {
+      toast.error(e?.data?.message || 'Failed to delete cabinet');
+    }
+  };
 
   return (
-    <div className="space-y-4 sm:space-y-5 lg:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-semibold text-text-900">Cabinet Types</h2>
-          <p className="text-xs sm:text-sm text-text-600 mt-1">{cabinets.length} cabinet type{cabinets.length === 1 ? '' : 's'}</p>
-        </div>
-        <Button onClick={() => setShowForm(true)} className="w-full sm:w-auto">
-          <Plus className="w-4 h-4 mr-2" />
-          <span className="hidden xs:inline">Add Cabinet Type</span>
-          <span className="xs:hidden">Add</span>
-        </Button>
+    <div className="w-full">
+      {/* Count + primary action (the page shell owns the H1 and tab chips) */}
+      <div className="flex items-center gap-4 flex-wrap mb-3.5">
+        <span className="text-[13px] text-text-700">
+          {totalElements} cabinet type{totalElements === 1 ? '' : 's'}
+        </span>
+        <div className="flex-1" />
+        {isSuperAdmin && (
+          <button
+            onClick={openCreate}
+            className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold whitespace-nowrap"
+          >
+            <span className="w-5 h-5 rounded-md bg-white/20 backdrop-blur-[2px] flex items-center justify-center shrink-0">
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </span>
+            Add Cabinet Type
+          </button>
+        )}
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-text-500 w-4 h-4 sm:w-5 sm:h-5" />
-        <Input
-          type="text"
-          placeholder="Search cabinet types..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-8 sm:pl-10 text-sm sm:text-base"
+      {/* Table card */}
+      <div className={cardCls}>
+        {/* Toolbar */}
+        <div className="flex items-center gap-2.5 px-3.5 py-3 flex-wrap">
+          <div className="relative flex-1 min-w-[220px] max-w-[480px]">
+            <Search
+              size={15}
+              className="absolute left-[11px] top-1/2 -translate-y-1/2 text-text-500 pointer-events-none"
+            />
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="Search cabinet types…"
+              className={searchInputCls}
+            />
+          </div>
+          <div className="flex-1" />
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[840px]">
+            <thead>
+              <tr className="border-t border-background-600 bg-background-700">
+                <th className={thClass}>Name</th>
+                <th className={thClass}>Category</th>
+                <th className={thClass}>Material</th>
+                <th className={thClass}>Fixed Price (₹)</th>
+                <th className={thClass}>Powder Coating</th>
+                <th className={thClass}>Status</th>
+                {isSuperAdmin && <th className={thActionsClass}>Actions</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <SkeletonRows cols={cols} />
+              ) : isError ? (
+                <ErrorRow cols={cols} entity="cabinet types" />
+              ) : cabinets.length === 0 ? (
+                <EmptyRow
+                  cols={cols}
+                  filtered={!!search}
+                  title="No cabinet types yet"
+                  sub={
+                    isSuperAdmin
+                      ? 'Add your first cabinet type with the button above.'
+                      : 'Cabinet types added by an admin will appear here.'
+                  }
+                />
+              ) : (
+                cabinets.map((cabinet) => (
+                  <tr
+                    key={cabinet.id}
+                    className="border-t border-background-600 hover:bg-background-700 transition-colors"
+                  >
+                    <td className="px-3 py-[13px] text-[13.5px] font-semibold text-text-900 whitespace-nowrap overflow-hidden text-ellipsis max-w-[260px]">
+                      {cabinet.name}
+                    </td>
+                    <td className="px-3 py-[13px] text-[13px] text-text-800 whitespace-nowrap">
+                      {cabinet.categoryName ?? '—'}
+                    </td>
+                    <td className="px-3 py-[13px] text-[13px] text-text-800 whitespace-nowrap">
+                      {cabinet.materialName ?? '—'}
+                    </td>
+                    <td className="px-3 py-[13px] text-[13px] font-semibold text-text-900 tabular-nums whitespace-nowrap">
+                      {fmtInr(cabinet.fixedPrice)}
+                    </td>
+                    <td className="px-3 py-[13px] text-[13px] text-text-800 tabular-nums whitespace-nowrap">
+                      {(cabinet.powderCoatingRatePerSqft ?? 0) > 0
+                        ? `${fmtInr(cabinet.powderCoatingRatePerSqft)}/sq.ft`
+                        : '—'}
+                    </td>
+                    <td className="px-3 py-[13px]">
+                      <ActivePill active={cabinet.active} />
+                    </td>
+                    {isSuperAdmin && (
+                      <td className="px-3.5 py-[13px]">
+                        <div className="flex justify-end gap-0.5">
+                          <button
+                            onClick={() => handleToggleActive(cabinet)}
+                            title={cabinet.active ? 'Deactivate' : 'Activate'}
+                            className={iconBtn}
+                            disabled={isUpdating || isDeleting}
+                          >
+                            {cabinet.active ? <Eye size={14} /> : <EyeOff size={14} />}
+                          </button>
+                          <button
+                            onClick={() => openEdit(cabinet)}
+                            title="Edit"
+                            className={iconBtn}
+                            disabled={isDeleting}
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            onClick={() => setDeleteTarget(cabinet)}
+                            title="Delete"
+                            className={iconBtn}
+                            disabled={isDeleting}
+                            onMouseEnter={(ev) => {
+                              ev.currentTarget.style.background = 'var(--st-lost-bg)';
+                              ev.currentTarget.style.color = 'var(--st-lost-fg)';
+                            }}
+                            onMouseLeave={(ev) => {
+                              ev.currentTarget.style.background = '';
+                              ev.currentTarget.style.color = '';
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <TableFooter
+          shown={cabinets.length}
+          total={totalElements}
+          page={page}
+          totalPages={totalPages}
+          onPage={setPage}
         />
       </div>
 
-      {cabinets.length === 0 ? (
-        <Card className="p-8 sm:p-12 text-center">
-          <Archive className="w-12 h-12 sm:w-16 sm:h-16 text-text-500 mx-auto mb-4" />
-          <p className="text-sm sm:text-base text-text-600 mb-4">No cabinet types found</p>
-          <Button onClick={() => setShowForm(true)} className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Create First Cabinet Type
-          </Button>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          {cabinets.map((cabinet) => (
-            <Card
-              key={cabinet.id}
-              className={`p-3 sm:p-4 ${cabinet.active ? 'hover:border-primary-600' : 'opacity-60'}`}
-            >
-              <div className="flex items-start justify-between mb-2 sm:mb-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base sm:text-lg font-semibold text-text-900 mb-1 line-clamp-1">{cabinet.name}</h3>
-                  {cabinet.categoryName && <p className="text-xs sm:text-sm text-text-600 line-clamp-1">{cabinet.categoryName}</p>}
-                  {cabinet.materialName && <p className="text-xs text-text-500 mt-1 line-clamp-1">Material: {cabinet.materialName}</p>}
-                </div>
-                <button
-                  onClick={() => handleToggleActive(cabinet)}
-                  className={`p-1.5 sm:p-2 rounded-md flex-shrink-0 ${cabinet.active ? 'text-success' : 'text-text-500'}`}
-                  disabled={isUpdating || isDeleting}
-                >
-                  {cabinet.active ? <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                </button>
-              </div>
-
-              <div className="bg-background-700 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3 space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm font-medium text-text-700">Fixed Price:</span>
-                  <span className="text-sm sm:text-base font-bold text-success">₹{(cabinet.fixedPrice ?? 0).toLocaleString()}</span>
-                </div>
-                {(cabinet.powderCoatingRatePerSqft ?? 0) > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs sm:text-sm font-medium text-text-700">Powder Coating:</span>
-                    <span className="text-xs sm:text-sm font-semibold text-text-900">
-                      ₹{(cabinet.powderCoatingRatePerSqft ?? 0).toLocaleString()}/sq.ft
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 pt-2 sm:pt-3 border-t border-background-600">
-                <Button variant="ghost" size="sm" onClick={() => setEditingCabinet(cabinet)} disabled={isDeleting} className="flex-1 text-xs sm:text-sm">
-                  <Edit2 className="w-3 h-3 mr-1" />
-                  <span className="hidden xs:inline">Edit</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(cabinet.id, cabinet.name)}
-                  disabled={isDeleting}
-                  className="text-error flex-1 text-xs sm:text-sm"
-                >
-                  <Trash2 className="w-3 h-3 mr-1" />
-                  <span className="hidden xs:inline">Delete</span>
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
+      {/* Add/Edit modal — keyed so switching between rows resets the form state. */}
+      {isFormOpen && (
+        <CabinetFormModal
+          key={editingCabinet?.id ?? 'new'}
+          initialValues={editingCabinet}
+          categories={categories}
+          onSubmit={handleSubmit}
+          onClose={closeForm}
+          isSaving={isCreating || isUpdating}
+        />
       )}
+
+      {/* Delete confirmation — replaces the window.confirm the old tab used. */}
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Cabinet Type"
+        message={
+          deleteTarget
+            ? `Delete the cabinet type "${deleteTarget.name}"? It disappears from the catalog and can no longer be added to quotations. This cannot be undone.`
+            : ''
+        }
+        confirmText={isDeleting ? 'Deleting…' : 'Delete'}
+        type="danger"
+        isLoading={isDeleting}
+      />
     </div>
   );
 };
 
-interface CabinetFormProps {
-  initialValues?: CabinetType;
-  categories: any[];
-  onSubmit: (values: Partial<CabinetType>) => void;
-  onCancel: () => void;
-  isLoading: boolean;
+interface CabinetFormModalProps {
+  initialValues: CabinetType | null;
+  categories: Category[];
+  onSubmit: (values: Omit<CabinetType, 'id'>) => void;
+  onClose: () => void;
+  isSaving: boolean;
 }
 
-function CabinetForm({ initialValues, categories, onSubmit, onCancel, isLoading }: CabinetFormProps) {
-  const [formData, setFormData] = useState<Partial<CabinetType>>({
-    name: initialValues?.name || '',
-    categoryId: initialValues?.categoryId,
-    fixedPrice: initialValues?.fixedPrice || 0,
-    powderCoatingRatePerSqft: initialValues?.powderCoatingRatePerSqft || 0,
-    active: initialValues?.active ?? true,
-  });
+function CabinetFormModal({ initialValues, categories, onSubmit, onClose, isSaving }: CabinetFormModalProps) {
+  const [name, setName] = useState(initialValues?.name ?? '');
+  const [categoryId, setCategoryId] = useState(
+    initialValues?.categoryId != null ? String(initialValues.categoryId) : ''
+  );
+  const [fixedPrice, setFixedPrice] = useState(String(initialValues?.fixedPrice ?? 0));
+  const [powderCoatingRatePerSqft, setPowderCoatingRatePerSqft] = useState(
+    String(initialValues?.powderCoatingRatePerSqft ?? 0)
+  );
+  const [active, setActive] = useState(initialValues?.active ?? true);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit({
+      name: name.trim(),
+      categoryId: categoryId ? Number(categoryId) : undefined,
+      fixedPrice: Number(fixedPrice) || 0,
+      // Field name is consumed by the quotation builder — must not change.
+      powderCoatingRatePerSqft: Number(powderCoatingRatePerSqft) || 0,
+      active,
+    });
   };
 
   return (
-    <Card className="p-4 sm:p-6">
-      <h2 className="text-lg sm:text-xl font-semibold text-text-900 mb-4 sm:mb-6">
-        {initialValues ? 'Edit Cabinet Type' : 'New Cabinet Type'}
-      </h2>
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={initialValues ? 'Edit Cabinet Type' : 'New Cabinet Type'}
+      size="md"
+    >
+      <form onSubmit={handleSubmit}>
+        <ModalBody className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>
+                Cabinet Name <span className="text-error">*</span>
+              </label>
+              <input
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g., Storage Base Cabinet"
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Category</label>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className={`${inputCls} cursor-pointer`}
+              >
+                <option value="">-- Select Category --</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-              Cabinet Name <span className="text-error">*</span>
-            </label>
-            <Input
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g., Storage Base Cabinet"
-              className="text-sm sm:text-base"
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>
+                Fixed Price (₹) <span className="text-error">*</span>
+              </label>
+              <input
+                type="number"
+                required
+                min="0"
+                step="0.01"
+                value={fixedPrice}
+                onChange={(e) => setFixedPrice(e.target.value)}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Powder Coating (₹ / sq.ft)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={powderCoatingRatePerSqft}
+                onChange={(e) => setPowderCoatingRatePerSqft(e.target.value)}
+                className={inputCls}
+              />
+              <p className="text-[11.5px] text-text-600 mt-1">
+                Charged on the cabinet's box surface area. Leave at 0 to hide the option on quotations.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="cabinet-active"
+              checked={active}
+              onChange={(e) => setActive(e.target.checked)}
+              className="w-4 h-4 text-primary-600 bg-background-900 border-background-600 rounded focus:ring-primary-600"
             />
-          </div>
-
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">Category</label>
-            <select
-              value={formData.categoryId || ''}
-              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value ? Number(e.target.value) : undefined })}
-              className="w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-background-900 border border-background-600 rounded-md text-text-900 text-sm sm:text-base focus:border-primary-600 focus:outline-none"
-            >
-              <option value="">-- Select Category --</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-              Fixed Price (₹) <span className="text-error">*</span>
+            <label htmlFor="cabinet-active" className="text-[12.5px] font-medium text-text-800">
+              Active
             </label>
-            <Input
-              type="number"
-              required
-              min="0"
-              step="0.01"
-              value={formData.fixedPrice}
-              onChange={(e) => setFormData({ ...formData, fixedPrice: Number(e.target.value) })}
-              className="text-sm sm:text-base"
-            />
           </div>
+        </ModalBody>
 
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-text-700 mb-1.5 sm:mb-2">
-              Powder Coating (₹ / sq.ft)
-            </label>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={formData.powderCoatingRatePerSqft}
-              onChange={(e) =>
-                setFormData({ ...formData, powderCoatingRatePerSqft: Number(e.target.value) })
-              }
-              className="text-sm sm:text-base"
-            />
-            <p className="text-[11.5px] text-text-600 mt-1">
-              Charged on the cabinet's box surface area. Leave at 0 to hide the option on quotations.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="active"
-            checked={formData.active}
-            onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-            className="w-4 h-4 text-primary-600 bg-background-900 border-background-600 rounded focus:ring-primary-600"
-          />
-          <label htmlFor="active" className="text-xs sm:text-sm font-medium text-text-700">Active</label>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-background-600">
-          <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
-            {isLoading ? 'Saving...' : initialValues ? 'Update Cabinet' : 'Create Cabinet'}
-          </Button>
-          <Button type="button" variant="ghost" onClick={onCancel} disabled={isLoading} className="w-full sm:w-auto">
+        <ModalFooter>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={isSaving}>
             Cancel
           </Button>
-        </div>
+          <Button type="submit" isLoading={isSaving}>
+            {initialValues ? 'Update Cabinet' : 'Create Cabinet'}
+          </Button>
+        </ModalFooter>
       </form>
-    </Card>
+    </Modal>
   );
 }
 

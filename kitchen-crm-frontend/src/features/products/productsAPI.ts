@@ -10,8 +10,11 @@ import type {
   Brand,
   Material,
   InnerPanelType,
-  Cabinet,
-  Door,
+  // The entity interfaces are named CabinetType/DoorType; aliased here so the ~30 usages below
+  // keep reading naturally. (The bare names never existed in types.ts — vite shipped it only
+  // because the build has no tsc step.)
+  CabinetType as Cabinet,
+  DoorType as Door,
   Accessory,
   LightProfile,
   Driver,
@@ -199,6 +202,23 @@ export const productsAPI = baseApi.injectEndpoints({
       transformResponse: (response: PaginatedApiResponse<Cabinet>) => response.data?.content ?? [],
       providesTags: [{ type: 'Products', id: 'CABINETS' }],
     }),
+    // Same endpoint keeping the page metadata — getCabinets throws it away, which is how the
+    // old tab silently capped the list at its page size with no way to reach the rest.
+    getCabinetsPaginated: builder.query<{
+      content: Cabinet[];
+      totalPages: number;
+      totalElements: number;
+      number: number;
+    }, ListParams | void>({
+      query: (params) => ({ url: API_ENDPOINTS.CABINETS.BASE, params: params || {} }),
+      transformResponse: (response: PaginatedApiResponse<Cabinet>) => ({
+        content: response.data?.content ?? [],
+        totalPages: response.data?.totalPages ?? 0,
+        totalElements: response.data?.totalElements ?? 0,
+        number: response.data?.number ?? 0,
+      }),
+      providesTags: [{ type: 'Products', id: 'CABINETS' }],
+    }),
     getCabinetById: builder.query<Cabinet, number>({
       query: (id) => API_ENDPOINTS.CABINETS.BY_ID(id),
       transformResponse: (response: ApiResponse<Cabinet>) => response.data as Cabinet,
@@ -239,6 +259,22 @@ export const productsAPI = baseApi.injectEndpoints({
     getDoors: builder.query<Door[], ListParams | void>({
       query: (params) => ({ url: API_ENDPOINTS.DOORS.BASE, params: params || {} }),
       transformResponse: (response: PaginatedApiResponse<Door>) => response.data?.content ?? [],
+      providesTags: [{ type: 'Products', id: 'DOORS' }],
+    }),
+    // See getCabinetsPaginated — identical reasoning.
+    getDoorsPaginated: builder.query<{
+      content: Door[];
+      totalPages: number;
+      totalElements: number;
+      number: number;
+    }, ListParams | void>({
+      query: (params) => ({ url: API_ENDPOINTS.DOORS.BASE, params: params || {} }),
+      transformResponse: (response: PaginatedApiResponse<Door>) => ({
+        content: response.data?.content ?? [],
+        totalPages: response.data?.totalPages ?? 0,
+        totalElements: response.data?.totalElements ?? 0,
+        number: response.data?.number ?? 0,
+      }),
       providesTags: [{ type: 'Products', id: 'DOORS' }],
     }),
     getDoorById: builder.query<Door, number>({
@@ -342,6 +378,9 @@ export const productsAPI = baseApi.injectEndpoints({
           url: `/accessories/${id}/image`,
           method: 'POST',
           body: formData,
+          // Without this flag prepareHeaders forces Content-Type: application/json onto the
+          // multipart body and the server cannot parse the upload — it had NEVER worked.
+          headers: { 'X-Skip-Json-Content-Type': 'true' },
         };
       },
       invalidatesTags: (_result, _error, { id }) => [
@@ -352,26 +391,11 @@ export const productsAPI = baseApi.injectEndpoints({
     }),
 
     // Lighting sub-entities (simple lists)
-    getLightProfiles: builder.query<LightProfile[], void>({
-      query: () => API_ENDPOINTS.LIGHTING.PROFILES,
-      transformResponse: (response: ApiResponse<LightProfile[]>) => response.data ?? [],
-      providesTags: [{ type: 'Products' }],
-    }),
-    getDrivers: builder.query<Driver[], void>({
-      query: () => API_ENDPOINTS.LIGHTING.DRIVERS,
-      transformResponse: (response: ApiResponse<Driver[]>) => response.data ?? [],
-      providesTags: [{ type: 'Products' }],
-    }),
-    getConnectors: builder.query<Connector[], void>({
-      query: () => API_ENDPOINTS.LIGHTING.CONNECTORS,
-      transformResponse: (response: ApiResponse<Connector[]>) => response.data ?? [],
-      providesTags: [{ type: 'Products' }],
-    }),
-    getSensors: builder.query<Sensor[], void>({
-      query: () => API_ENDPOINTS.LIGHTING.SENSORS,
-      transformResponse: (response: ApiResponse<Sensor[]>) => response.data ?? [],
-      providesTags: [{ type: 'Products' }],
-    }),
+    // The four lighting list queries were removed here: lightingAPI.ts defines the same
+    // endpoint names with the 'Lighting' tag its mutations invalidate, and injectEndpoints
+    // silently DISCARDS duplicate names (overrideExisting:false) — whichever module loaded
+    // first won, and when this one did, every lighting mutation invalidated a tag nothing
+    // provided, so the Lighting tab never refreshed after a save. One definition, one tag.
   }),
 });
 
@@ -405,12 +429,14 @@ export const {
   useDeleteInnerPanelTypeMutation,
   // Cabinets
   useGetCabinetsQuery,
+  useGetCabinetsPaginatedQuery,
   useGetCabinetByIdQuery,
   useCreateCabinetMutation,
   useUpdateCabinetMutation,
   useDeleteCabinetMutation,
   // Doors
   useGetDoorsQuery,
+  useGetDoorsPaginatedQuery,
   useGetDoorByIdQuery,
   useCreateDoorMutation,
   useUpdateDoorMutation,
@@ -424,10 +450,6 @@ export const {
   useDeleteAccessoryMutation,
   useUploadAccessoryImageMutation,
   // Lighting
-  useGetLightProfilesQuery,
-  useGetDriversQuery,
-  useGetConnectorsQuery,
-  useGetSensorsQuery,
 } = productsAPI;
 
 export default productsAPI;

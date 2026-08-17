@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/vendors")
@@ -24,18 +25,29 @@ public class VendorController {
     @Autowired
     private VendorService vendorService;
 
+    /**
+     * Sortable properties, whitelisted: an arbitrary {@code sortBy} goes straight into
+     * {@code Sort.by(...)}, and a name that is not an entity property is a 500 at query time.
+     */
+    private static final Set<String> SORTABLE = Set.of(
+            "vendorName", "contactPerson", "vendorType", "email", "phone", "active", "createdAt");
+
     @GetMapping
     public ResponseEntity<ApiResponse<Page<VendorDto>>> getAllVendors(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String vendorType,
+            @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "vendorName") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir) {
-        
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? 
-                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+
+        String sortProperty = SORTABLE.contains(sortBy) ? sortBy : "vendorName";
+        Sort sort = sortDir.equalsIgnoreCase("desc") ?
+                Sort.by(sortProperty).descending() : Sort.by(sortProperty).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
-        
-        return ResponseEntity.ok(vendorService.getAllVendors(pageable));
+
+        return ResponseEntity.ok(vendorService.getAllVendors(search, vendorType, active, pageable));
     }
 
     @GetMapping("/active")

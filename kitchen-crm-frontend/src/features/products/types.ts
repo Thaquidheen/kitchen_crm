@@ -126,6 +126,8 @@ export interface ListParams {
   sortBy?: string;
   sortDir?: 'asc' | 'desc';
   search?: string;
+  /** The backend list endpoints filter by `name`, not `search`. */
+  name?: string;
   active?: boolean;
   categoryId?: number;
   brandId?: number;
