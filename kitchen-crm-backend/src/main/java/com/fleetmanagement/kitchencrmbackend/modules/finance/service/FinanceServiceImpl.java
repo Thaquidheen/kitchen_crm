@@ -304,6 +304,15 @@ public class FinanceServiceImpl implements FinanceService {
         } else {
             expense.setQuotation(null);
         }
+        if (dto.getVendorId() != null) {
+            Vendor vendor = vendorRepository.findById(dto.getVendorId()).orElse(null);
+            if (vendor == null || !Boolean.TRUE.equals(vendor.getActive())) {
+                return "Vendor not found or inactive";
+            }
+            expense.setVendor(vendor);
+        } else {
+            expense.setVendor(null);
+        }
         expense.setTitle(dto.getTitle().trim());
         expense.setAmount(dto.getAmount());
         expense.setCashInHandPct(nz(dto.getCashInHandPct()));
@@ -622,6 +631,10 @@ public class FinanceServiceImpl implements FinanceService {
                     .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
             ed.setCashInHandAmount(chAmount);
             ed.setCashInAccountAmount(nz(e.getAmount()).subtract(chAmount));
+            if (e.getVendor() != null) {
+                ed.setVendorId(e.getVendor().getId());
+                ed.setVendorName(e.getVendor().getVendorName());
+            }
             if (e.getQuotation() != null) {
                 ed.setQuotationId(e.getQuotation().getId());
                 ed.setQuotationNumber(e.getQuotation().getQuotationNumber());
@@ -653,9 +666,36 @@ public class FinanceServiceImpl implements FinanceService {
             dto.getReleases().add(rd);
         }
 
+        // Vendor balances need BOTH sides: expensed (new) and released (pre-existing). Merge the
+        // two grouped queries keyed by vendor id — a vendor with only expense lines must appear
+        // (the release-side query alone would drop them), and a vendor with only releases keeps
+        // appearing with expensed = 0. Balance may go negative; it is shown, never hidden.
+        Map<Long, CustomerFinanceSummaryDto.VendorTotalDto> vendorMap = new LinkedHashMap<>();
+        for (Object[] row : expenseRepository.vendorTotals(financeId)) {
+            CustomerFinanceSummaryDto.VendorTotalDto vt = new CustomerFinanceSummaryDto.VendorTotalDto();
+            vt.setVendorId((Long) row[0]);
+            vt.setVendorName((String) row[1]);
+            vt.setTotalExpensed(nz((BigDecimal) row[2]));
+            vt.setTotalReleased(BigDecimal.ZERO);
+            vt.setExpenseCount((Long) row[3]);
+            vt.setReleaseCount(0L);
+            vendorMap.put(vt.getVendorId(), vt);
+        }
         for (Object[] row : releaseRepository.vendorTotals(financeId)) {
-            dto.getVendorTotals().add(new CustomerFinanceSummaryDto.VendorTotalDto(
-                    (Long) row[0], (String) row[1], (BigDecimal) row[2], (Long) row[3]));
+            CustomerFinanceSummaryDto.VendorTotalDto vt = vendorMap.computeIfAbsent((Long) row[0], id -> {
+                CustomerFinanceSummaryDto.VendorTotalDto fresh = new CustomerFinanceSummaryDto.VendorTotalDto();
+                fresh.setVendorId(id);
+                fresh.setVendorName((String) row[1]);
+                fresh.setTotalExpensed(BigDecimal.ZERO);
+                fresh.setExpenseCount(0L);
+                return fresh;
+            });
+            vt.setTotalReleased(nz((BigDecimal) row[2]));
+            vt.setReleaseCount((Long) row[3]);
+        }
+        for (CustomerFinanceSummaryDto.VendorTotalDto vt : vendorMap.values()) {
+            vt.setBalance(nz(vt.getTotalExpensed()).subtract(nz(vt.getTotalReleased())));
+            dto.getVendorTotals().add(vt);
         }
 
         return dto;

@@ -1,15 +1,18 @@
 /**
- * ExpenseFormModal — expense name (suggestion combobox + free text), amount,
- * auto-complementing C/H % + C/A % pair with live computed amounts, optional
- * quotation link, date and note.
+ * ExpenseFormModal — expense name (suggestion combobox + free text), optional vendor
+ * (feeds the per-vendor release balances), amount, auto-complementing C/H % + C/A % pair
+ * with live computed amounts, optional quotation link, date and note.
  */
 
 import React, { useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useGetQuotationsByCustomerQuery } from '@/app/baseApi';
+import { useGetActiveVendorsQuery } from '@/features/vendors/vendorsAPI';
+import VendorFormModal from '@/features/vendors/components/VendorFormModal';
 import { useAddFinanceExpenseMutation, useUpdateFinanceExpenseMutation } from '../financeAPI';
 import type { FinanceExpense } from '../types';
 import { FINANCE_EXPENSE_SUGGESTIONS, inr } from '../constants';
@@ -27,11 +30,14 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onCl
   const [amount, setAmount] = useState('');
   const [chPct, setChPct] = useState('100');
   const [caPct, setCaPct] = useState('0');
+  const [vendorId, setVendorId] = useState('');
+  const [vendorModalOpen, setVendorModalOpen] = useState(false);
   const [quotationId, setQuotationId] = useState('');
   const [expenseDate, setExpenseDate] = useState('');
   const [note, setNote] = useState('');
 
   const { data: quotationsResp } = useGetQuotationsByCustomerQuery(customerId, { skip: !isOpen });
+  const { data: vendors = [] } = useGetActiveVendorsQuery(undefined, { skip: !isOpen });
   // /quotations/customer/{id} returns ApiResponse<Page<...>> — the array lives at data.content.
   const quotations: any[] = (() => {
     const raw: any = quotationsResp;
@@ -52,6 +58,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onCl
       setAmount(expense ? String(expense.amount) : '');
       setChPct(expense ? String(expense.cashInHandPct) : '100');
       setCaPct(expense ? String(expense.cashInAccountPct) : '0');
+      setVendorId(expense?.vendorId ? String(expense.vendorId) : '');
       setQuotationId(expense?.quotationId ? String(expense.quotationId) : '');
       setExpenseDate(expense?.expenseDate ?? '');
       setNote(expense?.note ?? '');
@@ -92,6 +99,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onCl
       amount: amt,
       cashInHandPct: Number(chPct) || 0,
       cashInAccountPct: Number(caPct) || 0,
+      vendorId: vendorId ? Number(vendorId) : null,
       quotationId: quotationId ? Number(quotationId) : null,
       expenseDate: expenseDate || undefined,
       note: note.trim() || undefined,
@@ -112,6 +120,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onCl
   };
 
   return (
+    <>
     <Modal isOpen={isOpen} onClose={onClose} title={expense ? 'Edit Expense' : 'Add Expense'} size="md">
       <ModalBody>
         <div className="space-y-4">
@@ -129,6 +138,35 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onCl
                 <option key={s} value={s} />
               ))}
             </datalist>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-text-700">Vendor</label>
+              <button
+                type="button"
+                onClick={() => setVendorModalOpen(true)}
+                className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-primary-600 hover:underline"
+              >
+                <Plus className="w-3 h-3" />
+                New vendor
+              </button>
+            </div>
+            <select
+              value={vendorId}
+              onChange={(e) => setVendorId(e.target.value)}
+              className="w-full h-[38px] px-3 rounded-[10px] border border-background-600 bg-background-900 text-text-900 text-[13px] outline-none focus:border-primary-600"
+            >
+              <option value="">— No vendor —</option>
+              {(vendors as any[]).map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.vendorName}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 mb-0 text-[11.5px] text-text-500">
+              Setting the vendor lets Release Payment show their expensed-vs-released balance.
+            </p>
           </div>
 
           <Input
@@ -181,5 +219,12 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onCl
         </Button>
       </ModalFooter>
     </Modal>
+
+    <VendorFormModal
+      isOpen={vendorModalOpen}
+      onClose={() => setVendorModalOpen(false)}
+      onCreated={(v) => setVendorId(String(v.id))}
+    />
+    </>
   );
 };

@@ -30,6 +30,9 @@ public class ExpenseRequestDto {
     @DecimalMin(value = "0", message = "Percentage cannot be negative")
     private BigDecimal cashInAccountPct;
 
+    /** Optional vendor this expense is for; must reference an active vendor when present. */
+    private Long vendorId;
+
     private Long quotationId;
 
     private LocalDate expenseDate;

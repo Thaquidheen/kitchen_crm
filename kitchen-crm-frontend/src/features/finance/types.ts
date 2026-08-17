@@ -30,6 +30,8 @@ export interface FinanceExpense {
   cashInAccountPct: number;
   cashInHandAmount: number;
   cashInAccountAmount: number;
+  vendorId?: number;
+  vendorName?: string;
   quotationId?: number;
   quotationNumber?: string;
   quotationTotal?: number;
@@ -56,7 +58,12 @@ export interface FinanceRelease {
 export interface VendorTotal {
   vendorId: number;
   vendorName: string;
+  /** Sum of expense lines assigned to this vendor (this customer only). */
+  totalExpensed: number;
   totalReleased: number;
+  /** expensed − released; negative = over-released. */
+  balance: number;
+  expenseCount: number;
   releaseCount: number;
 }
 
@@ -122,6 +129,7 @@ export interface PaymentRequest {
 export interface ExpenseRequest {
   title: string;
   amount: number;
+  vendorId?: number | null;
   cashInHandPct: number;
   cashInAccountPct: number;
   quotationId?: number | null;

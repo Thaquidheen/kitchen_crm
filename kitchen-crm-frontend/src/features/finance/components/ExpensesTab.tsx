@@ -79,10 +79,11 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ summary }) => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1000px]">
+          <table className="w-full min-w-[1100px]">
             <thead>
               <tr className="border-t border-background-600 bg-background-700">
                 <th className={`${thClass} pl-4`}>Expense</th>
+                <th className={thClass}>Vendor</th>
                 <th className={thClass}>Amount</th>
                 <th className={thClass}>C/H %</th>
                 <th className={thClass}>C/A %</th>
@@ -100,7 +101,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ summary }) => {
             <tbody className="divide-y divide-background-600">
               {summary.expenses.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-10 text-center">
+                  <td colSpan={12} className="px-4 py-10 text-center">
                     <p className="m-0 text-[13px] text-text-600">No expenses added yet.</p>
                   </td>
                 </tr>
@@ -116,6 +117,9 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ summary }) => {
                           {e.note ?? ''}
                         </div>
                       )}
+                    </td>
+                    <td className="px-3 py-3 text-[12.5px] text-text-800 whitespace-nowrap overflow-hidden text-ellipsis max-w-[140px]">
+                      {e.vendorName ?? <span className="text-text-500">—</span>}
                     </td>
                     <td className="px-3 py-3 text-[13px] font-[650] text-text-900 tabular-nums whitespace-nowrap">
                       {inr(e.amount)}
@@ -183,6 +187,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ summary }) => {
               <tfoot>
                 <tr className="border-t border-background-600 bg-background-700">
                   <td className="px-4 py-3 text-[12px] font-[650] uppercase tracking-[0.05em] text-text-500">Totals</td>
+                  <td />
                   <td className="px-3 py-3 text-[13px] font-[650] text-text-900 tabular-nums">{inr(summary.expenseTotal)}</td>
                   <td colSpan={5} />
                   <td className="px-3 py-3 text-[12.5px] font-[650] text-text-900 tabular-nums">{inr(summary.releasedTotal)}</td>
@@ -294,20 +299,61 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ summary }) => {
           </table>
         </div>
 
+        {/* Per-vendor balances: expensed vs released, with a status pill. The bar shows how
+            much of the expensed amount has been released; over-released renders the bar red. */}
         {summary.vendorTotals.length > 0 && (
-          <div className="flex gap-2 flex-wrap px-4 py-3 border-t border-background-600">
-            {summary.vendorTotals.map((v) => (
-              <span
-                key={v.vendorId}
-                className="inline-flex items-center gap-1.5 px-[11px] py-[5px] rounded-[10px] border border-background-600 bg-background-700 text-[12px] text-text-700"
-              >
-                <b className="text-text-900">{v.vendorName}</b>
-                <span className="tabular-nums">{inr(v.totalReleased)}</span>
-                <span className="text-text-500 tabular-nums">
-                  · {v.releaseCount} {v.releaseCount === 1 ? 'release' : 'releases'}
-                </span>
-              </span>
-            ))}
+          <div className="px-4 py-3 border-t border-background-600">
+            <div className="text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 mb-2">
+              Vendor balances
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {summary.vendorTotals.map((v) => {
+                const pct =
+                  v.totalExpensed > 0
+                    ? Math.min(100, Math.round((v.totalReleased / v.totalExpensed) * 100))
+                    : v.totalReleased > 0
+                      ? 100
+                      : 0;
+                const over = v.balance < 0;
+                const cleared = v.balance === 0 && v.totalExpensed > 0;
+                return (
+                  <div
+                    key={v.vendorId}
+                    className="rounded-[12px] border border-background-600 bg-background-700/50 px-3.5 py-2.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[12.5px] font-semibold text-text-900 truncate">{v.vendorName}</span>
+                      <span
+                        className="inline-flex px-2 py-[2.5px] rounded-full text-[10.5px] font-semibold tabular-nums whitespace-nowrap"
+                        style={
+                          over
+                            ? { background: 'var(--st-lost-bg)', color: 'var(--st-lost-fg)' }
+                            : cleared
+                              ? { background: 'var(--st-confirmed-bg)', color: 'var(--st-confirmed-fg)' }
+                              : { background: 'var(--st-potential-bg)', color: 'var(--st-potential-fg)' }
+                        }
+                      >
+                        {over ? `${inr(-v.balance)} over-released` : cleared ? 'Cleared' : `${inr(v.balance)} pending`}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 rounded-full bg-background-600 overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${pct}%`,
+                          background: over ? 'var(--st-lost-fg)' : 'var(--st-confirmed-fg)',
+                        }}
+                      />
+                    </div>
+                    <div className="mt-1 text-[11px] text-text-600 tabular-nums">
+                      Released {inr(v.totalReleased)} of {inr(v.totalExpensed)} expensed
+                      {' · '}{v.expenseCount} {v.expenseCount === 1 ? 'line' : 'lines'}, {v.releaseCount}{' '}
+                      {v.releaseCount === 1 ? 'release' : 'releases'}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
@@ -364,6 +410,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ summary }) => {
         }}
         financeId={summary.financeId}
         expenses={summary.expenses}
+        vendorTotals={summary.vendorTotals}
         release={editingRelease}
       />
 

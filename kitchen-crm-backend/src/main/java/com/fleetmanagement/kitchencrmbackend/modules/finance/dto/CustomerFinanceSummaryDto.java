@@ -95,6 +95,8 @@ public class CustomerFinanceSummaryDto {
         private BigDecimal cashInAccountPct;
         private BigDecimal cashInHandAmount;
         private BigDecimal cashInAccountAmount;
+        private Long vendorId;
+        private String vendorName;
         private Long quotationId;
         private String quotationNumber;
         private BigDecimal quotationTotal;
@@ -127,7 +129,12 @@ public class CustomerFinanceSummaryDto {
     public static class VendorTotalDto {
         private Long vendorId;
         private String vendorName;
+        /** Sum of expense lines assigned to this vendor (this customer's finance only). */
+        private BigDecimal totalExpensed;
         private BigDecimal totalReleased;
+        /** expensed − released. Negative means over-released — shown, never hidden. */
+        private BigDecimal balance;
+        private Long expenseCount;
         private Long releaseCount;
     }
 }

@@ -1,6 +1,7 @@
 package com.fleetmanagement.kitchencrmbackend.modules.finance.entity;
 
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
+import com.fleetmanagement.kitchencrmbackend.modules.vendor.entity.Vendor;
 import com.fleetmanagement.kitchencrmbackend.shared.audit.Auditable;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -43,6 +44,11 @@ public class FinanceExpense extends Auditable {
 
     @Column(name = "cash_in_account_pct", nullable = false, precision = 5, scale = 2)
     private BigDecimal cashInAccountPct = BigDecimal.ZERO;
+
+    /** Optional: who the money goes to. Vendor-less lines (Installation, Incentive) stay legal. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vendor_id")
+    private Vendor vendor;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "quotation_id")
