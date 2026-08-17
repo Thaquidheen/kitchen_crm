@@ -47,6 +47,7 @@ public class CustomerFollowUpServiceImpl implements CustomerFollowUpService {
             reminder.setTitle("Follow up: " + customer.getName());
             reminder.setNotes(dto.getNotes());
             reminder.setRemindAt(dto.getNextFollowUpAt());
+            reminder.setSource("FOLLOW_UP");
             reminderService.createReminder(reminder, createdBy);
         }
 

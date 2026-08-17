@@ -458,11 +458,12 @@ export const baseApi = createApi({
       providesTags: ['Reminders'],
     }),
 
-    // Reminders page: cross-customer list filtered by day bucket
-    getReminders: builder.query<any, { bucket?: string; search?: string; page?: number; size?: number }>({
-      query: ({ bucket = 'ALL', search, page = 0, size = 20 }) => ({
+    // Reminders page: cross-customer list filtered by day bucket and module source
+    // (source: CUSTOMERS | PRODUCTION | APPLIANCE — server-side partition, see V102)
+    getReminders: builder.query<any, { bucket?: string; search?: string; source?: string; page?: number; size?: number }>({
+      query: ({ bucket = 'ALL', search, source, page = 0, size = 20 }) => ({
         url: '/reminders',
-        params: { bucket, page, size, ...(search ? { search } : {}) },
+        params: { bucket, page, size, ...(search ? { search } : {}), ...(source ? { source } : {}) },
       }),
       transformResponse: (response: any) => response?.data ?? { content: [], totalElements: 0, totalPages: 0 },
       providesTags: ['Reminders'],

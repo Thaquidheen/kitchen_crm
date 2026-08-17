@@ -49,4 +49,7 @@ public class CustomerReminderDto {
     private LocalDate remindDate;
     /** TODAY | OVERDUE | UPCOMING | DONE */
     private String bucket;
+
+    /** MANUAL | FOLLOW_UP | PRODUCTION — which flow created it, for the bell's source filter. */
+    private String source;
 }

@@ -5,16 +5,15 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Search, Settings, LogOut, KeyRound, Menu, AlarmClock, Check, Sun, Moon, ChevronDown, ListTodo } from 'lucide-react';
+import { Search, Settings, LogOut, KeyRound, Menu, Sun, Moon, ChevronDown } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { logout } from '../../features/auth/authSlice';
 import { useLogoutMutation } from '../../features/auth/authApi';
-import { useGetReminderNotificationsQuery, useMarkReminderDoneMutation } from '../../app/baseApi';
-import { useGetMyDueTodosQuery, useMarkTodoCompleteMutation } from '../../features/task-management/taskAPI';
 import { setTheme, selectCurrentTheme } from '../../features/theme/themeSlice';
 import { ROUTES } from '../../routes/routes.config';
 import { Dropdown } from '../ui';
 import { ChangePasswordModal } from '../../features/auth/components/ChangePasswordModal';
+import { NotificationBell } from './NotificationBell';
 import toast from 'react-hot-toast';
 
 export interface HeaderProps {
@@ -28,25 +27,10 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
   const { user } = useAppSelector((state) => state.auth);
   const currentTheme = useAppSelector(selectCurrentTheme);
   const [logoutApi] = useLogoutMutation();
-  const [bellOpen, setBellOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   const isDay = currentTheme?.type === 'light';
 
-  // Due customer reminders (shared) + the user's own due to-dos feed the bell; refreshed every 60s
-  const { data: notifData } = useGetReminderNotificationsQuery(undefined, {
-    pollingInterval: 60000,
-    skip: !user,
-  });
-  const { data: todoNotif } = useGetMyDueTodosQuery(undefined, {
-    pollingInterval: 60000,
-    skip: !user,
-  });
-  const [markReminderDone] = useMarkReminderDoneMutation();
-  const [markTodoComplete] = useMarkTodoCompleteMutation();
-  const dueReminders: any[] = notifData?.reminders ?? [];
-  const dueTodos = todoNotif?.todos ?? [];
-  const notificationCount = (notifData?.count ?? 0) + (todoNotif?.count ?? 0);
 
   const handleLogout = async () => {
     try {
@@ -114,135 +98,8 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
         </button>
       </div>
 
-      {/* Notifications (due customer reminders) */}
-      <div className="relative">
-        <button
-          onClick={() => setBellOpen((o) => !o)}
-          className="relative w-[34px] h-[34px] rounded-[10px] border border-background-600 bg-background-800 text-text-700 hover:bg-background-700 hover:text-text-900 flex items-center justify-center transition-colors"
-          aria-label="Notifications"
-        >
-          <Bell size={16} />
-          {notificationCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-600 text-background-900 text-[10.5px] font-bold flex items-center justify-center tabular-nums">
-              {notificationCount}
-            </span>
-          )}
-        </button>
-
-        {bellOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setBellOpen(false)} />
-            <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-background-800 border border-background-600 rounded-xl shadow-xl z-50">
-              <div className="px-4 py-2.5 border-b border-background-600 flex items-center gap-2">
-                <AlarmClock size={15} className="text-primary-600" />
-                <span className="text-sm font-semibold text-text-900">Today's reminders</span>
-                <span className="flex-1" />
-                <button
-                  onClick={() => {
-                    setBellOpen(false);
-                    navigate(ROUTES.REMINDERS);
-                  }}
-                  className="text-xs font-medium text-primary-600 hover:underline"
-                >
-                  View all
-                </button>
-              </div>
-              {/* My to-dos (private to this user) */}
-              {dueTodos.length > 0 && (
-                <>
-                  <div className="px-4 py-2 border-b border-background-600 flex items-center gap-2 bg-background-700/50">
-                    <ListTodo size={13} className="text-text-500" />
-                    <span className="text-xs font-semibold text-text-700 uppercase tracking-[0.04em]">My to-dos</span>
-                    <span className="text-[11px] font-[650] px-1.5 py-px rounded-full bg-background-700 border border-background-600 text-text-700 tabular-nums">
-                      {dueTodos.length}
-                    </span>
-                  </div>
-                  <div className="divide-y divide-background-600 border-b border-background-600">
-                    {dueTodos.map((t) => (
-                      <div key={t.id} className="px-4 py-3 hover:bg-background-700 transition-colors">
-                        <button
-                          className="text-left w-full"
-                          onClick={() => {
-                            setBellOpen(false);
-                            navigate(`${ROUTES.REMINDERS}?tab=todos`);
-                          }}
-                        >
-                          <p className="text-sm text-text-900 font-medium">{t.todoTitle}</p>
-                          {t.todoDate && (
-                            <p className="text-xs text-text-600 mt-0.5">
-                              Due {t.todoDate.split('-').reverse().join('/')}
-                            </p>
-                          )}
-                        </button>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await markTodoComplete(t.id).unwrap();
-                              toast.success('To-do completed');
-                            } catch {
-                              toast.error('Failed to complete to-do');
-                            }
-                          }}
-                          className="mt-1.5 inline-flex items-center gap-1 text-xs text-success hover:underline"
-                        >
-                          <Check size={12} /> Mark done
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {dueReminders.length === 0 && dueTodos.length === 0 ? (
-                <p className="px-4 py-6 text-sm text-text-600 text-center">Nothing due today. All caught up!</p>
-              ) : (
-                <div className="divide-y divide-background-600">
-                  {dueReminders.map((r) => (
-                    <div key={r.id} className="px-4 py-3 hover:bg-background-700 transition-colors">
-                      <button
-                        className="text-left w-full"
-                        onClick={() => {
-                          setBellOpen(false);
-                          // Appliance-owned reminders have no customer to navigate to.
-                          navigate(
-                            r.ownerType === 'APPLIANCE'
-                              ? ROUTES.APPLIANCE_QUARTZ
-                              : `/customers/${r.ownerId ?? r.customerId}`
-                          );
-                        }}
-                      >
-                        <p className="text-sm text-text-900 font-medium">{r.title}</p>
-                        <p className="text-xs text-text-600 mt-0.5">
-                          {r.ownerName ?? r.customerName} ·{' '}
-                          {new Date(r.remindAt).toLocaleString('en-IN', {
-                            day: '2-digit',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </button>
-                      <button
-                        onClick={async () => {
-                          try {
-                            await markReminderDone(r.id).unwrap();
-                            toast.success('Reminder marked done');
-                          } catch {
-                            toast.error('Failed to mark done');
-                          }
-                        }}
-                        className="mt-1.5 inline-flex items-center gap-1 text-xs text-success hover:underline"
-                      >
-                        <Check size={12} /> Mark done
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+      {/* Notifications — extracted; filtering/grouping lives in NotificationBell */}
+      <NotificationBell enabled={!!user} />
 
       <div className="w-px h-6 bg-background-500 hidden sm:block" />
 

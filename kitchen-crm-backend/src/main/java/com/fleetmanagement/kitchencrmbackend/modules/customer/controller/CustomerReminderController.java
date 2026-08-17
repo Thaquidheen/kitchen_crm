@@ -73,9 +73,10 @@ public class CustomerReminderController {
     public ResponseEntity<ApiResponse<Page<CustomerReminderDto>>> getReminders(
             @RequestParam(defaultValue = "ALL") String bucket,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String source,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(reminderService.getReminders(bucket, search, page, size));
+        return ResponseEntity.ok(reminderService.getReminders(bucket, search, source, page, size));
     }
 
     // Reminders page: counts for the filter chips

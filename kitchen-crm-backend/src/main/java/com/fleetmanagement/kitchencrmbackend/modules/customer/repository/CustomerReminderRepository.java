@@ -48,21 +48,43 @@ public interface CustomerReminderRepository extends JpaRepository<CustomerRemind
      * is an implicit INNER join, which would silently drop every appliance-owned reminder (they
      * have a null customer) from both the list and the search.
      */
+    // The source/owner filters follow the same no-nulls convention: the caller always passes a
+    // sources list (all values when unfiltered) and an ownerFilter of ANY | CUSTOMER | APPLIANCE.
     @Query(value = "SELECT r FROM CustomerReminder r "
             + "LEFT JOIN FETCH r.customer c LEFT JOIN FETCH r.applianceCustomer a "
             + "WHERE r.status IN :statuses "
+            + "AND r.source IN :sources "
+            + "AND (:ownerFilter = 'ANY' "
+            + "     OR (:ownerFilter = 'CUSTOMER' AND r.customer IS NOT NULL) "
+            + "     OR (:ownerFilter = 'APPLIANCE' AND r.applianceCustomer IS NOT NULL)) "
             + "AND r.remindAt >= :from AND r.remindAt < :to "
             + "AND (LOWER(r.title) LIKE :q OR LOWER(COALESCE(c.name, a.name, '')) LIKE :q)",
            countQuery = "SELECT COUNT(r) FROM CustomerReminder r "
             + "LEFT JOIN r.customer c LEFT JOIN r.applianceCustomer a "
             + "WHERE r.status IN :statuses "
+            + "AND r.source IN :sources "
+            + "AND (:ownerFilter = 'ANY' "
+            + "     OR (:ownerFilter = 'CUSTOMER' AND r.customer IS NOT NULL) "
+            + "     OR (:ownerFilter = 'APPLIANCE' AND r.applianceCustomer IS NOT NULL)) "
             + "AND r.remindAt >= :from AND r.remindAt < :to "
             + "AND (LOWER(r.title) LIKE :q OR LOWER(COALESCE(c.name, a.name, '')) LIKE :q)")
     Page<CustomerReminder> search(@Param("statuses") List<CustomerReminder.ReminderStatus> statuses,
+                                  @Param("sources") List<CustomerReminder.ReminderSource> sources,
+                                  @Param("ownerFilter") String ownerFilter,
                                   @Param("from") LocalDateTime from,
                                   @Param("to") LocalDateTime to,
                                   @Param("q") String q,
                                   Pageable pageable);
+
+    // Per-source chip counts (open = not DONE), matching the bell's partitioning: appliance by
+    // owner, production by source, customers = the remaining customer-owned rows.
+    long countByStatusNotAndApplianceCustomerIsNotNull(CustomerReminder.ReminderStatus excludedStatus);
+
+    long countByStatusNotAndSource(CustomerReminder.ReminderStatus excludedStatus,
+                                   CustomerReminder.ReminderSource source);
+
+    long countByStatusNotAndSourceInAndCustomerIsNotNull(CustomerReminder.ReminderStatus excludedStatus,
+                                                         List<CustomerReminder.ReminderSource> sources);
 
     // Chip counts. "Open" = anything not DONE.
     long countByStatusNotAndRemindAtGreaterThanEqualAndRemindAtLessThan(

@@ -19,7 +19,7 @@ public interface CustomerReminderService {
     ApiResponse<Map<String, Object>> getNotifications();
 
     // Reminders page: cross-customer list filtered by day bucket (ALL/TODAY/OVERDUE/UPCOMING/DONE)
-    ApiResponse<Page<CustomerReminderDto>> getReminders(String bucket, String search, int page, int size);
+    ApiResponse<Page<CustomerReminderDto>> getReminders(String bucket, String search, String source, int page, int size);
 
     // Reminders page: counts per bucket for the filter chips
     ApiResponse<Map<String, Long>> getReminderStats();

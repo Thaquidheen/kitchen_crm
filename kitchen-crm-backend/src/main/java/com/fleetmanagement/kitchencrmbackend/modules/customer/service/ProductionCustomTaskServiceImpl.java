@@ -329,6 +329,7 @@ public class ProductionCustomTaskServiceImpl implements ProductionCustomTaskServ
         reminderDto.setTitle(task.getTaskTitle());
         reminderDto.setNotes(notes != null && !notes.isBlank() ? notes : task.getTaskDescription());
         reminderDto.setRemindAt(remindAt);
+        reminderDto.setSource("PRODUCTION");
 
         ApiResponse<com.fleetmanagement.kitchencrmbackend.modules.customer.dto.CustomerReminderDto> created =
                 customerReminderService.createReminder(reminderDto, createdBy);

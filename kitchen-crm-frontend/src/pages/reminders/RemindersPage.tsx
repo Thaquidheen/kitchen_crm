@@ -9,6 +9,8 @@
 
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { FilterChips } from '../../components/shared/FilterChips';
+import { fmtReminderDate as fmtDate, fmtReminderTime as fmtTime } from '../../utils/reminderFormat';
 import { Search, Plus, Check, Pencil, Trash2, BellRing, ListTodo } from 'lucide-react';
 import { MyTodosTab } from './MyTodosTab';
 import toast from 'react-hot-toast';
@@ -43,7 +45,16 @@ interface Reminder {
   remindDate?: string;
   bucket?: 'TODAY' | 'OVERDUE' | 'UPCOMING' | 'DONE';
   status?: 'PENDING' | 'DUE' | 'DONE';
+  /** MANUAL | FOLLOW_UP | PRODUCTION — which flow created it (V102). */
+  source?: string;
 }
+
+const SOURCE_CHIPS = [
+  { key: '', label: 'All modules' },
+  { key: 'CUSTOMERS', label: 'Customers', st: 'design' },
+  { key: 'PRODUCTION', label: 'Production', st: 'nego' },
+  { key: 'APPLIANCE', label: 'Appliance', st: 'quote' },
+] as const;
 
 const BUCKETS = [
   { key: 'ALL', label: 'All', statKey: 'all', st: '' },
@@ -71,24 +82,6 @@ const initialsOf = (name?: string) =>
     .join('')
     .toUpperCase() || '?';
 
-/** Renders the stored wall-clock string without letting the browser shift it by timezone. */
-const fmtDate = (iso?: string) => {
-  if (!iso) return '—';
-  const [datePart] = iso.split('T');
-  const [y, m, d] = datePart.split('-').map(Number);
-  if (!y || !m || !d) return datePart;
-  return new Date(y, m - 1, d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-};
-
-const fmtTime = (iso?: string) => {
-  if (!iso || !iso.includes('T')) return '';
-  const [h, min] = iso.split('T')[1].split(':');
-  const hour = Number(h);
-  if (Number.isNaN(hour)) return '';
-  const suffix = hour >= 12 ? 'PM' : 'AM';
-  const h12 = hour % 12 === 0 ? 12 : hour % 12;
-  return `${h12}:${min} ${suffix}`;
-};
 
 export function RemindersPage() {
   const navigate = useNavigate();
@@ -97,8 +90,19 @@ export function RemindersPage() {
   const [bucket, setBucket] = useState<string>('TODAY');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
+  // Module filter, deep-linkable so the bell's "View all" keeps its context (?source=PRODUCTION).
+  const [sourceFilter, setSourceFilter] = useState<string>(() => {
+    const s0 = (searchParams.get('source') ?? '').toUpperCase();
+    return ['CUSTOMERS', 'PRODUCTION', 'APPLIANCE'].includes(s0) ? s0 : '';
+  });
 
-  const { data, isLoading } = useGetRemindersQuery({ bucket, search: search || undefined, page, size: 20 });
+  const { data, isLoading } = useGetRemindersQuery({
+    bucket,
+    search: search || undefined,
+    source: sourceFilter || undefined,
+    page,
+    size: 20,
+  });
   const { data: stats } = useGetReminderStatsQuery();
 
   const reminders: Reminder[] = data?.content ?? [];
@@ -303,6 +307,28 @@ export function RemindersPage() {
         <MyTodosTab />
       ) : (
         <>
+      {/* Module chips — mirrors the bell's filter; counts are open reminders across buckets */}
+      <div className="mb-2.5">
+        <FilterChips
+          items={SOURCE_CHIPS.map((c) => ({
+            ...c,
+            count:
+              c.key === ''
+                ? chipCount('customers') + chipCount('production') + chipCount('appliance')
+                : chipCount(c.key.toLowerCase()),
+          }))}
+          value={sourceFilter}
+          onChange={(k) => {
+            setSourceFilter(k);
+            setPage(0);
+            const next: Record<string, string> = {};
+            if (searchParams.get('tab') === 'todos') next.tab = 'todos';
+            if (k) next.source = k;
+            setSearchParams(next, { replace: true });
+          }}
+        />
+      </div>
+
       {/* Bucket chips */}
       <div className="flex gap-2 flex-wrap mb-5">
         {BUCKETS.map((b) => {
@@ -427,11 +453,19 @@ export function RemindersPage() {
                                 <span className="block text-[13px] text-text-900 truncate group-hover:text-primary-600 transition-colors">
                                   {name}
                                 </span>
-                                {isAppliance && (
+                                {isAppliance ? (
                                   <span className="block text-[10px] font-semibold uppercase tracking-[0.06em] text-text-500">
                                     Appliance &amp; Quartz
                                   </span>
-                                )}
+                                ) : r.source === 'PRODUCTION' ? (
+                                  <span className="block text-[10px] font-semibold uppercase tracking-[0.06em] text-text-500">
+                                    Production
+                                  </span>
+                                ) : r.source === 'FOLLOW_UP' ? (
+                                  <span className="block text-[10px] font-semibold uppercase tracking-[0.06em] text-text-500">
+                                    Follow-up
+                                  </span>
+                                ) : null}
                               </span>
                             </button>
                           );

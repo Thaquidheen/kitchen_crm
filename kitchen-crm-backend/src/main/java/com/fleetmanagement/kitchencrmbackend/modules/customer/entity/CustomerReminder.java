@@ -58,7 +58,19 @@ public class CustomerReminder extends Auditable {
     @Column(name = "created_by")
     private String createdBy;
 
+    /**
+     * Which flow created this reminder, so the bell and the Reminders page can filter by module.
+     * Production and follow-up rows used to be indistinguishable from manual ones (V102).
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", nullable = false, length = 20)
+    private ReminderSource source = ReminderSource.MANUAL;
+
     public enum ReminderStatus {
         PENDING, DUE, DONE
+    }
+
+    public enum ReminderSource {
+        MANUAL, FOLLOW_UP, PRODUCTION
     }
 }

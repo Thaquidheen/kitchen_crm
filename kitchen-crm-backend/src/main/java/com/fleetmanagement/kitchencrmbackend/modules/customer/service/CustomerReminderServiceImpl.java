@@ -109,6 +109,8 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
             reminder.setNotifiedAt(LocalDateTime.now());
         }
         reminder.setCreatedBy(createdBy);
+        // Internal flows stamp their origin (FOLLOW_UP, PRODUCTION); everything else is MANUAL.
+        reminder.setSource(parseSource(dto.getSource()));
         return ApiResponse.success("Reminder created", convertToDto(reminderRepository.save(reminder)));
     }
 
@@ -193,8 +195,15 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
         return ApiResponse.success(payload);
     }
 
+
+    private static final List<CustomerReminder.ReminderSource> ALL_SOURCES =
+            List.of(CustomerReminder.ReminderSource.values());
+    private static final List<CustomerReminder.ReminderSource> CUSTOMER_SOURCES = List.of(
+            CustomerReminder.ReminderSource.MANUAL, CustomerReminder.ReminderSource.FOLLOW_UP);
+
     @Override
-    public ApiResponse<Page<CustomerReminderDto>> getReminders(String bucket, String search, int page, int size) {
+    public ApiResponse<Page<CustomerReminderDto>> getReminders(String bucket, String search,
+                                                                String source, int page, int size) {
         LocalDateTime todayStart = today().atStartOfDay();
         LocalDateTime tomorrowStart = startOfTomorrow();
 
@@ -219,10 +228,25 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
             default -> { }
         }
 
+        // Source chips: CUSTOMERS = customer-owned manual+follow-up rows, PRODUCTION by source,
+        // APPLIANCE by owner. Unfiltered passes every source and ANY owner (no-nulls convention).
+        List<CustomerReminder.ReminderSource> sources = ALL_SOURCES;
+        String ownerFilter = "ANY";
+        String sourceKey = source == null ? "" : source.trim().toUpperCase();
+        switch (sourceKey) {
+            case "CUSTOMERS" -> {
+                sources = CUSTOMER_SOURCES;
+                ownerFilter = "CUSTOMER";
+            }
+            case "PRODUCTION" -> sources = List.of(CustomerReminder.ReminderSource.PRODUCTION);
+            case "APPLIANCE" -> ownerFilter = "APPLIANCE";
+            default -> { }
+        }
+
         String q = (search == null || search.isBlank()) ? "%" : "%" + search.trim().toLowerCase() + "%";
         Pageable pageable = PageRequest.of(Math.max(page, 0), size <= 0 ? 20 : size, sort);
         Page<CustomerReminderDto> result = reminderRepository
-                .search(statuses, from, to, q, pageable)
+                .search(statuses, sources, ownerFilter, from, to, q, pageable)
                 .map(this::convertToDto);
         return ApiResponse.success(result);
     }
@@ -244,6 +268,13 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
         stats.put("overdue", overdue);
         stats.put("upcoming", upcoming);
         stats.put("done", done == null ? 0L : done);
+
+        // Per-source chip counts for the Reminders page (open reminders, all buckets).
+        stats.put("customers", reminderRepository
+                .countByStatusNotAndSourceInAndCustomerIsNotNull(DONE, CUSTOMER_SOURCES));
+        stats.put("production", reminderRepository
+                .countByStatusNotAndSource(DONE, CustomerReminder.ReminderSource.PRODUCTION));
+        stats.put("appliance", reminderRepository.countByStatusNotAndApplianceCustomerIsNotNull(DONE));
         return ApiResponse.success(stats);
     }
 
@@ -263,6 +294,16 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
             r.setNotifiedAt(now);
         }
         reminderRepository.saveAll(dueNow);
+    }
+
+    /** Unknown or absent source strings become MANUAL rather than a 500. */
+    private CustomerReminder.ReminderSource parseSource(String value) {
+        if (value == null || value.isBlank()) return CustomerReminder.ReminderSource.MANUAL;
+        try {
+            return CustomerReminder.ReminderSource.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return CustomerReminder.ReminderSource.MANUAL;
+        }
     }
 
     private CustomerReminderDto convertToDto(CustomerReminder r) {
@@ -297,6 +338,7 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
         LocalDate date = r.getRemindAt().toLocalDate();
         LocalDate today = today();
         dto.setRemindDate(date);
+        dto.setSource(r.getSource() != null ? r.getSource().name() : "MANUAL");
         dto.setBucket(r.getStatus() == DONE ? "DONE"
                 : date.isBefore(today) ? "OVERDUE"
                 : date.isEqual(today) ? "TODAY"
