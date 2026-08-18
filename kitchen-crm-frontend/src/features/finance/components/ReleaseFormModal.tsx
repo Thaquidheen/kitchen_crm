@@ -18,7 +18,7 @@ import { useGetActiveVendorsQuery } from '@/features/vendors/vendorsAPI';
 import VendorFormModal from '@/features/vendors/components/VendorFormModal';
 import { useAddFinanceReleaseMutation, useUpdateFinanceReleaseMutation } from '../financeAPI';
 import type { FinanceExpense, FinanceRelease, PaymentMode, VendorTotal } from '../types';
-import { MODE_LABEL, inr, todayIso } from '../constants';
+import { MODE_LABEL, MODE_ST, inr, todayIso } from '../constants';
 
 interface ReleaseFormModalProps {
   isOpen: boolean;
@@ -70,13 +70,45 @@ export const ReleaseFormModal: React.FC<ReleaseFormModalProps> = ({
     [vendorTotals, vendorId]
   );
 
-  // Prefill the open balance when a vendor is picked and the user hasn't typed an amount.
+  /**
+   * A vendor's money split by where it comes from. A release is wholly one bucket (mode is a
+   * two-value enum), so the balance that matters when releasing is the SELECTED bucket's — not the
+   * combined one. They routinely disagree: a vendor can sit at a flat ₹0 overall while being owed
+   * from the bank and over-paid in cash, which the single figure hid completely.
+   */
+  const bucketOf = (vt: VendorTotal | undefined, m: PaymentMode) => {
+    if (!vt) return null;
+    return m === 'CASH_IN_HAND'
+      ? {
+          expensed: vt.expensedCashInHand ?? 0,
+          released: vt.releasedCashInHand ?? 0,
+          balance: vt.balanceCashInHand ?? 0,
+        }
+      : {
+          expensed: vt.expensedCashInAccount ?? 0,
+          released: vt.releasedCashInAccount ?? 0,
+          balance: vt.balanceCashInAccount ?? 0,
+        };
+  };
+
+  const selectedBucket = useMemo(() => bucketOf(vendorTotal, mode), [vendorTotal, mode]);
+
+  // Prefill what is actually outstanding in the bucket being paid from, so the default is the
+  // amount that clears THIS bucket rather than a combined figure that clears neither.
+  const prefill = (vt: VendorTotal | undefined, m: PaymentMode) => {
+    const b = bucketOf(vt, m);
+    setAmount(b && b.balance > 0 ? String(b.balance) : '');
+  };
+
   const pickVendor = (id: string) => {
     setVendorId(id);
-    if (!amountTouched) {
-      const vt = vendorTotals.find((v) => String(v.vendorId) === id);
-      setAmount(vt && vt.balance > 0 ? String(vt.balance) : '');
-    }
+    if (!amountTouched) prefill(vendorTotals.find((v) => String(v.vendorId) === id), mode);
+  };
+
+  // Switching bucket re-prefills, because the outstanding amount is bucket-specific.
+  const pickMode = (m: PaymentMode) => {
+    setMode(m);
+    if (!amountTouched) prefill(vendorTotal, m);
   };
 
   // Vendor-aware grouping for the line dropdown: the picked vendor's lines first (with their
@@ -108,12 +140,17 @@ export const ReleaseFormModal: React.FC<ReleaseFormModalProps> = ({
       }
       return null;
     }
-    if (vendorTotal) {
-      const room = vendorTotal.balance + selfAllowance;
-      if (amt > room) return `${inr(amt - room)} more than expensed for this vendor`;
+    // Measured against the SELECTED bucket: releasing from cash when only the bank side is
+    // outstanding is exactly the mistake worth flagging, and a combined balance never catches it.
+    if (selectedBucket) {
+      const sameMode = release && release.mode === mode ? selfAllowance : 0;
+      const room = selectedBucket.balance + sameMode;
+      if (amt > room) {
+        return `${inr(amt - room)} more than is outstanding for this vendor in ${MODE_LABEL[mode]}`;
+      }
     }
     return null;
-  }, [amount, vendorTotal, expenseId, expenses, release, vendorId]);
+  }, [amount, selectedBucket, mode, expenseId, expenses, release, vendorId]);
 
   const handleSave = async () => {
     if (!vendorId) {
@@ -183,7 +220,9 @@ export const ReleaseFormModal: React.FC<ReleaseFormModalProps> = ({
                 ))}
               </select>
 
-              {/* Balance strip: this vendor's money on this customer, at a glance */}
+              {/* Balance strip: the combined position, then the split that actually decides how
+                  much to release. The bucket being paid from is ringed so the amount below is
+                  never read against the wrong balance. */}
               {vendorTotal && (
                 <div className="mt-2 rounded-[10px] border border-background-600 bg-background-900 px-3 py-2">
                   <div className="flex items-center justify-between gap-2 text-[11.5px] text-text-700">
@@ -219,6 +258,52 @@ export const ReleaseFormModal: React.FC<ReleaseFormModalProps> = ({
                       />
                     </div>
                   )}
+
+                  <div className="mt-2 pt-2 border-t border-background-600 grid grid-cols-2 gap-2">
+                    {(['CASH_IN_HAND', 'CASH_IN_ACCOUNT'] as PaymentMode[]).map((m) => {
+                      const b = bucketOf(vendorTotal, m)!;
+                      const active = mode === m;
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => pickMode(m)}
+                          className="text-left rounded-[8px] px-2 py-1.5 border transition-colors"
+                          style={{
+                            borderColor: active ? `var(--st-${MODE_ST[m]}-fg)` : 'var(--color-background-600)',
+                            background: active ? `var(--st-${MODE_ST[m]}-bg)` : 'transparent',
+                          }}
+                        >
+                          <div
+                            className="text-[10.5px] font-[650] uppercase tracking-[0.04em]"
+                            style={{ color: `var(--st-${MODE_ST[m]}-fg)` }}
+                          >
+                            {MODE_LABEL[m]}
+                          </div>
+                          <div
+                            className="text-[13px] font-[650] tabular-nums mt-0.5"
+                            style={{
+                              color:
+                                b.balance > 0
+                                  ? 'var(--st-potential-fg)'
+                                  : b.balance === 0
+                                    ? 'var(--st-confirmed-fg)'
+                                    : 'var(--st-lost-fg)',
+                            }}
+                          >
+                            {b.balance > 0
+                              ? `${inr(b.balance)} due`
+                              : b.balance === 0
+                                ? 'Settled'
+                                : `${inr(-b.balance)} over`}
+                          </div>
+                          <div className="text-[10.5px] text-text-600 tabular-nums mt-0.5">
+                            {inr(b.released)} of {inr(b.expensed)}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -251,7 +336,7 @@ export const ReleaseFormModal: React.FC<ReleaseFormModalProps> = ({
                   <button
                     key={m}
                     type="button"
-                    onClick={() => setMode(m)}
+                    onClick={() => pickMode(m)}
                     className="h-[36px] text-[12.5px] font-semibold transition-colors"
                     style={
                       mode === m
