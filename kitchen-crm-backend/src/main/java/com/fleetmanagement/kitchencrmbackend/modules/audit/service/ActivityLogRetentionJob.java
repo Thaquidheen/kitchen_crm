@@ -5,11 +5,13 @@ import com.fleetmanagement.kitchencrmbackend.modules.audit.repository.ActivityLo
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 /**
  * Bounds the activity log. It records every sign-in attempt and every write request in the app,
@@ -28,14 +30,20 @@ public class ActivityLogRetentionJob {
     private static final int FAILED_LOGIN_RETENTION_DAYS = 30;
     private static final int RETENTION_DAYS = 180;
 
+    /** Rows are stamped in the business timezone, so the cutoffs must be measured from it too. */
+    @Value("${app.business-timezone:Asia/Kolkata}")
+    private String businessTimezone;
+
     @Autowired
     private ActivityLogRepository repository;
 
-    @Scheduled(cron = "0 30 2 * * ?")
+    // 02:30 in the business timezone, not the container's UTC — otherwise this "nightly" job runs
+    // at 08:00 local, in the middle of the working day.
+    @Scheduled(cron = "0 30 2 * * ?", zone = "${app.business-timezone:Asia/Kolkata}")
     @Transactional
     public void purgeOldEntries() {
         try {
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime now = LocalDateTime.now(ZoneId.of(businessTimezone));
             int failed = repository.deleteByEventTypeOlderThan(
                     ActivityLog.EventType.LOGIN_FAILED, now.minusDays(FAILED_LOGIN_RETENTION_DAYS));
             int old = repository.deleteOlderThan(now.minusDays(RETENTION_DAYS));

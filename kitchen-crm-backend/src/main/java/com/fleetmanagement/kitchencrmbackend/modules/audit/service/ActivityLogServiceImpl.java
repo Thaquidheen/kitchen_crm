@@ -10,6 +10,7 @@ import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -37,6 +39,16 @@ public class ActivityLogServiceImpl implements ActivityLogService {
     /** The sign-in cards are a glance surface, not a directory; the table is the full record. */
     private static final int MAX_USERS_IN_SUMMARY = 100;
 
+    /**
+     * The team's clock. The JVM runs in UTC (no TZ on the container), so anything derived from a
+     * bare now() is 5h30m behind the office. Reminders and todos already resolve "now" through this
+     * property (CustomerReminderServiceImpl, AdminTodoServiceImpl); the audit log must too, both so
+     * the viewer shows real local times and so a date picked in the filter means the same day the
+     * rows were stamped in.
+     */
+    @Value("${app.business-timezone:Asia/Kolkata}")
+    private String businessTimezone;
+
     @Autowired
     private ActivityLogRepository repository;
 
@@ -45,6 +57,10 @@ public class ActivityLogServiceImpl implements ActivityLogService {
 
     @Autowired
     private ActivityLogWriter writer;
+
+    private ZoneId zone() {
+        return ZoneId.of(businessTimezone);
+    }
 
     /**
      * Builds the row and hands it to {@link ActivityLogWriter}, which persists it on a background
@@ -60,6 +76,7 @@ public class ActivityLogServiceImpl implements ActivityLogService {
                        Integer statusCode, String ipAddress, String userAgent) {
         try {
             ActivityLog log = new ActivityLog();
+            log.setCreatedAt(LocalDateTime.now(zone()));
             log.setEventType(eventType);
             log.setActorEmail(trim(actorEmail, 255));
             log.setActorName(trim(actorName, 255));

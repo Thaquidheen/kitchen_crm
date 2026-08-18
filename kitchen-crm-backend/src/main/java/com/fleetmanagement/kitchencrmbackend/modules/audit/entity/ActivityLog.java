@@ -57,10 +57,18 @@ public class ActivityLog {
     @Column(name = "user_agent", length = 300)
     private String userAgent;
 
-    // App-set (like workflow_history.timestamp) so date-range filters compare like with like;
-    // the column's DB default is only a safety net.
+    /**
+     * Set by ActivityLogServiceImpl in the BUSINESS timezone (app.business-timezone), not here.
+     *
+     * A bare LocalDateTime.now() initialiser takes the JVM default, and the container has no TZ
+     * set — so every row landed in UTC and the viewer, which renders the stored value verbatim,
+     * showed times 5h30m behind the team. It also broke the date filter: a date picked in IST was
+     * compared against UTC-stamped rows, silently hiding the most recent 5h30m.
+     *
+     * No default here, so a row can never be stamped from the wrong clock by accident.
+     */
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
     public enum EventType {
         LOGIN, LOGIN_FAILED, LOGOUT, ACTION
