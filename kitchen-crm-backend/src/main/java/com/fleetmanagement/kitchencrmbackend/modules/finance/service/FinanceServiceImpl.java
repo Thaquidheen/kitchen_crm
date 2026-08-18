@@ -574,6 +574,11 @@ public class FinanceServiceImpl implements FinanceService {
         dto.setCashInHandBalance(dto.getCommittedCashInHand().subtract(receivedCH));
         dto.setCashInAccountBalance(dto.getCommittedCashInAccount().subtract(receivedCA));
         dto.setOverCollected(dto.getTotalBalance().compareTo(BigDecimal.ZERO) < 0);
+        // The header stores totalAmount and the two committed buckets independently and validates
+        // none of them against each other. When they disagree the per-bucket margins cannot re-sum
+        // to totalMargin, so flag it rather than letting the split quietly lie.
+        dto.setCommittedSplitMismatch(dto.getCommittedCashInHand().add(dto.getCommittedCashInAccount())
+                .compareTo(dto.getTotalAmount()) != 0);
 
         // Expenses & releases
         BigDecimal expenseTotal = expenseRepository.sumByFinanceId(financeId);
@@ -607,6 +612,18 @@ public class FinanceServiceImpl implements FinanceService {
             releasedByExpense.put((Long) row[0], (BigDecimal) row[1]);
         }
 
+        // The C/H and C/A totals are accumulated in the loops below rather than fetched as their
+        // own SUM queries. The per-line split is amount x pct/100 rounded HALF_UP to 2dp, so a
+        // SQL-side SUM(amount * pct / 100) would round once at the end and drift from the C/H Amt
+        // column the user can actually see. Summing the same values that get rendered is the only
+        // way the tile total and the column agree.
+        BigDecimal expenseCH = BigDecimal.ZERO;
+        BigDecimal expenseCA = BigDecimal.ZERO;
+        // Vendor balances likewise: both sides come from the already-loaded lists, so per-vendor
+        // figures reconcile with the per-line ones and with the top-level totals by construction.
+        // A vendor with only expense lines and one with only releases must both still appear.
+        Map<Long, CustomerFinanceSummaryDto.VendorTotalDto> vendorMap = new LinkedHashMap<>();
+
         for (FinanceIncomePayment p : payments) {
             CustomerFinanceSummaryDto.PaymentDto pd = new CustomerFinanceSummaryDto.PaymentDto();
             pd.setId(p.getId());
@@ -629,11 +646,20 @@ public class FinanceServiceImpl implements FinanceService {
             ed.setCashInAccountPct(nz(e.getCashInAccountPct()));
             BigDecimal chAmount = nz(e.getAmount()).multiply(nz(e.getCashInHandPct()))
                     .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            BigDecimal caAmount = nz(e.getAmount()).subtract(chAmount);
             ed.setCashInHandAmount(chAmount);
-            ed.setCashInAccountAmount(nz(e.getAmount()).subtract(chAmount));
+            ed.setCashInAccountAmount(caAmount);
+            expenseCH = expenseCH.add(chAmount);
+            expenseCA = expenseCA.add(caAmount);
             if (e.getVendor() != null) {
                 ed.setVendorId(e.getVendor().getId());
                 ed.setVendorName(e.getVendor().getVendorName());
+                CustomerFinanceSummaryDto.VendorTotalDto vt = vendorTotalFor(
+                        vendorMap, e.getVendor().getId(), e.getVendor().getVendorName());
+                vt.setTotalExpensed(vt.getTotalExpensed().add(nz(e.getAmount())));
+                vt.setExpensedCashInHand(vt.getExpensedCashInHand().add(chAmount));
+                vt.setExpensedCashInAccount(vt.getExpensedCashInAccount().add(caAmount));
+                vt.setExpenseCount(vt.getExpenseCount() + 1);
             }
             if (e.getQuotation() != null) {
                 ed.setQuotationId(e.getQuotation().getId());
@@ -664,41 +690,80 @@ public class FinanceServiceImpl implements FinanceService {
             rd.setNote(r.getNote());
             rd.setReceipts(toReceiptDtos(releaseFiles.get(r.getId())));
             dto.getReleases().add(rd);
+
+            // A release is wholly one bucket (mode is a two-value enum), unlike an expense which
+            // splits by percentage.
+            CustomerFinanceSummaryDto.VendorTotalDto vt = vendorTotalFor(
+                    vendorMap, r.getVendor().getId(), r.getVendor().getVendorName());
+            BigDecimal amount = nz(r.getAmount());
+            vt.setTotalReleased(vt.getTotalReleased().add(amount));
+            if (r.getMode() == FinanceIncomePayment.PaymentMode.CASH_IN_HAND) {
+                vt.setReleasedCashInHand(vt.getReleasedCashInHand().add(amount));
+            } else {
+                vt.setReleasedCashInAccount(vt.getReleasedCashInAccount().add(amount));
+            }
+            vt.setReleaseCount(vt.getReleaseCount() + 1);
         }
 
-        // Vendor balances need BOTH sides: expensed (new) and released (pre-existing). Merge the
-        // two grouped queries keyed by vendor id — a vendor with only expense lines must appear
-        // (the release-side query alone would drop them), and a vendor with only releases keeps
-        // appearing with expensed = 0. Balance may go negative; it is shown, never hidden.
-        Map<Long, CustomerFinanceSummaryDto.VendorTotalDto> vendorMap = new LinkedHashMap<>();
-        for (Object[] row : expenseRepository.vendorTotals(financeId)) {
-            CustomerFinanceSummaryDto.VendorTotalDto vt = new CustomerFinanceSummaryDto.VendorTotalDto();
-            vt.setVendorId((Long) row[0]);
-            vt.setVendorName((String) row[1]);
-            vt.setTotalExpensed(nz((BigDecimal) row[2]));
-            vt.setTotalReleased(BigDecimal.ZERO);
-            vt.setExpenseCount((Long) row[3]);
-            vt.setReleaseCount(0L);
-            vendorMap.put(vt.getVendorId(), vt);
-        }
-        for (Object[] row : releaseRepository.vendorTotals(financeId)) {
-            CustomerFinanceSummaryDto.VendorTotalDto vt = vendorMap.computeIfAbsent((Long) row[0], id -> {
-                CustomerFinanceSummaryDto.VendorTotalDto fresh = new CustomerFinanceSummaryDto.VendorTotalDto();
-                fresh.setVendorId(id);
-                fresh.setVendorName((String) row[1]);
-                fresh.setTotalExpensed(BigDecimal.ZERO);
-                fresh.setExpenseCount(0L);
-                return fresh;
-            });
-            vt.setTotalReleased(nz((BigDecimal) row[2]));
-            vt.setReleaseCount((Long) row[3]);
-        }
+        // Cash split of the expense side, and the two figures that hang off it. Outstanding and
+        // extra are clamped PER BUCKET before being summed — settling a 100%-cash expense from the
+        // bank leaves you outstanding in C/H and over in C/A simultaneously, which a single net
+        // figure would hide. The pair still reconciles with the net:
+        //   outstandingTotal - extraTotal == expenseTotal - releasedTotal
+        dto.setExpenseCashInHand(expenseCH);
+        dto.setExpenseCashInAccount(expenseCA);
+
+        BigDecimal outstandingCH = expenseCH.subtract(releasedCH).max(BigDecimal.ZERO);
+        BigDecimal outstandingCA = expenseCA.subtract(releasedCA).max(BigDecimal.ZERO);
+        dto.setOutstandingCashInHand(outstandingCH);
+        dto.setOutstandingCashInAccount(outstandingCA);
+        dto.setOutstandingTotal(outstandingCH.add(outstandingCA));
+
+        BigDecimal extraCH = releasedCH.subtract(expenseCH).max(BigDecimal.ZERO);
+        BigDecimal extraCA = releasedCA.subtract(expenseCA).max(BigDecimal.ZERO);
+        dto.setExtraCashInHand(extraCH);
+        dto.setExtraCashInAccount(extraCA);
+        dto.setExtraTotal(extraCH.add(extraCA));
+
+        // Margins per bucket mirror their totals: committed - expensed, and received - released.
+        // These only re-sum to totalMargin when committedSplitMismatch is false.
+        dto.setTotalMarginCashInHand(dto.getCommittedCashInHand().subtract(expenseCH));
+        dto.setTotalMarginCashInAccount(dto.getCommittedCashInAccount().subtract(expenseCA));
+        dto.setCollectedMarginCashInHand(receivedCH.subtract(releasedCH));
+        dto.setCollectedMarginCashInAccount(receivedCA.subtract(releasedCA));
+
+        // Balance may go negative on either side; it is shown, never hidden.
         for (CustomerFinanceSummaryDto.VendorTotalDto vt : vendorMap.values()) {
-            vt.setBalance(nz(vt.getTotalExpensed()).subtract(nz(vt.getTotalReleased())));
+            vt.setBalance(vt.getTotalExpensed().subtract(vt.getTotalReleased()));
+            vt.setBalanceCashInHand(vt.getExpensedCashInHand().subtract(vt.getReleasedCashInHand()));
+            vt.setBalanceCashInAccount(vt.getExpensedCashInAccount().subtract(vt.getReleasedCashInAccount()));
             dto.getVendorTotals().add(vt);
         }
 
         return dto;
+    }
+
+    /**
+     * Fetches or creates this customer's running total for a vendor. Every numeric field starts at
+     * ZERO rather than null because the caller only ever adds to them, and a vendor may be seen
+     * first from either the expense side or the release side.
+     */
+    private CustomerFinanceSummaryDto.VendorTotalDto vendorTotalFor(
+            Map<Long, CustomerFinanceSummaryDto.VendorTotalDto> vendorMap, Long vendorId, String vendorName) {
+        return vendorMap.computeIfAbsent(vendorId, id -> {
+            CustomerFinanceSummaryDto.VendorTotalDto fresh = new CustomerFinanceSummaryDto.VendorTotalDto();
+            fresh.setVendorId(id);
+            fresh.setVendorName(vendorName);
+            fresh.setTotalExpensed(BigDecimal.ZERO);
+            fresh.setExpensedCashInHand(BigDecimal.ZERO);
+            fresh.setExpensedCashInAccount(BigDecimal.ZERO);
+            fresh.setTotalReleased(BigDecimal.ZERO);
+            fresh.setReleasedCashInHand(BigDecimal.ZERO);
+            fresh.setReleasedCashInAccount(BigDecimal.ZERO);
+            fresh.setExpenseCount(0L);
+            fresh.setReleaseCount(0L);
+            return fresh;
+        });
     }
 
     private List<Long> idsOfPayments(List<FinanceIncomePayment> list) {

@@ -1,12 +1,16 @@
 /**
- * FinanceCustomerPage — one customer's money story: header KPI strip (total,
- * received with the C/H–C/A split, balances, expenses, TOTAL MARGIN) and the
- * Income | Expenses tabs. One summary query powers everything.
+ * FinanceCustomerPage — one customer's money story, and the Income | Expenses tabs. One summary
+ * query powers everything.
+ *
+ * The KPI strip is two rows: money with the CUSTOMER (total, received, balance, total margin) and
+ * money with the VENDORS (expenses, released, outstanding, extra, cash margin). Every figure
+ * carries its Cash-in-Hand / Cash-in-Account split, and each tile is tinted with its own --st-*
+ * token so a figure is found by colour rather than by reading nine labels.
  */
 
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -100,36 +104,77 @@ export function FinanceCustomerPage() {
     );
   }
 
+  /**
+   * One figure in the KPI strip. `tone` is an --st-* status token: it tints the tile background
+   * and colours the value, so a figure can be found by colour instead of by reading labels.
+   *
+   * The C/H · C/A lines are deliberately NOT colour-coded. On a tinted tile the mode colours
+   * (C/H = draft grey, C/A = lead blue) would collide with the tile's own tint — blue-on-blue on
+   * the Total Expenses tile. Inside a tile the prefix does the work; MODE_ST keeps its meaning in
+   * the tables, where the background is neutral.
+   */
   const kpi = (
     label: string,
     value: string,
-    sub?: string,
-    color?: string,
-    warn?: boolean
-  ) => (
-    <div className="bg-background-800 px-4 py-3 min-w-0">
-      <div className="text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 truncate">{label}</div>
+    opts?: {
+      tone?: string;
+      sub?: string;
+      split?: { ch: number; ca: number };
+      negative?: boolean;
+      warn?: boolean;
+    }
+  ) => {
+    const { tone, sub, split, negative, warn } = opts ?? {};
+    return (
       <div
-        className="text-[16px] font-[650] mt-[3px] tabular-nums whitespace-nowrap"
-        style={{ color: color ?? 'var(--color-text-900)' }}
+        className="px-4 py-3 min-w-0"
+        style={{ background: tone ? `var(--st-${tone}-bg)` : 'var(--color-background-800)' }}
       >
-        {value}
-      </div>
-      {sub && (
-        <div className="text-[11px] text-text-500 mt-0.5 tabular-nums leading-[1.5]" title={sub}>
-          {sub}
-        </div>
-      )}
-      {warn && (
-        <span
-          className="inline-flex mt-1 px-2 py-[2px] rounded-full text-[10.5px] font-semibold"
-          style={{ background: 'var(--st-lost-bg)', color: 'var(--st-lost-fg)' }}
+        <div className="text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 truncate">{label}</div>
+        <div
+          className="text-[16px] font-[650] mt-[3px] tabular-nums whitespace-nowrap"
+          style={{
+            color: negative
+              ? 'var(--st-lost-fg)'
+              : tone
+                ? `var(--st-${tone}-fg)`
+                : 'var(--color-text-900)',
+          }}
         >
-          Over-collected
-        </span>
-      )}
-    </div>
-  );
+          {value}
+        </div>
+        {split && (
+          <div className="mt-1 text-[11px] tabular-nums leading-[1.55] text-text-600">
+            <div className="flex justify-between gap-2">
+              <span>C/H</span>
+              <span style={split.ch < 0 ? { color: 'var(--st-lost-fg)' } : undefined}>{inr(split.ch)}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span>C/A</span>
+              <span style={split.ca < 0 ? { color: 'var(--st-lost-fg)' } : undefined}>{inr(split.ca)}</span>
+            </div>
+          </div>
+        )}
+        {sub && (
+          <div className="text-[11px] text-text-500 mt-0.5 tabular-nums leading-[1.5]" title={sub}>
+            {sub}
+          </div>
+        )}
+        {warn && (
+          <span
+            className="inline-flex mt-1 px-2 py-[2px] rounded-full text-[10.5px] font-semibold"
+            style={{ background: 'var(--st-lost-bg)', color: 'var(--st-lost-fg)' }}
+          >
+            Over-collected
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  // Every new field is read with ?? 0: the frontend ships alongside the backend, but if the jar is
+  // ever rolled back these fields vanish from the payload and the tiles must not print "undefined".
+  const n = (v: number | undefined) => v ?? 0;
 
   return (
     <div className="w-full">
@@ -162,35 +207,82 @@ export function FinanceCustomerPage() {
           </button>
         </div>
 
-        {/* KPI strip */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-px border-t border-background-600 bg-background-600">
-          {kpi('Total Amount', inr(summary.totalAmount))}
-          {kpi(
-            'Received',
-            inr(summary.receivedTotal),
-            `C/H ${inr(summary.receivedCashInHand)} · C/A ${inr(summary.receivedCashInAccount)}`
-          )}
-          {kpi(
-            'Balance',
-            inr(summary.totalBalance),
-            `C/H bal ${inr(summary.cashInHandBalance)} · C/A bal ${inr(summary.cashInAccountBalance)}`,
-            summary.totalBalance < 0 ? 'var(--st-lost-fg)' : undefined,
-            Boolean(summary.overCollected)
-          )}
-          {kpi('Expenses', inr(summary.expenseTotal), `Released ${inr(summary.releasedTotal)}`)}
-          {kpi(
-            'Total Margin',
-            inr(summary.totalMargin),
-            'Total − expenses',
-            summary.totalMargin >= 0 ? 'var(--st-confirmed-fg)' : 'var(--st-lost-fg)'
-          )}
-          {kpi(
-            'Cash Margin',
-            inr(summary.collectedMargin),
-            'Received − released',
-            summary.collectedMargin >= 0 ? undefined : 'var(--st-lost-fg)'
-          )}
+        {/* KPI strip — row 1: money with the CUSTOMER */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-px border-t border-background-600 bg-background-600">
+          {kpi('Total Amount', inr(summary.totalAmount), {
+            tone: 'design',
+            split: { ch: n(summary.committedCashInHand), ca: n(summary.committedCashInAccount) },
+          })}
+          {kpi('Received', inr(summary.receivedTotal), {
+            tone: 'quote',
+            split: { ch: n(summary.receivedCashInHand), ca: n(summary.receivedCashInAccount) },
+          })}
+          {kpi('Balance', inr(summary.totalBalance), {
+            tone: 'potential',
+            split: { ch: n(summary.cashInHandBalance), ca: n(summary.cashInAccountBalance) },
+            negative: summary.totalBalance < 0,
+            warn: Boolean(summary.overCollected),
+          })}
+          {kpi('Total Margin', inr(summary.totalMargin), {
+            tone: 'confirmed',
+            split: {
+              ch: n(summary.totalMarginCashInHand),
+              ca: n(summary.totalMarginCashInAccount),
+            },
+            negative: summary.totalMargin < 0,
+          })}
         </div>
+
+        {/* KPI strip — row 2: money with the VENDORS */}
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-px border-t border-background-600 bg-background-600">
+          {kpi('Total Expenses', inr(summary.expenseTotal), {
+            tone: 'lead',
+            split: { ch: n(summary.expenseCashInHand), ca: n(summary.expenseCashInAccount) },
+          })}
+          {kpi('Payment Released', inr(summary.releasedTotal), {
+            tone: 'nego',
+            split: { ch: n(summary.releasedCashInHand), ca: n(summary.releasedCashInAccount) },
+          })}
+          {kpi('Outstanding Expenses', inr(n(summary.outstandingTotal)), {
+            tone: 'follow',
+            split: {
+              ch: n(summary.outstandingCashInHand),
+              ca: n(summary.outstandingCashInAccount),
+            },
+          })}
+          {/* Red only when there IS an over-release — a permanently red tile trains the eye to
+              ignore it, which is the opposite of what a warning is for. */}
+          {kpi('Extra Expenses', inr(n(summary.extraTotal)), {
+            tone: n(summary.extraTotal) > 0 ? 'lost' : 'draft',
+            split: { ch: n(summary.extraCashInHand), ca: n(summary.extraCashInAccount) },
+            sub: n(summary.extraTotal) > 0 ? 'Released beyond expensed' : undefined,
+          })}
+          {kpi('Cash Margin', inr(summary.collectedMargin), {
+            tone: 'confirmed',
+            split: {
+              ch: n(summary.collectedMarginCashInHand),
+              ca: n(summary.collectedMarginCashInAccount),
+            },
+            negative: summary.collectedMargin < 0,
+          })}
+        </div>
+
+        {/* The three header figures are stored independently and never validated against each
+            other, so say so rather than letting the margin split silently fail to add up. */}
+        {summary.committedSplitMismatch && (
+          <div
+            className="flex items-start gap-2 px-4 py-2.5 border-t border-background-600 text-[11.5px] leading-[1.5]"
+            style={{ background: 'var(--st-potential-bg)', color: 'var(--st-potential-fg)' }}
+          >
+            <AlertTriangle size={14} className="mt-[1px] shrink-0" />
+            <span>
+              Committed C/H {inr(summary.committedCashInHand)} + C/A {inr(summary.committedCashInAccount)} ={' '}
+              {inr(n(summary.committedCashInHand) + n(summary.committedCashInAccount))}, which does not match the
+              total amount {inr(summary.totalAmount)}. The C/H and C/A margin figures will not add up to Total
+              Margin until the header is corrected.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}

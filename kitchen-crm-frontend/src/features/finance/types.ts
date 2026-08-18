@@ -60,9 +60,16 @@ export interface VendorTotal {
   vendorName: string;
   /** Sum of expense lines assigned to this vendor (this customer only). */
   totalExpensed: number;
+  expensedCashInHand: number;
+  expensedCashInAccount: number;
   totalReleased: number;
+  releasedCashInHand: number;
+  releasedCashInAccount: number;
   /** expensed − released; negative = over-released. */
   balance: number;
+  /** Per-bucket balance, signed like `balance` — cash and bank can disagree. */
+  balanceCashInHand: number;
+  balanceCashInAccount: number;
   expenseCount: number;
   releaseCount: number;
 }
@@ -85,12 +92,31 @@ export interface FinanceSummary {
   cashInHandBalance: number;
   cashInAccountBalance: number;
   overCollected?: boolean;
+  /** committed C/H + C/A ≠ totalAmount, so the margin split cannot re-sum to totalMargin. */
+  committedSplitMismatch?: boolean;
   expenseTotal: number;
+  expenseCashInHand: number;
+  expenseCashInAccount: number;
   releasedTotal: number;
   releasedCashInHand: number;
   releasedCashInAccount: number;
+  /**
+   * Clamped per bucket then summed, NOT expenseTotal − releasedTotal: paying a cash expense from
+   * the bank leaves you outstanding in one bucket and over in the other at the same time.
+   * Reconciles as outstandingTotal − extraTotal === expenseTotal − releasedTotal.
+   */
+  outstandingTotal: number;
+  outstandingCashInHand: number;
+  outstandingCashInAccount: number;
+  extraTotal: number;
+  extraCashInHand: number;
+  extraCashInAccount: number;
   totalMargin: number;
+  totalMarginCashInHand: number;
+  totalMarginCashInAccount: number;
   collectedMargin: number;
+  collectedMarginCashInHand: number;
+  collectedMarginCashInAccount: number;
   payments: FinancePayment[];
   expenses: FinanceExpense[];
   releases: FinanceRelease[];

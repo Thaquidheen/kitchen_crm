@@ -27,8 +27,7 @@ public interface FinanceVendorReleaseRepository extends JpaRepository<FinanceVen
             "WHERE r.finance.id = :financeId AND r.expense IS NOT NULL GROUP BY r.expense.id")
     List<Object[]> sumGroupedByExpense(@Param("financeId") Long financeId);
 
-    @Query("SELECT r.vendor.id, r.vendor.vendorName, COALESCE(SUM(r.amount), 0), COUNT(r) " +
-            "FROM FinanceVendorRelease r WHERE r.finance.id = :financeId " +
-            "GROUP BY r.vendor.id, r.vendor.vendorName")
-    List<Object[]> vendorTotals(@Param("financeId") Long financeId);
+    // Released-per-vendor is now accumulated in FinanceServiceImpl.buildSummary from the release
+    // list that method already loads, which is also where each release's mode is split into the
+    // cash/bank buckets. See the matching note in FinanceExpenseRepository.
 }

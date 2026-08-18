@@ -16,6 +16,32 @@ import { ReceiptsCell } from './ReceiptsCell';
 
 const thClass = 'px-3 py-[9px] text-left text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500';
 
+/**
+ * The C/H · C/A pair under a margin figure. Each side is coloured on its own sign: one bucket can
+ * be in profit while the other is not, and averaging that into one colour hides it.
+ */
+const MarginSplit: React.FC<{ ch?: number; ca?: number; align?: 'left' | 'right' }> = ({
+  ch,
+  ca,
+  align = 'left',
+}) => (
+  <div
+    className={`mt-1 text-[11px] tabular-nums text-text-600 ${align === 'right' ? 'text-right' : ''}`}
+  >
+    {(
+      [
+        ['CASH_IN_HAND', ch],
+        ['CASH_IN_ACCOUNT', ca],
+      ] as const
+    ).map(([mode, v]) => (
+      <span key={mode} className={align === 'right' ? 'ml-2.5' : 'mr-2.5'}>
+        <span style={{ color: `var(--st-${MODE_ST[mode]}-fg)` }}>{mode === 'CASH_IN_HAND' ? 'C/H' : 'C/A'}</span>{' '}
+        <span style={(v ?? 0) < 0 ? { color: 'var(--st-lost-fg)' } : undefined}>{inr(v ?? 0)}</span>
+      </span>
+    ))}
+  </div>
+);
+
 interface ExpensesTabProps {
   summary: FinanceSummary;
 }
@@ -350,6 +376,48 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ summary }) => {
                       {' · '}{v.expenseCount} {v.expenseCount === 1 ? 'line' : 'lines'}, {v.releaseCount}{' '}
                       {v.releaseCount === 1 ? 'release' : 'releases'}
                     </div>
+                    {/* Cash vs bank per vendor. The two can disagree in sign — settling a cash
+                        expense from the bank leaves one bucket owed and the other over — so each
+                        side is coloured on its own balance, not on the combined one. */}
+                    <div className="mt-1.5 pt-1.5 border-t border-background-600 grid grid-cols-2 gap-2 text-[10.5px] tabular-nums">
+                      {(
+                        [
+                          ['CASH_IN_HAND', v.expensedCashInHand, v.releasedCashInHand, v.balanceCashInHand],
+                          ['CASH_IN_ACCOUNT', v.expensedCashInAccount, v.releasedCashInAccount, v.balanceCashInAccount],
+                        ] as const
+                      ).map(([mode, expensed, released, bal]) => (
+                        <div key={mode} className="min-w-0">
+                          <span
+                            className="inline-flex px-1.5 py-[1px] rounded-md font-semibold"
+                            style={{
+                              background: `var(--st-${MODE_ST[mode]}-bg)`,
+                              color: `var(--st-${MODE_ST[mode]}-fg)`,
+                            }}
+                          >
+                            {MODE_LABEL[mode]}
+                          </span>
+                          <div className="mt-0.5 text-text-600">
+                            {inr(released ?? 0)} of {inr(expensed ?? 0)}
+                          </div>
+                          <div
+                            style={{
+                              color:
+                                (bal ?? 0) < 0
+                                  ? 'var(--st-lost-fg)'
+                                  : (bal ?? 0) === 0
+                                    ? 'var(--st-confirmed-fg)'
+                                    : 'var(--st-potential-fg)',
+                            }}
+                          >
+                            {(bal ?? 0) < 0
+                              ? `${inr(-(bal ?? 0))} over`
+                              : (bal ?? 0) === 0
+                                ? 'Cleared'
+                                : `${inr(bal ?? 0)} pending`}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 );
               })}
@@ -376,17 +444,23 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ summary }) => {
               {inr(summary.totalMargin)}
             </div>
             <div className="text-[11.5px] text-text-600 mt-0.5">Total amount − total expenses</div>
+            <MarginSplit ch={summary.totalMarginCashInHand} ca={summary.totalMarginCashInAccount} />
           </div>
           <div className="flex-1" />
           <div className="text-right">
             <div className="text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500">Cash margin</div>
             <div
               className="text-[16px] font-[650] tabular-nums mt-0.5"
-              style={{ color: summary.collectedMargin >= 0 ? 'var(--color-text-900)' : 'var(--st-lost-fg)' }}
+              style={{ color: summary.collectedMargin >= 0 ? 'var(--st-confirmed-fg)' : 'var(--st-lost-fg)' }}
             >
               {inr(summary.collectedMargin)}
             </div>
             <div className="text-[11.5px] text-text-600 mt-0.5">Received − released</div>
+            <MarginSplit
+              ch={summary.collectedMarginCashInHand}
+              ca={summary.collectedMarginCashInAccount}
+              align="right"
+            />
           </div>
         </div>
       </div>

@@ -22,9 +22,8 @@ public interface FinanceExpenseRepository extends JpaRepository<FinanceExpense, 
             "WHERE e.finance.id IN :financeIds GROUP BY e.finance.id")
     List<Object[]> sumByFinanceIds(@Param("financeIds") Collection<Long> financeIds);
 
-    /** Expensed per vendor (vendor-less lines excluded) — the other half of the vendor balance. */
-    @Query("SELECT e.vendor.id, e.vendor.vendorName, COALESCE(SUM(e.amount), 0), COUNT(e) " +
-            "FROM FinanceExpense e WHERE e.finance.id = :financeId AND e.vendor IS NOT NULL " +
-            "GROUP BY e.vendor.id, e.vendor.vendorName")
-    List<Object[]> vendorTotals(@Param("financeId") Long financeId);
+    // Expensed-per-vendor used to live here as a GROUP BY. It is now accumulated in
+    // FinanceServiceImpl.buildSummary from the expense list that method already loads, so the
+    // per-vendor cash/bank split is summed from the very same rounded per-line amounts the UI
+    // renders. A SQL aggregate would round independently and drift from the visible column.
 }
