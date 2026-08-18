@@ -12,6 +12,7 @@ import com.fleetmanagement.kitchencrmbackend.security.JwtTokenProvider;
 import com.fleetmanagement.kitchencrmbackend.security.TokenBlacklistService;
 import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
+import com.fleetmanagement.kitchencrmbackend.common.util.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -174,11 +175,13 @@ public class AuthController {
         return null;
     }
 
+    /**
+     * Delegates to {@link ClientIpResolver}: X-Forwarded-For's first hop is client-supplied
+     * (nginx appends rather than overwrites), so trusting it let a caller forge the IP recorded
+     * against their sign-ins. The shared resolver prefers X-Real-IP and is used by the audit
+     * interceptor too, so login and action rows always agree.
+     */
     private String getClientIp(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        return ClientIpResolver.resolve(request);
     }
 }

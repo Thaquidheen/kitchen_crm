@@ -6,6 +6,8 @@ import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.LoginRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.LoginResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.ResetPasswordRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.dto.SignupRequest;
+import com.fleetmanagement.kitchencrmbackend.modules.audit.entity.ActivityLog;
+import com.fleetmanagement.kitchencrmbackend.modules.audit.service.ActivityLogService;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.entity.PasswordResetToken;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.entity.RefreshToken;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.entity.Role;
@@ -68,6 +70,9 @@ public class AuthServiceImpl implements AuthService {
     RefreshTokenService refreshTokenService;
 
     @Autowired
+    ActivityLogService activityLogService;
+
+    @Autowired
     TokenBlacklistService tokenBlacklistService;
 
     @Value("${app.frontend.url:http://localhost:5173}")
@@ -116,9 +121,29 @@ public class AuthServiceImpl implements AuthService {
                     .roles(roles)
                     .build();
 
+            // Settings > Activity Log. record() is non-transactional and queues the row for a
+            // background writer, so it cannot stall or fail this request; the guard is belt and
+            // braces, because authentication has already SUCCEEDED here and must not be turned
+            // into a 500 by the act of recording it.
+            try {
+                activityLogService.record(ActivityLog.EventType.LOGIN, user.getEmail(), user.getName(),
+                        roles.stream().findFirst().orElse(null), null, null,
+                        "Signed in", null, ipAddress, deviceInfo);
+            } catch (Throwable ignored) {
+                // never let auditing affect the login outcome
+            }
+
             return ApiResponse.success("Login successful", loginResponse);
         } catch (AuthenticationException e) {
             logger.warn("Authentication failed for user {}: {}", loginRequest.getEmail(), e.getMessage());
+            // The attempted email is the only identity available on failure; the row also keeps
+            // the source IP, which is the part that matters when reviewing break-in attempts.
+            try {
+                activityLogService.record(ActivityLog.EventType.LOGIN_FAILED, loginRequest.getEmail(),
+                        null, null, null, null, "Failed sign-in attempt", null, ipAddress, deviceInfo);
+            } catch (Throwable ignored) {
+                // the caller must still get "Invalid email or password", not a 500
+            }
             return ApiResponse.error("Invalid email or password");
         }
     }

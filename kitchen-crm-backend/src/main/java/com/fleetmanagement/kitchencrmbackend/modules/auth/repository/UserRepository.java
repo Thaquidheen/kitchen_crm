@@ -7,12 +7,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
+
+    /** Bulk lookup for the activity log's sign-in cards, which resolve current display names. */
+    List<User> findByEmailIn(Collection<String> emails);
     Boolean existsByEmail(String email);
 
     @Query("SELECT u FROM User u JOIN FETCH u.roles WHERE u.email = :email")

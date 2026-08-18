@@ -6,14 +6,31 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
+import com.fleetmanagement.kitchencrmbackend.modules.audit.web.ActivityLogInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Page;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.io.IOException;
 
 @Configuration
 public class WebConfig {
+
+    /**
+     * Write-action audit trail (Settings > Activity Log). Registered on /api/** so the
+     * interceptor sees every controller; it self-filters to authenticated write methods.
+     */
+    @Bean
+    public WebMvcConfigurer activityLogConfigurer(ActivityLogInterceptor interceptor) {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addInterceptors(InterceptorRegistry registry) {
+                registry.addInterceptor(interceptor).addPathPatterns("/api/**");
+            }
+        };
+    }
 
     /**
      * Configure Jackson to properly serialize Page objects

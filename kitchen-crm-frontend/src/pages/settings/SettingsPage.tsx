@@ -3,6 +3,7 @@ import { useGetMarginsQuery, useUpdateMarginsMutation, useGetCompanySettingsQuer
 import type { MarginsData } from '../../services/settingsAPI.types';
 import type { CompanySettings } from '../../services/settingsAPI';
 import { Card, CardHeader, CardBody, CardFooter } from '../../components/ui/Card';
+import { ActivityLogTab } from '../../features/activity/ActivityLogTab';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { TextArea } from '../../components/ui/TextArea';
@@ -18,6 +19,7 @@ import {
   CheckCircle2,
   Info,
   TrendingUp,
+  History,
   Shield,
   Building2,
   Mail,
@@ -739,6 +741,11 @@ export const SettingsPage: React.FC = () => {
               label: 'Theme Configuration',
               icon: <Palette className="w-4 h-4" />,
               content: <ThemeSelector />,
+            },
+            {
+              label: 'Activity Log',
+              icon: <History className="w-4 h-4" />,
+              content: <ActivityLogTab />,
             },
           ]}
         />
