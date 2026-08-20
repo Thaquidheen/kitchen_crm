@@ -131,6 +131,16 @@ const baseQuery = fetchBaseQuery({
       headers.set('authorization', `Bearer ${token}`);
     }
 
+    // Second key for the concealed reporting module. Without it the customer-finance endpoints
+    // answer 404, so it is attached to every request while an unlock is live. Held in memory only
+    // (financeAccessSlice), so a refresh drops it and the module re-hides.
+    // Expiry is checked HERE too, not only in the selector the UI uses. Reading the raw value
+    // meant a lapsed key kept riding along on every unrelated request for the rest of the session.
+    const fa = state.financeAccess;
+    if (fa?.key && fa.expiresAt && Date.now() < fa.expiresAt) {
+      headers.set('X-Reporting-Key', fa.key);
+    }
+
     // Allow multipart/form-data requests to control their own Content-Type
     // If a request sets this flag, we skip forcing JSON so the browser can set a proper boundary
     const skipJsonContentType = headers.get('X-Skip-Json-Content-Type') === 'true';

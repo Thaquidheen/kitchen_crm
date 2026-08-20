@@ -56,12 +56,54 @@ public class JwtTokenProvider {
         return Long.parseLong(claims.getSubject());
     }
 
+    /**
+     * Validates a token for AUTHENTICATION. Signature and expiry alone are not enough: this key
+     * also signs scoped tokens (see {@link #generateScopedToken}), and without a type check any of
+     * those would authenticate as a bearer credential with its own, longer lifetime — outliving the
+     * access-token expiry and surviving the logout blacklist, which keys on the access token value.
+     *
+     * A MISSING type is still accepted, so access tokens issued before the claim existed keep
+     * working; only a token that declares a different type is refused.
+     */
     public boolean validateToken(String authToken) {
         try {
-            Jwts.parser()
+            Claims claims = Jwts.parser()
                     .setSigningKey(getSigningKey())
-                    .parseClaimsJws(authToken);
-            return true;
+                    .parseClaimsJws(authToken)
+                    .getBody();
+            Object type = claims.get("type");
+            return type == null || "access".equals(type);
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Mints a token that grants ONE named capability to one user for a short window — not a login.
+     * Deliberately typed "scope" so {@link #validateToken} refuses it on the authentication path.
+     */
+    public String generateScopedToken(String scope, Long userId, long ttlMs) {
+        return Jwts.builder()
+                .setSubject(Long.toString(userId))
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + ttlMs))
+                .claim("type", "scope")
+                .claim("scope", scope)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
+                .compact();
+    }
+
+    /** True only for an unexpired scoped token of exactly this scope, bound to exactly this user. */
+    public boolean validateScopedToken(String token, String scope, Long userId) {
+        try {
+            Claims claims = Jwts.parser()
+                    .setSigningKey(getSigningKey())
+                    .parseClaimsJws(token)
+                    .getBody();
+            return "scope".equals(claims.get("type"))
+                    && scope.equals(claims.get("scope"))
+                    && userId != null
+                    && userId.toString().equals(claims.getSubject());
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }

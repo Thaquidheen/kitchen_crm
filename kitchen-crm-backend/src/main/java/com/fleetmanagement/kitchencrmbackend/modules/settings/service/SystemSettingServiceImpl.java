@@ -27,6 +27,14 @@ import java.util.UUID;
 @Service
 public class SystemSettingServiceImpl implements SystemSettingService {
 
+    /**
+     * Settings that hold secrets and must never be writable through a generic key/value update.
+     * Anything added here is still readable/writable by the code that owns it, just not by the
+     * open-ended company-settings map.
+     */
+    private static final java.util.Set<String> RESERVED_SETTING_KEYS =
+            java.util.Set.of("reporting_module_key");
+
     private static final Logger logger = LoggerFactory.getLogger(SystemSettingServiceImpl.class);
 
     @Autowired
@@ -107,6 +115,16 @@ public class SystemSettingServiceImpl implements SystemSettingService {
     @Transactional
     public void updateCompanySettings(Map<String, String> settings) {
         settings.forEach((key, value) -> {
+            // This method writes whatever keys it is handed, so it is a general-purpose write into
+            // system_settings, not a company-details form. Secrets stored in the same table must be
+            // excluded explicitly: without this, PUT /settings/company with
+            // {"reporting_module_key": "<hash of my choosing>"} would silently take over the
+            // reporting module's passphrase — defeating a control whose whole purpose is to stand
+            // ABOVE super-admin, and whose stated threat is a second holder of that same login.
+            if (RESERVED_SETTING_KEYS.contains(key)) {
+                logger.warn("Refused an attempt to write the protected setting '{}' via company settings", key);
+                return;
+            }
             SystemSetting setting = systemSettingRepository.findBySettingKey(key)
                     .orElseGet(() -> {
                         SystemSetting newSetting = new SystemSetting();

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -35,6 +36,11 @@ public class ActivityLogInterceptor implements HandlerInterceptor {
     private static final Set<String> SKIP_PATHS = Set.of(
             "/api/v1/auth/signin",
             "/api/v1/auth/refresh");
+
+    /** Paths whose activity is never recorded — see the note at the call site. */
+    private static final List<String> AUDIT_BLACKOUT_PREFIXES = List.of(
+            "/api/v1/customer-finance",
+            "/api/v1/reporting-access");
 
     private static final Map<String, String> AUTH_SUMMARIES = Map.of(
             "/api/v1/auth/signup", "Created a user account",
@@ -64,6 +70,18 @@ public class ActivityLogInterceptor implements HandlerInterceptor {
             // and logout-all revokes sessions. Those must appear in the trail.
             if (SKIP_PATHS.contains(uri)) {
                 return;
+            }
+            // The concealed reporting module leaves no trail, by explicit instruction. Checked by
+            // URI as well as by module because the unlock endpoint is not itself in the finance
+            // package — and a row reading "POST /api/v1/reporting-access/unlock" in a log the whole
+            // team's super admin can read would announce the very thing being hidden.
+            //
+            // This is a deliberate blind spot: a wrong finance figure will have no record of who
+            // changed it. That is the accepted trade-off, not an oversight.
+            for (String prefix : AUDIT_BLACKOUT_PREFIXES) {
+                if (uri.startsWith(prefix)) {
+                    return;
+                }
             }
 
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();

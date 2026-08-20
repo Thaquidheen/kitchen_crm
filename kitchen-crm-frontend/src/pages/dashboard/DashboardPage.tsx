@@ -15,6 +15,7 @@ import { useGetDashboardSummaryQuery, useGetRevenueAnalyticsQuery } from '@/feat
 import { useGetCustomerStatisticsQuery } from '@/features/customers/customersAPI';
 import { useGetQuotationsQuery, useGetRemindersQuery, useGetReminderStatsQuery } from '@/app/baseApi';
 import ROUTES from '@/routes/routes.config';
+import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 
 type RangeKey = '7D' | '30D' | '3M' | '1Y';
 const RANGES: { key: RangeKey; months: number; label: string; prev: string }[] = [
@@ -78,9 +79,11 @@ const QSTATUS: Record<string, { st: string; label: string }> = {
 export function DashboardPage() {
   const navigate = useNavigate();
   const [range, setRange] = useState<RangeKey>('30D');
+  const isSuperAdmin = useIsSuperAdmin();
 
   const { data: summary, refetch: refetchSummary } = useGetDashboardSummaryQuery();
-  const { data: revenue, refetch: refetchRevenue } = useGetRevenueAnalyticsQuery();
+  // Skipped for staff: the endpoint is super-admin only now, and firing it would just 403.
+  const { data: revenue, refetch: refetchRevenue } = useGetRevenueAnalyticsQuery(undefined, { skip: !isSuperAdmin });
   const { data: custStats } = useGetCustomerStatisticsQuery();
   const { data: latestQ } = useGetQuotationsQuery({ page: 0, size: 5, sortBy: 'createdAt', sortDir: 'desc' });
   const { data: todayRem } = useGetRemindersQuery({ bucket: 'TODAY', page: 0, size: 6 });
@@ -133,7 +136,12 @@ export function DashboardPage() {
   });
 
   // ---- Band 1: KPIs ------------------------------------------------------
+  // The money tiles are super-admin only. The backend withholds these fields for staff (they come
+  // back null, never 0, so "withheld" stays distinguishable from "genuinely nothing"), and the UI
+  // must not render a tile that would then read as a real zero.
   const kpis = [
+    ...(isSuperAdmin
+      ? [
     {
       label: 'Revenue booked',
       value: inr(revWindow.value),
@@ -141,6 +149,8 @@ export function DashboardPage() {
       sub: cfg.prev,
       series: revWindow.series,
     },
+        ]
+      : []),
     {
       label: 'Quotations sent',
       value: String(s.totalQuotations ?? 0),
@@ -148,6 +158,8 @@ export function DashboardPage() {
       sub: `${s.pendingQuotations ?? 0} pending · ${s.approvedQuotations ?? 0} approved`,
       series: [] as number[],
     },
+    ...(isSuperAdmin
+      ? [
     {
       label: 'Open pipeline',
       value: inr(s.totalQuotationValue),
@@ -162,6 +174,8 @@ export function DashboardPage() {
       sub: `${inr(s.pendingPayments)} still pending`,
       series: [] as number[],
     },
+        ]
+      : []),
   ];
 
   // ---- Band 2: needs attention (all real, all navigable) -----------------
@@ -171,8 +185,10 @@ export function DashboardPage() {
       sub: 'Outstanding across all customers',
       count: inr(s.pendingPayments),
       st: 'lost',
-      to: ROUTES.FINANCE,
-      show: Number(s.pendingPayments ?? 0) > 0,
+      // No link: Income & Expenses is concealed, and this card was the one place outside the
+      // sidebar that pointed at it — for every role, not just super admin.
+      to: null,
+      show: isSuperAdmin && Number(s.pendingPayments ?? 0) > 0,
     },
     {
       label: 'Quotations pending approval',
@@ -321,7 +337,8 @@ export function DashboardPage() {
 
       {/* Band 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-4 items-start mb-4">
-        {/* Revenue vs target */}
+        {/* Revenue vs target — money, so super admin only. Staff get the rest of the band. */}
+        {isSuperAdmin && (
         <div className={CARD}>
           <div className="flex items-start gap-3 px-4 pt-3.5 pb-2.5 flex-wrap">
             <div className="min-w-0">
@@ -420,6 +437,7 @@ export function DashboardPage() {
             </>
           )}
         </div>
+        )}
 
         {/* Needs attention + pipeline */}
         <div className="flex flex-col gap-4 min-w-0">
@@ -443,8 +461,11 @@ export function DashboardPage() {
               alerts.map((a) => (
                 <button
                   key={a.label}
-                  onClick={() => navigate(a.to)}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 border-t border-background-600 hover:bg-background-700 transition-colors text-left"
+                  onClick={() => a.to && navigate(a.to)}
+                  disabled={!a.to}
+                  className={`w-full flex items-center gap-2.5 px-4 py-2.5 border-t border-background-600 transition-colors text-left ${
+                    a.to ? 'hover:bg-background-700' : 'cursor-default'
+                  }`}
                 >
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ background: `var(--st-${a.st}-fg)` }} />
                   <span className="flex-1 min-w-0">

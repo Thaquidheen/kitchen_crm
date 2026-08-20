@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
 import com.fleetmanagement.kitchencrmbackend.modules.audit.web.ActivityLogInterceptor;
+import com.fleetmanagement.kitchencrmbackend.modules.finance.web.FinanceAccessInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Page;
@@ -28,6 +29,26 @@ public class WebConfig {
             @Override
             public void addInterceptors(InterceptorRegistry registry) {
                 registry.addInterceptor(interceptor).addPathPatterns("/api/**");
+            }
+        };
+    }
+
+    /**
+     * Conceals the customer-finance API behind the reporting unlock key: without it those paths
+     * answer 404, matching the UI, where the module is absent from the sidebar and its route
+     * behaves like a mistyped one. The SUPER_ADMIN role checks on those endpoints are untouched —
+     * this is a second lock, not a replacement.
+     */
+    @Bean
+    public WebMvcConfigurer financeAccessConfigurer(FinanceAccessInterceptor interceptor) {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addInterceptors(InterceptorRegistry registry) {
+                // Both patterns on purpose: the list endpoint is the bare path, and relying on
+                // "/**" to match zero segments would leave precisely the endpoint that enumerates
+                // every customer's money wide open if that behaviour ever differed.
+                registry.addInterceptor(interceptor)
+                        .addPathPatterns("/api/v1/customer-finance", "/api/v1/customer-finance/**");
             }
         };
     }

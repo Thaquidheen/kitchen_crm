@@ -14,7 +14,15 @@ import { ROUTES } from '../../routes/routes.config';
 import { Dropdown } from '../ui';
 import { ChangePasswordModal } from '../../features/auth/components/ChangePasswordModal';
 import { NotificationBell } from './NotificationBell';
+import { useUnlockReportingMutation } from '../../features/finance/financeAccessAPI';
+import { unlocked } from '../../features/finance/financeAccessSlice';
 import toast from 'react-hot-toast';
+
+/**
+ * Marker that turns a search into an unlock attempt: type `#<passphrase>` and press Enter.
+ * Deliberately not a secret — the passphrase is the secret, and it is verified server-side.
+ */
+const UNLOCK_PREFIX = '#';
 
 export interface HeaderProps {
   onMenuClick?: () => void;
@@ -27,9 +35,42 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
   const { user } = useAppSelector((state) => state.auth);
   const currentTheme = useAppSelector(selectCurrentTheme);
   const [logoutApi] = useLogoutMutation();
+  const [unlockReporting] = useUnlockReportingMutation();
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [searchDraft, setSearchDraft] = useState('');
 
   const isDay = currentTheme?.type === 'light';
+
+  /**
+   * Enter in the search box attempts the reporting-module unlock.
+   *
+   * Failure is deliberately silent — no toast, no shake, no message. Any feedback would tell
+   * someone experimenting here that there is something to find. The field is cleared on both
+   * outcomes so a phrase is never left sitting in the box, and only super admins even reach the
+   * endpoint (it 403s otherwise), so a staff member typing anything sees nothing regardless.
+   */
+  const handleSearchKey = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    const typed = searchDraft.trim();
+    // Only a deliberate attempt counts. The box genuinely invites searching ("Search customers,
+    // quotations, invoices…"), and without this marker five ordinary searches — a name, a phone
+    // number, an invoice no. — would each burn an unlock attempt and lock the owner out for ten
+    // minutes. The marker is not a secret and adds nothing to the concealment; it exists purely so
+    // normal typing never reaches the throttle.
+    if (!typed.startsWith(UNLOCK_PREFIX)) return;
+    const phrase = typed.slice(UNLOCK_PREFIX.length).trim();
+    setSearchDraft('');
+    if (!phrase) return;
+    try {
+      const res = await unlockReporting({ passphrase: phrase }).unwrap();
+      if (res?.success && res.data?.key) {
+        dispatch(unlocked({ key: res.data.key, expiresInSeconds: res.data.expiresInSeconds }));
+        navigate(ROUTES.FINANCE);
+      }
+    } catch {
+      // stays silent by design
+    }
+  };
 
 
   const handleLogout = async () => {
@@ -74,13 +115,20 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
         </button>
       )}
 
-      {/* Global search */}
+      {/* Global search. Also the way in to the concealed reporting module: the passphrase is typed
+          here and submitted with Enter. Nothing on screen hints at it, a wrong phrase does nothing
+          visible, and the field clears itself either way so the phrase is never left on display. */}
       <div className="relative hidden md:block w-[320px] max-w-[40vw]">
         <Search
           size={15}
           className="absolute left-[11px] top-1/2 -translate-y-1/2 text-text-500 pointer-events-none"
         />
         <input
+          value={searchDraft}
+          onChange={(e) => setSearchDraft(e.target.value)}
+          onKeyDown={handleSearchKey}
+          autoComplete="off"
+          spellCheck={false}
           placeholder="Search customers, quotations, invoices…"
           className="w-full h-[34px] pl-[34px] pr-3 rounded-[10px] border border-background-600 bg-background-900 text-text-900 text-[13px] outline-none focus:border-primary-600 transition-colors placeholder:text-text-500"
         />

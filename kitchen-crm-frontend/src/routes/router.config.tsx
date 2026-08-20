@@ -219,6 +219,19 @@ const routes = [
                 path: ROUTES.STAFF,
                 element: <StaffPage />,
               },
+            ],
+          },
+
+          // Income & Expenses is concealed, not merely role-gated: super admin AND the reporting
+          // unlock. While locked this redirects to the dashboard — exactly what a mistyped URL
+          // does here — so probing the path reveals nothing about whether it exists.
+          {
+            element: (
+              <ProtectedRoute requireRole={UserRole.ROLE_SUPER_ADMIN} requireReportingUnlock>
+                <Outlet />
+              </ProtectedRoute>
+            ),
+            children: [
               {
                 path: ROUTES.FINANCE,
                 element: <FinancePage />,

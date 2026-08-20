@@ -17,7 +17,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Store,
-  Wallet,
   Building2,
   IdCard,
   Refrigerator,
@@ -71,9 +70,10 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    // Income & Expenses is deliberately NOT listed. The module is concealed and reached only via
+    // the unlock passphrase; the group keeps its shape from Vendors so nothing looks removed.
     label: 'Finance',
     items: [
-      { label: 'Income & Expenses', path: ROUTES.FINANCE, icon: <Wallet size={18} />, adminOnly: true },
       { label: 'Vendors', path: ROUTES.VENDORS, icon: <Store size={18} /> },
     ],
   },

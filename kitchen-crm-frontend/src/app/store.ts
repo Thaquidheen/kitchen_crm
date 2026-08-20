@@ -14,6 +14,7 @@ import customersReducer from '../features/customers/customersSlice';
 import productsReducer from '../features/products/productsSlice';
 import quotationsReducer from '../features/quotations/quotationsSlice';
 import themeReducer from '../features/theme/themeSlice';
+import financeAccessReducer from '../features/finance/financeAccessSlice';
 
 export const store = configureStore({
   reducer: {
@@ -28,6 +29,7 @@ export const store = configureStore({
     products: productsReducer,
     quotations: quotationsReducer,
     theme: themeReducer,
+    financeAccess: financeAccessReducer,
   },
   // Adding the api middleware enables caching, invalidation, polling, and other features of RTK Query
   middleware: (getDefaultMiddleware) =>

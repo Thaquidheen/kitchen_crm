@@ -20,12 +20,25 @@ public class DashboardController {
     @Autowired
     private DashboardService dashboardService;
 
+    /**
+     * The summary mixes operational counts with the company's money, and staff need the counts —
+     * so the endpoint stays open to every authenticated user and the FINANCIAL FIELDS are withheld
+     * instead. Withheld means null, never zero: a 0 is indistinguishable from real data, and this
+     * codebase has already been bitten by exactly that (see the note in QuotationDto and the V101
+     * repair migration).
+     */
     @GetMapping("/summary")
     public ResponseEntity<ApiResponse<DashboardSummaryDto>> getDashboardSummary() {
-        return ResponseEntity.ok(dashboardService.getDashboardSummary());
+        ApiResponse<DashboardSummaryDto> response = dashboardService.getDashboardSummary();
+        if (!isSuperAdmin() && response != null && response.getData() != null) {
+            withholdFinancials(response.getData());
+        }
+        return ResponseEntity.ok(response);
     }
 
+    /** Entirely a money report — there is no operational half worth keeping for staff. */
     @GetMapping("/revenue-analytics")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<RevenueAnalyticsDto>> getRevenueAnalytics(
             @RequestParam(defaultValue = "#{T(java.time.LocalDate).now().minusMonths(12)}")
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -61,9 +74,41 @@ public class DashboardController {
         return ResponseEntity.ok(dashboardService.getPerformanceMetrics(fromDate, toDate));
     }
 
+    /** Same treatment: the operational counters stay, the money keys are removed for staff. */
     @GetMapping("/real-time-metrics")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getRealTimeMetrics() {
-        return ResponseEntity.ok(dashboardService.getRealTimeMetrics());
+        ApiResponse<Map<String, Object>> response = dashboardService.getRealTimeMetrics();
+        if (!isSuperAdmin() && response != null && response.getData() != null) {
+            MONEY_METRIC_KEYS.forEach(response.getData()::remove);
+        }
+        return ResponseEntity.ok(response);
+    }
+
+    /** Money keys in the real-time metrics map, removed wholesale for non-super-admins. */
+    private static final java.util.List<String> MONEY_METRIC_KEYS = java.util.List.of(
+            "cash_in_hand", "cash_in_account", "pending_payments", "payments_today");
+
+    private boolean isSuperAdmin() {
+        org.springframework.security.core.Authentication auth =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_SUPER_ADMIN".equals(a.getAuthority()));
+    }
+
+    /**
+     * Nulls every money field. Kept as an explicit list rather than a clever filter so that adding
+     * a financial field to the DTO and forgetting it here is a visible omission in review.
+     */
+    private void withholdFinancials(DashboardSummaryDto dto) {
+        dto.setTotalQuotationValue(null);
+        dto.setAverageQuotationValue(null);
+        dto.setTotalProjectValue(null);
+        dto.setCompletedProjectValue(null);
+        dto.setTotalPaymentsReceived(null);
+        dto.setPaymentsThisMonth(null);
+        dto.setPendingPayments(null);
+        dto.setCashInHand(null);
+        dto.setCashInAccount(null);
     }
 
     @GetMapping("/business-alerts")
