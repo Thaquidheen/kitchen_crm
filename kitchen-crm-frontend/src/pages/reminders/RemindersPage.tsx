@@ -315,7 +315,7 @@ export function RemindersPage() {
             ...c,
             count:
               c.key === ''
-                ? chipCount('customers') + chipCount('production') + chipCount('appliance')
+                ? chipCount('customers') + chipCount('production') + chipCount('appliance') + chipCount('architect')
                 : chipCount(c.key.toLowerCase()),
           }))}
           value={sourceFilter}
