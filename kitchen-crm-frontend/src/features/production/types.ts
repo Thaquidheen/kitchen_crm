@@ -226,6 +226,13 @@ export interface ProductionCustomTaskUpdateRequest {
 
 // Task Group Types
 export interface ProductionTaskGroup {
+  /** Null for a stage; set when this group is a sub-stage. */
+  parentGroupId?: number | null;
+  /** Sub-stages nested under a stage (backend caps the tree at two levels). */
+  subGroups?: ProductionTaskGroup[];
+  /** This group's own tasks only; totalTasks/completedTasks include sub-stages. */
+  ownTotalTasks?: number;
+  ownCompletedTasks?: number;
   id: number;
   productionInstallationId: number;
   groupTitle: string;
@@ -246,9 +253,13 @@ export interface ProductionTaskGroupCreateRequest {
   groupTitle: string;
   groupDescription?: string;
   sortOrder?: number;
+  /** Omit for a stage; set to a stage's id to create a sub-stage under it. */
+  parentGroupId?: number;
 }
 
 export interface ProductionTaskGroupUpdateRequest {
+  /** Move a group: a stage id nests it, 0 promotes it back to a top-level stage. */
+  parentGroupId?: number;
   groupTitle?: string;
   groupDescription?: string;
   sortOrder?: number;

@@ -13,4 +13,6 @@ public class ProductionTaskGroupCreateDto {
     private String groupTitle;
     private String groupDescription;
     private Integer sortOrder;
+    /** Omit for a stage; set to the stage's id to create a sub-stage under it. */
+    private Long parentGroupId;
 }

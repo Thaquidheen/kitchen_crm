@@ -57,6 +57,9 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
   const [loadingTasks, setLoadingTasks] = useState<Set<string>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set());
   const [showAddGroupForm, setShowAddGroupForm] = useState(false);
+  /** Stage id currently having a sub-stage added, or null. */
+  const [addingSubStageFor, setAddingSubStageFor] = useState<number | null>(null);
+  const [newSubStageTitle, setNewSubStageTitle] = useState('');
   const [showAddTaskFormForGroup, setShowAddTaskFormForGroup] = useState<number | null>(null);
   const [editingGroupId, setEditingGroupId] = useState<number | null>(null);
   const [editingGroupTitle, setEditingGroupTitle] = useState('');
@@ -161,6 +164,27 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
     } catch (error) {
       console.error('Error creating group:', error);
       toast.error('Failed to create group');
+    }
+  };
+
+  /** Same endpoint as a stage — a sub-stage is just a group with a parent. */
+  const handleCreateSubStage = async (parentGroupId: number) => {
+    if (!newSubStageTitle.trim()) {
+      toast.error('Sub-stage title is required');
+      return;
+    }
+    try {
+      await createTaskGroup({
+        customerId,
+        groupTitle: newSubStageTitle.trim(),
+        parentGroupId,
+      }).unwrap();
+      toast.success('Sub-stage added');
+      setNewSubStageTitle('');
+      setAddingSubStageFor(null);
+    } catch (error) {
+      console.error('Error creating sub-stage:', error);
+      toast.error('Failed to add sub-stage');
     }
   };
 
@@ -404,15 +428,32 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
     s3: { bg: 'var(--st-quote-bg)', fg: 'var(--st-quote-fg)' },
   };
 
-  const renderGroup = (group: ProductionTaskGroup, idx: number) => {
+  /**
+   * Renders a stage, and recurses one level for its sub-stages.
+   *
+   * Depth is a parameter rather than a separate component because a sub-stage is the same thing as
+   * a stage — same header, same tasks, same add/edit/delete — just indented, with a lighter frame
+   * and its ordinal shown as "2.1" instead of "2". The backend caps nesting at two levels, so this
+   * recursion cannot run away.
+   */
+  const renderGroup = (group: ProductionTaskGroup, idx: number, depth = 0, parentIdx?: number) => {
     const isExpanded = expandedGroups.has(group.id);
     const isEditing = editingGroupId === group.id;
     const groupProgress = group.totalTasks > 0 ? Math.round((group.completedTasks / group.totalTasks) * 100) : 0;
     const allDone = group.totalTasks > 0 && group.completedTasks === group.totalTasks;
-    const stageColor = STAGE_COLORS[STAGE_ST[idx % 3]];
+    const stageColor = STAGE_COLORS[STAGE_ST[(parentIdx ?? idx) % 3]];
+    const ordinal = depth === 0 ? String(idx + 1) : `${(parentIdx ?? 0) + 1}.${idx + 1}`;
+    const subGroups = group.subGroups ?? [];
 
     return (
-      <div key={group.id} className="border border-background-600 rounded-xl overflow-hidden mb-3">
+      <div
+        key={group.id}
+        className={
+          depth === 0
+            ? 'border border-background-600 rounded-xl overflow-hidden mb-3'
+            : 'border border-background-700 rounded-lg overflow-hidden mb-2 ml-6'
+        }
+      >
         {/* Group Header */}
         <div className="flex items-center justify-between px-3.5 py-3 bg-background-800 cursor-pointer hover:bg-background-700 transition-colors">
           <div className="flex items-center gap-2.5 flex-1 min-w-0" onClick={() => toggleGroupExpanded(group.id)}>
@@ -420,7 +461,7 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
               className="w-6 h-6 rounded-lg flex items-center justify-center text-[11.5px] font-bold shrink-0"
               style={allDone ? { background: 'var(--st-confirmed-bg)', color: 'var(--st-confirmed-fg)' } : { background: stageColor.bg, color: stageColor.fg }}
             >
-              {allDone ? '✓' : idx + 1}
+              {allDone ? '✓' : ordinal}
             </span>
             {isEditing ? (
               <input
@@ -527,6 +568,13 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
               </div>
             )}
 
+            {/* Sub-stages sit below this stage's own tasks, so direct work is not buried. */}
+            {subGroups.length > 0 && (
+              <div className="pt-2 pb-1 border-t border-background-700">
+                {subGroups.map((sub, subIdx) => renderGroup(sub, subIdx, depth + 1, idx))}
+              </div>
+            )}
+
             {/* Add Task Form or Button */}
             {showAddTaskFormForGroup === group.id ? (
               renderAddTaskForm(group.id)
@@ -539,6 +587,44 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
                 Add Task
               </button>
             )}
+
+            {/* Only a stage may gain sub-stages; the backend refuses a third level. */}
+            {depth === 0 && addingSubStageFor === group.id ? (
+              <div className="flex items-center gap-2 p-2 pl-10 border-t border-background-700 bg-background-800">
+                <input
+                  autoFocus
+                  value={newSubStageTitle}
+                  onChange={(e) => setNewSubStageTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCreateSubStage(group.id);
+                    if (e.key === 'Escape') { setAddingSubStageFor(null); setNewSubStageTitle(''); }
+                  }}
+                  placeholder="Sub-stage name, e.g. Cabinet production"
+                  className="flex-1 h-[32px] px-2.5 rounded-lg border border-background-500 bg-background-900 text-text-900 text-[13px] outline-none focus:border-primary-600"
+                />
+                <button
+                  onClick={() => handleCreateSubStage(group.id)}
+                  className="h-[32px] px-3 rounded-lg text-[12.5px] font-semibold"
+                  style={{ background: 'var(--color-primary-600)', color: 'var(--on-accent)' }}
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => { setAddingSubStageFor(null); setNewSubStageTitle(''); }}
+                  className="h-[32px] px-3 rounded-lg text-[12.5px] text-text-600 hover:text-text-900"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : depth === 0 ? (
+              <button
+                onClick={() => setAddingSubStageFor(group.id)}
+                className="w-full p-2 pl-10 text-sm text-text-500 hover:text-text-800 hover:bg-background-800 transition-colors flex items-center gap-2 border-t border-background-700"
+              >
+                <Plus className="w-4 h-4" />
+                Add sub-stage
+              </button>
+            ) : null}
           </div>
         )}
       </div>

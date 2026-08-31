@@ -11,11 +11,22 @@ import java.util.List;
 @Repository
 public interface ProductionTaskGroupRepository extends JpaRepository<ProductionTaskGroup, Long> {
 
+    /**
+     * Top-level stages only. Sub-stages arrive nested inside their parent via the subGroups
+     * relation — returning them here as well would list every sub-stage twice, once inside its
+     * stage and once beside it, and double every task in the checklist total.
+     */
     @Query("SELECT DISTINCT g FROM ProductionTaskGroup g " +
            "LEFT JOIN FETCH g.tasks " +
            "WHERE g.productionInstallation.customer.id = :customerId " +
+           "AND g.parentGroup IS NULL " +
            "ORDER BY g.sortOrder ASC")
     List<ProductionTaskGroup> findByCustomerIdWithTasks(@Param("customerId") Long customerId);
+
+    /** Stage count for sort-order defaults; sub-stages number within their own stage. */
+    @Query("SELECT COUNT(g) FROM ProductionTaskGroup g " +
+           "WHERE g.productionInstallation.customer.id = :customerId AND g.parentGroup IS NULL")
+    Long countTopLevelByCustomerId(@Param("customerId") Long customerId);
 
     @Query("SELECT g FROM ProductionTaskGroup g " +
            "WHERE g.productionInstallation.customer.id = :customerId " +

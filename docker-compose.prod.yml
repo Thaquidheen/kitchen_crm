@@ -26,6 +26,10 @@ services:
     restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      # The app's business clock. Without this the JVM defaults to UTC and every LocalDateTime.now()
+      # — customer timestamps, reminders, quotations, the nightly cron jobs — runs 5h30m behind the
+      # office. V108 shifts the history to match; from here new rows are IST at the source.
+      - TZ=Asia/Kolkata
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}

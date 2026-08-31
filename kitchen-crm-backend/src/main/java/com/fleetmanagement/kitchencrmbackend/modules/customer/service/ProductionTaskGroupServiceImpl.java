@@ -53,12 +53,23 @@ public class ProductionTaskGroupServiceImpl implements ProductionTaskGroupServic
             group.setCreatedByUser(currentUser);
             group.setIsExpanded(true);
 
-            // Set sort order
+            if (createDto.getParentGroupId() != null) {
+                ApiResponse<ProductionTaskGroup> parent = resolveParent(createDto.getParentGroupId(), production, null);
+                if (!Boolean.TRUE.equals(parent.getSuccess())) {
+                    return ApiResponse.error(parent.getMessage());
+                }
+                group.setParentGroup(parent.getData());
+            }
+
+            // Sort order is scoped to the siblings: sub-stages number within their stage, not
+            // across the whole job, otherwise adding one renumbers unrelated stages.
             if (createDto.getSortOrder() != null) {
                 group.setSortOrder(createDto.getSortOrder());
+            } else if (group.getParentGroup() != null) {
+                group.setSortOrder(group.getParentGroup().getSubGroups() != null
+                        ? group.getParentGroup().getSubGroups().size() : 0);
             } else {
-                Long count = groupRepository.countByCustomerId(createDto.getCustomerId());
-                group.setSortOrder(count.intValue());
+                group.setSortOrder(groupRepository.countTopLevelByCustomerId(createDto.getCustomerId()).intValue());
             }
 
             ProductionTaskGroup savedGroup = groupRepository.save(group);
@@ -94,6 +105,18 @@ public class ProductionTaskGroupServiceImpl implements ProductionTaskGroupServic
             if (updateDto.getIsExpanded() != null) {
                 group.setIsExpanded(updateDto.getIsExpanded());
             }
+            if (updateDto.getParentGroupId() != null) {
+                if (updateDto.getParentGroupId() == 0L) {
+                    group.setParentGroup(null); // promote back to a top-level stage
+                } else {
+                    ApiResponse<ProductionTaskGroup> parent = resolveParent(
+                            updateDto.getParentGroupId(), group.getProductionInstallation(), group);
+                    if (!Boolean.TRUE.equals(parent.getSuccess())) {
+                        return ApiResponse.error(parent.getMessage());
+                    }
+                    group.setParentGroup(parent.getData());
+                }
+            }
 
             ProductionTaskGroup savedGroup = groupRepository.save(group);
             log.info("Updated task group ID: {}", groupId);
@@ -103,6 +126,37 @@ public class ProductionTaskGroupServiceImpl implements ProductionTaskGroupServic
             log.error("Error updating task group: {}", e.getMessage(), e);
             return ApiResponse.error("Failed to update task group: " + e.getMessage());
         }
+    }
+
+    /**
+     * Validates a proposed parent. Four ways this can be wrong, and all of them produce a
+     * checklist that silently misbehaves rather than an error, so each is refused up front:
+     * the parent must exist, belong to the SAME job (otherwise a stage from another customer's
+     * checklist adopts these tasks), not be the group itself, and not already be a sub-stage —
+     * which is what caps the tree at two levels.
+     */
+    private ApiResponse<ProductionTaskGroup> resolveParent(Long parentId, ProductionInstallation production,
+                                                           ProductionTaskGroup moving) {
+        Optional<ProductionTaskGroup> parentOpt = groupRepository.findById(parentId);
+        if (parentOpt.isEmpty()) {
+            return ApiResponse.error("Parent stage not found with ID: " + parentId);
+        }
+        ProductionTaskGroup parent = parentOpt.get();
+        if (production == null || parent.getProductionInstallation() == null
+                || !parent.getProductionInstallation().getId().equals(production.getId())) {
+            return ApiResponse.error("A sub-stage must belong to the same job as its stage");
+        }
+        if (moving != null && parent.getId().equals(moving.getId())) {
+            return ApiResponse.error("A stage cannot be placed inside itself");
+        }
+        if (parent.getParentGroup() != null) {
+            return ApiResponse.error("Sub-stages cannot be nested further — a stage may hold sub-stages, "
+                    + "but a sub-stage may not");
+        }
+        if (moving != null && moving.getSubGroups() != null && !moving.getSubGroups().isEmpty()) {
+            return ApiResponse.error("Move or remove this stage's sub-stages before making it a sub-stage");
+        }
+        return ApiResponse.success(parent);
     }
 
     @Override

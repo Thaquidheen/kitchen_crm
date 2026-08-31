@@ -43,6 +43,23 @@ public class ProductionTaskGroup extends Auditable {
     @JoinColumn(name = "created_by_user_id")
     private User createdByUser;
 
+    /**
+     * The stage this group sits under, or null when it IS a stage.
+     *
+     * Depth is capped at two by the service, not by the schema: a stage may hold sub-stages, a
+     * sub-stage may not. A production SOP does not need arbitrary nesting, and every extra level
+     * makes the progress roll-up and the checklist UI harder for no practical gain.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_group_id")
+    private ProductionTaskGroup parentGroup;
+
+    /** Sub-stages, ordered like tasks. Removing a stage removes these with it. */
+    @OneToMany(mappedBy = "parentGroup", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    private List<ProductionTaskGroup> subGroups = new ArrayList<>();
+
+    /** A stage can still hold tasks directly, alongside its sub-stages. */
     @OneToMany(mappedBy = "taskGroup", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortOrder ASC")
     private List<ProductionCustomTask> tasks = new ArrayList<>();

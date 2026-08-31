@@ -125,7 +125,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     }
 
     @Override
-    @Scheduled(cron = "0 0 2 * * ?") // Run at 2 AM daily
+    @Scheduled(cron = "0 0 2 * * ?", zone = "${app.business-timezone:Asia/Kolkata}") // 2 AM business time
     public void deleteExpiredTokens() {
         int deletedCount = refreshTokenRepository.deleteExpiredTokens(Instant.now());
         if (deletedCount > 0) {
