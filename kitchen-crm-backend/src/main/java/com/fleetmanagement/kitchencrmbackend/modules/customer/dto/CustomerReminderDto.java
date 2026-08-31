@@ -23,6 +23,7 @@ public class CustomerReminderDto {
     private Long customerId;
     private String customerName;
     private Long applianceCustomerId;
+    private Long architectId;
 
     /** CUSTOMER | APPLIANCE — which module this reminder belongs to. */
     private String ownerType;

@@ -19,7 +19,7 @@ import { ROUTES } from '../../routes/routes.config';
 import { FilterChips } from '../shared/FilterChips';
 import { fmtReminderDateTime } from '../../utils/reminderFormat';
 
-type SourceKey = '' | 'TODOS' | 'CUSTOMERS' | 'PRODUCTION' | 'APPLIANCE';
+type SourceKey = '' | 'TODOS' | 'CUSTOMERS' | 'PRODUCTION' | 'APPLIANCE' | 'ARCHITECT';
 
 interface BellReminder {
   id: number;
@@ -40,11 +40,13 @@ const SOURCE_META: Record<string, { st: string; label: string }> = {
   FOLLOW_UP: { st: 'design', label: 'Follow-up' },
   PRODUCTION: { st: 'nego', label: 'Production' },
   APPLIANCE: { st: 'quote', label: 'Appliance & Quartz' },
+  ARCHITECT: { st: 'lead', label: 'Architect' },
   TODOS: { st: 'draft', label: 'To-do' },
 };
 
 const sourceKeyOf = (r: BellReminder): Exclude<SourceKey, '' | 'TODOS'> => {
   if (r.ownerType === 'APPLIANCE') return 'APPLIANCE';
+  if (r.ownerType === 'ARCHITECT') return 'ARCHITECT';
   if (r.source === 'PRODUCTION') return 'PRODUCTION';
   return 'CUSTOMERS';
 };
@@ -115,7 +117,9 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const openReminder = (r: BellReminder) => {
     setOpen(false);
     navigate(
-      r.ownerType === 'APPLIANCE' ? ROUTES.APPLIANCE_QUARTZ : `/customers/${r.ownerId ?? r.customerId}`
+      r.ownerType === 'APPLIANCE' ? ROUTES.APPLIANCE_QUARTZ
+        : r.ownerType === 'ARCHITECT' ? ROUTES.ARCHITECTS
+        : `/customers/${r.ownerId ?? r.customerId}`
     );
   };
 

@@ -36,7 +36,7 @@ interface Reminder {
   customerName?: string;
   applianceCustomerId?: number;
   /** Which module the reminder belongs to. */
-  ownerType?: 'CUSTOMER' | 'APPLIANCE';
+  ownerType?: 'CUSTOMER' | 'APPLIANCE' | 'ARCHITECT';
   ownerId?: number;
   ownerName?: string;
   title: string;
@@ -54,6 +54,7 @@ const SOURCE_CHIPS = [
   { key: 'CUSTOMERS', label: 'Customers', st: 'design' },
   { key: 'PRODUCTION', label: 'Production', st: 'nego' },
   { key: 'APPLIANCE', label: 'Appliance', st: 'quote' },
+  { key: 'ARCHITECT', label: 'Architects', st: 'lead' },
 ] as const;
 
 const BUCKETS = [
@@ -438,11 +439,16 @@ export function RemindersPage() {
                       <td className="px-3 py-3">
                         {(() => {
                           const isAppliance = r.ownerType === 'APPLIANCE';
+                          const isArchitect = r.ownerType === 'ARCHITECT';
                           const name = r.ownerName || r.customerName || '—';
                           return (
                             <button
                               onClick={() =>
-                                navigate(isAppliance ? '/appliance-quartz' : `/customers/${r.ownerId ?? r.customerId}`)
+                                navigate(
+                                  isAppliance ? '/appliance-quartz'
+                                    : isArchitect ? '/architects'
+                                    : `/customers/${r.ownerId ?? r.customerId}`
+                                )
                               }
                               className="flex items-center gap-2 min-w-0 group"
                             >
@@ -464,6 +470,10 @@ export function RemindersPage() {
                                 ) : r.source === 'FOLLOW_UP' ? (
                                   <span className="block text-[10px] font-semibold uppercase tracking-[0.06em] text-text-500">
                                     Follow-up
+                                  </span>
+                                ) : isArchitect ? (
+                                  <span className="block text-[10px] font-semibold uppercase tracking-[0.06em] text-text-500">
+                                    Architect
                                   </span>
                                 ) : null}
                               </span>

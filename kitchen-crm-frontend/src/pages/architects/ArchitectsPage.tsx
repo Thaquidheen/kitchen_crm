@@ -14,13 +14,14 @@ import {
   useDeleteArchitectMutation,
   useMarkAsVisitedMutation,
 } from '@/features/architects/architectsAPI';
-import { Plus, Search, Trash2, Edit, CheckCircle, Calendar, History } from 'lucide-react';
+import { Plus, Search, Trash2, Edit, CheckCircle, Calendar, History, Bell } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { partnerTypeLabel, partnerTypeOf } from '@/features/architects/types';
 import type { Architect, PartnerType } from '@/features/architects/types';
 import ArchitectFormModal from '@/features/architects/components/ArchitectFormModal';
 import ArchitectVisitFormModal from '@/features/architects/components/ArchitectVisitFormModal';
 import ArchitectVisitHistory from '@/features/architects/components/ArchitectVisitHistory';
+import ArchitectReminderModal from '@/features/architects/components/ArchitectReminderModal';
 
 /** Purple for architects, orange for builders — distinct from the green/red visit states. */
 const TYPE_PILL: Record<PartnerType, { st: string; label: string }> = {
@@ -55,6 +56,7 @@ export function ArchitectsPage() {
   const [sortDir, setSortDir] = useState<string>('asc');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [editingArchitect, setEditingArchitect] = useState<Architect | null>(null);
   const [selectedArchitect, setSelectedArchitect] = useState<Architect | null>(null);
@@ -411,6 +413,16 @@ export function ArchitectsPage() {
                           <button
                             onClick={() => {
                               setSelectedArchitect(architect);
+                              setIsReminderModalOpen(true);
+                            }}
+                            title="Set reminder"
+                            className={iconBtn}
+                          >
+                            <Bell size={14} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedArchitect(architect);
                               setIsVisitModalOpen(true);
                             }}
                             title="Record a visit"
@@ -501,6 +513,13 @@ export function ArchitectsPage() {
           architect={selectedArchitect}
         />
       )}
+
+      {/* Reminder Modal */}
+      <ArchitectReminderModal
+        isOpen={isReminderModalOpen}
+        onClose={() => setIsReminderModalOpen(false)}
+        architect={selectedArchitect}
+      />
 
       {/* Visit History Modal */}
       {isHistoryModalOpen && selectedArchitect && (

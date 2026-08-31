@@ -39,6 +39,10 @@ public class CustomerReminder extends Auditable {
     @JoinColumn(name = "appliance_customer_id")
     private ApplianceCustomer applianceCustomer;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "architect_id")
+    private com.fleetmanagement.kitchencrmbackend.modules.architect.entity.Architect architect;
+
     @Column(name = "title", nullable = false)
     private String title;
 
@@ -71,6 +75,6 @@ public class CustomerReminder extends Auditable {
     }
 
     public enum ReminderSource {
-        MANUAL, FOLLOW_UP, PRODUCTION
+        MANUAL, FOLLOW_UP, PRODUCTION, ARCHITECT
     }
 }

@@ -3,6 +3,8 @@ package com.fleetmanagement.kitchencrmbackend.modules.customer.service;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.entity.ApplianceCustomer;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.repository.ApplianceCustomerRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.architect.entity.Architect;
+import com.fleetmanagement.kitchencrmbackend.modules.architect.repository.ArchitectRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.dto.CustomerReminderDto;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.CustomerReminder;
@@ -54,6 +56,9 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
     @Autowired
     private ApplianceCustomerRepository applianceCustomerRepository;
 
+    @Autowired
+    private ArchitectRepository architectRepository;
+
     @Value("${app.business-timezone:Asia/Kolkata}")
     private String businessTimezone;
 
@@ -80,8 +85,11 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
     public ApiResponse<CustomerReminderDto> createReminder(CustomerReminderDto dto, String createdBy) {
         boolean hasCustomer = dto.getCustomerId() != null;
         boolean hasAppliance = dto.getApplianceCustomerId() != null;
-        if (hasCustomer == hasAppliance) {
-            return ApiResponse.error("A reminder must belong to exactly one of a customer or an appliance entry");
+        boolean hasArchitect = dto.getArchitectId() != null;
+        // Exactly one owner. Three-way: count the set owners rather than a two-way equality.
+        int owners = (hasCustomer ? 1 : 0) + (hasAppliance ? 1 : 0) + (hasArchitect ? 1 : 0);
+        if (owners != 1) {
+            return ApiResponse.error("A reminder must belong to exactly one of a customer, an appliance entry or an architect");
         }
 
         CustomerReminder reminder = new CustomerReminder();
@@ -91,12 +99,18 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
                 return ApiResponse.error("Customer not found");
             }
             reminder.setCustomer(customer);
-        } else {
+        } else if (hasAppliance) {
             ApplianceCustomer appliance = applianceCustomerRepository.findById(dto.getApplianceCustomerId()).orElse(null);
             if (appliance == null) {
                 return ApiResponse.error("Appliance entry not found");
             }
             reminder.setApplianceCustomer(appliance);
+        } else {
+            Architect architect = architectRepository.findById(dto.getArchitectId()).orElse(null);
+            if (architect == null) {
+                return ApiResponse.error("Architect not found");
+            }
+            reminder.setArchitect(architect);
         }
         reminder.setTitle(dto.getTitle());
         reminder.setNotes(dto.getNotes());
@@ -240,6 +254,7 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
             }
             case "PRODUCTION" -> sources = List.of(CustomerReminder.ReminderSource.PRODUCTION);
             case "APPLIANCE" -> ownerFilter = "APPLIANCE";
+            case "ARCHITECT" -> ownerFilter = "ARCHITECT";
             default -> { }
         }
 
@@ -275,6 +290,7 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
         stats.put("production", reminderRepository
                 .countByStatusNotAndSource(DONE, CustomerReminder.ReminderSource.PRODUCTION));
         stats.put("appliance", reminderRepository.countByStatusNotAndApplianceCustomerIsNotNull(DONE));
+        stats.put("architect", reminderRepository.countByStatusNotAndArchitectIsNotNull(DONE));
         return ApiResponse.success(stats);
     }
 
@@ -315,6 +331,7 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
         // per-customer tab and the bell keep working unchanged.
         Customer customer = r.getCustomer();
         ApplianceCustomer appliance = r.getApplianceCustomer();
+        Architect architect = r.getArchitect();
         if (customer != null) {
             dto.setCustomerId(customer.getId());
             dto.setCustomerName(customer.getName());
@@ -326,6 +343,11 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
             dto.setOwnerType("APPLIANCE");
             dto.setOwnerId(appliance.getId());
             dto.setOwnerName(appliance.getName());
+        } else if (architect != null) {
+            dto.setArchitectId(architect.getId());
+            dto.setOwnerType("ARCHITECT");
+            dto.setOwnerId(architect.getId());
+            dto.setOwnerName(architect.getArchitectureName());
         }
         dto.setTitle(r.getTitle());
         dto.setNotes(r.getNotes());

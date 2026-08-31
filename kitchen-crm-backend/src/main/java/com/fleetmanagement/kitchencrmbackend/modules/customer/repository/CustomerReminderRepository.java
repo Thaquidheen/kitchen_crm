@@ -51,23 +51,25 @@ public interface CustomerReminderRepository extends JpaRepository<CustomerRemind
     // The source/owner filters follow the same no-nulls convention: the caller always passes a
     // sources list (all values when unfiltered) and an ownerFilter of ANY | CUSTOMER | APPLIANCE.
     @Query(value = "SELECT r FROM CustomerReminder r "
-            + "LEFT JOIN FETCH r.customer c LEFT JOIN FETCH r.applianceCustomer a "
+            + "LEFT JOIN FETCH r.customer c LEFT JOIN FETCH r.applianceCustomer a LEFT JOIN FETCH r.architect ar "
             + "WHERE r.status IN :statuses "
             + "AND r.source IN :sources "
             + "AND (:ownerFilter = 'ANY' "
             + "     OR (:ownerFilter = 'CUSTOMER' AND r.customer IS NOT NULL) "
-            + "     OR (:ownerFilter = 'APPLIANCE' AND r.applianceCustomer IS NOT NULL)) "
+            + "     OR (:ownerFilter = 'APPLIANCE' AND r.applianceCustomer IS NOT NULL) "
+            + "     OR (:ownerFilter = 'ARCHITECT' AND r.architect IS NOT NULL)) "
             + "AND r.remindAt >= :from AND r.remindAt < :to "
-            + "AND (LOWER(r.title) LIKE :q OR LOWER(COALESCE(c.name, a.name, '')) LIKE :q)",
+            + "AND (LOWER(r.title) LIKE :q OR LOWER(COALESCE(c.name, a.name, ar.architectureName, '')) LIKE :q)",
            countQuery = "SELECT COUNT(r) FROM CustomerReminder r "
-            + "LEFT JOIN r.customer c LEFT JOIN r.applianceCustomer a "
+            + "LEFT JOIN r.customer c LEFT JOIN r.applianceCustomer a LEFT JOIN r.architect ar "
             + "WHERE r.status IN :statuses "
             + "AND r.source IN :sources "
             + "AND (:ownerFilter = 'ANY' "
             + "     OR (:ownerFilter = 'CUSTOMER' AND r.customer IS NOT NULL) "
-            + "     OR (:ownerFilter = 'APPLIANCE' AND r.applianceCustomer IS NOT NULL)) "
+            + "     OR (:ownerFilter = 'APPLIANCE' AND r.applianceCustomer IS NOT NULL) "
+            + "     OR (:ownerFilter = 'ARCHITECT' AND r.architect IS NOT NULL)) "
             + "AND r.remindAt >= :from AND r.remindAt < :to "
-            + "AND (LOWER(r.title) LIKE :q OR LOWER(COALESCE(c.name, a.name, '')) LIKE :q)")
+            + "AND (LOWER(r.title) LIKE :q OR LOWER(COALESCE(c.name, a.name, ar.architectureName, '')) LIKE :q)")
     Page<CustomerReminder> search(@Param("statuses") List<CustomerReminder.ReminderStatus> statuses,
                                   @Param("sources") List<CustomerReminder.ReminderSource> sources,
                                   @Param("ownerFilter") String ownerFilter,
@@ -79,6 +81,8 @@ public interface CustomerReminderRepository extends JpaRepository<CustomerRemind
     // Per-source chip counts (open = not DONE), matching the bell's partitioning: appliance by
     // owner, production by source, customers = the remaining customer-owned rows.
     long countByStatusNotAndApplianceCustomerIsNotNull(CustomerReminder.ReminderStatus excludedStatus);
+
+    long countByStatusNotAndArchitectIsNotNull(CustomerReminder.ReminderStatus excludedStatus);
 
     long countByStatusNotAndSource(CustomerReminder.ReminderStatus excludedStatus,
                                    CustomerReminder.ReminderSource source);

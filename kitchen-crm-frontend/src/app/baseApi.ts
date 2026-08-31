@@ -486,7 +486,7 @@ export const baseApi = createApi({
       providesTags: ['Reminders'],
     }),
 
-    createReminder: builder.mutation<any, { customerId?: number; applianceCustomerId?: number; title: string; notes?: string; remindAt: string }>({
+    createReminder: builder.mutation<any, { customerId?: number; applianceCustomerId?: number; architectId?: number; title: string; notes?: string; remindAt: string; source?: string }>({
       query: (body) => ({ url: '/reminders', method: 'POST', body }),
       invalidatesTags: ['Reminders'],
     }),
