@@ -41,6 +41,12 @@ public interface ProductionInstallationService {
     ApiResponse<String> updateInstallationStatus(Long customerId,
                                                  ProductionInstallation.InstallationStatus status, String updatedBy);
 
+    /**
+     * Removes the job with its stages, checklist, pending works and production reminders. The
+     * customer row and its workflow history are kept.
+     */
+    ApiResponse<String> deleteProductionInstallation(Long customerId, String deletedBy);
+
     ApiResponse<List<ProductionInstallationDto>> getInstallationsByStatus(
             ProductionInstallation.InstallationStatus status);
 

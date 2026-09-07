@@ -99,6 +99,10 @@ public class ProductionInstallationDto {
     // Stage checklist rollup (null when the job predates the checklist and has no tasks)
     private Integer checklistTotal;
     private Integer checklistDone;
+    /** NOT_STARTED | IN_PROGRESS | COMPLETED, derived from the checklist by ProductionStageResolver. */
+    private String derivedStatus;
+    /** 1-based index of the current top-level stage. */
+    private Integer currentStageIndex;
     private String currentStageName;
 
     // Next open checklist item (first by stage/task order), with its reminder date when set

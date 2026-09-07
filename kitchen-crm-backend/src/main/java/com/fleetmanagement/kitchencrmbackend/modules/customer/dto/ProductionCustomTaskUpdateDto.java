@@ -26,4 +26,6 @@ public class ProductionCustomTaskUpdateDto {
     private Integer sortOrder;
 
     private String notes;
+
+    private LocalDate taskDate;
 }

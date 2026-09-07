@@ -115,3 +115,7 @@ uploads/
 # Claude Plans
 # ===================================
 .claude/
+
+# Local deploy/SSH helper scripts (not app code)
+deploy.py
+srvcmd.py

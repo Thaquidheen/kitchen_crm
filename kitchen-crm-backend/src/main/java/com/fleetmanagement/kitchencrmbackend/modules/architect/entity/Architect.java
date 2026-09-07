@@ -46,6 +46,16 @@ public class Architect extends Auditable {
     @Column(name = "principal_architect_name")
     private String principalArchitectName;
 
+    @Column(name = "email")
+    private String email;
+
+    @Column(name = "location")
+    private String location;
+
+    /** Starred partners float to the top of the list. */
+    @Column(name = "highlighted", nullable = false)
+    private Boolean highlighted = false;
+
     @Column(name = "last_visit_date")
     private LocalDateTime lastVisitDate;
 

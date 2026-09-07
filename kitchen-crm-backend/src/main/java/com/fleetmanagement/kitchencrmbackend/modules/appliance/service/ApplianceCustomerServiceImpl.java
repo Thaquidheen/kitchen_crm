@@ -2,10 +2,14 @@ package com.fleetmanagement.kitchencrmbackend.modules.appliance.service;
 
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.dto.ApplianceCustomerDto;
+import com.fleetmanagement.kitchencrmbackend.modules.appliance.dto.ApplianceFollowUpDto;
+import com.fleetmanagement.kitchencrmbackend.modules.appliance.dto.ApplianceFollowUpRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.dto.ApplianceQuotationFileDto;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.entity.ApplianceCustomer;
+import com.fleetmanagement.kitchencrmbackend.modules.appliance.entity.ApplianceCustomerFollowUp;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.entity.ApplianceCustomerItem;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.entity.ApplianceQuotationFile;
+import com.fleetmanagement.kitchencrmbackend.modules.appliance.repository.ApplianceCustomerFollowUpRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.repository.ApplianceCustomerRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +41,9 @@ public class ApplianceCustomerServiceImpl implements ApplianceCustomerService {
 
     @Autowired
     private ApplianceCustomerRepository repository;
+
+    @Autowired
+    private ApplianceCustomerFollowUpRepository followUpRepository;
 
     @Override
     public ApiResponse<Page<ApplianceCustomerDto>> getAll(ApplianceCustomer.Category category,
@@ -171,6 +178,75 @@ public class ApplianceCustomerServiceImpl implements ApplianceCustomerService {
         return ApiResponse.success("Quotation removed", convertToDto(repository.save(entity)));
     }
 
+    // ===== Follow-ups (call history) =====
+
+    @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<List<ApplianceFollowUpDto>> getFollowUps(Long id) {
+        if (!repository.existsById(id)) {
+            return ApiResponse.error("Entry not found");
+        }
+        List<ApplianceFollowUpDto> followUps = followUpRepository
+                .findByApplianceCustomerIdOrderByCalledAtDescIdDesc(id)
+                .stream().map(this::toFollowUpDto).toList();
+        return ApiResponse.success(followUps);
+    }
+
+    @Override
+    public ApiResponse<ApplianceFollowUpDto> addFollowUp(Long id, ApplianceFollowUpRequest request, String author) {
+        ApplianceCustomer entity = repository.findById(id).orElse(null);
+        if (entity == null) {
+            return ApiResponse.error("Entry not found");
+        }
+        if (request == null || request.getNote() == null || request.getNote().trim().isEmpty()) {
+            return ApiResponse.error("Note cannot be empty");
+        }
+        ApplianceCustomerFollowUp entry = new ApplianceCustomerFollowUp();
+        entry.setApplianceCustomer(entity);
+        entry.setCalledAt(request.getCalledAt() != null ? request.getCalledAt() : LocalDateTime.now());
+        entry.setNote(request.getNote().trim());
+        entry.setCreatedBy(author);
+        entry.setCreatedAt(LocalDateTime.now());
+        ApplianceCustomerFollowUp saved = followUpRepository.saveAndFlush(entry);
+        syncLastCalledAt(entity);
+        return ApiResponse.success("Follow-up added", toFollowUpDto(saved));
+    }
+
+    @Override
+    public ApiResponse<String> deleteFollowUp(Long id, Long followUpId) {
+        ApplianceCustomer entity = repository.findById(id).orElse(null);
+        if (entity == null) {
+            return ApiResponse.error("Entry not found");
+        }
+        ApplianceCustomerFollowUp target = followUpRepository.findById(followUpId).orElse(null);
+        if (target == null || target.getApplianceCustomer() == null
+                || !id.equals(target.getApplianceCustomer().getId())) {
+            return ApiResponse.error("Follow-up not found on this entry");
+        }
+        followUpRepository.delete(target);
+        followUpRepository.flush();
+        syncLastCalledAt(entity);
+        return ApiResponse.success("Follow-up removed");
+    }
+
+    /**
+     * Recomputes the denormalised last_called_at from the follow-up rows (null when none remain),
+     * so a backdated call or a deleted newest call can never leave the column stale.
+     */
+    private void syncLastCalledAt(ApplianceCustomer entity) {
+        LocalDateTime latest = followUpRepository
+                .findFirstByApplianceCustomerIdOrderByCalledAtDescIdDesc(entity.getId())
+                .map(ApplianceCustomerFollowUp::getCalledAt)
+                .orElse(null);
+        entity.setLastCalledAt(latest);
+        repository.save(entity);
+    }
+
+    private ApplianceFollowUpDto toFollowUpDto(ApplianceCustomerFollowUp f) {
+        return new ApplianceFollowUpDto(f.getId(), f.getApplianceCustomer().getId(), f.getCalledAt(),
+                f.getNote(), f.getCreatedBy(), f.getCreatedAt());
+    }
+
     private void deleteStoredQuotation(String url) {
         if (url == null || url.isBlank()) return;
         try {
@@ -222,6 +298,7 @@ public class ApplianceCustomerServiceImpl implements ApplianceCustomerService {
         dto.setItems(items);
         dto.setCreatedBy(entity.getCreatedBy());
         dto.setCreatedAt(entity.getCreatedAt());
+        dto.setLastCalledAt(entity.getLastCalledAt());
         return dto;
     }
 }

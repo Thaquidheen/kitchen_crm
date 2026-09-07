@@ -20,6 +20,8 @@ const architectSchema = z.object({
   firm: z.string().optional(),
   contactNumber: z.string().optional(),
   principalArchitectName: z.string().optional(),
+  email: z.string().email('Enter a valid email').optional().or(z.literal('')),
+  location: z.string().optional(),
 });
 
 type ArchitectFormData = z.infer<typeof architectSchema>;
@@ -59,12 +61,16 @@ export default function ArchitectFormModal({
       firm: architect.firm || '',
       contactNumber: architect.contactNumber || '',
       principalArchitectName: architect.principalArchitectName || '',
+      email: architect.email || '',
+      location: architect.location || '',
     } : {
       architectureName: '',
       partnerType: defaultType ?? 'ARCHITECT',
       firm: '',
       contactNumber: '',
       principalArchitectName: '',
+      email: '',
+      location: '',
     },
   });
 
@@ -79,6 +85,8 @@ export default function ArchitectFormModal({
         firm: data.firm || undefined,
         contactNumber: data.contactNumber || undefined,
         principalArchitectName: data.principalArchitectName || undefined,
+        email: data.email || undefined,
+        location: data.location || undefined,
       };
 
       if (architect) {
@@ -147,6 +155,20 @@ export default function ArchitectFormModal({
           label="Principal Architect Name"
           {...register('principalArchitectName')}
           error={errors.principalArchitectName?.message}
+        />
+
+        <Input
+          label="Email"
+          type="email"
+          {...register('email')}
+          error={errors.email?.message}
+        />
+
+        <Input
+          label="Location"
+          placeholder="City / area"
+          {...register('location')}
+          error={errors.location?.message}
         />
 
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-2 mt-6">

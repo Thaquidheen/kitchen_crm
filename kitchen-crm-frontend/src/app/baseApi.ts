@@ -280,6 +280,7 @@ export const baseApi = createApi({
     'Dashboard',
     'Architects',
     'ArchitectVisits',
+    'ArchitectNotes',
     'Tasks',
     'WarrantyCard',
     'WarrantyComponents',
@@ -287,6 +288,7 @@ export const baseApi = createApi({
     'Reminders',
     'FollowUps',
     'ApplianceCustomers',
+    'ApplianceFollowUps',
   ],
   endpoints: (builder) => ({
     // ==================== QUOTATION ENDPOINTS ====================
@@ -380,10 +382,10 @@ export const baseApi = createApi({
 
     // Update quotation status (SUPER_ADMIN only)
     updateQuotationStatus: builder.mutation<any, { id: number; status: string }>({
+      // Backend reads status as a @RequestParam (query string), not a JSON body.
       query: ({ id, status }) => ({
-        url: `/quotations/${id}/status`,
+        url: `/quotations/${id}/status?status=${encodeURIComponent(status)}`,
         method: 'PATCH',
-        body: { status },
       }),
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'Quotations', id },
@@ -403,10 +405,11 @@ export const baseApi = createApi({
     // ==================== QUOTATION FOLDER ENDPOINTS ====================
 
     // Folders (one per quotation, holding all its versions)
-    getQuotationFolders: builder.query<any, { customerName?: string; page?: number; size?: number }>({
+    getQuotationFolders: builder.query<any, { customerName?: string; status?: string; page?: number; size?: number }>({
       query: (params) => {
         const search = new URLSearchParams();
         if (params.customerName) search.append('customerName', params.customerName);
+        if (params.status) search.append('status', params.status);
         if (params.page !== undefined) search.append('page', params.page.toString());
         if (params.size !== undefined) search.append('size', params.size.toString());
         return { url: '/quotations/folders', params: Object.fromEntries(search) };
@@ -583,6 +586,38 @@ export const baseApi = createApi({
       invalidatesTags: ['ApplianceCustomers'],
     }),
 
+    // Follow-up call history for one appliance entry (append-only, newest call first).
+    getApplianceFollowUps: builder.query<any[], number>({
+      query: (id) => `/appliance-customers/${id}/followups`,
+      transformResponse: (response: any) => response?.data ?? [],
+      providesTags: (_result, _error, id) => [{ type: 'ApplianceFollowUps', id }],
+    }),
+
+    // calledAt is a naive local date-time string (yyyy-MM-ddTHH:mm:ss) — business wall-clock,
+    // like reminders. Also refreshes the customer list so the "Last called" column updates.
+    addApplianceFollowUp: builder.mutation<any, { id: number; calledAt?: string; note: string }>({
+      query: ({ id, ...body }) => ({
+        url: `/appliance-customers/${id}/followups`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'ApplianceFollowUps', id },
+        'ApplianceCustomers',
+      ],
+    }),
+
+    deleteApplianceFollowUp: builder.mutation<any, { id: number; followUpId: number }>({
+      query: ({ id, followUpId }) => ({
+        url: `/appliance-customers/${id}/followups/${followUpId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'ApplianceFollowUps', id },
+        'ApplianceCustomers',
+      ],
+    }),
+
     // Download quotation PDF
     downloadQuotationPDF: builder.mutation<Blob, number>({
       query: (id) => ({
@@ -662,6 +697,9 @@ export const {
   useDeleteApplianceCustomerMutation,
   useUploadApplianceQuotationMutation,
   useDeleteApplianceQuotationMutation,
+  useGetApplianceFollowUpsQuery,
+  useAddApplianceFollowUpMutation,
+  useDeleteApplianceFollowUpMutation,
   useDownloadQuotationPDFMutation,
   useGetCustomerAvailablePlanImagesQuery,
   useUploadPlanImageMutation,

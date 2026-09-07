@@ -17,7 +17,7 @@ public interface ArchitectService {
     /**
      * Get architects with pagination, optionally filtered by partner type and visit status
      */
-    ApiResponse<Page<ArchitectDto>> getAllArchitects(Pageable pageable, String visitStatus,
+    ApiResponse<Page<ArchitectDto>> getAllArchitects(Pageable pageable, String visitStatus, Boolean highlightedOnly, String search,
                                                      Architect.PartnerType partnerType);
 
     /**
@@ -56,6 +56,12 @@ public interface ArchitectService {
      */
     ApiResponse<ArchitectVisitDto> recordVisit(ArchitectVisitCreateDto dto, String visitedBy);
 
+    ApiResponse<java.util.Map<String, Long>> getCounts();
+
+    ApiResponse<com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectNoteDto> addNote(Long architectId, String note, String author);
+
+    ApiResponse<List<com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectNoteDto>> getNotes(Long architectId);
+
     /**
      * Quick mark architect as visited (uses current date)
      */
@@ -65,6 +71,11 @@ public interface ArchitectService {
      * Get visit history for an architect
      */
     ApiResponse<List<ArchitectVisitDto>> getVisitHistory(Long architectId);
+
+    /**
+     * Remove a recorded visit; the architect's last-visit date falls back to the newest remaining visit
+     */
+    ApiResponse<String> deleteVisit(Long architectId, Long visitId);
 }
 
 

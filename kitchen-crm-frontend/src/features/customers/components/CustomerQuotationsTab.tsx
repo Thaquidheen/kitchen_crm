@@ -23,13 +23,20 @@ export const CustomerQuotationsTab: React.FC<CustomerQuotationsTabProps> = ({ cu
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       DRAFT: 'bg-background-500/20 text-text-500 border-background-500',
-      SENT: 'bg-info/20 text-info border-info',
-      ACCEPTED: 'bg-success/20 text-success border-success',
-      REJECTED: 'bg-error/20 text-error border-error',
-      EXPIRED: 'bg-warning/20 text-warning border-warning',
+      ON_HOLD: 'bg-warning/20 text-warning border-warning',
+      COMPLETE: 'bg-success/20 text-success border-success',
+      APPROVED: 'bg-info/20 text-info border-info',
+      CANCELLED: 'bg-error/20 text-error border-error',
     };
     return colors[status] || colors.DRAFT;
   };
+
+  // ON_HOLD -> "On Hold", etc.
+  const humanizeStatus = (status: string) =>
+    (status || '')
+      .toLowerCase()
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -131,7 +138,7 @@ export const CustomerQuotationsTab: React.FC<CustomerQuotationsTabProps> = ({ cu
                         quotation.status
                       )}`}
                     >
-                      {quotation.status}
+                      {humanizeStatus(quotation.status)}
                     </span>
                   </div>
                   <p className="text-sm text-text-600 mb-3">

@@ -34,4 +34,6 @@ public class ApplianceCustomerDto {
     private List<String> items;
     private String createdBy;
     private LocalDateTime createdAt;
+    // Read-only: derived from the follow-up history by the service, ignored on create/update.
+    private LocalDateTime lastCalledAt;
 }

@@ -19,6 +19,9 @@ public class ArchitectDto {
     private String firm;
     private String contactNumber;
     private String principalArchitectName;
+    private String email;
+    private String location;
+    private Boolean highlighted;
     private LocalDateTime lastVisitDate;
     private Long visitCount;
     private Boolean hasVisits;

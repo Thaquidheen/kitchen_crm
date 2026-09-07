@@ -2,10 +2,12 @@ package com.fleetmanagement.kitchencrmbackend.modules.customer.service;
 
 import com.fleetmanagement.kitchencrmbackend.modules.customer.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.CustomerReminder;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.ProductionCustomTask;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.ProductionInstallation;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.ProductionTaskGroup;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.WorkflowHistory;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerReminderRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.ProductionCustomTaskRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.ProductionInstallationRepository;
@@ -46,6 +48,12 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
 
     @Autowired
     private CustomerReminderService customerReminderService;
+
+    @Autowired
+    private CustomerReminderRepository customerReminderRepository;
+
+    @Autowired
+    private ProductionStageResolver stageResolver;
 
     @Override
     public ApiResponse<Page<ProductionInstallationDto>> getAllProductionInstallations(
@@ -138,6 +146,8 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
             thirtieth.setTitle("30th-day site verification — " + customer.getName());
             thirtieth.setNotes("Electrical, plumbing, floor & wall tiling — then inform client about installation");
             thirtieth.setRemindAt(LocalDate.now().plusDays(30).atTime(10, 0));
+            // Tagged PRODUCTION so the Production chip lists them and deleting the job purges them.
+            thirtieth.setSource(CustomerReminder.ReminderSource.PRODUCTION.name());
             customerReminderService.createReminder(thirtieth, createdBy);
 
             LocalDate est = installation.getEstimatedCompletionDate();
@@ -148,6 +158,7 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
                 procure.setNotes("5 days before delivery — accessories, light and wires (anchored to est. completion "
                         + est + ")");
                 procure.setRemindAt(est.minusDays(5).atTime(10, 0));
+                procure.setSource(CustomerReminder.ReminderSource.PRODUCTION.name());
                 customerReminderService.createReminder(procure, createdBy);
             }
         } catch (Exception e) {
@@ -299,10 +310,8 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
             return ApiResponse.error("Production installation not found for customer");
         }
 
-        if (!Boolean.TRUE.equals(installation.getQualityCheckPassed())) {
-            return ApiResponse.error("Quality check must pass before handover");
-        }
-
+        // No quality-check gate: there is no QC screen, so the gate only ever blocked handover.
+        // The QC fields stay as recorded ("Pending" when never done).
         installation.setHandoverToClient(true);
         installation.setHandoverDate(handoverDto.getHandoverDate());
         installation.setClientFeedbackPhotography(handoverDto.getClientFeedbackPhotography());
@@ -339,6 +348,31 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
                 updatedBy, "Status changed from " + previousStatus + " to " + status);
 
         return ApiResponse.success("Installation status updated successfully");
+    }
+
+    @Override
+    public ApiResponse<String> deleteProductionInstallation(Long customerId, String deletedBy) {
+        ProductionInstallation installation = productionInstallationRepository.findByCustomerId(customerId).orElse(null);
+        if (installation == null) {
+            return ApiResponse.error("Production installation not found for customer");
+        }
+
+        Customer customer = installation.getCustomer();
+        String previousStatus = installation.getOverallStatus() != null
+                ? installation.getOverallStatus().name() : "NOT_STARTED";
+
+        // Reminders first: the SOP and per-task reminders carry source=PRODUCTION (V115 backfilled
+        // the older SOP rows). Stages, sub-stages, tasks and pending works go with the job via the
+        // database cascades (V46/V47/V107/V48); the task -> reminder FK is ON DELETE SET NULL (V98).
+        customerReminderRepository.deleteByCustomer_IdAndSource(customerId, CustomerReminder.ReminderSource.PRODUCTION);
+        productionInstallationRepository.delete(installation);
+
+        // The customer row and its workflow history are kept on purpose.
+        createWorkflowHistory(customer, "Production Installation Deleted", "DELETED", deletedBy,
+                "Production job removed (was " + previousStatus
+                        + ") with its stages, checklist, pending works and production reminders");
+
+        return ApiResponse.success("Production installation deleted successfully");
     }
 
     @Override
@@ -599,6 +633,15 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
     }
 
     private void autoUpdateStatus(ProductionInstallation installation, String updatedBy) {
+        // A job with a checklist takes its status from the checklist alone (ProductionStageResolver);
+        // the legacy boolean-checkpoint rule below only ever applies to jobs that predate it.
+        List<ProductionCustomTask> tasks = productionCustomTaskRepository
+                .findByProductionInstallationIdOrderBySortOrderAsc(installation.getId());
+        if (!tasks.isEmpty()) {
+            stageResolver.syncOverallStatus(installation, tasks, updatedBy);
+            return;
+        }
+
         ProductionInstallation.InstallationStatus newStatus = determineStatusBasedOnProgress(installation);
 
         if (newStatus != installation.getOverallStatus()) {
@@ -818,10 +861,15 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
             dto.setOverallProgressPercentage((int) ((done * 100.0) / tasks.size()));
             dto.setChecklistTotal(tasks.size());
             dto.setChecklistDone((int) done);
-            dto.setCurrentStageName(currentStageName(installation.getId(), tasks));
+
+            // Stage and status come from the one shared rule so every screen agrees.
+            ProductionStageResolver.StageSnapshot stage = stageResolver.resolve(installation, tasks);
+            dto.setDerivedStatus(stage.derivedStatus());
+            dto.setCurrentStageIndex(stage.currentStageIndex());
+            dto.setCurrentStageName(stage.currentStageName());
 
             // Next due = first open task in stage order, then task order within the stage.
-            ProductionCustomTask next = firstOpenTask(installation.getId(), tasks);
+            ProductionCustomTask next = firstOpenTask(installation.getCustomer().getId(), tasks);
             if (next != null) {
                 dto.setNextDueTask(next.getTaskTitle());
                 dto.setNextDueHasReminder(next.getReminder() != null);
@@ -841,17 +889,22 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
         return dto;
     }
 
-    /** First open task in stage order, then task order within the stage; null when all done. */
-    private ProductionCustomTask firstOpenTask(Long installationId, List<ProductionCustomTask> tasks) {
-        List<ProductionTaskGroup> groups = productionTaskGroupRepository
-                .findByProductionInstallationIdOrderBySortOrderAsc(installationId);
-        for (ProductionTaskGroup g : groups) {
-            ProductionCustomTask candidate = tasks.stream()
-                    .filter(t -> t.getTaskGroup() != null && t.getTaskGroup().getId().equals(g.getId())
-                            && !Boolean.TRUE.equals(t.getCompleted()))
-                    .findFirst() // tasks arrive sorted by sortOrder
-                    .orElse(null);
+    /**
+     * First open task walking the top-level stages in order — a stage's own tasks, then each of its
+     * sub-stages — so a sub-stage's sortOrder (numbered within its stage) can never pull "next due"
+     * ahead of an earlier stage. Null when all done.
+     */
+    private ProductionCustomTask firstOpenTask(Long customerId, List<ProductionCustomTask> tasks) {
+        List<ProductionTaskGroup> stages = productionTaskGroupRepository.findByCustomerIdWithTasks(customerId);
+        for (ProductionTaskGroup stage : stages) {
+            ProductionCustomTask candidate = firstOpenTaskInGroup(stage, tasks);
             if (candidate != null) return candidate;
+            if (stage.getSubGroups() != null) {
+                for (ProductionTaskGroup sub : stage.getSubGroups()) {
+                    candidate = firstOpenTaskInGroup(sub, tasks);
+                    if (candidate != null) return candidate;
+                }
+            }
         }
         // Tasks without a group (manually added) come last
         return tasks.stream()
@@ -860,17 +913,11 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
                 .orElse(null);
     }
 
-    /** The first stage (by sort order) that still has open tasks; the last stage when all done. */
-    private String currentStageName(Long installationId, List<ProductionCustomTask> tasks) {
-        List<ProductionTaskGroup> groups = productionTaskGroupRepository
-                .findByProductionInstallationIdOrderBySortOrderAsc(installationId);
-        if (groups.isEmpty()) return null;
-        for (ProductionTaskGroup g : groups) {
-            boolean open = tasks.stream().anyMatch(t ->
-                    t.getTaskGroup() != null && t.getTaskGroup().getId().equals(g.getId())
-                            && !Boolean.TRUE.equals(t.getCompleted()));
-            if (open) return g.getGroupTitle();
-        }
-        return groups.get(groups.size() - 1).getGroupTitle();
+    private ProductionCustomTask firstOpenTaskInGroup(ProductionTaskGroup group, List<ProductionCustomTask> tasks) {
+        return tasks.stream()
+                .filter(t -> t.getTaskGroup() != null && t.getTaskGroup().getId().equals(group.getId())
+                        && !Boolean.TRUE.equals(t.getCompleted()))
+                .findFirst() // tasks arrive sorted by sortOrder
+                .orElse(null);
     }
 }

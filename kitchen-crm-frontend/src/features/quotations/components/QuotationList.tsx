@@ -22,6 +22,7 @@ import {
   useGetFolderVersionsQuery,
   useRenameQuotationFolderMutation,
   useDeleteQuotationFolderMutation,
+  useUpdateQuotationStatusMutation,
 } from '@/app/baseApi';
 import type { RootState } from '@/app/store';
 
@@ -60,7 +61,7 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
   const { data, isLoading, error } = useGetQuotationsQuery(filters, { skip: viewMode !== 'all' });
   // Folder view
   const { data: folderData, isLoading: foldersLoading, error: foldersError } = useGetQuotationFoldersQuery(
-    { customerName: filters.customerName, page: filters.page ?? 0, size: filters.size ?? 10 },
+    { customerName: filters.customerName, status: (filters as any).status, page: filters.page ?? 0, size: filters.size ?? 10 },
     { skip: viewMode !== 'folders' }
   );
   const { data: versionsData, isFetching: versionsLoading } = useGetFolderVersionsQuery(expandedFolderId!, {
@@ -70,6 +71,10 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
   const [deleteQuotation, { isLoading: isDeleting }] = useDeleteQuotationMutation();
   const [renameFolder, { isLoading: isRenaming }] = useRenameQuotationFolderMutation();
   const [deleteFolder, { isLoading: isDeletingFolder }] = useDeleteQuotationFolderMutation();
+  const [updateStatus] = useUpdateQuotationStatusMutation();
+  // A super-admin can change a quotation's status straight from the list. The menu is rendered in a
+  // fixed overlay (positioned from the pill's rect) so the table's overflow never clips it.
+  const [statusMenu, setStatusMenu] = useState<{ id: number; status?: string; x: number; y: number } | null>(null);
 
   const quotations: QuotationSummary[] = data?.content ?? [];
   const folders: QuotationFolderSummary[] = folderData?.content ?? [];
@@ -143,10 +148,10 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
   // red rejected, violet revised) using the shared --st-* tokens.
   const QSTATUS: Record<string, { st: string; label: string }> = {
     DRAFT: { st: 'draft', label: 'Draft' },
-    SENT: { st: 'lead', label: 'Sent' },
-    APPROVED: { st: 'confirmed', label: 'Approved' },
-    REJECTED: { st: 'lost', label: 'Rejected' },
-    REVISED: { st: 'design', label: 'Revised' },
+    ON_HOLD: { st: 'nego', label: 'On Hold' },
+    COMPLETE: { st: 'confirmed', label: 'Complete' },
+    APPROVED: { st: 'lead', label: 'Approved' },
+    CANCELLED: { st: 'lost', label: 'Cancelled' },
     PENDING: { st: 'potential', label: 'Pending' },
   };
   const statusPill = (status?: string) => {
@@ -161,6 +166,47 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
         <span className="w-1.5 h-1.5 rounded-full" style={{ background: fg }} />
         {m.label}
       </span>
+    );
+  };
+
+  // The set of statuses a super-admin can move a quotation to, in workflow order.
+  const STATUS_OPTIONS: string[] = ['DRAFT', 'ON_HOLD', 'COMPLETE', 'APPROVED', 'CANCELLED'];
+
+  const changeStatus = async (id: number, status: string) => {
+    setStatusMenu(null);
+    try {
+      await updateStatus({ id, status }).unwrap();
+      toast.success(`Status changed to ${QSTATUS[status]?.label ?? status}`);
+    } catch (e: any) {
+      toast.error(e?.data?.message || 'Failed to update status');
+    }
+  };
+
+  // Interactive status cell: a clickable pill for a super-admin (opens the status menu), or the
+  // plain read-only pill for everyone else / when there is no target quotation id.
+  const statusCell = (id?: number, status?: string) => {
+    if (!isSuperAdmin || !id) return statusPill(status);
+    const m = (status && QSTATUS[status]) || { st: '', label: status ?? '—' };
+    const fg = m.st ? `var(--st-${m.st}-fg)` : 'var(--color-text-700)';
+    const bg = m.st ? `var(--st-${m.st}-bg)` : 'var(--color-background-700)';
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          const r = e.currentTarget.getBoundingClientRect();
+          setStatusMenu((prev) =>
+            prev && prev.id === id ? null : { id, status, x: r.left, y: r.bottom + 4 }
+          );
+        }}
+        title="Change status"
+        className="inline-flex items-center gap-1.5 px-2.5 py-[3.5px] rounded-full text-xs font-semibold whitespace-nowrap hover:brightness-95 transition"
+        style={{ background: bg, color: fg }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: fg }} />
+        {m.label}
+        <ChevronDown className="h-3 w-3 opacity-70" />
+      </button>
     );
   };
   const isOverdue = (d?: string) => !!d && new Date(d) < new Date(new Date().toDateString());
@@ -319,7 +365,7 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
                             ₹{f.latestTotalAmount?.toLocaleString('en-IN') ?? '-'}
                           </td>
                           <td className="px-2 sm:px-4 py-3 sm:py-4">
-                            {f.latestStatus ? statusPill(f.latestStatus) : '-'}
+                            {statusCell(f.latestQuotationId, f.latestStatus)}
                           </td>
                           <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-700 text-xs sm:text-sm hidden md:table-cell">
                             {formatDate(f.latestCreatedAt)}
@@ -388,7 +434,7 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
                                   ₹{q.totalAmount?.toLocaleString('en-IN') ?? '-'}
                                 </td>
                                 <td className="px-2 sm:px-4 py-2.5 sm:py-3">
-                                  {statusPill(q.status)}
+                                  {statusCell(q.id, q.status)}
                                 </td>
                                 <td className="px-2 sm:px-4 py-2.5 sm:py-3 text-text-700 text-xs sm:text-sm hidden md:table-cell">
                                   {formatDate(q.createdAt)}
@@ -504,7 +550,7 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
                         ₹{q.totalAmount?.toLocaleString('en-IN') ?? '-'}
                       </td>
                       <td className="px-2 sm:px-4 py-3 sm:py-4">
-                        {statusPill(q.status)}
+                        {statusCell(q.id, q.status)}
                       </td>
                       <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-700 text-xs sm:text-sm hidden md:table-cell">
                         {formatDate(q.createdAt)}
@@ -612,6 +658,42 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
             </div>
           </div>
         </div>
+      )}
+
+      {/* Status change menu — fixed overlay so the table's overflow never clips it */}
+      {statusMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setStatusMenu(null)} />
+          <div
+            className="fixed z-50 min-w-[168px] py-1 rounded-[10px] border border-background-600 bg-background-800 shadow-lg"
+            style={{ left: statusMenu.x, top: statusMenu.y }}
+          >
+            <div className="px-3 py-1.5 text-[10.5px] font-[650] tracking-[0.05em] uppercase text-text-500">
+              Change status
+            </div>
+            {STATUS_OPTIONS.map((opt) => {
+              const meta = QSTATUS[opt] || { st: '', label: opt };
+              const active = statusMenu.status === opt;
+              return (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => changeStatus(statusMenu.id, opt)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-[13px] transition-colors hover:bg-background-700 ${
+                    active ? 'font-semibold text-text-900' : 'text-text-700'
+                  }`}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ background: meta.st ? `var(--st-${meta.st}-fg)` : 'var(--color-text-500)' }}
+                  />
+                  {meta.label}
+                  {active && <span className="ml-auto text-primary-600">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );

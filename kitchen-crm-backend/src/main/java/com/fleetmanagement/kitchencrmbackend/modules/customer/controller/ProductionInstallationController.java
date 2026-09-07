@@ -214,6 +214,23 @@ public class ProductionInstallationController {
         }
     }
 
+    /** Removes the whole job (stages, checklist, pending works, production reminders); the customer stays. */
+    @DeleteMapping("/customer/{customerId}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<String>> deleteProductionInstallation(
+            @PathVariable Long customerId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        ApiResponse<String> response = productionInstallationService.deleteProductionInstallation(
+                customerId, currentUser.getName());
+
+        if (response.getSuccess()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
     @PatchMapping("/customer/{customerId}/status")
     public ResponseEntity<ApiResponse<String>> updateInstallationStatus(
             @PathVariable Long customerId,

@@ -184,11 +184,12 @@ export function QuotationBuilderPage() {
     lightingTaxPercentage: 18,
     miscellaneousMarginPercentage: 0,
     miscellaneousTaxPercentage: 18,
-    // Per-category MRP (list price) rates (default to the offer values)
-    accessoriesMrpMarginPercentage: 20,
-    cabinetsMrpMarginPercentage: 20,
-    doorsMrpMarginPercentage: 20,
-    lightingMrpMarginPercentage: 20,
+    // Per-category MRP (list price) rates. Default margin is 60% (the MRP/list price is marked up
+    // well above the offer price); tax mirrors the offer default.
+    accessoriesMrpMarginPercentage: 60,
+    cabinetsMrpMarginPercentage: 60,
+    doorsMrpMarginPercentage: 60,
+    lightingMrpMarginPercentage: 60,
     accessoriesMrpTaxPercentage: 18,
     cabinetsMrpTaxPercentage: 18,
     doorsMrpTaxPercentage: 18,

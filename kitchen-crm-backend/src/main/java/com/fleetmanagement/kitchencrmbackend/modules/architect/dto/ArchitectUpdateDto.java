@@ -16,6 +16,9 @@ public class ArchitectUpdateDto {
     private String firm;
     private String contactNumber;
     private String principalArchitectName;
+    private String email;
+    private String location;
+    private Boolean highlighted;
 }
 
 

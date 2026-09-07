@@ -28,6 +28,7 @@ public interface ArchitectRepository extends JpaRepository<Architect, Long> {
             "(:visited IS NULL " +
             " OR (:visited = TRUE AND a.lastVisitDate IS NOT NULL) " +
             " OR (:visited = FALSE AND a.lastVisitDate IS NULL)) AND " +
+            "(:highlighted IS NULL OR a.highlighted = :highlighted) AND " +
             "(:search IS NULL " +
             " OR LOWER(a.architectureName) LIKE LOWER(CONCAT('%', :search, '%')) " +
             " OR LOWER(a.firm) LIKE LOWER(CONCAT('%', :search, '%')) " +
@@ -35,6 +36,7 @@ public interface ArchitectRepository extends JpaRepository<Architect, Long> {
             " OR LOWER(a.contactNumber) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Architect> findByFilters(@Param("partnerType") Architect.PartnerType partnerType,
                                   @Param("visited") Boolean visited,
+                                  @Param("highlighted") Boolean highlighted,
                                   @Param("search") String search,
                                   Pageable pageable);
 
@@ -42,6 +44,8 @@ public interface ArchitectRepository extends JpaRepository<Architect, Long> {
     @Query("SELECT a FROM Architect a WHERE (:partnerType IS NULL OR a.partnerType = :partnerType) " +
             "ORDER BY a.architectureName ASC")
     List<Architect> findAllByPartnerType(@Param("partnerType") Architect.PartnerType partnerType);
+
+    long countByPartnerType(Architect.PartnerType partnerType);
 
     /**
      * Backs the soft dedupe in createArchitect: typing a name that already exists in the

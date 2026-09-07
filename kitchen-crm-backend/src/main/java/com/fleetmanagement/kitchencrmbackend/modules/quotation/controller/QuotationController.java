@@ -74,10 +74,11 @@ public class QuotationController {
     @GetMapping("/folders")
     public ResponseEntity<ApiResponse<Page<QuotationFolderSummaryDto>>> getQuotationFolders(
             @RequestParam(required = false) String customerName,
+            @RequestParam(required = false) Quotation.QuotationStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        return ResponseEntity.ok(quotationService.getQuotationFolders(customerName, pageable));
+        return ResponseEntity.ok(quotationService.getQuotationFolders(customerName, status, pageable));
     }
 
     @GetMapping("/folders/{folderId}/versions")

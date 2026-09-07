@@ -24,6 +24,9 @@ public class ArchitectCreateDto {
     private String contactNumber;
 
     private String principalArchitectName;
+    private String email;
+    private String location;
+    private Boolean highlighted;
 }
 
 

@@ -175,6 +175,23 @@ export const productionAPI = baseApi.injectEndpoints({
       invalidatesTags: ['Production'],
     }),
 
+    // Delete a production job (super admin). DB cascade removes stages, tasks and pending works;
+    // the backend purges the job's production reminders. The customer record is kept.
+    deleteProductionJob: builder.mutation<ProductionApiResponse<string>, number>({
+      query: (customerId) => ({
+        url: API_ENDPOINTS.PRODUCTION.BY_CUSTOMER(customerId),
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_result, _error, customerId) => [
+        'Production',
+        { type: 'Production', id: customerId },
+        'CustomTask',
+        'TaskGroup',
+        'ProductionIssue',
+        'Reminders',
+      ],
+    }),
+
     // Update installation status
     updateInstallationStatus: builder.mutation<ProductionApiResponse<string>, { customerId: number; status: InstallationStatus }>({
       query: ({ customerId, status }) => ({
@@ -214,6 +231,9 @@ export const productionAPI = baseApi.injectEndpoints({
       ],
     }),
 
+    // Every task/group mutation also invalidates the job itself: the header badge, stage strip
+    // and list chips read the backend-derived stage/status, which changes with each tick.
+
     // Create custom task
     createCustomTask: builder.mutation<ProductionApiResponse<ProductionCustomTask>, ProductionCustomTaskCreateRequest>({
       query: (data) => ({
@@ -224,6 +244,8 @@ export const productionAPI = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { customerId }) => [
         { type: 'CustomTask', id: customerId },
         'CustomTask',
+        { type: 'Production', id: customerId },
+        'Production',
       ],
     }),
 
@@ -237,6 +259,8 @@ export const productionAPI = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { customerId }) => [
         { type: 'CustomTask', id: customerId },
         'CustomTask',
+        { type: 'Production', id: customerId },
+        'Production',
       ],
     }),
 
@@ -249,6 +273,8 @@ export const productionAPI = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { customerId }) => [
         { type: 'CustomTask', id: customerId },
         'CustomTask',
+        { type: 'Production', id: customerId },
+        'Production',
       ],
     }),
 
@@ -261,6 +287,8 @@ export const productionAPI = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { customerId }) => [
         { type: 'CustomTask', id: customerId },
         'CustomTask',
+        { type: 'Production', id: customerId },
+        'Production',
       ],
     }),
 
@@ -274,6 +302,8 @@ export const productionAPI = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { customerId }) => [
         { type: 'CustomTask', id: customerId },
         'CustomTask',
+        { type: 'Production', id: customerId },
+        'Production',
       ],
     }),
 
@@ -350,6 +380,8 @@ export const productionAPI = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { customerId }) => [
         { type: 'TaskGroup', id: customerId },
         'TaskGroup',
+        { type: 'Production', id: customerId },
+        'Production',
       ],
     }),
 
@@ -363,6 +395,8 @@ export const productionAPI = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { customerId }) => [
         { type: 'TaskGroup', id: customerId },
         'TaskGroup',
+        { type: 'Production', id: customerId },
+        'Production',
       ],
     }),
 
@@ -376,6 +410,8 @@ export const productionAPI = baseApi.injectEndpoints({
         { type: 'TaskGroup', id: customerId },
         'TaskGroup',
         'CustomTask',
+        { type: 'Production', id: customerId },
+        'Production',
       ],
     }),
 
@@ -389,6 +425,8 @@ export const productionAPI = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { customerId }) => [
         { type: 'TaskGroup', id: customerId },
         'TaskGroup',
+        { type: 'Production', id: customerId },
+        'Production',
       ],
     }),
 
@@ -494,6 +532,7 @@ export const {
   useGetReadyForHandoverQuery,
   useGetScheduledCompletionsQuery,
   useCreateProductionInstallationMutation,
+  useDeleteProductionJobMutation,
   useUpdateInstallationStatusMutation,
   useUpdateTaskStatusMutation,
   // Custom Tasks hooks

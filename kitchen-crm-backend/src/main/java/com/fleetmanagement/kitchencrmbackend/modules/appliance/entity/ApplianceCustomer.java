@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,6 +50,13 @@ public class ApplianceCustomer extends Auditable {
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
+
+    /**
+     * Denormalised MAX(called_at) of this entry's follow-ups, kept in step by the service on
+     * every add/delete (see ApplianceCustomerServiceImpl.syncLastCalledAt). Never set from a DTO.
+     */
+    @Column(name = "last_called_at")
+    private LocalDateTime lastCalledAt;
 
     /** Quotation PDFs attached to this entry; an entry may carry several. */
     @OneToMany(mappedBy = "applianceCustomer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

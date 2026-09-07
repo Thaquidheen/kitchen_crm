@@ -2,10 +2,10 @@
 
 export const QuotationStatus = {
   DRAFT: 'DRAFT',
-  SENT: 'SENT',
+  ON_HOLD: 'ON_HOLD',
+  COMPLETE: 'COMPLETE',
   APPROVED: 'APPROVED',
-  REJECTED: 'REJECTED',
-  REVISED: 'REVISED'
+  CANCELLED: 'CANCELLED'
 } as const;
 
 export type QuotationStatus = typeof QuotationStatus[keyof typeof QuotationStatus];

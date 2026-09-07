@@ -28,7 +28,7 @@ import {
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { BellRing, ListChecks } from 'lucide-react';
+import { BellRing, ListChecks, Calendar } from 'lucide-react';
 
 const PRIORITY_COLORS: Record<string, string> = {
   LOW: 'text-gray-400',
@@ -67,6 +67,7 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
   const [newTask, setNewTask] = useState({
     taskTitle: '',
     taskDescription: '',
+    taskDate: '',
     priority: 'MEDIUM' as TaskPriority,
   });
 
@@ -123,15 +124,14 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
 
   const taskGroups = taskGroupsResponse?.success ? taskGroupsResponse.data || [] : [];
 
-  // Initially expand only the current stage (first with open tasks); everything else stays
+  // Initially expand only the current stage (backend-derived, 1-based); everything else stays
   // collapsed so a 36-task checklist opens at a readable height.
   React.useEffect(() => {
     if (taskGroups.length > 0 && expandedGroups.size === 0) {
-      const current =
-        taskGroups.find((g) => (g.completedTasks ?? 0) < (g.totalTasks ?? 0)) ?? taskGroups[0];
+      const current = taskGroups[(production.currentStageIndex ?? 1) - 1] ?? taskGroups[0];
       setExpandedGroups(new Set([current.id]));
     }
-  }, [taskGroups]);
+  }, [taskGroups, production.currentStageIndex]);
 
   const toggleGroupExpanded = (groupId: number) => {
     setExpandedGroups(prev => {
@@ -233,13 +233,14 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
         customerId,
         taskTitle: newTask.taskTitle,
         taskDescription: newTask.taskDescription,
+        taskDate: newTask.taskDate || undefined,
         phase: 'CUSTOM',
         priority: newTask.priority,
         taskGroupId: groupId,
       }).unwrap();
 
       toast.success('Task created successfully');
-      setNewTask({ taskTitle: '', taskDescription: '', priority: 'MEDIUM' });
+      setNewTask({ taskTitle: '', taskDescription: '', taskDate: '', priority: 'MEDIUM' });
       setShowAddTaskFormForGroup(null);
     } catch (error) {
       console.error('Error creating task:', error);
@@ -320,6 +321,15 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
               <span className={`text-xs px-1.5 py-0.5 rounded ${PRIORITY_BG[task.priority]} ${PRIORITY_COLORS[task.priority]}`}>
                 {task.priority}
               </span>
+              {task.taskDate && (
+                <span
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-text-600 whitespace-nowrap tabular-nums"
+                  title="Task date"
+                >
+                  <Calendar className="w-3 h-3" />
+                  {new Date(task.taskDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              )}
             </div>
             {task.taskDescription && (
               <span className="text-xs text-text-500 mt-0.5">{task.taskDescription}</span>
@@ -389,6 +399,15 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
         onChange={(e) => setNewTask({ ...newTask, taskDescription: e.target.value })}
         className="w-full px-3 py-2 bg-background-900 border border-background-600 rounded-lg text-sm text-text-900 placeholder-text-500 focus:outline-none focus:border-primary-500"
       />
+      <label className="flex items-center gap-2 text-xs text-text-500">
+        <span className="whitespace-nowrap">Task date</span>
+        <input
+          type="date"
+          value={newTask.taskDate}
+          onChange={(e) => setNewTask({ ...newTask, taskDate: e.target.value })}
+          className="flex-1 px-3 py-2 bg-background-900 border border-background-600 rounded-lg text-sm text-text-900 placeholder-text-500 focus:outline-none focus:border-primary-500"
+        />
+      </label>
       <div className="flex items-center gap-2">
         <select
           value={newTask.priority}
@@ -403,7 +422,7 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
         <button
           onClick={() => {
             setShowAddTaskFormForGroup(null);
-            setNewTask({ taskTitle: '', taskDescription: '', priority: 'MEDIUM' });
+            setNewTask({ taskTitle: '', taskDescription: '', taskDate: '', priority: 'MEDIUM' });
           }}
           className="p-2 text-text-600 hover:text-text-900 transition-colors"
         >

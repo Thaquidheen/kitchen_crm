@@ -20,6 +20,7 @@ public class ProductionCustomTaskDto {
     private String phase;
     private Boolean completed;
     private LocalDate completionDate;
+    private LocalDate taskDate;
     private LocalDateTime completedAt;
     private Long completedByUserId;
     private String completedByUserName;
@@ -47,6 +48,7 @@ public class ProductionCustomTaskDto {
         dto.setPhase(entity.getPhase() != null ? entity.getPhase().name() : null);
         dto.setCompleted(entity.getCompleted());
         dto.setCompletionDate(entity.getCompletionDate());
+        dto.setTaskDate(entity.getTaskDate());
         dto.setCompletedAt(entity.getCompletedAt());
         if (entity.getCompletedBy() != null) {
             dto.setCompletedByUserId(entity.getCompletedBy().getId());

@@ -32,10 +32,10 @@ export function QuotationFilters({ filters, onFiltersChange, onReset }: Quotatio
 
   const statusOptions: Array<{ value: QuotationStatus; label: string }> = [
     { value: 'DRAFT', label: 'Draft' },
-    { value: 'SENT', label: 'Sent' },
+    { value: 'ON_HOLD', label: 'On Hold' },
+    { value: 'COMPLETE', label: 'Complete' },
     { value: 'APPROVED', label: 'Approved' },
-    { value: 'REJECTED', label: 'Rejected' },
-    { value: 'REVISED', label: 'Revised' },
+    { value: 'CANCELLED', label: 'Cancelled' },
   ];
 
   const controlClass =

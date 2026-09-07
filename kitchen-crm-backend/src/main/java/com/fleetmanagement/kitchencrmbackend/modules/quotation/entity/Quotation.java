@@ -256,7 +256,9 @@ public class Quotation extends Auditable {
     private BigDecimal paymentInstallationPct;
 
     public enum QuotationStatus {
-        DRAFT, SENT, APPROVED, REJECTED, REVISED
+        // Workflow statuses shown in the Quotations list. SENT/REJECTED/REVISED were retired in
+        // favour of ON_HOLD/COMPLETE/CANCELLED; no rows used the old values (all were DRAFT).
+        DRAFT, ON_HOLD, COMPLETE, APPROVED, CANCELLED
     }
 
     // Generate quotation number before saving

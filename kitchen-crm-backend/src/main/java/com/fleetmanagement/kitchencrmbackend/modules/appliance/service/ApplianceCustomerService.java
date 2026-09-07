@@ -2,10 +2,13 @@ package com.fleetmanagement.kitchencrmbackend.modules.appliance.service;
 
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.dto.ApplianceCustomerDto;
+import com.fleetmanagement.kitchencrmbackend.modules.appliance.dto.ApplianceFollowUpDto;
+import com.fleetmanagement.kitchencrmbackend.modules.appliance.dto.ApplianceFollowUpRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.entity.ApplianceCustomer;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Map;
 
 public interface ApplianceCustomerService {
@@ -25,4 +28,13 @@ public interface ApplianceCustomerService {
     /** Category chip counts are always global; status counts and total value are scoped
      *  to {@code category} so they line up with what the table is showing. */
     ApiResponse<Map<String, Object>> getStatistics(ApplianceCustomer.Category category);
+
+    /** Follow-up call history for an entry, newest call first. */
+    ApiResponse<List<ApplianceFollowUpDto>> getFollowUps(Long id);
+
+    /** Logs a call and refreshes the entry's denormalised lastCalledAt. */
+    ApiResponse<ApplianceFollowUpDto> addFollowUp(Long id, ApplianceFollowUpRequest request, String author);
+
+    /** Removes one logged call (must belong to the entry) and refreshes lastCalledAt. */
+    ApiResponse<String> deleteFollowUp(Long id, Long followUpId);
 }

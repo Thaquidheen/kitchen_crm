@@ -30,6 +30,8 @@ public class ProductionTaskGroupServiceImpl implements ProductionTaskGroupServic
     private final ProductionTaskGroupRepository groupRepository;
     private final ProductionInstallationRepository productionInstallationRepository;
     private final UserRepository userRepository;
+    // Repositories only — no cycle through ProductionInstallationServiceImpl.
+    private final ProductionStageResolver stageResolver;
 
     @Override
     @Transactional
@@ -121,6 +123,9 @@ public class ProductionTaskGroupServiceImpl implements ProductionTaskGroupServic
             ProductionTaskGroup savedGroup = groupRepository.save(group);
             log.info("Updated task group ID: {}", groupId);
 
+            // Re-parenting or re-ordering a stage can change which stage is "current".
+            stageResolver.syncOverallStatus(savedGroup.getProductionInstallation(), nameOf(getCurrentUser()));
+
             return ApiResponse.success("Task group updated successfully", ProductionTaskGroupDto.fromEntity(savedGroup));
         } catch (Exception e) {
             log.error("Error updating task group: {}", e.getMessage(), e);
@@ -200,8 +205,13 @@ public class ProductionTaskGroupServiceImpl implements ProductionTaskGroupServic
                 return ApiResponse.error("Task group not found with ID: " + groupId);
             }
 
+            // Capture the job before the row goes: dropping a stage (and its tasks) moves the status.
+            ProductionInstallation production = groupOpt.get().getProductionInstallation();
+
             groupRepository.deleteById(groupId);
             log.info("Deleted task group ID: {}", groupId);
+
+            stageResolver.syncOverallStatus(production, nameOf(getCurrentUser()));
 
             return ApiResponse.success("Task group deleted successfully", null);
         } catch (Exception e) {
@@ -227,6 +237,11 @@ public class ProductionTaskGroupServiceImpl implements ProductionTaskGroupServic
             }
 
             log.info("Reordered {} task groups for customer ID: {}", groupIds.size(), customerId);
+
+            // Stage order defines the stage index, which the status column is mapped from.
+            productionInstallationRepository.findByCustomerId(customerId)
+                    .ifPresent(production -> stageResolver.syncOverallStatus(production, nameOf(getCurrentUser())));
+
             return ApiResponse.success("Task groups reordered successfully", reorderedGroups);
         } catch (Exception e) {
             log.error("Error reordering task groups: {}", e.getMessage(), e);
@@ -244,5 +259,10 @@ public class ProductionTaskGroupServiceImpl implements ProductionTaskGroupServic
             log.warn("Could not get current user: {}", e.getMessage());
         }
         return null;
+    }
+
+    /** Display name for workflow history; "System" when there is no authenticated user. */
+    private static String nameOf(User user) {
+        return user != null && user.getName() != null ? user.getName() : "System";
     }
 }

@@ -94,7 +94,7 @@ export function RemindersPage() {
   // Module filter, deep-linkable so the bell's "View all" keeps its context (?source=PRODUCTION).
   const [sourceFilter, setSourceFilter] = useState<string>(() => {
     const s0 = (searchParams.get('source') ?? '').toUpperCase();
-    return ['CUSTOMERS', 'PRODUCTION', 'APPLIANCE'].includes(s0) ? s0 : '';
+    return ['CUSTOMERS', 'PRODUCTION', 'APPLIANCE', 'ARCHITECT'].includes(s0) ? s0 : '';
   });
 
   const { data, isLoading } = useGetRemindersQuery({

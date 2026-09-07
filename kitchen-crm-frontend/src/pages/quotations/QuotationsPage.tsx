@@ -15,10 +15,10 @@ import type { QuotationListParams } from '@/features/quotations/types';
 // Status -> chip token + label (semantic colors shared with the customers pipeline)
 const STATUS_CHIPS: Array<{ status: string; st: string; label: string }> = [
   { status: 'DRAFT', st: 'draft', label: 'Draft' },
-  { status: 'SENT', st: 'lead', label: 'Sent' },
-  { status: 'APPROVED', st: 'confirmed', label: 'Approved' },
-  { status: 'REJECTED', st: 'lost', label: 'Rejected' },
-  { status: 'REVISED', st: 'design', label: 'Revised' },
+  { status: 'ON_HOLD', st: 'nego', label: 'On Hold' },
+  { status: 'COMPLETE', st: 'confirmed', label: 'Complete' },
+  { status: 'APPROVED', st: 'lead', label: 'Approved' },
+  { status: 'CANCELLED', st: 'lost', label: 'Cancelled' },
 ];
 
 export function QuotationsPage() {

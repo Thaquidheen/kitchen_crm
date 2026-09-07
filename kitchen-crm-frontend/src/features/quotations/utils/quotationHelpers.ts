@@ -155,10 +155,10 @@ export function searchQuotations(
 export function getQuotationStatusCount(quotations: QuotationSummary[]): Record<QuotationStatus, number> {
   const counts = {
     [QuotationStatus.DRAFT]: 0,
-    [QuotationStatus.SENT]: 0,
+    [QuotationStatus.ON_HOLD]: 0,
+    [QuotationStatus.COMPLETE]: 0,
     [QuotationStatus.APPROVED]: 0,
-    [QuotationStatus.REJECTED]: 0,
-    [QuotationStatus.REVISED]: 0,
+    [QuotationStatus.CANCELLED]: 0,
   };
 
   quotations.forEach(quotation => {
@@ -243,10 +243,9 @@ export function calculateQuotationStatistics(quotations: QuotationSummary[]): {
   const averageValue = totalCount > 0 ? totalValue / totalCount : 0;
   const statusCounts = getQuotationStatusCount(quotations);
   
-  // Calculate conversion rate (approved / sent)
-  const sentCount = statusCounts[QuotationStatus.SENT];
+  // Conversion rate = approved out of all quotations (the SENT stage was retired).
   const approvedCount = statusCounts[QuotationStatus.APPROVED];
-  const conversionRate = sentCount > 0 ? (approvedCount / sentCount) * 100 : 0;
+  const conversionRate = totalCount > 0 ? (approvedCount / totalCount) * 100 : 0;
 
   return {
     totalCount,
@@ -283,8 +282,8 @@ export function getQuotationPriority(quotation: QuotationSummary): 'high' | 'med
     }
   }
   
-  // Medium priority: draft or revised
-  if (quotation.status === QuotationStatus.DRAFT || quotation.status === QuotationStatus.REVISED) {
+  // Medium priority: draft or on hold
+  if (quotation.status === QuotationStatus.DRAFT || quotation.status === QuotationStatus.ON_HOLD) {
     return 'medium';
   }
   
@@ -296,7 +295,7 @@ export function getQuotationPriority(quotation: QuotationSummary): 'high' | 'med
  * Check if quotation can be edited
  */
 export function canEditQuotation(quotation: QuotationSummary): boolean {
-  return quotation.status === QuotationStatus.DRAFT || quotation.status === QuotationStatus.REVISED;
+  return quotation.status === QuotationStatus.DRAFT || quotation.status === QuotationStatus.ON_HOLD;
 }
 
 /**
@@ -323,12 +322,8 @@ export function getQuotationActions(quotation: QuotationSummary): string[] {
     actions.push('edit');
   }
   
-  if (quotation.status === QuotationStatus.DRAFT) {
-    actions.push('send');
-  }
-  
-  if (quotation.status === QuotationStatus.SENT) {
-    actions.push('approve', 'reject');
+  if (quotation.status === QuotationStatus.ON_HOLD) {
+    actions.push('approve', 'cancel');
   }
   
   if (quotation.status === QuotationStatus.APPROVED) {

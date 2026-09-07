@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -26,6 +28,8 @@ public class ProductionCustomTaskCreateDto {
     private Integer sortOrder;
 
     private String notes;
+
+    private LocalDate taskDate;
 
     private Long taskGroupId;
 }

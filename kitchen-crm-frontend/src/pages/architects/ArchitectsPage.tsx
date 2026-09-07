@@ -5,16 +5,17 @@
  * single table card with an inline search toolbar and a "showing x of y" footer.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/shared/Pagination';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import {
   useGetArchitectsQuery,
   useDeleteArchitectMutation,
-  useMarkAsVisitedMutation,
+  useGetArchitectCountsQuery,
+  useToggleArchitectHighlightMutation,
 } from '@/features/architects/architectsAPI';
-import { Plus, Search, Trash2, Edit, CheckCircle, Calendar, History, Bell } from 'lucide-react';
+import { Plus, Search, Trash2, Edit, Calendar, History, Bell, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { partnerTypeLabel, partnerTypeOf } from '@/features/architects/types';
 import type { Architect, PartnerType } from '@/features/architects/types';
@@ -50,8 +51,11 @@ const iconBtn =
 export function ArchitectsPage() {
   const [page, setPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  // Search runs on the server (across the whole table), so debounce keystrokes and reset to page 0.
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [visitStatusFilter, setVisitStatusFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<'' | PartnerType>('');
+  const [starredOnly, setStarredOnly] = useState(false);
   const [sortBy, setSortBy] = useState<string>('architectureName');
   const [sortDir, setSortDir] = useState<string>('asc');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -62,6 +66,14 @@ export function ArchitectsPage() {
   const [selectedArchitect, setSelectedArchitect] = useState<Architect | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Architect | null>(null);
 
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setPage(0);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
   const { data, isLoading, error } = useGetArchitectsQuery({
     page,
     size: 10,
@@ -69,9 +81,12 @@ export function ArchitectsPage() {
     sortDir,
     visitStatus: visitStatusFilter || undefined,
     partnerType: typeFilter || undefined,
+    highlighted: starredOnly || undefined,
+    search: debouncedSearch || undefined,
   });
+  const { data: counts } = useGetArchitectCountsQuery();
   const [deleteArchitect, { isLoading: isDeleting }] = useDeleteArchitectMutation();
-  const [markAsVisited] = useMarkAsVisitedMutation();
+  const [toggleHighlight] = useToggleArchitectHighlightMutation();
 
   const architects: Architect[] = data?.content || [];
   const totalElements: number = data?.totalElements || 0;
@@ -88,38 +103,29 @@ export function ArchitectsPage() {
     }
   };
 
-  const handleMarkAsVisited = async (architect: Architect) => {
+  // Search, type and highlight filters all run server-side now, so the returned page already holds
+  // exactly the rows to show (search used to filter only the 10 loaded rows, missing matches on
+  // every other page).
+  const filteredArchitects = architects;
+
+  // Per-type totals come from the dedicated /counts endpoint — the paged list only knows its
+  // current page, which is why the chips used to read "10" while the header said 41.
+  const architectCount = counts?.architect ?? 0;
+  const builderCount = counts?.builder ?? 0;
+  const allCount = counts?.all ?? totalElements;
+  const distTotal = architectCount + builderCount || 1;
+
+  const handleToggleStar = async (architect: Architect) => {
     try {
-      await markAsVisited(architect.id).unwrap();
-      toast.success(`${architect.architectureName} marked as visited`);
+      await toggleHighlight({ id: architect.id, highlighted: !architect.highlighted }).unwrap();
+      toast.success(architect.highlighted ? 'Removed highlight' : 'Highlighted — floated to top');
     } catch (e: any) {
-      toast.error(e?.data?.message || 'Failed to mark as visited');
+      toast.error(e?.data?.message || 'Failed to update');
     }
   };
 
-  // The type filter is applied server-side too; this keeps the chips honest for any row the
-  // server returned before the param landed, and matches the existing client-side search.
-  const typedArchitects = typeFilter
-    ? architects.filter((a) => partnerTypeOf(a) === typeFilter)
-    : architects;
-
-  const filteredArchitects = searchTerm
-    ? typedArchitects.filter(
-        (a) =>
-          a.architectureName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          a.firm?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          a.principalArchitectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          a.contactNumber?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : typedArchitects;
-
-  // Counts come from the current page, so they describe what is on screen rather than the
-  // whole table — the list endpoint returns no per-type totals.
-  const architectCount = architects.filter((a) => partnerTypeOf(a) === 'ARCHITECT').length;
-  const builderCount = architects.filter((a) => partnerTypeOf(a) === 'BUILDER').length;
-
   const chips: Array<{ key: '' | PartnerType; st?: string; label: string; count: number }> = [
-    { key: '', label: 'All', count: architects.length },
+    { key: '', label: 'All', count: allCount },
     { key: 'ARCHITECT', st: 'design', label: 'Architects', count: architectCount },
     { key: 'BUILDER', st: 'nego', label: 'Builders', count: builderCount },
   ];
@@ -207,13 +213,13 @@ export function ArchitectsPage() {
       </div>
 
       {/* Distribution bar */}
-      {architects.length > 0 && (
+      {distTotal > 0 && (architectCount > 0 || builderCount > 0) && (
         <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden mx-0.5 mb-5">
           {architectCount > 0 && (
             <div
               title={`Architects · ${architectCount}`}
               style={{
-                width: `${(architectCount / architects.length) * 100}%`,
+                width: `${(architectCount / distTotal) * 100}%`,
                 background: 'var(--st-design-fg)',
               }}
             />
@@ -222,7 +228,7 @@ export function ArchitectsPage() {
             <div
               title={`Builders · ${builderCount}`}
               style={{
-                width: `${(builderCount / architects.length) * 100}%`,
+                width: `${(builderCount / distTotal) * 100}%`,
                 background: 'var(--st-nego-fg)',
               }}
             />
@@ -247,6 +253,27 @@ export function ArchitectsPage() {
             />
           </div>
           <div className="flex-1" />
+          <button
+            type="button"
+            onClick={() => {
+              setStarredOnly((v) => !v);
+              setPage(0);
+            }}
+            title="Show only highlighted"
+            className="h-[34px] px-2.5 inline-flex items-center gap-1.5 rounded-[10px] border text-[12.5px] font-medium transition-colors"
+            style={
+              starredOnly
+                ? {
+                    borderColor: 'var(--color-primary-600)',
+                    background: 'color-mix(in oklab, var(--color-primary-600) 16%, transparent)',
+                    color: 'var(--color-text-900)',
+                  }
+                : { borderColor: 'var(--color-background-600)', background: 'var(--color-background-900)' }
+            }
+          >
+            <Star size={13} fill={starredOnly ? '#f5b301' : 'none'} color={starredOnly ? '#f5b301' : 'currentColor'} />
+            Starred
+          </button>
           <select
             value={visitStatusFilter}
             onChange={(e) => {
@@ -280,16 +307,19 @@ export function ArchitectsPage() {
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[920px]">
+          <table className="w-full min-w-[1120px]">
             <thead>
               <tr className="border-t border-background-600 bg-background-700">
+                <th className={`${thClass} w-[44px] text-right pr-2`}>#</th>
                 <th className={thClass}>Name</th>
                 <th className={thClass}>Type</th>
                 <th className={thClass}>Firm</th>
                 <th className={thClass}>Contact</th>
+                <th className={thClass}>Email</th>
+                <th className={thClass}>Location</th>
                 <th className={thClass}>Visits</th>
                 <th className={thClass}>Last Visit</th>
-                <th className="px-3.5 py-[9px] text-right text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 w-[170px]">
+                <th className="px-3.5 py-[9px] text-right text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 w-[200px]">
                   Actions
                 </th>
               </tr>
@@ -299,12 +329,15 @@ export function ArchitectsPage() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-t border-background-600 animate-pulse">
                     <td className="px-3 py-[13px]">
+                      <div className="h-4 bg-background-600 rounded w-5 ml-auto" />
+                    </td>
+                    <td className="px-3 py-[13px]">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 bg-background-600 rounded-[9px]" />
                         <div className="h-4 bg-background-600 rounded w-32" />
                       </div>
                     </td>
-                    {Array.from({ length: 5 }).map((_, j) => (
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <td key={j} className="px-3 py-[13px]">
                         <div className="h-4 bg-background-600 rounded w-20" />
                       </td>
@@ -316,13 +349,13 @@ export function ArchitectsPage() {
                 ))
               ) : error ? (
                 <tr className="border-t border-background-600">
-                  <td colSpan={7} className="px-5 py-14 text-center text-[13px] text-text-700">
+                  <td colSpan={10} className="px-5 py-14 text-center text-[13px] text-text-700">
                     Failed to load architects
                   </td>
                 </tr>
               ) : filteredArchitects.length === 0 ? (
                 <tr className="border-t border-background-600">
-                  <td colSpan={7} className="px-5 py-14 text-center">
+                  <td colSpan={10} className="px-5 py-14 text-center">
                     {searchTerm || typeFilter || visitStatusFilter ? (
                       <>
                         <div className="text-[14.5px] font-semibold text-text-900">No matching records</div>
@@ -349,15 +382,34 @@ export function ArchitectsPage() {
                     <tr
                       key={architect.id}
                       className="border-t border-background-600 hover:bg-background-700 transition-colors"
+                      style={
+                        architect.highlighted
+                          ? {
+                              background: 'color-mix(in oklab, #f5b301 8%, transparent)',
+                              boxShadow: 'inset 3px 0 0 #f5b301',
+                            }
+                          : undefined
+                      }
                     >
+                      <td className="px-3 py-[13px] text-right pr-2 text-[12.5px] text-text-500 tabular-nums">
+                        {/* Number by the row's real position in the server page, not its index in the
+                            client-search-filtered subset — otherwise a search would renumber matches 1..n
+                            and mislabel each record's actual position. */}
+                        {page * 10 + architects.indexOf(architect) + 1}
+                      </td>
                       <td className="px-3 py-[13px]">
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div className="w-8 h-8 rounded-[9px] bg-background-600 border border-background-500 flex items-center justify-center text-[11px] font-[650] text-text-700 shrink-0">
                             {initialsOf(architect.architectureName)}
                           </div>
                           <div className="min-w-0">
-                            <div className="text-[13.5px] font-semibold text-text-900 whitespace-nowrap overflow-hidden text-ellipsis">
-                              {architect.architectureName}
+                            <div className="flex items-center gap-1.5">
+                              {architect.highlighted && (
+                                <Star size={12} fill="#f5b301" color="#f5b301" className="shrink-0" />
+                              )}
+                              <div className="text-[13.5px] font-semibold text-text-900 whitespace-nowrap overflow-hidden text-ellipsis">
+                                {architect.architectureName}
+                              </div>
                             </div>
                             {architect.principalArchitectName && (
                               <div className="text-xs text-text-700 whitespace-nowrap overflow-hidden text-ellipsis">
@@ -388,6 +440,21 @@ export function ArchitectsPage() {
                       <td className="px-3 py-[13px] text-[13px] text-text-900 tabular-nums whitespace-nowrap">
                         {architect.contactNumber || '—'}
                       </td>
+                      <td className="px-3 py-[13px] text-[13px] text-text-800 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
+                        {architect.email ? (
+                          <a
+                            href={`mailto:${architect.email}`}
+                            className="hover:text-primary-600 transition-colors"
+                          >
+                            {architect.email}
+                          </a>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="px-3 py-[13px] text-[13px] text-text-800 whitespace-nowrap overflow-hidden text-ellipsis max-w-[160px]">
+                        {architect.location || '—'}
+                      </td>
                       <td className="px-3 py-[13px] text-[13px] text-text-800 tabular-nums whitespace-nowrap">
                         {visits > 0 ? `${visits} visit${visits !== 1 ? 's' : ''}` : '—'}
                       </td>
@@ -397,18 +464,12 @@ export function ArchitectsPage() {
                       <td className="px-3.5 py-[13px]">
                         <div className="flex justify-end gap-0.5">
                           <button
-                            onClick={() => handleMarkAsVisited(architect)}
-                            title="Mark visited today"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
-                            style={{ color: 'var(--st-confirmed-fg)' }}
-                            onMouseEnter={(ev) => {
-                              ev.currentTarget.style.background = 'var(--st-confirmed-bg)';
-                            }}
-                            onMouseLeave={(ev) => {
-                              ev.currentTarget.style.background = 'transparent';
-                            }}
+                            onClick={() => handleToggleStar(architect)}
+                            title={architect.highlighted ? 'Remove highlight' : 'Highlight (float to top)'}
+                            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-background-600"
+                            style={{ color: architect.highlighted ? '#f5b301' : undefined }}
                           >
-                            <CheckCircle size={14} />
+                            <Star size={14} fill={architect.highlighted ? '#f5b301' : 'none'} />
                           </button>
                           <button
                             onClick={() => {

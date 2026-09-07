@@ -37,6 +37,8 @@ public class ProductionCustomTaskServiceImpl implements ProductionCustomTaskServ
     private final UserRepository userRepository;
     private final CustomerReminderService customerReminderService;
     private final com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerReminderRepository customerReminderRepository;
+    // Repositories only — no cycle through ProductionInstallationServiceImpl.
+    private final ProductionStageResolver stageResolver;
 
     @Override
     @Transactional
@@ -57,6 +59,7 @@ public class ProductionCustomTaskServiceImpl implements ProductionCustomTaskServ
             task.setProductionInstallation(production);
             task.setTaskTitle(createDto.getTaskTitle());
             task.setTaskDescription(createDto.getTaskDescription());
+            task.setTaskDate(createDto.getTaskDate());
             task.setNotes(createDto.getNotes());
             task.setCompleted(false);
             task.setCreatedByUser(currentUser);
@@ -101,6 +104,9 @@ public class ProductionCustomTaskServiceImpl implements ProductionCustomTaskServ
             ProductionCustomTask savedTask = taskRepository.save(task);
             log.info("Created custom task '{}' for customer ID: {}", savedTask.getTaskTitle(), createDto.getCustomerId());
 
+            // A new open task can move a COMPLETED job back to a stage.
+            stageResolver.syncOverallStatus(production, nameOf(currentUser));
+
             return ApiResponse.success("Task created successfully", ProductionCustomTaskDto.fromEntity(savedTask));
         } catch (Exception e) {
             log.error("Error creating custom task: {}", e.getMessage(), e);
@@ -131,6 +137,9 @@ public class ProductionCustomTaskServiceImpl implements ProductionCustomTaskServ
             if (updateDto.getSortOrder() != null) {
                 task.setSortOrder(updateDto.getSortOrder());
             }
+            if (updateDto.getTaskDate() != null) {
+                task.setTaskDate(updateDto.getTaskDate());
+            }
 
             // Update phase
             if (updateDto.getPhase() != null && !updateDto.getPhase().isEmpty()) {
@@ -151,6 +160,8 @@ public class ProductionCustomTaskServiceImpl implements ProductionCustomTaskServ
             }
 
             // Update completion status
+            boolean completionChanged = updateDto.getCompleted() != null
+                    && !updateDto.getCompleted().equals(Boolean.TRUE.equals(task.getCompleted()));
             if (updateDto.getCompleted() != null) {
                 task.setCompleted(updateDto.getCompleted());
                 if (updateDto.getCompleted()) {
@@ -166,6 +177,10 @@ public class ProductionCustomTaskServiceImpl implements ProductionCustomTaskServ
 
             ProductionCustomTask savedTask = taskRepository.save(task);
             log.info("Updated custom task ID: {}", taskId);
+
+            if (completionChanged) {
+                stageResolver.syncOverallStatus(savedTask.getProductionInstallation(), nameOf(getCurrentUser()));
+            }
 
             return ApiResponse.success("Task updated successfully", ProductionCustomTaskDto.fromEntity(savedTask));
         } catch (Exception e) {
@@ -199,6 +214,8 @@ public class ProductionCustomTaskServiceImpl implements ProductionCustomTaskServ
 
             ProductionCustomTask savedTask = taskRepository.save(task);
             log.info("Toggled custom task ID: {} to completed={}", taskId, newCompletedStatus);
+
+            stageResolver.syncOverallStatus(savedTask.getProductionInstallation(), nameOf(getCurrentUser()));
 
             return ApiResponse.success(
                     newCompletedStatus ? "Task marked as completed" : "Task marked as incomplete",
@@ -266,8 +283,13 @@ public class ProductionCustomTaskServiceImpl implements ProductionCustomTaskServ
                 return ApiResponse.error("Task not found with ID: " + taskId);
             }
 
+            // Capture the job before the row goes: removing the last open task can complete it.
+            ProductionInstallation production = taskOpt.get().getProductionInstallation();
+
             taskRepository.deleteById(taskId);
             log.info("Deleted custom task ID: {}", taskId);
+
+            stageResolver.syncOverallStatus(production, nameOf(getCurrentUser()));
 
             return ApiResponse.success("Task deleted successfully", null);
         } catch (Exception e) {
@@ -310,6 +332,11 @@ public class ProductionCustomTaskServiceImpl implements ProductionCustomTaskServ
             log.warn("Could not get current user: {}", e.getMessage());
         }
         return null;
+    }
+
+    /** Display name for workflow history; "System" when there is no authenticated user. */
+    private static String nameOf(User user) {
+        return user != null && user.getName() != null ? user.getName() : "System";
     }
 
     @Override

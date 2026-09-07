@@ -96,6 +96,18 @@ export interface ProductionInstallation {
   currentPhase?: string;
   readyForInstallation?: boolean;
 
+  // Derived from the stage checklist by the backend (ProductionStageResolver).
+  // All null for a legacy job with no checklist — fall back to overallStatus then.
+  derivedStatus?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | null;
+  /** 1-based index of the current top-level stage. */
+  currentStageIndex?: number | null;
+  currentStageName?: string | null;
+  checklistTotal?: number | null;
+  checklistDone?: number | null;
+  nextDueTask?: string | null;
+  nextDueDate?: string | null;
+  nextDueHasReminder?: boolean | null;
+
   createdAt?: string;
   updatedAt?: string;
 }
@@ -188,6 +200,7 @@ export interface ProductionCustomTask {
   phase: TaskPhase;
   completed: boolean;
   completionDate?: string;
+  taskDate?: string;
   completedAt?: string;
   completedByUserId?: number;
   completedByUserName?: string;
@@ -210,6 +223,7 @@ export interface ProductionCustomTaskCreateRequest {
   priority?: TaskPriority;
   sortOrder?: number;
   notes?: string;
+  taskDate?: string;
   taskGroupId?: number;
 }
 
@@ -219,6 +233,7 @@ export interface ProductionCustomTaskUpdateRequest {
   phase?: TaskPhase;
   completed?: boolean;
   completionDate?: string;
+  taskDate?: string;
   priority?: TaskPriority;
   sortOrder?: number;
   notes?: string;

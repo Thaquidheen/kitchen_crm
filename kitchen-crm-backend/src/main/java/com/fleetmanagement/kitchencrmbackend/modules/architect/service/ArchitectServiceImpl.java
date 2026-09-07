@@ -9,6 +9,9 @@ import com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectVisi
 import com.fleetmanagement.kitchencrmbackend.modules.architect.entity.Architect;
 import com.fleetmanagement.kitchencrmbackend.modules.architect.entity.ArchitectVisit;
 import com.fleetmanagement.kitchencrmbackend.modules.architect.repository.ArchitectRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectNoteDto;
+import com.fleetmanagement.kitchencrmbackend.modules.architect.entity.ArchitectNote;
+import com.fleetmanagement.kitchencrmbackend.modules.architect.repository.ArchitectNoteRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.architect.repository.ArchitectVisitRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -17,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,11 +35,20 @@ public class ArchitectServiceImpl implements ArchitectService {
     @Autowired
     private ArchitectVisitRepository architectVisitRepository;
 
+    @Autowired
+    private ArchitectNoteRepository architectNoteRepository;
+
     @Override
     public ApiResponse<Page<ArchitectDto>> getAllArchitects(Pageable pageable, String visitStatus,
+                                                            Boolean highlightedOnly, String search,
                                                             Architect.PartnerType partnerType) {
+        // highlightedOnly TRUE -> only starred; null/false -> all rows.
+        Boolean highlighted = Boolean.TRUE.equals(highlightedOnly) ? Boolean.TRUE : null;
+        // Search runs server-side across name/firm/principal/contact so it spans the whole table,
+        // not just the current page (the old client-side filter only saw the 10 loaded rows).
+        String term = (search != null && !search.isBlank()) ? search.trim() : null;
         Page<Architect> architects = architectRepository.findByFilters(
-                partnerType, visitedFlag(visitStatus), null, pageable);
+                partnerType, visitedFlag(visitStatus), highlighted, term, pageable);
         return ApiResponse.success(architects.map(this::convertToDto));
     }
 
@@ -88,6 +102,9 @@ public class ArchitectServiceImpl implements ArchitectService {
         architect.setFirm(architectCreateDto.getFirm());
         architect.setContactNumber(architectCreateDto.getContactNumber());
         architect.setPrincipalArchitectName(architectCreateDto.getPrincipalArchitectName());
+        architect.setEmail(architectCreateDto.getEmail());
+        architect.setLocation(architectCreateDto.getLocation());
+        architect.setHighlighted(Boolean.TRUE.equals(architectCreateDto.getHighlighted()));
 
         Architect saved = architectRepository.save(architect);
         return ApiResponse.success(labelFor(type) + " created successfully", convertToDto(saved));
@@ -119,6 +136,15 @@ public class ArchitectServiceImpl implements ArchitectService {
         if (architectUpdateDto.getPartnerType() != null) {
             architect.setPartnerType(architectUpdateDto.getPartnerType());
         }
+        if (architectUpdateDto.getEmail() != null) {
+            architect.setEmail(architectUpdateDto.getEmail());
+        }
+        if (architectUpdateDto.getLocation() != null) {
+            architect.setLocation(architectUpdateDto.getLocation());
+        }
+        if (architectUpdateDto.getHighlighted() != null) {
+            architect.setHighlighted(architectUpdateDto.getHighlighted());
+        }
 
         Architect updated = architectRepository.save(architect);
         return ApiResponse.success("Architect updated successfully", convertToDto(updated));
@@ -141,7 +167,7 @@ public class ArchitectServiceImpl implements ArchitectService {
         // A blank term means "no search filter" rather than an error — the picker mounts with an
         // empty box, and this endpoint used to reject that outright.
         String term = (searchTerm != null && !searchTerm.isBlank()) ? searchTerm.trim() : null;
-        Page<Architect> architects = architectRepository.findByFilters(partnerType, null, term, pageable);
+        Page<Architect> architects = architectRepository.findByFilters(partnerType, null, null, term, pageable);
         return ApiResponse.success(architects.map(this::convertToDto));
     }
 
@@ -158,11 +184,11 @@ public class ArchitectServiceImpl implements ArchitectService {
         visit.setNotes(dto.getNotes());
         visit.setVisitedBy(dto.getVisitedBy() != null ? dto.getVisitedBy() : visitedBy);
 
-        ArchitectVisit savedVisit = architectVisitRepository.save(visit);
-
-        // Update architect's last visit date
-        architect.setLastVisitDate(dto.getVisitDate());
-        architectRepository.save(architect);
+        // Flush so the derived last-visit lookup below sees this row. Recomputing (rather than
+        // stamping dto.getVisitDate()) means a backdated visit can no longer move "Last Visit"
+        // backwards past a newer one.
+        ArchitectVisit savedVisit = architectVisitRepository.saveAndFlush(visit);
+        syncLastVisitDate(architect);
 
         return ApiResponse.success("Visit recorded successfully", convertVisitToDto(savedVisit));
     }
@@ -179,13 +205,46 @@ public class ArchitectServiceImpl implements ArchitectService {
         visit.setVisitDate(LocalDateTime.now());
         visit.setVisitedBy(visitedBy);
 
-        ArchitectVisit savedVisit = architectVisitRepository.save(visit);
-
-        // Update architect's last visit date
-        architect.setLastVisitDate(LocalDateTime.now());
-        architectRepository.save(architect);
+        ArchitectVisit savedVisit = architectVisitRepository.saveAndFlush(visit);
+        syncLastVisitDate(architect);
 
         return ApiResponse.success("Architect marked as visited", convertVisitToDto(savedVisit));
+    }
+
+    @Override
+    public ApiResponse<String> deleteVisit(Long architectId, Long visitId) {
+        Architect architect = architectRepository.findById(architectId).orElse(null);
+        if (architect == null) {
+            return ApiResponse.error("Architect not found");
+        }
+
+        ArchitectVisit visit = architectVisitRepository.findById(visitId).orElse(null);
+        if (visit == null || visit.getArchitect() == null
+                || !architectId.equals(visit.getArchitect().getId())) {
+            return ApiResponse.error("Visit not found for this architect");
+        }
+
+        // Delete through the repository only. Architect.visits is cascade=ALL/orphanRemoval, so
+        // touching that collection as well would double-delete the row.
+        architectVisitRepository.delete(visit);
+        architectVisitRepository.flush();
+        syncLastVisitDate(architect);
+
+        return ApiResponse.success("Visit removed");
+    }
+
+    /**
+     * lastVisitDate is a stored column (it backs the VISITED/NOT_VISITED filter and the "Recently
+     * visited" sort), so it has to be recomputed from the visits table after any visit change
+     * rather than written blindly from the request. Callers flush the visit change first.
+     */
+    private void syncLastVisitDate(Architect architect) {
+        LocalDateTime latest = architectVisitRepository
+                .findFirstByArchitectIdOrderByVisitDateDesc(architect.getId())
+                .map(ArchitectVisit::getVisitDate)
+                .orElse(null);
+        architect.setLastVisitDate(latest);
+        architectRepository.save(architect);
     }
 
     @Override
@@ -211,6 +270,9 @@ public class ArchitectServiceImpl implements ArchitectService {
         dto.setFirm(architect.getFirm());
         dto.setContactNumber(architect.getContactNumber());
         dto.setPrincipalArchitectName(architect.getPrincipalArchitectName());
+        dto.setEmail(architect.getEmail());
+        dto.setLocation(architect.getLocation());
+        dto.setHighlighted(Boolean.TRUE.equals(architect.getHighlighted()));
         dto.setLastVisitDate(architect.getLastVisitDate());
         
         // Calculate visit count
@@ -234,8 +296,48 @@ public class ArchitectServiceImpl implements ArchitectService {
         dto.setUpdatedAt(visit.getUpdatedAt());
         return dto;
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<Map<String, Long>> getCounts() {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        long architects = architectRepository.countByPartnerType(Architect.PartnerType.ARCHITECT);
+        long builders = architectRepository.countByPartnerType(Architect.PartnerType.BUILDER);
+        counts.put("all", architects + builders);
+        counts.put("architect", architects);
+        counts.put("builder", builders);
+        return ApiResponse.success(counts);
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<ArchitectNoteDto> addNote(Long architectId, String note, String author) {
+        Architect architect = architectRepository.findById(architectId).orElse(null);
+        if (architect == null) {
+            return ApiResponse.error("Architect not found");
+        }
+        if (note == null || note.trim().isEmpty()) {
+            return ApiResponse.error("Note cannot be empty");
+        }
+        ArchitectNote entry = new ArchitectNote();
+        entry.setArchitect(architect);
+        entry.setNote(note.trim());
+        entry.setCreatedBy(author);
+        entry.setCreatedAt(LocalDateTime.now());
+        return ApiResponse.success("Note added", toNoteDto(architectNoteRepository.save(entry)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<List<ArchitectNoteDto>> getNotes(Long architectId) {
+        List<ArchitectNoteDto> notes = architectNoteRepository
+                .findByArchitectIdOrderByCreatedAtDescIdDesc(architectId)
+                .stream().map(this::toNoteDto).collect(Collectors.toList());
+        return ApiResponse.success(notes);
+    }
+
+    private ArchitectNoteDto toNoteDto(ArchitectNote n) {
+        return new ArchitectNoteDto(n.getId(), n.getArchitect().getId(), n.getNote(),
+                n.getCreatedBy(), n.getCreatedAt());
+    }
 }
-
-
-
-

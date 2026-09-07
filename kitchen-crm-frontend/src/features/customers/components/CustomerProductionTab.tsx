@@ -1,21 +1,22 @@
 /**
  * CustomerProductionTab
- * The production job view in the HOCH design language: compact header with status control,
- * a 3-segment stage strip, the stage checklist on the left, and a sticky right rail with
- * job summary, upcoming reminders, open issues and recent activity.
+ * The production job view in the HOCH design language: compact header with a derived status
+ * badge (status is computed from the checklist — there is no manual control), a 3-segment
+ * stage strip, the stage checklist on the left, and a sticky right rail with job summary,
+ * upcoming reminders, pending works and recent activity.
  */
 
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, ChevronDown, AlertTriangle, Plus, Check } from 'lucide-react';
+import { Package, AlertTriangle, Plus, Check } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import {
   useGetProductionInstallationByCustomerQuery,
   useCreateProductionInstallationMutation,
   useUpdateTaskStatusMutation,
-  useUpdateInstallationStatusMutation,
   useGetTaskGroupsByCustomerQuery,
   useGetIssuesByCustomerQuery,
+  useResolveIssueMutation,
   useCreateTaskGroupMutation,
   useCompleteHandoverMutation,
 } from '../../production/productionAPI';
@@ -24,11 +25,11 @@ import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useGetCustomerRemindersQuery } from '@/app/baseApi';
+import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 import { ProductionCreateModal } from '../../production/components/ProductionCreateModal';
 import { ProductionTaskChecklist } from '../../production/components/ProductionTaskChecklist';
 import { ReportIssueModal } from '../../production/components/ReportIssueModal';
-import type { ProductionInstallationCreateRequest, InstallationStatus } from '../../production/types';
-import { InstallationStatus as InstallationStatusEnum } from '../../production/types';
+import type { ProductionInstallationCreateRequest } from '../../production/types';
 
 export interface CustomerProductionTabProps {
   customerId: number;
@@ -67,13 +68,31 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
   const [addStageOpen, setAddStageOpen] = useState(false);
   const [newStageTitle, setNewStageTitle] = useState('');
   const [handoverOpen, setHandoverOpen] = useState(false);
+  const isSuperAdmin = useIsSuperAdmin();
 
   const { data: productionResponse, isLoading, error, refetch } = useGetProductionInstallationByCustomerQuery(customerId);
   const [createProductionInstallation] = useCreateProductionInstallationMutation();
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
-  const [updateInstallationStatus, { isLoading: isUpdatingStatus }] = useUpdateInstallationStatusMutation();
   const [createTaskGroup, { isLoading: isAddingStage }] = useCreateTaskGroupMutation();
   const [completeHandover, { isLoading: isHandingOver }] = useCompleteHandoverMutation();
+  const [resolveIssue] = useResolveIssueMutation();
+  const [resolvingIssueId, setResolvingIssueId] = useState<number | null>(null);
+
+  const handleMarkDone = async (issueId: number) => {
+    setResolvingIssueId(issueId);
+    try {
+      const result = await resolveIssue({ issueId, resolution: 'Done', customerId }).unwrap();
+      if (result.success) {
+        toast.success('Marked done');
+      } else {
+        toast.error(result.message || 'Failed to mark done');
+      }
+    } catch (e: any) {
+      toast.error(e?.data?.message || 'Failed to mark done');
+    } finally {
+      setResolvingIssueId(null);
+    }
+  };
 
   const handleAddStage = async () => {
     if (!newStageTitle.trim()) return;
@@ -103,7 +122,7 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
       }
       setHandoverOpen(false);
     } catch (e: any) {
-      toast.error(e?.data?.message || 'Failed to mark handover (super admin only)');
+      toast.error(e?.data?.message || 'Failed to mark handover');
       setHandoverOpen(false);
     }
   };
@@ -126,7 +145,7 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
     [issuesResponse]
   );
 
-  /** Stage rollup: counts per group, which stage is current, recent completions. */
+  /** Stage rollup: counts per group and recent completions. The current stage comes from the backend. */
   const stages = useMemo(() => {
     return taskGroups.map((g: any, idx: number) => {
       const total = Number(g.totalTasks ?? g.tasks?.length ?? 0);
@@ -134,7 +153,8 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
       return { id: g.id, idx, title: g.groupTitle, total, done, complete: total > 0 && done === total };
     });
   }, [taskGroups]);
-  const currentStageIdx = stages.findIndex((s) => !s.complete && s.total > 0);
+  // Backend-derived (1-based) → 0-based; -1 when the job has no checklist yet.
+  const currentStageIdx = (production?.currentStageIndex ?? 0) - 1;
   const totalTasks = stages.reduce((t, s) => t + s.total, 0);
   const doneTasks = stages.reduce((t, s) => t + s.done, 0);
   const pct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : Number(production?.overallProgressPercentage ?? 0);
@@ -146,11 +166,6 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
       .sort((a, b) => String(b.completedAt ?? b.completionDate).localeCompare(String(a.completedAt ?? a.completionDate)))
       .slice(0, 4);
   }, [taskGroups]);
-
-  const statusOptions: { value: InstallationStatus; label: string }[] = Object.entries(STATUS_META).map(([k, v]) => ({
-    value: InstallationStatusEnum[k as keyof typeof InstallationStatusEnum],
-    label: v.label,
-  }));
 
   const handleCreateProductionInstallation = async (data: ProductionInstallationCreateRequest) => {
     try {
@@ -170,20 +185,6 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
       }
     } catch (e: any) {
       toast.error(e?.data?.message || 'Failed to create production installation');
-    }
-  };
-
-  const handleStatusChange = async (newStatus: InstallationStatus) => {
-    try {
-      const result = await updateInstallationStatus({ customerId, status: newStatus }).unwrap();
-      if (result.success) {
-        toast.success('Status updated');
-        refetch();
-      } else {
-        toast.error(result.message || 'Failed to update status');
-      }
-    } catch (e: any) {
-      toast.error(e?.data?.message || 'Failed to update status');
     }
   };
 
@@ -257,7 +258,25 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
     );
   }
 
-  const meta = STATUS_META[production.overallStatus] ?? STATUS_META.NOT_STARTED;
+  // Header badge from the backend-derived status; a legacy job (no checklist → null) keeps
+  // showing its stored column.
+  const meta: { st: string; label: string } = (() => {
+    switch (production.derivedStatus) {
+      case 'COMPLETED':
+        return STATUS_META.COMPLETED;
+      case 'NOT_STARTED':
+        return STATUS_META.NOT_STARTED;
+      case 'IN_PROGRESS': {
+        const idx = (production.currentStageIndex ?? 1) - 1;
+        return {
+          st: STAGE_ST[idx % STAGE_ST.length] ?? 'lead',
+          label: production.currentStageName || `Stage ${idx + 1}`,
+        };
+      }
+      default:
+        return STATUS_META[production.overallStatus] ?? STATUS_META.NOT_STARTED;
+    }
+  })();
 
   return (
     <div className="w-full">
@@ -297,7 +316,7 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
             className="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-[10px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors"
           >
             <AlertTriangle className="w-3.5 h-3.5" style={{ color: 'var(--st-hold-fg, var(--st-potential-fg))' }} />
-            Report Issue
+            Add pending work
           </button>
           <button
             onClick={() => setAddStageOpen(true)}
@@ -306,7 +325,9 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
             <Plus className="w-3.5 h-3.5" />
             Add Stage
           </button>
-          {production.overallStatus !== 'COMPLETED' && (
+          {/* Gated on the handover flag, not on status — status derives from the checklist and
+              would hide this exactly when every task is done. */}
+          {!production.handoverToClient && isSuperAdmin && (
             <button
               onClick={() => setHandoverOpen(true)}
               className="btn-raised-accent inline-flex items-center gap-1.5 h-[34px] px-3.5 rounded-[10px] text-[12.5px] font-semibold"
@@ -315,25 +336,6 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
               Mark Handover
             </button>
           )}
-          <div className="relative">
-            <select
-              value={production.overallStatus}
-              onChange={(e) => handleStatusChange(e.target.value as InstallationStatus)}
-              disabled={isUpdatingStatus}
-              className="appearance-none cursor-pointer h-[34px] pl-3 pr-8 rounded-[10px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-semibold outline-none focus:border-primary-600 disabled:opacity-50"
-            >
-              {statusOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              className={`absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-text-500 ${
-                isUpdatingStatus ? 'animate-spin' : ''
-              }`}
-            />
-          </div>
         </div>
       </div>
 
@@ -501,10 +503,10 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
             )}
           </div>
 
-          {/* Issues */}
+          {/* Pending works */}
           <div className="bg-background-800 border border-background-600 rounded-[14px] px-4 py-3.5">
             <div className="flex items-center gap-2 mb-1.5">
-              <h4 className="m-0 text-[13px] font-[650] text-text-900">Issues</h4>
+              <h4 className="m-0 text-[13px] font-[650] text-text-900">Pending works</h4>
               {openIssues.length > 0 && (
                 <span
                   className="text-[11px] font-[650] px-2 py-0.5 rounded-full tabular-nums"
@@ -515,7 +517,7 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
               )}
             </div>
             {openIssues.length === 0 ? (
-              <p className="m-0 text-[12px] text-text-500">No open issues.</p>
+              <p className="m-0 text-[12px] text-text-500">No pending works.</p>
             ) : (
               openIssues.slice(0, 3).map((i: any) => (
                 <div key={i.id} className="flex items-start gap-2 py-1.5 border-t border-background-600 first:border-t-0 text-[12.5px]">
@@ -523,10 +525,10 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
                     className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
                     style={{
                       background:
-                        i.priority === 'URGENT' || i.priority === 'HIGH' ? 'var(--st-lost-fg)' : 'var(--st-potential-fg)',
+                        i.priority === 'CRITICAL' || i.priority === 'HIGH' ? 'var(--st-lost-fg)' : 'var(--st-potential-fg)',
                     }}
                   />
-                  <span className="min-w-0">
+                  <span className="min-w-0 flex-1">
                     <span className="block text-text-800">{i.title}</span>
                     {(i.createdAt || i.reportedBy) && (
                       <span className="block text-[11px] text-text-500 tabular-nums">
@@ -536,6 +538,22 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
                       </span>
                     )}
                   </span>
+                  <button
+                    onClick={() => handleMarkDone(i.id)}
+                    disabled={resolvingIssueId === i.id}
+                    title="Mark done"
+                    className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-text-500 transition-colors disabled:opacity-50"
+                    onMouseEnter={(ev) => {
+                      ev.currentTarget.style.background = 'var(--st-confirmed-bg)';
+                      ev.currentTarget.style.color = 'var(--st-confirmed-fg)';
+                    }}
+                    onMouseLeave={(ev) => {
+                      ev.currentTarget.style.background = 'transparent';
+                      ev.currentTarget.style.color = '';
+                    }}
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               ))
             )}

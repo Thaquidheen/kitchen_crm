@@ -1,0 +1,11 @@
+-- quotations.status was a MySQL ENUM pinned to the OLD workflow values
+-- (DRAFT,SENT,APPROVED,REJECTED,REVISED,EXPIRED), so the DB rejected the new statuses
+-- (ON_HOLD/COMPLETE/CANCELLED) with a data-truncation error even though the JPA entity maps the
+-- column with @Enumerated(EnumType.STRING).
+--
+-- Convert it to VARCHAR — the column type EnumType.STRING actually expects — so it accepts the
+-- current enum values and is no longer pinned to a fixed list. Every existing row is 'DRAFT' and
+-- fits unchanged. This is rollback-safe: the previously deployed jar also maps status as an
+-- EnumType.STRING, and Hibernate validate + reads treat a VARCHAR status column exactly as they did
+-- the ENUM (all live values remain in its known set).
+ALTER TABLE quotations MODIFY COLUMN status VARCHAR(255) DEFAULT 'DRAFT';

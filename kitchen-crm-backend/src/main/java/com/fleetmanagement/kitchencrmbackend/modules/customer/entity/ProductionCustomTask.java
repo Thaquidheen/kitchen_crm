@@ -43,6 +43,10 @@ public class ProductionCustomTask extends Auditable {
     @Column(name = "completion_date")
     private LocalDate completionDate;
 
+    /** Planned/scheduled date for this task (distinct from completion_date). */
+    @Column(name = "task_date")
+    private LocalDate taskDate;
+
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 

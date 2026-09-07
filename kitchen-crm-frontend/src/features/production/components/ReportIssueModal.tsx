@@ -47,7 +47,7 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
     e.preventDefault();
 
     if (!formData.title.trim()) {
-      toast.error('Please enter an issue title');
+      toast.error('Please enter the pending work');
       return;
     }
 
@@ -62,14 +62,14 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
       }).unwrap();
 
       if (result.success) {
-        toast.success('Issue reported successfully!');
+        toast.success('Pending work added');
         handleClose();
       } else {
-        toast.error(result.message || 'Failed to report issue');
+        toast.error(result.message || 'Failed to add pending work');
       }
     } catch (error: any) {
-      console.error('Error reporting issue:', error);
-      toast.error(error?.data?.message || 'Failed to report issue');
+      console.error('Error adding pending work:', error);
+      toast.error(error?.data?.message || 'Failed to add pending work');
     }
   };
 
@@ -93,7 +93,7 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
         <div className="flex items-center justify-between p-4 border-b border-background-700">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-warning" />
-            <h2 className="text-lg font-semibold text-text-900">Report Issue</h2>
+            <h2 className="text-lg font-semibold text-text-900">Add pending work</h2>
           </div>
           <button
             onClick={handleClose}
@@ -108,13 +108,13 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-text-700 mb-1">
-              Issue Title <span className="text-red-500">*</span>
+              Pending work <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Brief description of the issue"
+              placeholder="What is still to be done"
               className="w-full px-3 py-2 bg-background-800 border border-background-600 rounded-lg text-text-900 placeholder-text-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
@@ -166,7 +166,7 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Detailed description of the issue..."
+              placeholder="Details of the pending work..."
               rows={4}
               className="w-full px-3 py-2 bg-background-800 border border-background-600 rounded-lg text-text-900 placeholder-text-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
             />
@@ -200,7 +200,7 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
               disabled={isLoading}
               className="px-4 py-2 bg-warning hover:bg-warning/90 text-black font-medium rounded-lg transition-colors disabled:opacity-50"
             >
-              {isLoading ? 'Reporting...' : 'Report Issue'}
+              {isLoading ? 'Saving…' : 'Add pending work'}
             </button>
           </div>
         </form>

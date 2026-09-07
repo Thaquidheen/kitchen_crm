@@ -11,6 +11,7 @@ import com.fleetmanagement.kitchencrmbackend.modules.architect.service.Architect
 import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectNoteRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -41,9 +42,11 @@ public class ArchitectController {
 
     private Pageable pageableOf(int page, int size, String sortBy, String sortDir) {
         String safeSortBy = SORTABLE.contains(sortBy) ? sortBy : "architectureName";
-        Sort sort = sortDir.equalsIgnoreCase("desc")
+        Sort requested = sortDir.equalsIgnoreCase("desc")
                 ? Sort.by(safeSortBy).descending()
                 : Sort.by(safeSortBy).ascending();
+        // Highlighted (starred) partners always float to the top, whatever the chosen sort.
+        Sort sort = Sort.by(Sort.Order.desc("highlighted")).and(requested);
         return PageRequest.of(page, size, sort);
     }
 
@@ -54,10 +57,12 @@ public class ArchitectController {
             @RequestParam(defaultValue = "architectureName") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir,
             @RequestParam(required = false) String visitStatus,
+            @RequestParam(required = false) Boolean highlighted,
+            @RequestParam(required = false) String search,
             @RequestParam(required = false) Architect.PartnerType partnerType) {
 
         return ResponseEntity.ok(architectService.getAllArchitects(
-                pageableOf(page, size, sortBy, sortDir), visitStatus, partnerType));
+                pageableOf(page, size, sortBy, sortDir), visitStatus, highlighted, search, partnerType));
     }
 
     @GetMapping("/all")
@@ -156,6 +161,22 @@ public class ArchitectController {
         }
     }
 
+    /**
+     * Undo a recorded visit. Any authenticated user, like recordVisit — visitedBy is free text and
+     * ArchitectVisit carries no created_by, so an author-only rule is not enforceable.
+     */
+    @DeleteMapping("/{id}/visits/{visitId}")
+    public ResponseEntity<ApiResponse<String>> deleteVisit(
+            @PathVariable Long id,
+            @PathVariable Long visitId) {
+        ApiResponse<String> response = architectService.deleteVisit(id, visitId);
+        if (response.getSuccess()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
     private String getCurrentUserName() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal) {
@@ -164,8 +185,23 @@ public class ArchitectController {
         }
         return "System";
     }
+
+    /** True per-type totals for the filter chips (the paged list only knows the current page). */
+    @GetMapping("/counts")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Long>>> getCounts() {
+        return ResponseEntity.ok(architectService.getCounts());
+    }
+
+    @GetMapping("/{id}/notes")
+    public ResponseEntity<ApiResponse<java.util.List<com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectNoteDto>>> getNotes(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(architectService.getNotes(id));
+    }
+
+    @PostMapping("/{id}/notes")
+    public ResponseEntity<ApiResponse<com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectNoteDto>> addNote(
+            @PathVariable Long id,
+            @Valid @RequestBody ArchitectNoteRequest request) {
+        return ResponseEntity.ok(architectService.addNote(id, request.getNote(), getCurrentUserName()));
+    }
 }
-
-
-
-

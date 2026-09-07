@@ -2,6 +2,8 @@ package com.fleetmanagement.kitchencrmbackend.modules.appliance.controller;
 
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.dto.ApplianceCustomerDto;
+import com.fleetmanagement.kitchencrmbackend.modules.appliance.dto.ApplianceFollowUpDto;
+import com.fleetmanagement.kitchencrmbackend.modules.appliance.dto.ApplianceFollowUpRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.entity.ApplianceCustomer;
 import com.fleetmanagement.kitchencrmbackend.modules.appliance.service.ApplianceCustomerService;
 import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
@@ -17,6 +19,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -85,6 +88,31 @@ public class ApplianceCustomerController {
             @PathVariable Long id,
             @PathVariable Long fileId) {
         ApiResponse<ApplianceCustomerDto> response = service.deleteQuotation(id, fileId);
+        return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    // ===== Follow-ups (call history) =====
+
+    @GetMapping("/{id}/followups")
+    public ResponseEntity<ApiResponse<List<ApplianceFollowUpDto>>> getFollowUps(@PathVariable Long id) {
+        return ResponseEntity.ok(service.getFollowUps(id));
+    }
+
+    @PostMapping("/{id}/followups")
+    public ResponseEntity<ApiResponse<ApplianceFollowUpDto>> addFollowUp(
+            @PathVariable Long id,
+            @Valid @RequestBody ApplianceFollowUpRequest request,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        ApiResponse<ApplianceFollowUpDto> response =
+                service.addFollowUp(id, request, currentUser != null ? currentUser.getName() : null);
+        return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    @DeleteMapping("/{id}/followups/{followUpId}")
+    public ResponseEntity<ApiResponse<String>> deleteFollowUp(
+            @PathVariable Long id,
+            @PathVariable Long followUpId) {
+        ApiResponse<String> response = service.deleteFollowUp(id, followUpId);
         return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 }

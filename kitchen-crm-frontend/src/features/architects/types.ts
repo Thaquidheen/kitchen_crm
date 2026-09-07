@@ -21,6 +21,9 @@ export interface Architect {
   firm?: string;
   contactNumber?: string;
   principalArchitectName?: string;
+  email?: string;
+  location?: string;
+  highlighted?: boolean;
   lastVisitDate?: string;
   visitCount?: number;
   hasVisits?: boolean;
@@ -34,6 +37,9 @@ export interface ArchitectCreate {
   firm?: string;
   contactNumber?: string;
   principalArchitectName?: string;
+  email?: string;
+  location?: string;
+  highlighted?: boolean;
 }
 
 export interface ArchitectUpdate {
@@ -42,6 +48,17 @@ export interface ArchitectUpdate {
   firm?: string;
   contactNumber?: string;
   principalArchitectName?: string;
+  email?: string;
+  location?: string;
+  highlighted?: boolean;
+}
+
+export interface ArchitectNote {
+  id: number;
+  architectId: number;
+  note: string;
+  createdBy?: string;
+  createdAt?: string;
 }
 
 export interface ArchitectVisit {

@@ -23,7 +23,7 @@ public interface QuotationService {
     ApiResponse<Map<String, Object>> getQuotationStatistics();
 
     // Folder organization (versions grouped per folder)
-    ApiResponse<Page<QuotationFolderSummaryDto>> getQuotationFolders(String customerName, Pageable pageable);
+    ApiResponse<Page<QuotationFolderSummaryDto>> getQuotationFolders(String customerName, Quotation.QuotationStatus status, Pageable pageable);
     ApiResponse<java.util.List<QuotationSummaryDto>> getFolderVersions(Long folderId);
     ApiResponse<String> renameFolder(Long folderId, String name);
     ApiResponse<String> deleteFolder(Long folderId);

@@ -256,10 +256,11 @@ public class QuotationServiceImpl implements QuotationService {
             return ApiResponse.error("Quotation not found");
         }
 
-        // Check if quotation can be updated
-        if (existingQuotation.getStatus() == Quotation.QuotationStatus.APPROVED || 
-            existingQuotation.getStatus() == Quotation.QuotationStatus.REJECTED) {
-            return ApiResponse.error("Cannot update approved or rejected quotations");
+        // Check if quotation can be updated — terminal statuses are locked from edits.
+        if (existingQuotation.getStatus() == Quotation.QuotationStatus.APPROVED ||
+            existingQuotation.getStatus() == Quotation.QuotationStatus.COMPLETE ||
+            existingQuotation.getStatus() == Quotation.QuotationStatus.CANCELLED) {
+            return ApiResponse.error("Cannot update approved, completed or cancelled quotations");
         }
 
         // A field withheld from the caller must never be writable by that caller. convertToDto
@@ -770,9 +771,9 @@ public class QuotationServiceImpl implements QuotationService {
     }
 
     @Override
-    public ApiResponse<Page<QuotationFolderSummaryDto>> getQuotationFolders(String customerName, Pageable pageable) {
+    public ApiResponse<Page<QuotationFolderSummaryDto>> getQuotationFolders(String customerName, Quotation.QuotationStatus status, Pageable pageable) {
         Page<QuotationFolder> folders = folderRepository.findByFilters(
-                customerName != null && !customerName.isBlank() ? customerName : null, pageable);
+                customerName != null && !customerName.isBlank() ? customerName : null, status, pageable);
 
         List<Long> folderIds = folders.getContent().stream().map(QuotationFolder::getId).toList();
         Map<Long, List<Quotation>> byFolder = new HashMap<>();

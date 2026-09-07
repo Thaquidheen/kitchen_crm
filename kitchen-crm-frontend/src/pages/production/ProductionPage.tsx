@@ -7,21 +7,24 @@
 
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Eye, Filter, Plus, BellRing, AlertTriangle, ListChecks } from 'lucide-react';
+import { Search, Eye, Filter, Plus, BellRing, AlertTriangle, ListChecks, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   useGetProductionInstallationsQuery,
   useGetProductionStatisticsQuery,
   useCreateProductionInstallationMutation,
+  useDeleteProductionJobMutation,
 } from '@/features/production/productionAPI';
 import { ReportIssueModal } from '@/features/production/components/ReportIssueModal';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
 import { useGetStaffQuery } from '@/features/staff/staffAPI';
+import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 
-type Bucket = 'all' | 'not_started' | 's1' | 's2' | 's3' | 'inprog' | 'completed' | 'hold' | 'cancelled';
+type Bucket = 'all' | 'not_started' | 's1' | 's2' | 's3' | 'inprog' | 'completed';
 
 const BUCKETS: { key: Bucket; label: string; st?: string }[] = [
   { key: 'all', label: 'All' },
@@ -31,8 +34,6 @@ const BUCKETS: { key: Bucket; label: string; st?: string }[] = [
   { key: 's3', label: 'Stage 3', st: 'quote' },
   { key: 'inprog', label: 'In Progress', st: 'lead' },
   { key: 'completed', label: 'Completed', st: 'confirmed' },
-  { key: 'hold', label: 'On Hold', st: 'potential' },
-  { key: 'cancelled', label: 'Cancelled', st: 'lost' },
 ];
 
 const thClass = 'px-3 py-[9px] text-left text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500';
@@ -52,23 +53,24 @@ const fmtShort = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
 const isPast = (iso?: string) => !!iso && new Date(iso) < new Date(new Date().toDateString());
 
-/** Which chip a job belongs to — status first, then the checklist's current stage. */
+/**
+ * Which chip a job belongs to — driven by the backend-derived status/stage (one rule for the
+ * list, the detail header and the checklist). A legacy job with no checklist has no derived
+ * status, so it falls back to the stored column.
+ */
 const bucketOf = (r: any): Bucket => {
-  switch (r.overallStatus) {
-    case 'COMPLETED':
-      return 'completed';
-    case 'ON_HOLD':
-      return 'hold';
-    case 'CANCELLED':
-      return 'cancelled';
-    case 'NOT_STARTED':
-      return 'not_started';
+  const status = r.derivedStatus ?? r.overallStatus;
+  if (status === 'COMPLETED') return 'completed';
+  if (status === 'NOT_STARTED') return 'not_started';
+  if (r.derivedStatus == null) return 'inprog';
+  switch (r.currentStageIndex) {
+    case 1:
+      return 's1';
+    case 2:
+      return 's2';
+    case 3:
+      return 's3';
   }
-  const s = String(r.currentStageName ?? '');
-  if (s.startsWith('Stage 1')) return 's1';
-  if (s.startsWith('Stage 2')) return 's2';
-  if (s.startsWith('Stage 3')) return 's3';
-  if (r.checklistTotal != null && r.checklistDone === r.checklistTotal && r.checklistTotal > 0) return 'completed';
   return 'inprog';
 };
 
@@ -81,6 +83,8 @@ export function ProductionPage() {
   const [teamLead, setTeamLead] = useState('');
   const [moreOpen, setMoreOpen] = useState(false);
   const [issueFor, setIssueFor] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const isSuperAdmin = useIsSuperAdmin();
 
   // Create modal
   const [createOpen, setCreateOpen] = useState(false);
@@ -107,7 +111,7 @@ export function ProductionPage() {
 
   const counts = useMemo(() => {
     const c: Record<Bucket, number> = {
-      all: allRows.length, not_started: 0, s1: 0, s2: 0, s3: 0, inprog: 0, completed: 0, hold: 0, cancelled: 0,
+      all: allRows.length, not_started: 0, s1: 0, s2: 0, s3: 0, inprog: 0, completed: 0,
     };
     allRows.forEach((r) => { c[bucketOf(r)]++; });
     return c;
@@ -119,6 +123,7 @@ export function ProductionPage() {
   );
 
   const [createInstallation, { isLoading: isCreating }] = useCreateProductionInstallationMutation();
+  const [deleteProductionJob, { isLoading: isDeleting }] = useDeleteProductionJobMutation();
   const { data: staffList = [] } = useGetStaffQuery(undefined, { skip: !createOpen });
   const { data: custPage } = useGetCustomersPageQuery(
     { name: custSearch, page: 0, size: 8, sortBy: 'name', sortDir: 'asc' },
@@ -156,6 +161,21 @@ export function ProductionPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      const res: any = await deleteProductionJob(deleteTarget.customerId).unwrap();
+      if (res?.success === false) {
+        toast.error(res?.message || 'Failed to delete the production job');
+        return;
+      }
+      toast.success('Production job deleted');
+      setDeleteTarget(null);
+    } catch (e: any) {
+      toast.error(e?.data?.message || 'Failed to delete the production job');
+    }
+  };
+
   const pill = (st: string, label: string) => (
     <span
       className="inline-flex items-center gap-1.5 px-2.5 py-[3.5px] rounded-full text-xs font-semibold whitespace-nowrap"
@@ -169,7 +189,7 @@ export function ProductionPage() {
   const stageCell = (r: any) => {
     const b = bucketOf(r);
     const meta = BUCKETS.find((x) => x.key === b)!;
-    if (b === 's1' || b === 's2' || b === 's3') return pill(meta.st!, r.currentStageName);
+    if (b === 's1' || b === 's2' || b === 's3') return pill(meta.st!, r.currentStageName || meta.label);
     return pill(meta.st ?? 'draft', meta.label);
   };
 
@@ -352,7 +372,7 @@ export function ProductionPage() {
                 rows.map((r) => {
                   const hasChecklist = r.checklistTotal != null && r.checklistTotal > 0;
                   const pct = Number(r.overallProgressPercentage ?? 0);
-                  const overdue = isPast(r.estimatedCompletionDate) && r.overallStatus !== 'COMPLETED';
+                  const overdue = isPast(r.estimatedCompletionDate) && (r.derivedStatus ?? r.overallStatus) !== 'COMPLETED';
                   const dueOverdue = r.nextDueDate ? isPast(r.nextDueDate) : false;
                   return (
                     <tr
@@ -449,7 +469,7 @@ export function ProductionPage() {
                               e.stopPropagation();
                               setIssueFor(r.customerId);
                             }}
-                            title="Report issue"
+                            title="Add pending work"
                             className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 transition-colors"
                             onMouseEnter={(ev) => {
                               ev.currentTarget.style.background = 'var(--st-potential-bg)';
@@ -462,6 +482,26 @@ export function ProductionPage() {
                           >
                             <AlertTriangle size={14} />
                           </button>
+                          {isSuperAdmin && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteTarget(r);
+                              }}
+                              title="Delete job"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 transition-colors"
+                              onMouseEnter={(ev) => {
+                                ev.currentTarget.style.background = 'var(--st-lost-bg)';
+                                ev.currentTarget.style.color = 'var(--st-lost-fg)';
+                              }}
+                              onMouseLeave={(ev) => {
+                                ev.currentTarget.style.background = 'transparent';
+                                ev.currentTarget.style.color = '';
+                              }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -479,10 +519,26 @@ export function ProductionPage() {
         </div>
       </div>
 
-      {/* Report issue from a row */}
+      {/* Add a pending work from a row */}
       {issueFor != null && (
         <ReportIssueModal isOpen={issueFor != null} onClose={() => setIssueFor(null)} customerId={issueFor} />
       )}
+
+      {/* Delete job (super admin) */}
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Production Job"
+        message={
+          deleteTarget
+            ? `Delete the production job for ${deleteTarget.customerName || `Customer #${deleteTarget.customerId}`}? Its stages, checklist, pending works and production reminders are removed. The customer record is kept.`
+            : ''
+        }
+        confirmText={isDeleting ? 'Deleting…' : 'Delete'}
+        type="danger"
+        isLoading={isDeleting}
+      />
 
       {/* Start Production */}
       <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Start Production" size="md">

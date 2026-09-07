@@ -3,10 +3,13 @@
  * Component to display visit history for an architect
  */
 
-import { useGetVisitHistoryQuery } from '../architectsAPI';
+import { useState } from 'react';
+import { useGetVisitHistoryQuery, useDeleteVisitMutation } from '../architectsAPI';
 import { Card } from '@/components/ui/Card';
-import { Calendar, User, FileText, Clock } from 'lucide-react';
-import type { Architect } from '../types';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { Calendar, User, FileText, Clock, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import type { Architect, ArchitectVisit } from '../types';
 
 interface ArchitectVisitHistoryProps {
   architect: Architect;
@@ -14,6 +17,19 @@ interface ArchitectVisitHistoryProps {
 
 export function ArchitectVisitHistory({ architect }: ArchitectVisitHistoryProps) {
   const { data: visits, isLoading, error } = useGetVisitHistoryQuery(architect.id);
+  const [deleteVisit, { isLoading: isDeleting }] = useDeleteVisitMutation();
+  const [deleteTarget, setDeleteTarget] = useState<ArchitectVisit | null>(null);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteVisit({ architectId: architect.id, visitId: deleteTarget.id }).unwrap();
+      toast.success('Visit removed');
+      setDeleteTarget(null);
+    } catch (e: any) {
+      toast.error(e?.data?.message || e?.message || 'Failed to remove visit');
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -95,9 +111,28 @@ export function ArchitectVisitHistory({ architect }: ArchitectVisitHistoryProps)
                   {formatDate(visit.visitDate)}
                 </span>
               </div>
-              <span className="text-xs sm:text-sm text-text-600">
-                {formatRelativeTime(visit.visitDate)}
-              </span>
+              <div className="flex items-center gap-2 sm:justify-end">
+                <span className="text-xs sm:text-sm text-text-600">
+                  {formatRelativeTime(visit.visitDate)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(visit)}
+                  title="Remove this visit"
+                  aria-label="Remove this visit"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 transition-colors"
+                  onMouseEnter={(ev) => {
+                    ev.currentTarget.style.background = 'var(--st-lost-bg)';
+                    ev.currentTarget.style.color = 'var(--st-lost-fg)';
+                  }}
+                  onMouseLeave={(ev) => {
+                    ev.currentTarget.style.background = 'transparent';
+                    ev.currentTarget.style.color = '';
+                  }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
             
             {visit.visitedBy && (
@@ -118,6 +153,21 @@ export function ArchitectVisitHistory({ architect }: ArchitectVisitHistoryProps)
           </div>
         ))}
       </div>
+
+      {/* Nested Headless UI dialog — stacks above the history Modal */}
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Remove Visit"
+        message={
+          deleteTarget
+            ? `Remove the visit on ${formatDate(deleteTarget.visitDate)}? The last-visit date will fall back to the previous visit.`
+            : ''
+        }
+        confirmText={isDeleting ? 'Removing…' : 'Remove'}
+        type="danger"
+      />
     </Card>
   );
 }

@@ -6,9 +6,11 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Search, Trash2, Pencil, X, BellRing, FileText, Upload } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, X, BellRing, FileText, Upload, PhoneCall } from 'lucide-react';
 import { Modal, ModalBody } from '@/components/ui/Modal';
 import { CustomerReminders } from '@/features/customers/components/CustomerReminders';
+import ApplianceFollowUpsModal from './ApplianceFollowUpsModal';
+import { fmtReminderDate } from '@/utils/reminderFormat';
 import toast from 'react-hot-toast';
 import { Pagination } from '@/components/shared/Pagination';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
@@ -44,6 +46,8 @@ interface ApplianceEntry {
   quotationFiles?: QuotationFile[];
   createdBy?: string;
   createdAt?: string;
+  /** Newest follow-up call (naive business-local date-time), maintained by the backend. */
+  lastCalledAt?: string | null;
 }
 
 /** Uploaded files are served from the API host, not the SPA origin. */
@@ -193,6 +197,7 @@ export function ApplianceQuartzPage() {
   const [itemDraft, setItemDraft] = useState('');
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [remindersFor, setRemindersFor] = useState<ApplianceEntry | null>(null);
+  const [followUpsFor, setFollowUpsFor] = useState<ApplianceEntry | null>(null);
   const [filesFor, setFilesFor] = useState<ApplianceEntry | null>(null);
 
   const openAdd = () => {
@@ -439,7 +444,7 @@ export function ApplianceQuartzPage() {
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px]">
+          <table className="w-full min-w-[980px]">
             <thead>
               <tr className="border-t border-background-600 bg-background-700">
                 <th className={thClass}>Name</th>
@@ -450,14 +455,15 @@ export function ApplianceQuartzPage() {
                 <th className={thClass}>Items</th>
                 <th className={thClass}>Status</th>
                 <th className={thClass}>Created</th>
-                <th className="px-3.5 py-[9px] text-right text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 w-[90px]">Actions</th>
+                <th className={thClass}>Last called</th>
+                <th className="px-3.5 py-[9px] text-right text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 w-[120px]">Actions</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-t border-background-600 animate-pulse">
-                    {Array.from({ length: 9 }).map((_, j) => (
+                    {Array.from({ length: 10 }).map((_, j) => (
                       <td key={j} className="px-3 py-[13px]">
                         <div className="h-4 bg-background-600 rounded w-16" />
                       </td>
@@ -466,7 +472,7 @@ export function ApplianceQuartzPage() {
                 ))
               ) : entries.length === 0 ? (
                 <tr className="border-t border-background-600">
-                  <td colSpan={9} className="px-5 py-14 text-center">
+                  <td colSpan={10} className="px-5 py-14 text-center">
                     {category || status || search ? (
                       <>
                         <div className="text-[14.5px] font-semibold text-text-900">No matching entries</div>
@@ -546,8 +552,19 @@ export function ApplianceQuartzPage() {
                         </div>
                       </td>
                       <td className="px-3 py-[13px] text-[12.5px] text-text-700 tabular-nums whitespace-nowrap">{fmtDate(e.createdAt)}</td>
+                      {/* Naive business-local stamp — format by string, never via new Date(). */}
+                      <td className="px-3 py-[13px] text-[12.5px] text-text-700 tabular-nums whitespace-nowrap">
+                        {e.lastCalledAt ? fmtReminderDate(e.lastCalledAt) : '—'}
+                      </td>
                       <td className="px-3.5 py-[13px]">
                         <div className="flex justify-end gap-0.5">
+                          <button
+                            onClick={() => setFollowUpsFor(e)}
+                            title="Follow-ups"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors"
+                          >
+                            <PhoneCall size={14} />
+                          </button>
                           <button
                             onClick={() => setRemindersFor(e)}
                             title="Reminders"
@@ -878,6 +895,13 @@ export function ApplianceQuartzPage() {
           {remindersFor && <CustomerReminders applianceCustomerId={remindersFor.id} />}
         </ModalBody>
       </Modal>
+
+      {/* Follow-up call history for one entry; the newest call feeds the "Last called" column. */}
+      <ApplianceFollowUpsModal
+        isOpen={followUpsFor !== null}
+        onClose={() => setFollowUpsFor(null)}
+        entry={followUpsFor}
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 /**
  * NotificationBell
  * The navbar bell, extracted from Header. Pools the user's due to-dos and the shared reminder
- * feed, but lets the user filter by module — All / To-dos / Customers / Production / Appliance —
+ * feed, but lets the user filter by module — All / To-dos / Customers / Production / Appliance / Architects —
  * and groups rows Overdue vs Today (the payload's server-computed `bucket`, which the old inline
  * bell ignored: "Today's reminders" was silently mostly overdue).
  *
@@ -80,7 +80,12 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const badgeCount = (notifData?.count ?? 0) + (todoNotif?.count ?? 0);
 
   const counts = useMemo(() => {
-    const c = { CUSTOMERS: 0, PRODUCTION: 0, APPLIANCE: 0 };
+    const c: Record<Exclude<SourceKey, '' | 'TODOS'>, number> = {
+      CUSTOMERS: 0,
+      PRODUCTION: 0,
+      APPLIANCE: 0,
+      ARCHITECT: 0,
+    };
     for (const r of reminders) c[sourceKeyOf(r)] += 1;
     return c;
   }, [reminders]);
@@ -91,6 +96,7 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     { key: 'CUSTOMERS', label: 'Customers', st: SOURCE_META.CUSTOMERS.st, count: counts.CUSTOMERS },
     { key: 'PRODUCTION', label: 'Production', st: SOURCE_META.PRODUCTION.st, count: counts.PRODUCTION },
     { key: 'APPLIANCE', label: 'Appliance', st: SOURCE_META.APPLIANCE.st, count: counts.APPLIANCE },
+    { key: 'ARCHITECT', label: 'Architects', st: SOURCE_META.ARCHITECT.st, count: counts.ARCHITECT },
   ];
 
   const visibleReminders =

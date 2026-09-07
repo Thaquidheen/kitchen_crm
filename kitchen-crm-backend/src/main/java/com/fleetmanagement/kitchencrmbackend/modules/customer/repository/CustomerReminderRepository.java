@@ -34,9 +34,16 @@ public interface CustomerReminderRepository extends JpaRepository<CustomerRemind
      * Bell feed: every open reminder dated today or earlier. Bounded by the start of tomorrow
      * rather than by "now", so a reminder is visible for the whole of its own day.
      */
-    @EntityGraph(attributePaths = {"customer", "applianceCustomer"})
+    @EntityGraph(attributePaths = {"customer", "applianceCustomer", "architect"})
     List<CustomerReminder> findByStatusNotAndRemindAtLessThanOrderByRemindAtAsc(
             CustomerReminder.ReminderStatus excludedStatus, LocalDateTime endExclusive);
+
+    /**
+     * Purge one module's reminders for a customer — used when a production job is deleted so its
+     * SOP and task reminders do not linger in the bell. Derived delete: loads then removes each
+     * row, so the task FK (ON DELETE SET NULL) is handled by the database.
+     */
+    void deleteByCustomer_IdAndSource(Long customerId, CustomerReminder.ReminderSource source);
 
     /**
      * Cross-owner list for the Reminders page. Bounds are half-open [from, to) and are always

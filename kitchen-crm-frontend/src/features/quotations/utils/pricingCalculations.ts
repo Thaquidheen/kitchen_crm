@@ -192,14 +192,14 @@ export function getQuotationStatusColor(status: string): string {
   switch (status) {
     case 'DRAFT':
       return 'gray';
-    case 'SENT':
-      return 'blue';
-    case 'APPROVED':
-      return 'green';
-    case 'REJECTED':
-      return 'red';
-    case 'REVISED':
+    case 'ON_HOLD':
       return 'orange';
+    case 'COMPLETE':
+      return 'green';
+    case 'APPROVED':
+      return 'blue';
+    case 'CANCELLED':
+      return 'red';
     default:
       return 'gray';
   }
@@ -212,14 +212,14 @@ export function getQuotationStatusLabel(status: string): string {
   switch (status) {
     case 'DRAFT':
       return 'Draft';
-    case 'SENT':
-      return 'Sent';
+    case 'ON_HOLD':
+      return 'On Hold';
+    case 'COMPLETE':
+      return 'Complete';
     case 'APPROVED':
       return 'Approved';
-    case 'REJECTED':
-      return 'Rejected';
-    case 'REVISED':
-      return 'Revised';
+    case 'CANCELLED':
+      return 'Cancelled';
     default:
       return status;
   }

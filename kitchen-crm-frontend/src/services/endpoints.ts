@@ -189,7 +189,10 @@ export const API_ENDPOINTS = {
     ALL: '/architects/all',
     SEARCH: '/architects/search',
     VISITS: (id: number) => `/architects/${id}/visits`,
+    VISIT_BY_ID: (id: number, visitId: number) => `/architects/${id}/visits/${visitId}`,
     VISITS_QUICK: (id: number) => `/architects/${id}/visits/quick`,
+    COUNTS: '/architects/counts',
+    NOTES: (id: number) => `/architects/${id}/notes`,
   },
 
   // Staff
