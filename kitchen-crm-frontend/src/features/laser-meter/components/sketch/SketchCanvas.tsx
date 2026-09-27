@@ -47,7 +47,11 @@ export interface SketchCanvasHandle {
   fit: () => void;
   zoom: (factor: number) => void;
   svg: () => SVGSVGElement | null;
+  /** A clean rendering for export: cropped to the drawing, no selection highlights or handles. */
+  exportMarkup: () => Promise<{ xml: string; width: number; height: number }>;
 }
+
+const EXPORT_WIDTH = 1600;
 
 export interface SketchCanvasProps {
   plan: SketchPlan;
@@ -118,6 +122,8 @@ export const SketchCanvas = forwardRef<SketchCanvasHandle, SketchCanvasProps>(fu
   const drag = useRef<Drag | null>(null);
   const pointers = useRef(new Map<number, Pt>());
   const fitted = useRef(false);
+  const [clean, setClean] = useState(false);
+  const pendingExport = useRef<((r: { xml: string; width: number; height: number }) => void) | null>(null);
 
   const corners = solved.corners;
   const n = wallCount(plan);
@@ -161,13 +167,55 @@ export const SketchCanvas = forwardRef<SketchCanvasHandle, SketchCanvasProps>(fu
     });
   }, [size]);
 
-  useImperativeHandle(ref, () => ({ fit, zoom: (f) => zoomAt(f), svg: () => svgRef.current }), [fit, zoomAt]);
+  useImperativeHandle(
+    ref,
+    () => ({
+      fit,
+      zoom: (f) => zoomAt(f),
+      svg: () => svgRef.current,
+      exportMarkup: () =>
+        new Promise((resolve) => {
+          pendingExport.current = resolve;
+          setClean(true);
+        }),
+    }),
+    [fit, zoomAt]
+  );
+
+  // Frame being rendered: the interactive view, or (while exporting) the whole drawing.
+  const frame = useMemo(() => {
+    if (clean) {
+      const pts: Pt[] = [...corners];
+      for (const a of plan.annotations) {
+        if (a.type === 'note') {
+          pts.push({ x: a.x, y: a.y });
+        } else {
+          pts.push({ x: a.x1, y: a.y1 }, { x: a.x2, y: a.y2 });
+        }
+      }
+      const b = bounds(pts, 700);
+      const k = EXPORT_WIDTH / b.w;
+      return { x: b.x, y: b.y, w: b.w, h: b.h, k, W: EXPORT_WIDTH, H: Math.round(b.h * k) };
+    }
+    const W = size.w || 1;
+    const H = size.h || 1;
+    return { x: view.x, y: view.y, w: W / view.k, h: H / view.k, k: view.k, W, H };
+  }, [clean, corners, plan.annotations, size, view]);
+
+  useEffect(() => {
+    if (clean && pendingExport.current && svgRef.current) {
+      const xml = new XMLSerializer().serializeToString(svgRef.current);
+      pendingExport.current({ xml, width: frame.W, height: frame.H });
+      pendingExport.current = null;
+      setClean(false);
+    }
+  }, [clean, frame]);
 
   const toWorld = (clientX: number, clientY: number): Pt => {
     const r = svgRef.current?.getBoundingClientRect();
     return { x: view.x + (clientX - (r?.left ?? 0)) / view.k, y: view.y + (clientY - (r?.top ?? 0)) / view.k };
   };
-  const px = (p: number) => p / view.k; // screen pixels → world mm
+  const px = (p: number) => p / frame.k; // screen pixels → world mm
 
   // ---------------------------------------------------------------- hit testing
 
@@ -428,29 +476,28 @@ export const SketchCanvas = forwardRef<SketchCanvasHandle, SketchCanvasProps>(fu
 
   // ---------------------------------------------------------------- rendering helpers
 
-  const fs = px(12.5); // label font size in world units
-  const isSel = (kind: SketchSelection['kind'], id: string) => selection?.kind === kind && selection.id === id;
-  const isActive = (kind: SketchSelection['kind'], id: string) => activeRef?.kind === kind && activeRef.id === id;
+  const fs = px(clean ? 20 : 12.5); // label font size in world units (bigger in exported images)
+  const isSel = (kind: SketchSelection['kind'], id: string) => !clean && selection?.kind === kind && selection.id === id;
+  const isActive = (kind: SketchSelection['kind'], id: string) => !clean && activeRef?.kind === kind && activeRef.id === id;
   const fmt = (mm: number) => formatMm(Math.round(mm), displayUnit);
 
   const grid = useMemo(() => {
-    const w = size.w / view.k;
-    const h = size.h / view.k;
-    const step = view.k > 0.08 ? 100 : 500;
+    const { x: fx, y: fy, w, h, k } = frame;
+    const step = k > 0.08 ? 100 : 500;
     const lines: React.ReactElement[] = [];
-    const x0 = Math.floor(view.x / step) * step;
-    const y0 = Math.floor(view.y / step) * step;
-    for (let x = x0; x < view.x + w; x += step) {
-      lines.push(<line key={`x${x}`} x1={x} y1={view.y} x2={x} y2={view.y + h} stroke={x % 1000 === 0 ? C.gridMajor : C.grid} vectorEffect="non-scaling-stroke" />);
+    const x0 = Math.floor(fx / step) * step;
+    const y0 = Math.floor(fy / step) * step;
+    for (let x = x0; x < fx + w; x += step) {
+      lines.push(<line key={`x${x}`} x1={x} y1={fy} x2={x} y2={fy + h} stroke={x % 1000 === 0 ? C.gridMajor : C.grid} vectorEffect="non-scaling-stroke" />);
     }
-    for (let y = y0; y < view.y + h; y += step) {
-      lines.push(<line key={`y${y}`} x1={view.x} y1={y} x2={view.x + w} y2={y} stroke={y % 1000 === 0 ? C.gridMajor : C.grid} vectorEffect="non-scaling-stroke" />);
+    for (let y = y0; y < fy + h; y += step) {
+      lines.push(<line key={`y${y}`} x1={fx} y1={y} x2={fx + w} y2={y} stroke={y % 1000 === 0 ? C.gridMajor : C.grid} vectorEffect="non-scaling-stroke" />);
     }
     return lines;
-  }, [view, size]);
+  }, [frame]);
 
   const preview = (() => {
-    if (tool !== 'draw' || !hover || plan.closed || !plan.corners.length) {
+    if (clean || tool !== 'draw' || !hover || plan.closed || !plan.corners.length) {
       return null;
     }
     const last = corners[corners.length - 1];
@@ -469,12 +516,12 @@ export const SketchCanvas = forwardRef<SketchCanvasHandle, SketchCanvasProps>(fu
   })();
 
   return (
-    <div ref={wrapRef} className={className} style={{ touchAction: 'none', position: 'relative' }}>
+    <div ref={wrapRef} className={className} style={{ touchAction: 'none', position: 'relative', overflow: 'hidden' }}>
       <svg
         ref={svgRef}
-        width={size.w || 1}
-        height={size.h || 1}
-        viewBox={`${view.x} ${view.y} ${(size.w || 1) / view.k} ${(size.h || 1) / view.k}`}
+        width={frame.W}
+        height={frame.H}
+        viewBox={`${frame.x} ${frame.y} ${frame.w} ${frame.h}`}
         xmlns="http://www.w3.org/2000/svg"
         style={{ display: 'block', background: C.paper, cursor: tool === 'select' ? 'default' : 'crosshair', userSelect: 'none' }}
         onPointerDown={onPointerDown}
@@ -490,7 +537,7 @@ export const SketchCanvas = forwardRef<SketchCanvasHandle, SketchCanvasProps>(fu
             <path d="M0,0 L10,5 L0,10 z" fill={C.text} />
           </marker>
         </defs>
-        <rect x={view.x} y={view.y} width={size.w / view.k} height={size.h / view.k} fill={C.paper} />
+        <rect x={frame.x} y={frame.y} width={frame.w} height={frame.h} fill={C.paper} />
         {grid}
 
         {plan.closed && corners.length >= 3 && (
@@ -525,7 +572,14 @@ export const SketchCanvas = forwardRef<SketchCanvasHandle, SketchCanvasProps>(fu
                   vectorEffect="non-scaling-stroke"
                 />
                 {it.type === 'appliance' && <ApplianceSymbol kind={it.kind} pts={pts} />}
-                <text x={cx} y={cy + fs / 3} fontSize={fs * 0.85} textAnchor="middle" fill={it.type === 'appliance' ? C.applianceStroke : C.cabinetStroke} pointerEvents="none">
+                <text
+                  x={cx}
+                  y={cy + fs / 3}
+                  fontSize={Math.min(fs * 0.85, (Math.min(p.width, it.depthMm) * 0.92) / (names[it.id].length * 0.56))}
+                  textAnchor="middle"
+                  fill={it.type === 'appliance' ? C.applianceStroke : C.cabinetStroke}
+                  pointerEvents="none"
+                >
                   {names[it.id]}
                 </text>
               </g>
@@ -656,7 +710,7 @@ export const SketchCanvas = forwardRef<SketchCanvasHandle, SketchCanvasProps>(fu
           })}
 
         {/* Corners */}
-        {tool === 'select' || tool === 'draw'
+        {!clean && (tool === 'select' || tool === 'draw')
           ? corners.map((c, i) => (
               <circle
                 key={c.id}
