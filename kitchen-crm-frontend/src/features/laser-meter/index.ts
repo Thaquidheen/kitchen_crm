@@ -11,7 +11,13 @@ export { laserMeter, laserSettingsStore } from './instance';
 
 // Core (framework-agnostic)
 export * from './core/types';
-export { LaserMeterService, errorMessage, type LaserEvents, type LogEntry } from './core/LaserMeterService';
+export {
+  LaserMeterService,
+  errorMessage,
+  isChooserCancelled,
+  type LaserEvents,
+  type LogEntry,
+} from './core/LaserMeterService';
 export { parseReading, parseBinary, parseAscii, parseAsciiText, DEFAULT_ASCII_REGEX } from './core/parser';
 export { parseHidInput, type HidDefaultUnit } from './core/hidInputParser';
 export { classifyKeystrokes, DEFAULT_KEYSTROKE_TIMING } from './core/keystrokeTiming';
@@ -43,6 +49,8 @@ export { useLaserMeter, useApplyLaserSettings } from './hooks/useLaserMeter';
 export { useLaserSettings, useLaserDevTools } from './hooks/useLaserSettings';
 export { useGuidedMeasure, type GuidedMeasure } from './hooks/useGuidedMeasure';
 export { useSelectableAdapters } from './hooks/useAdapters';
+export { useSyncAdapters } from './hooks/useSyncAdapters';
+export { ConnectLaserButton } from './components/ConnectLaserButton';
 export { LaserStatusChip } from './components/LaserStatusChip';
 export { LaserModeBar } from './components/LaserModeBar';
 export { MeasureField } from './components/MeasureField';
@@ -52,6 +60,7 @@ export { LaserSettings } from './components/LaserSettings';
 
 // API
 export {
+  useGetActiveLaserAdaptersQuery,
   useGetSiteMeasurementQuery,
   useSaveSiteMeasurementMutation,
   type SiteMeasurementRecord,

@@ -38,6 +38,8 @@ import { MockConnection } from './connections/MockConnection';
 import { KeyboardConnection } from './connections/KeyboardConnection';
 import { parseHidInput, type HidDefaultUnit } from './hidInputParser';
 import { classifyKeystrokes, DEFAULT_KEYSTROKE_TIMING } from './keystrokeTiming';
+import { BleConnection } from './connections/BleConnection';
+import { getBleSupport, getBluetooth, type BluetoothLike, type BTDevice } from './connections/webBluetooth';
 
 export interface LogEntry {
   at: number;
@@ -72,6 +74,8 @@ export interface LaserServiceDeps {
   timers?: Timers;
   storage?: StorageLike | null;
   reconnectDelaysMs?: number[];
+  /** Web Bluetooth entry point; defaults to navigator.bluetooth. */
+  bluetooth?: () => BluetoothLike | null;
 }
 
 const REMEMBERED_KEY = 'laserMeter.lastDevice.v1';
@@ -96,6 +100,7 @@ export class LaserMeterService {
   readonly registry: AdapterRegistry;
   protected readonly timers: Timers;
   protected readonly storage: StorageLike | null;
+  private readonly bluetooth: () => BluetoothLike | null;
   private readonly emitter = new Emitter<LaserEvents>();
   private state: LaserState = initialLaserState();
   protected connection: LaserConnection | null = null;
@@ -113,6 +118,7 @@ export class LaserMeterService {
     this.timers = deps.timers ?? realTimers;
     this.storage = deps.storage === undefined ? safeLocalStorage() : deps.storage;
     this.registry = deps.registry ?? new AdapterRegistry(this.storage);
+    this.bluetooth = deps.bluetooth ?? getBluetooth;
     this.reconnector = new ReconnectScheduler(
       {
         onScheduled: (attempt, at) =>
@@ -279,6 +285,91 @@ export class LaserMeterService {
     this.log('Disconnected by user');
   }
 
+  // ------------------------------------------------------------------ Bluetooth (Mode A)
+
+  private requireBluetooth(): BluetoothLike {
+    const bt = this.bluetooth();
+    if (!bt) {
+      throw new Error(getBleSupport().message || 'Bluetooth is not available in this browser');
+    }
+    return bt;
+  }
+
+  private requireBleAdapter(adapterId?: string | null) {
+    const adapter = this.registry.get(adapterId ?? this.state.adapterId);
+    if (!adapter?.ble?.measurementCharUuid) {
+      throw new Error('Choose your laser meter model in Laser meter settings first.');
+    }
+    return adapter;
+  }
+
+  /**
+   * Show the browser's device chooser and connect. MUST be called from a user gesture (click).
+   * `showAllDevices` lists every nearby device, for meters whose name doesn't match the filters.
+   * Resolves false when the user closes the chooser.
+   */
+  async connectBle(opts: { adapterId?: string | null; showAllDevices?: boolean } = {}): Promise<boolean> {
+    const bt = this.requireBluetooth();
+    const adapter = this.requireBleAdapter(opts.adapterId);
+    this.setAdapter(adapter.id);
+    const conn = new BleConnection(this.host, adapter, bt, { showAllDevices: opts.showAllDevices });
+    try {
+      await this.useConnection(conn);
+    } catch (e) {
+      if (isChooserCancelled(e)) {
+        this.update({ mode: 'ble', lastError: null });
+        return false;
+      }
+      throw e;
+    }
+    this.afterBleConnected(conn, adapter.id);
+    return true;
+  }
+
+  /**
+   * The remembered meter, if this browser still has permission for it (getDevices() is not
+   * available everywhere). Lets the UI offer one-tap reconnect without the chooser.
+   */
+  async findRememberedDevice(): Promise<BTDevice | null> {
+    const remembered = this.state.rememberedDevice;
+    const bt = this.bluetooth();
+    if (!remembered || !bt?.getDevices) {
+      return null;
+    }
+    try {
+      const devices = await bt.getDevices();
+      return devices.find((d) => d.id === remembered.id) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Reconnect the remembered meter without the chooser. */
+  async reconnectRemembered(): Promise<boolean> {
+    const remembered = this.state.rememberedDevice;
+    const bt = this.requireBluetooth();
+    const device = await this.findRememberedDevice();
+    if (!remembered || !device) {
+      return false;
+    }
+    const adapter = this.requireBleAdapter(remembered.adapterId);
+    this.setAdapter(adapter.id);
+    const conn = new BleConnection(this.host, adapter, bt, { device });
+    await this.useConnection(conn);
+    this.afterBleConnected(conn, adapter.id);
+    return true;
+  }
+
+  forgetRememberedDevice(): void {
+    this.remember(null);
+  }
+
+  private afterBleConnected(conn: BleConnection, adapterId: string): void {
+    if (conn.deviceId) {
+      this.remember({ id: conn.deviceId, name: conn.deviceName, adapterId });
+    }
+  }
+
   /** Bluetooth-direct mode, not yet connected: connecting needs a user gesture (Connect button). */
   async prepareBle(): Promise<void> {
     await this.teardown();
@@ -418,6 +509,13 @@ export class LaserMeterService {
     }
   }
 }
+
+/** requestDevice() rejects with NotFoundError when the user closes the chooser. */
+export const isChooserCancelled = (e: unknown): boolean =>
+  !!e &&
+  typeof e === 'object' &&
+  (e as { name?: string }).name === 'NotFoundError' &&
+  /cancel/i.test((e as { message?: string }).message ?? '');
 
 export const errorMessage = (e: unknown): string =>
   e instanceof Error ? e.message : typeof e === 'string' ? e : 'Unknown error';

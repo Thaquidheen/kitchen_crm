@@ -52,7 +52,7 @@ export const flush = async () => {
 export class MemoryStorage {
   private m = new Map<string, string>();
   getItem(k: string) {
-    return this.m.has(k) ? this.m.get(k)! : null;
+    return this.m.get(k) ?? null;
   }
   setItem(k: string, v: string) {
     this.m.set(k, v);

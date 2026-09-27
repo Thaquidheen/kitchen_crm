@@ -6,12 +6,14 @@
 import { useState } from 'react';
 import { Tabs } from '@/components/ui';
 import {
+  ConnectLaserButton,
   GuidedMeasurePanel,
   LaserSettings,
   getBleSupport,
   useApplyLaserSettings,
   useGuidedMeasure,
   useLaserSettings,
+  useSyncAdapters,
   DEFAULT_LAYOUT,
 } from '@/features/laser-meter';
 
@@ -32,12 +34,18 @@ const TryItOut = () => {
         Practice area — nothing here is saved. Connect your meter (or choose keyboard / manual mode) and take a
         few readings.
       </p>
-      <GuidedMeasurePanel guided={guided} settings={settings} bleSupported={ble.supported} />
+      <GuidedMeasurePanel
+        guided={guided}
+        settings={settings}
+        bleSupported={ble.supported}
+        bluetoothControls={<ConnectLaserButton adapterId={settings.adapterId} />}
+      />
     </div>
   );
 };
 
 const LaserMeterPage = () => {
+  useSyncAdapters();
   const tabs = [
     { label: 'Try it out', content: <TryItOut /> },
     { label: 'Settings', content: <LaserSettings /> },

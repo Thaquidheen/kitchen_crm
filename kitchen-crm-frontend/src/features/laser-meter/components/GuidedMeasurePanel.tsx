@@ -6,12 +6,13 @@
  */
 
 import { Fragment, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, CircleCheckBig, Undo2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleCheckBig, Info, Undo2 } from 'lucide-react';
 import { MeasureField } from './MeasureField';
 import { LaserStatusChip } from './LaserStatusChip';
 import { LaserModeBar } from './LaserModeBar';
 import { useLaserMeter } from '../hooks/useLaserMeter';
 import { GROUP_LABELS } from '../core/guidedSequence';
+import { getBleSupport } from '../core/connections/webBluetooth';
 import type { GuidedMeasure } from '../hooks/useGuidedMeasure';
 import type { LaserSettings } from '../core/settings';
 
@@ -44,6 +45,12 @@ export const GuidedMeasurePanel = ({
         <LaserStatusChip onClick={onStatusClick} />
         <LaserModeBar bleSupported={bleSupported} bluetoothControls={bluetoothControls} />
       </div>
+      {bleSupported === false && state.mode !== 'mock' && (
+        <p className="m-0 flex gap-2 text-[12.5px] text-text-600">
+          <Info size={15} className="shrink-0 mt-0.5" />
+          {getBleSupport().message}
+        </p>
+      )}
 
       {/* Current target + progress, sticky so it stays visible while scrolling on a phone */}
       <div className="sticky top-0 z-10 py-1">

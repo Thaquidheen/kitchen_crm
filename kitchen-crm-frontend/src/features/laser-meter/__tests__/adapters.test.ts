@@ -77,8 +77,12 @@ describe('AdapterRegistry', () => {
     const r2 = new AdapterRegistry(storage);
     expect(r2.get('test-meter')?.displayName).toBe('Test meter');
 
+    const base = r2.get('test-meter');
+    if (!base) {
+      throw new Error('cached adapter missing');
+    }
     r2.registerCode({
-      ...r2.get('test-meter')!,
+      ...base,
       displayName: 'Code version',
       parse: () => ({ ok: true, valueMm: 1 }),
     });

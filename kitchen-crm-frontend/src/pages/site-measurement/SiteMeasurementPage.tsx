@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { Button, Modal, Spinner } from '@/components/ui';
 import { useGetCustomerByIdQuery } from '@/features/customers/customersAPI';
 import {
+  ConnectLaserButton,
   GuidedMeasurePanel,
   LaserSettings,
   RoomLayoutEditor,
@@ -19,6 +20,7 @@ import {
   useApplyLaserSettings,
   useGuidedMeasure,
   useLaserSettings,
+  useSyncAdapters,
   useGetSiteMeasurementQuery,
   useSaveSiteMeasurementMutation,
   sanitizeLayout,
@@ -45,6 +47,7 @@ const SiteMeasurementPage = () => {
 
   const [settings] = useLaserSettings();
   useApplyLaserSettings(settings);
+  useSyncAdapters();
   const ble = useMemo(() => getBleSupport(), []);
 
   const [layout, setLayout] = useState<RoomLayout>(DEFAULT_LAYOUT);
@@ -242,6 +245,9 @@ const SiteMeasurementPage = () => {
         guided={guided}
         settings={settings}
         bleSupported={ble.supported}
+        bluetoothControls={
+          <ConnectLaserButton adapterId={settings.adapterId} onChooseModel={() => setSettingsOpen(true)} />
+        }
         onStatusClick={() => setSettingsOpen(true)}
       />
 
