@@ -15,7 +15,7 @@ jobs:
           host: 157.173.114.116
           username: root
           password: ${{ secrets.SERVER_PASSWORD }}
-          command_timeout: 30m
+          command_timeout: 45m
           script: |
             # Any failing step fails the run. Before this, a refused `git pull` still ended green
             # and the old code was simply rebuilt from cache.
@@ -55,22 +55,40 @@ jobs:
             echo "Now at: $(git log --oneline -1)"
 
             echo "== Building and restarting"
-            START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
             $COMPOSE up -d --no-deps --build backend
             $COMPOSE up -d --no-deps --build frontend
-            $COMPOSE up -d --no-deps --build nginx
 
-            echo "== Waiting for the backend to start"
-            for i in $(seq 1 60); do
-              if docker logs kitchen_crm_backend --since "$START" 2>&1 | grep -q "Started .* in "; then
-                docker logs kitchen_crm_backend --since "$START" 2>&1 | grep -iE "Migrating schema|Successfully applied|Schema .* is up to date|Started .* in " || true
-                echo "Deployment complete! Backup: $BK"
-                exit 0
+            echo "== Waiting for the backend to start (up to 10 minutes)"
+            # Look at the logs of the backend container's current run, whether or not this deploy
+            # recreated it (an unchanged image leaves it running).
+            ok=0
+            for i in $(seq 1 120); do
+              SINCE=$(docker inspect -f '{{.State.StartedAt}}' kitchen_crm_backend)
+              if docker logs kitchen_crm_backend --since "$SINCE" 2>&1 | grep -q "Started .* in "; then
+                ok=1
+                break
               fi
               sleep 5
             done
-            echo "Backend did not start within 5 minutes. Last log lines:"
-            docker logs kitchen_crm_backend --since "$START" --tail 80 2>&1 || true
-            echo "Roll back: docker tag kitchen-crm-backend-backend:before-$TS kitchen-crm-backend-backend:latest && $COMPOSE up -d --no-deps backend"
+
+            # nginx resolves the backend/frontend container addresses only when it starts. Recreated
+            # containers get new addresses, so without this restart nginx keeps proxying to the old
+            # ones (502 Bad Gateway) even though the new containers are running fine.
+            echo "== Restarting nginx"
+            $COMPOSE up -d --no-deps nginx
+            docker restart kitchen_crm_nginx
+
+            if [ "$ok" = 1 ]; then
+              docker logs kitchen_crm_backend --since "$SINCE" 2>&1 | grep -iE "Migrating schema|Successfully applied|Schema .* is up to date|Started .* in " || true
+              sleep 3
+              echo "== Smoke test through nginx"
+              curl -s -o /dev/null -w "Home page: HTTP %{http_code}\n" http://localhost/ || true
+              curl -s -o /dev/null -w "API: HTTP %{http_code}\n" http://localhost/api/v1/laser-meter/adapters/active || true
+              echo "Deployment complete! Backup: $BK"
+              exit 0
+            fi
+            echo "Backend did not start within 10 minutes. Last log lines:"
+            docker logs kitchen_crm_backend --tail 80 2>&1 || true
+            echo "Roll back: docker tag kitchen-crm-backend-backend:before-$TS kitchen-crm-backend-backend:latest && $COMPOSE up -d --no-deps backend && docker restart kitchen_crm_nginx"
             echo "Database backup: $BK/db.sql.gz"
             exit 1
