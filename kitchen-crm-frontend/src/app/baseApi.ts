@@ -289,6 +289,9 @@ export const baseApi = createApi({
     'FollowUps',
     'ApplianceCustomers',
     'ApplianceFollowUps',
+    'SiteMeasurements',
+    'LaserAdapters',
+    'DeviceLabLogs',
   ],
   endpoints: (builder) => ({
     // ==================== QUOTATION ENDPOINTS ====================

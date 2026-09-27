@@ -21,6 +21,7 @@ import {
   Trash2,
   FileText,
   IndianRupee,
+  Ruler,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -40,6 +41,7 @@ import { STATUS_PILL } from '../../features/customers/components/CustomerList';
 import { ProjectNetworkChips } from '../../features/customers/components/ProjectNetworkChips';
 import { customerLeadSource, leadSourceLabel } from '../../features/customers/leadSource';
 import type { CustomerStatus } from '../../features/customers/types';
+import { getSiteMeasurementRoute } from '../../routes/routes.config';
 
 // Timeline is gone as a tab — its feed now lives on Overview, where notes are written.
 const TABS = ['Overview', 'Reminders', 'Pipeline', 'Quotations', 'Production', 'Warranty'];
@@ -213,6 +215,10 @@ const CustomerDetailPage: React.FC = () => {
               Email
             </a>
           )}
+          <button onClick={() => navigate(getSiteMeasurementRoute(customer.id))} className={ghostBtn}>
+            <Ruler size={13} className="text-text-700" />
+            Measure site
+          </button>
           <button onClick={() => setEditOpen(true)} className={ghostBtn}>
             <Pencil size={13} className="text-text-700" />
             Edit

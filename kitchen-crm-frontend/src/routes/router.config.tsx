@@ -49,6 +49,10 @@ import VendorsPage from '../pages/vendors/VendorsPage';
 import ArchitectsPage from '../pages/architects/ArchitectsPage';
 import StaffPage from '../pages/staff/StaffPage';
 
+// Site measurement / laser meter
+import SiteMeasurementPage from '../pages/site-measurement/SiteMeasurementPage';
+import LaserMeterPage from '../pages/site-measurement/LaserMeterPage';
+
 // Public Pages
 import ApprovalPage from '../pages/public/approval/ApprovalPage';
 
@@ -128,6 +132,14 @@ const routes = [
           {
             path: ROUTES.CUSTOMERS_DETAIL,
             element: <CustomerDetailPage />,
+          },
+          {
+            path: ROUTES.SITE_MEASUREMENT,
+            element: <SiteMeasurementPage />,
+          },
+          {
+            path: ROUTES.LASER_METER,
+            element: <LaserMeterPage />,
           },
 
           // Products — the second entry carries the active tab in the URL
