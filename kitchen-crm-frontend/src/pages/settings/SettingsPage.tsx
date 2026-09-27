@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useGetMarginsQuery, useUpdateMarginsMutation, useGetCompanySettingsQuery, useUpdateCompanySettingsMutation } from '../../services/settingsAPI';
+import { useGetMarginsQuery, useUpdateMarginsMutation, useGetCompanySettingsQuery, useUpdateCompanySettingsMutation, useGetPriorityColorsQuery, useUpdatePriorityColorsMutation } from '../../services/settingsAPI';
 import type { MarginsData } from '../../services/settingsAPI.types';
-import type { CompanySettings } from '../../services/settingsAPI';
+import type { CompanySettings, PriorityColors } from '../../services/settingsAPI';
 import { Card, CardHeader, CardBody, CardFooter } from '../../components/ui/Card';
 import { ActivityLogTab } from '../../features/activity/ActivityLogTab';
 import { Button } from '../../components/ui/Button';
@@ -28,6 +28,7 @@ import {
   MapPin,
   FileText,
   Palette,
+  Tags,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ThemeSelector } from '../../features/theme/components/ThemeSelector';
@@ -67,6 +68,12 @@ export const SettingsPage: React.FC = () => {
   const { data: marginsResponse, isLoading: isLoadingMargins, error: marginsError } = useGetMarginsQuery();
   const [updateMargins, { isLoading: isUpdatingMargins }] = useUpdateMarginsMutation();
 
+  const { data: priorityColorsResponse } = useGetPriorityColorsQuery();
+  const [updatePriorityColors, { isLoading: isUpdatingPriorityColors }] = useUpdatePriorityColorsMutation();
+  const [priorityColorForm, setPriorityColorForm] = useState<PriorityColors>({
+    LOW: '#9CA3AF', MEDIUM: '#3B82F6', HIGH: '#F97316', URGENT: '#EF4444',
+  });
+
   const [marginFormData, setMarginFormData] = useState<MarginsData>({
     accessories: 20,
     cabinets: 20,
@@ -102,6 +109,12 @@ export const SettingsPage: React.FC = () => {
       setMarginFormData(marginsResponse.data);
     }
   }, [marginsResponse]);
+
+  useEffect(() => {
+    if (priorityColorsResponse?.data) {
+      setPriorityColorForm(priorityColorsResponse.data);
+    }
+  }, [priorityColorsResponse]);
 
   // Load company settings from API when data is available
   useEffect(() => {
@@ -140,6 +153,19 @@ export const SettingsPage: React.FC = () => {
       const errorMessage = err?.data?.message || 'An error occurred while saving';
       setMarginSaveError(errorMessage);
       toast.error(errorMessage);
+    }
+  };
+
+  const handlePriorityColorSave = async () => {
+    try {
+      const result = await updatePriorityColors(priorityColorForm).unwrap();
+      if (result.success) {
+        toast.success('Priority colors updated');
+      } else {
+        toast.error(result.message || 'Failed to update priority colors');
+      }
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'An error occurred while saving');
     }
   };
 
@@ -482,6 +508,52 @@ export const SettingsPage: React.FC = () => {
   );
 
   // Company Settings Tab Content
+  const priorityColorsContent = (
+    <Card>
+      <CardHeader>
+        <h3 className="text-lg font-semibold text-text-900">Task priority colors</h3>
+        <p className="text-sm text-text-600 mt-1">Set the colour shown for each task priority in the production checklist.</p>
+      </CardHeader>
+      <CardBody>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {(['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const).map((level) => (
+            <div key={level} className="flex items-center gap-3">
+              <input
+                type="color"
+                value={priorityColorForm[level]}
+                onChange={(e) => setPriorityColorForm((prev) => ({ ...prev, [level]: e.target.value }))}
+                className="w-10 h-10 rounded cursor-pointer border border-background-600 bg-transparent p-0.5"
+                aria-label={`${level} colour`}
+              />
+              <div className="flex-1">
+                <div className="text-sm font-medium text-text-900">
+                  {level.charAt(0) + level.slice(1).toLowerCase()}
+                </div>
+                <input
+                  type="text"
+                  value={priorityColorForm[level]}
+                  onChange={(e) => setPriorityColorForm((prev) => ({ ...prev, [level]: e.target.value }))}
+                  className="mt-1 w-28 px-2 py-1 text-xs rounded border border-background-600 bg-background-900 text-text-900 tabular-nums focus:outline-none focus:border-primary-500"
+                />
+              </div>
+              <span
+                className="text-xs px-2 py-0.5 rounded font-medium"
+                style={{ background: `${priorityColorForm[level]}22`, color: priorityColorForm[level] }}
+              >
+                {level}
+              </span>
+            </div>
+          ))}
+        </div>
+      </CardBody>
+      <CardFooter>
+        <Button onClick={handlePriorityColorSave} disabled={isUpdatingPriorityColors}>
+          {isUpdatingPriorityColors ? 'Saving...' : 'Save colors'}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+
   const companySettingsContent = (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
@@ -727,6 +799,11 @@ export const SettingsPage: React.FC = () => {
         {/* Tabs */}
         <Tabs
           tabs={[
+            {
+              label: 'Priority Colors',
+              icon: <Tags className="w-4 h-4" />,
+              content: priorityColorsContent,
+            },
             {
               label: 'Margin Settings',
               icon: <TrendingUp className="w-4 h-4" />,

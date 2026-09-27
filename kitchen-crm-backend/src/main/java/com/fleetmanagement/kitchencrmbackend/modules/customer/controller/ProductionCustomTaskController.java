@@ -78,7 +78,9 @@ public class ProductionCustomTaskController {
             return ResponseEntity.badRequest().body(ApiResponse.error("A valid reminder date is required"));
         }
         ApiResponse<ProductionCustomTaskDto> response = taskService.setTaskReminder(
-                taskId, remindAt, body.get("notes"), currentUser != null ? currentUser.getName() : "System");
+                taskId, remindAt, body.get("notes"),
+                currentUser != null ? currentUser.getName() : "System",
+                currentUser != null ? currentUser.getId() : null);
         return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 

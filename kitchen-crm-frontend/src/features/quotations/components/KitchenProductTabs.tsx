@@ -173,6 +173,12 @@ export function KitchenProductTabs({
                 onMiscellaneousMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? onMiscellaneousMarginChange : undefined}
                 onMiscellaneousTaxChange={onMiscellaneousTaxChange}
                 userRole={userRole}
+                serverCategoryTotals={{
+                  accessories: kitchen.accessoriesFinalTotal,
+                  cabinets: kitchen.cabinetsFinalTotal,
+                  doors: kitchen.doorsFinalTotal,
+                  lighting: kitchen.lightingFinalTotal,
+                }}
                 kitchenName={kitchen.kitchenName}
               />
             </div>
@@ -199,6 +205,12 @@ export function KitchenProductTabs({
           {expandedPanels[index]?.totals && (
             <div className="mt-4">
               <CategoryTotals
+                serverCategoryTotals={{
+                  accessories: kitchen.accessoriesFinalTotal,
+                  cabinets: kitchen.cabinetsFinalTotal,
+                  doors: kitchen.doorsFinalTotal,
+                  lighting: kitchen.lightingFinalTotal,
+                }}
                 accessories={kitchen.accessories || []}
                 cabinets={kitchen.cabinets || []}
                 doors={kitchen.doors || []}

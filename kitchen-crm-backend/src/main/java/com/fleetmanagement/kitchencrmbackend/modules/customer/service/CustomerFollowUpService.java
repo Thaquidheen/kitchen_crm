@@ -6,7 +6,7 @@ import com.fleetmanagement.kitchencrmbackend.modules.customer.dto.CustomerFollow
 import java.util.List;
 
 public interface CustomerFollowUpService {
-    ApiResponse<CustomerFollowUpDto> createFollowUp(CustomerFollowUpDto dto, String createdBy);
-    ApiResponse<List<CustomerFollowUpDto>> getFollowUpsForCustomer(Long customerId);
-    ApiResponse<String> deleteFollowUp(Long id);
+    ApiResponse<CustomerFollowUpDto> createFollowUp(CustomerFollowUpDto dto, String createdBy, Long createdByUserId);
+    ApiResponse<List<CustomerFollowUpDto>> getFollowUpsForCustomer(Long customerId, long viewerId);
+    ApiResponse<String> deleteFollowUp(Long id, long viewerId);
 }

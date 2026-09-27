@@ -114,8 +114,10 @@ export const AppLayout = ({ children, showFooter = false }: AppLayoutProps) => {
           showMenuButton
         />
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto">
+        {/* Main Content
+            This element — not the window — is the app's scroll container. The id is the
+            handle scroll-driven content uses to attach to it (see KitchenBuildPanel). */}
+        <main id="dashboard-main" className="flex-1 overflow-y-auto">
           <div className="p-3 sm:p-4 md:p-6">{children}</div>
         </main>
 

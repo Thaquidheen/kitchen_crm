@@ -42,6 +42,10 @@ public class CustomerFollowUp extends Auditable {
     @Column(name = "created_by")
     private String createdBy;
 
+    /** Creator id — follow-up notes are private to their author (NULL = legacy, admin-only). */
+    @Column(name = "created_by_user_id")
+    private Long createdByUserId;
+
     public enum FollowUpType {
         CALL, WHATSAPP, MEETING, SITE_VISIT, EMAIL, OTHER
     }

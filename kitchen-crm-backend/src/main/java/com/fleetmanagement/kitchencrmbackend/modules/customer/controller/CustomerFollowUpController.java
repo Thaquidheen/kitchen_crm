@@ -4,6 +4,7 @@ import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.dto.CustomerFollowUpDto;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.service.CustomerFollowUpService;
 import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
+import com.fleetmanagement.kitchencrmbackend.security.ViewerScope;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -24,16 +25,22 @@ public class CustomerFollowUpController {
     public ResponseEntity<ApiResponse<CustomerFollowUpDto>> createFollowUp(
             @Valid @RequestBody CustomerFollowUpDto dto,
             @AuthenticationPrincipal UserPrincipal currentUser) {
-        return ResponseEntity.ok(followUpService.createFollowUp(dto, currentUser != null ? currentUser.getName() : null));
+        return ResponseEntity.ok(followUpService.createFollowUp(dto,
+                currentUser != null ? currentUser.getName() : null,
+                currentUser != null ? currentUser.getId() : null));
     }
 
     @GetMapping("/customer/{customerId}")
-    public ResponseEntity<ApiResponse<List<CustomerFollowUpDto>>> getFollowUpsForCustomer(@PathVariable Long customerId) {
-        return ResponseEntity.ok(followUpService.getFollowUpsForCustomer(customerId));
+    public ResponseEntity<ApiResponse<List<CustomerFollowUpDto>>> getFollowUpsForCustomer(
+            @PathVariable Long customerId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        return ResponseEntity.ok(followUpService.getFollowUpsForCustomer(customerId, ViewerScope.of(currentUser)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteFollowUp(@PathVariable Long id) {
-        return ResponseEntity.ok(followUpService.deleteFollowUp(id));
+    public ResponseEntity<ApiResponse<String>> deleteFollowUp(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        return ResponseEntity.ok(followUpService.deleteFollowUp(id, ViewerScope.of(currentUser)));
     }
 }

@@ -57,6 +57,14 @@ public class EmployeeTask extends Auditable {
     @Column(name = "status", nullable = false)
     private TaskStatus status = TaskStatus.PENDING;
 
+    /** When the assignee first opened their list after this was assigned; null = still "New" to them. */
+    @Column(name = "acknowledged_at")
+    private LocalDateTime acknowledgedAt;
+
+    /** When the assigner saw that it was completed; null on a completed task = "done, awaiting review". */
+    @Column(name = "completion_seen_at")
+    private LocalDateTime completionSeenAt;
+
     public enum TaskPriority {
         LOW, MEDIUM, HIGH, URGENT
     }

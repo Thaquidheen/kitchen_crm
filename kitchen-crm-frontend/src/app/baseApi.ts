@@ -476,18 +476,31 @@ export const baseApi = createApi({
 
     // Reminders page: cross-customer list filtered by day bucket and module source
     // (source: CUSTOMERS | PRODUCTION | APPLIANCE — server-side partition, see V102)
-    getReminders: builder.query<any, { bucket?: string; search?: string; source?: string; page?: number; size?: number }>({
-      query: ({ bucket = 'ALL', search, source, page = 0, size = 20 }) => ({
+    // createdByUserId is the super admin's "only this staff member's reminders" filter. The
+    // server ignores it for everyone else, so it can never widen what a staff member sees.
+    getReminders: builder.query<any, { bucket?: string; search?: string; source?: string; createdByUserId?: number; page?: number; size?: number }>({
+      query: ({ bucket = 'ALL', search, source, createdByUserId, page = 0, size = 20 }) => ({
         url: '/reminders',
-        params: { bucket, page, size, ...(search ? { search } : {}), ...(source ? { source } : {}) },
+        params: {
+          bucket,
+          page,
+          size,
+          ...(search ? { search } : {}),
+          ...(source ? { source } : {}),
+          ...(createdByUserId ? { createdByUserId } : {}),
+        },
       }),
       transformResponse: (response: any) => response?.data ?? { content: [], totalElements: 0, totalPages: 0 },
       providesTags: ['Reminders'],
     }),
 
-    // Reminders page: counts per bucket for the filter chips
-    getReminderStats: builder.query<any, void>({
-      query: () => '/reminders/stats',
+    // Reminders page: counts per bucket for the filter chips. Takes the same staff filter as the
+    // list above — otherwise the chip numbers would describe a different set of rows.
+    getReminderStats: builder.query<any, { createdByUserId?: number } | void>({
+      query: (args) => ({
+        url: '/reminders/stats',
+        params: args && args.createdByUserId ? { createdByUserId: args.createdByUserId } : {},
+      }),
       transformResponse: (response: any) => response?.data ?? {},
       providesTags: ['Reminders'],
     }),

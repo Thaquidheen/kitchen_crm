@@ -82,6 +82,28 @@ public class SettingsController {
         }
     }
 
+    /** Per-priority task colours (LOW/MEDIUM/HIGH/URGENT -> hex). Readable by any authenticated
+        user so the production checklist shows the configured colours for everyone; only the PUT is admin. */
+    @GetMapping("/priority-colors")
+    public ApiResponse<Map<String, String>> getPriorityColors() {
+        try {
+            return ApiResponse.success("Priority colors retrieved successfully", systemSettingService.getPriorityColors());
+        } catch (Exception e) {
+            return ApiResponse.error("Failed to retrieve priority colors: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/priority-colors")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ApiResponse<String> updatePriorityColors(@RequestBody Map<String, String> colors) {
+        try {
+            systemSettingService.updatePriorityColors(colors);
+            return ApiResponse.success("Priority colors updated successfully", "Updated");
+        } catch (Exception e) {
+            return ApiResponse.error("Failed to update priority colors: " + e.getMessage());
+        }
+    }
+
     /**
      * Get dashboard configuration settings (Super Admin only)
      * @return Map of dashboard setting keys to values

@@ -1,5 +1,8 @@
 package com.fleetmanagement.kitchencrmbackend.modules.task.repository;
 
+import org.springframework.data.jpa.repository.Modifying;
+import java.time.LocalDateTime;
+
 import com.fleetmanagement.kitchencrmbackend.modules.task.entity.EmployeeTask;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -77,5 +80,39 @@ public interface EmployeeTaskRepository extends JpaRepository<EmployeeTask, Long
      * Find all tasks assigned by a specific admin
      */
     List<EmployeeTask> findByAssignedById(Long adminId);
-}
 
+    /** Assignee's list, oldest due first. */
+    List<EmployeeTask> findByAssignedToIdOrderByTaskDateAscIdAsc(Long employeeId);
+
+    /** Assigner's list, newest due first (Team Tasks tab). */
+    List<EmployeeTask> findByAssignedByIdOrderByTaskDateDescIdDesc(Long adminId);
+
+    /**
+     * Staff bell feed: my open tasks due today or earlier, PLUS any not yet acknowledged regardless
+     * of date - a task assigned for next week must still be announced now, not on its day.
+     */
+    @Query("SELECT t FROM EmployeeTask t WHERE t.assignedTo.id = :userId AND t.completed = false " +
+           "AND (t.taskDate <= :today OR t.acknowledgedAt IS NULL) ORDER BY t.taskDate ASC, t.id ASC")
+    List<EmployeeTask> findDueForAssignee(@Param("userId") Long userId, @Param("today") LocalDate today);
+
+    /**
+     * Assigner bell feed: tasks I assigned that were completed and I have not yet seen, plus open
+     * ones past their date. Completed-unseen leads, newest completion first.
+     */
+    @Query("SELECT t FROM EmployeeTask t WHERE t.assignedBy.id = :adminId AND (" +
+           "(t.completed = true AND t.completionSeenAt IS NULL) OR (t.completed = false AND t.taskDate < :today)) " +
+           "ORDER BY t.completed DESC, t.completedAt DESC, t.taskDate ASC")
+    List<EmployeeTask> findAttentionForAssigner(@Param("adminId") Long adminId, @Param("today") LocalDate today);
+
+    /** The assignee opened their list: every open, unseen assignment stops being "new". */
+    @Modifying
+    @Query("UPDATE EmployeeTask t SET t.acknowledgedAt = :now WHERE t.assignedTo.id = :userId " +
+           "AND t.acknowledgedAt IS NULL AND t.completed = false")
+    int acknowledgeAllForAssignee(@Param("userId") Long userId, @Param("now") LocalDateTime now);
+
+    /** The assigner has seen every completion. */
+    @Modifying
+    @Query("UPDATE EmployeeTask t SET t.completionSeenAt = :now WHERE t.assignedBy.id = :adminId " +
+           "AND t.completed = true AND t.completionSeenAt IS NULL")
+    int markAllCompletionsSeen(@Param("adminId") Long adminId, @Param("now") LocalDateTime now);
+}

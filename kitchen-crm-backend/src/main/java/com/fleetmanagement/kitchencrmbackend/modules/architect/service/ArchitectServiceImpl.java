@@ -311,7 +311,7 @@ public class ArchitectServiceImpl implements ArchitectService {
 
     @Override
     @Transactional
-    public ApiResponse<ArchitectNoteDto> addNote(Long architectId, String note, String author) {
+    public ApiResponse<ArchitectNoteDto> addNote(Long architectId, String note, String author, Long authorUserId) {
         Architect architect = architectRepository.findById(architectId).orElse(null);
         if (architect == null) {
             return ApiResponse.error("Architect not found");
@@ -323,15 +323,16 @@ public class ArchitectServiceImpl implements ArchitectService {
         entry.setArchitect(architect);
         entry.setNote(note.trim());
         entry.setCreatedBy(author);
+        entry.setCreatedByUserId(authorUserId);
         entry.setCreatedAt(LocalDateTime.now());
         return ApiResponse.success("Note added", toNoteDto(architectNoteRepository.save(entry)));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<ArchitectNoteDto>> getNotes(Long architectId) {
+    public ApiResponse<List<ArchitectNoteDto>> getNotes(Long architectId, long viewerId) {
         List<ArchitectNoteDto> notes = architectNoteRepository
-                .findByArchitectIdOrderByCreatedAtDescIdDesc(architectId)
+                .findForArchitect(architectId, viewerId)
                 .stream().map(this::toNoteDto).collect(Collectors.toList());
         return ApiResponse.success(notes);
     }

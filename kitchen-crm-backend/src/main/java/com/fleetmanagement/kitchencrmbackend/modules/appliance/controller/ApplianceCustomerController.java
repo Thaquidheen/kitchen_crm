@@ -94,8 +94,11 @@ public class ApplianceCustomerController {
     // ===== Follow-ups (call history) =====
 
     @GetMapping("/{id}/followups")
-    public ResponseEntity<ApiResponse<List<ApplianceFollowUpDto>>> getFollowUps(@PathVariable Long id) {
-        return ResponseEntity.ok(service.getFollowUps(id));
+    public ResponseEntity<ApiResponse<List<ApplianceFollowUpDto>>> getFollowUps(
+            @PathVariable Long id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            com.fleetmanagement.kitchencrmbackend.security.UserPrincipal currentUser) {
+        return ResponseEntity.ok(service.getFollowUps(id, com.fleetmanagement.kitchencrmbackend.security.ViewerScope.of(currentUser)));
     }
 
     @PostMapping("/{id}/followups")
@@ -103,16 +106,18 @@ public class ApplianceCustomerController {
             @PathVariable Long id,
             @Valid @RequestBody ApplianceFollowUpRequest request,
             @AuthenticationPrincipal UserPrincipal currentUser) {
-        ApiResponse<ApplianceFollowUpDto> response =
-                service.addFollowUp(id, request, currentUser != null ? currentUser.getName() : null);
+        ApiResponse<ApplianceFollowUpDto> response = service.addFollowUp(id, request,
+                currentUser != null ? currentUser.getName() : null,
+                currentUser != null ? currentUser.getId() : null);
         return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @DeleteMapping("/{id}/followups/{followUpId}")
     public ResponseEntity<ApiResponse<String>> deleteFollowUp(
             @PathVariable Long id,
-            @PathVariable Long followUpId) {
-        ApiResponse<String> response = service.deleteFollowUp(id, followUpId);
+            @PathVariable Long followUpId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        ApiResponse<String> response = service.deleteFollowUp(id, followUpId, com.fleetmanagement.kitchencrmbackend.security.ViewerScope.of(currentUser));
         return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 }

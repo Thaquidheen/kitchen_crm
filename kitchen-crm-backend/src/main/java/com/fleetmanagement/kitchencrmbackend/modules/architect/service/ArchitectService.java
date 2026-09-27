@@ -58,9 +58,9 @@ public interface ArchitectService {
 
     ApiResponse<java.util.Map<String, Long>> getCounts();
 
-    ApiResponse<com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectNoteDto> addNote(Long architectId, String note, String author);
+    ApiResponse<com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectNoteDto> addNote(Long architectId, String note, String author, Long authorUserId);
 
-    ApiResponse<List<com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectNoteDto>> getNotes(Long architectId);
+    ApiResponse<List<com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectNoteDto>> getNotes(Long architectId, long viewerId);
 
     /**
      * Quick mark architect as visited (uses current date)

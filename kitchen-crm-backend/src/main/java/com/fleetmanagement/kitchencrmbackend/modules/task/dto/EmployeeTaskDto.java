@@ -28,6 +28,12 @@ public class EmployeeTaskDto {
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime acknowledgedAt;
+    private LocalDateTime completionSeenAt;
+    /** Open and past its date (business timezone). */
+    private Boolean overdue;
+    /** Open and not yet acknowledged by the assignee - shows as "New" in their list and bell. */
+    private Boolean newForAssignee;
 }
 
 

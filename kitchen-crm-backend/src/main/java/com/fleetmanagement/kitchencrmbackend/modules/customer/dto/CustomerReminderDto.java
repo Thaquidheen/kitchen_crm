@@ -43,6 +43,8 @@ public class CustomerReminderDto {
     private CustomerReminder.ReminderStatus status;
     private LocalDateTime notifiedAt;
     private String createdBy;
+    /** Creator id — lets the Reminders page offer a per-staff filter to a super admin. */
+    private Long createdByUserId;
     private LocalDateTime createdAt;
 
     // Derived server-side so the browser never re-does the date maths in its own timezone.

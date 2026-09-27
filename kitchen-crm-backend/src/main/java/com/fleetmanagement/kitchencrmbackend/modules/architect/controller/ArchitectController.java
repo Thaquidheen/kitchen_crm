@@ -194,14 +194,21 @@ public class ArchitectController {
 
     @GetMapping("/{id}/notes")
     public ResponseEntity<ApiResponse<java.util.List<com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectNoteDto>>> getNotes(
-            @PathVariable Long id) {
-        return ResponseEntity.ok(architectService.getNotes(id));
+            @PathVariable Long id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            com.fleetmanagement.kitchencrmbackend.security.UserPrincipal currentUser) {
+        // Notes are private to their author; a super admin sees them all.
+        return ResponseEntity.ok(architectService.getNotes(id,
+                com.fleetmanagement.kitchencrmbackend.security.ViewerScope.of(currentUser)));
     }
 
     @PostMapping("/{id}/notes")
     public ResponseEntity<ApiResponse<com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectNoteDto>> addNote(
             @PathVariable Long id,
-            @Valid @RequestBody ArchitectNoteRequest request) {
-        return ResponseEntity.ok(architectService.addNote(id, request.getNote(), getCurrentUserName()));
+            @Valid @RequestBody ArchitectNoteRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            com.fleetmanagement.kitchencrmbackend.security.UserPrincipal currentUser) {
+        return ResponseEntity.ok(architectService.addNote(id, request.getNote(), getCurrentUserName(),
+                currentUser != null ? currentUser.getId() : null));
     }
 }

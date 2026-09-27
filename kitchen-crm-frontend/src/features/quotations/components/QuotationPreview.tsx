@@ -47,6 +47,13 @@ export interface QuotationPreviewProps {
   cabinetsMrpTaxPercentage: number;
   doorsMrpTaxPercentage: number;
   lightingMrpTaxPercentage: number;
+  /**
+   * Figures as stored by the SERVER. Staff are not sent unit prices, so everything derived from
+   * them is 0 in their browser; these are what they should actually see. A super admin keeps the
+   * live client-side calculation so edits update immediately.
+   */
+  serverGrandTotal?: number | null;
+  serverTaxAmount?: number | null;
   miscellaneousMrpMarginPercentage: number;
   miscellaneousMrpTaxPercentage: number;
   // Multi-kitchen support
@@ -82,6 +89,8 @@ export function QuotationPreview({
   lightingMrpTaxPercentage,
   miscellaneousMrpMarginPercentage,
   miscellaneousMrpTaxPercentage,
+  serverGrandTotal,
+  serverTaxAmount,
   kitchens,
 }: QuotationPreviewProps) {
   const isSuperAdmin = useIsSuperAdmin();
@@ -302,6 +311,14 @@ export function QuotationPreview({
     }
     return calculations.grandTotal;
   }, [isMultiKitchen, kitchenCalculations, commonTransportFinal, calculations.grandTotal]);
+
+  // Staff cannot derive any of this (the prices it is built from are withheld), so show the
+  // server's stored figures to them instead of a computed zero.
+  const canComputeLocally = isSuperAdmin;
+  const displayGrandTotal =
+    !canComputeLocally && serverGrandTotal != null ? Number(serverGrandTotal) : grandTotal;
+  const displayTaxAmount = (computed: number) =>
+    !canComputeLocally && serverTaxAmount != null ? Number(serverTaxAmount) : computed;
 
   // MRP (list price): one common margin + tax applied to the full BASE sum of products
   // (pre per-category margin/tax) + installation + custom other-expenses + common transportation.
@@ -530,7 +547,9 @@ export function QuotationPreview({
                   <div className="flex justify-between border-t border-background-600 pt-2">
                     <span className="font-semibold text-text-900">Kitchen Total</span>
                     <span className="font-bold text-primary-600 tabular-nums">
-                      ₹{kitchenCalc.total.toLocaleString('en-IN')}
+                      ₹{(!canComputeLocally && (kitchenCalc.kitchen as any)?.totalAmount != null
+                        ? Number((kitchenCalc.kitchen as any).totalAmount)
+                        : kitchenCalc.total).toLocaleString('en-IN')}
                     </span>
                   </div>
                 </div>
@@ -549,7 +568,9 @@ export function QuotationPreview({
                 <div key={idx} className="flex justify-between text-xs">
                   <span className="text-text-700">{kitchenCalc.kitchen.kitchenName}</span>
                   <span className="font-medium text-text-900 tabular-nums">
-                    ₹{kitchenCalc.total.toLocaleString('en-IN')}
+                    ₹{(!canComputeLocally && (kitchenCalc.kitchen as any)?.totalAmount != null
+                        ? Number((kitchenCalc.kitchen as any).totalAmount)
+                        : kitchenCalc.total).toLocaleString('en-IN')}
                   </span>
                 </div>
               ))}
@@ -565,7 +586,7 @@ export function QuotationPreview({
                 {mrpFinal > 0 && (
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-text-600">MRP</span>
-                    <span className={`text-sm tabular-nums ${mrpFinal > grandTotal ? 'text-text-500 line-through' : 'text-text-700'}`}>
+                    <span className={`text-sm tabular-nums ${mrpFinal > displayGrandTotal ? 'text-text-500 line-through' : 'text-text-700'}`}>
                       ₹{mrpFinal.toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -573,7 +594,7 @@ export function QuotationPreview({
                 <div className="flex justify-between items-baseline">
                   <span className="text-sm font-[650] text-text-900">Offer Price</span>
                   <span className="text-2xl font-bold text-primary-600 tabular-nums">
-                    ₹{grandTotal.toLocaleString('en-IN')}
+                    ₹{displayGrandTotal.toLocaleString('en-IN')}
                   </span>
                 </div>
               </div>
@@ -735,7 +756,7 @@ export function QuotationPreview({
           <div className="p-3 rounded-xl border border-background-600 bg-background-700/40">
             <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Total Tax</div>
             <div className="text-lg font-bold text-text-900 tabular-nums mt-0.5">
-              ₹{(isMultiKitchen && kitchenCalculations
+              ₹{displayTaxAmount(isMultiKitchen && kitchenCalculations
                 ? kitchenCalculations.reduce((sum, k) => sum + k.categoryTotals.accessories.taxAmount + k.categoryTotals.cabinets.taxAmount + k.categoryTotals.doors.taxAmount + k.categoryTotals.lighting.taxAmount, 0)
                 : calculations.totalTaxAmount
               ).toLocaleString('en-IN')}
@@ -745,7 +766,7 @@ export function QuotationPreview({
           <div className="p-3 rounded-xl border border-primary-600/40 bg-primary-600/[0.06]">
             <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Grand Total</div>
             <div className="text-lg font-bold text-primary-600 tabular-nums mt-0.5">
-              ₹{grandTotal.toLocaleString('en-IN')}
+              ₹{displayGrandTotal.toLocaleString('en-IN')}
             </div>
           </div>
         </div>

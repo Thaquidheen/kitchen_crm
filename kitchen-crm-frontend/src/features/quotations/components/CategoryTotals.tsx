@@ -30,6 +30,17 @@ export interface CategoryTotalsProps {
   // Miscellaneous (Other Expenses) margin & tax
   miscellaneousMarginPercentage?: number;
   miscellaneousTaxPercentage?: number;
+  /**
+   * Per-category totals as computed by the SERVER (margin and tax already applied). Staff are
+   * sent neither unit prices nor margins, so the client-side figure is 0 for them - these are
+   * the only correct numbers. A super admin keeps the live calculation.
+   */
+  serverCategoryTotals?: {
+    accessories?: number | null;
+    cabinets?: number | null;
+    doors?: number | null;
+    lighting?: number | null;
+  };
   // Optional kitchen name for context
   kitchenName?: string;
 }
@@ -58,6 +69,7 @@ export function CategoryTotals({
   lightingTaxPercentage,
   miscellaneousMarginPercentage = 0,
   miscellaneousTaxPercentage = 18,
+  serverCategoryTotals,
   kitchenName,
 }: CategoryTotalsProps) {
   // Read the role here rather than threading a prop through every call site.
@@ -82,6 +94,26 @@ export function CategoryTotals({
     };
   };
 
+  /**
+   * Swap in the server figure when the viewer cannot compute one. taxAmount is derived from the
+   * final total and the rate, which needs neither cost nor margin. finalTotal null = genuinely
+   * not known yet (an unsaved quotation).
+   */
+  const withServerTotal = (
+    computed: CategoryBreakdown,
+    server: number | null | undefined,
+    taxPercentage: number,
+    itemCount: number,
+  ): Omit<CategoryBreakdown, 'finalTotal'> & { finalTotal: number | null } => {
+    if (isSuperAdmin) return computed;
+    if (server == null) {
+      return { ...computed, taxAmount: 0, finalTotal: itemCount === 0 ? 0 : null };
+    }
+    const finalTotal = Number(server);
+    const taxAmount = taxPercentage > 0 ? (finalTotal * taxPercentage) / (100 + taxPercentage) : 0;
+    return { ...computed, taxAmount, finalTotal };
+  };
+
   const categories = useMemo(() => {
     return [
       {
@@ -89,7 +121,8 @@ export function CategoryTotals({
         icon: Wrench,
         color: 'text-text-600',
         items: accessories,
-        breakdown: calculateCategoryTotal(accessories, accessoriesMarginPercentage, accessoriesTaxPercentage),
+        breakdown: withServerTotal(calculateCategoryTotal(accessories, accessoriesMarginPercentage, accessoriesTaxPercentage),
+          serverCategoryTotals?.accessories, accessoriesTaxPercentage, accessories.length),
         marginPercentage: accessoriesMarginPercentage,
         taxPercentage: accessoriesTaxPercentage,
       },
@@ -98,7 +131,8 @@ export function CategoryTotals({
         icon: Package,
         color: 'text-text-600',
         items: cabinets,
-        breakdown: calculateCategoryTotal(cabinets, cabinetsMarginPercentage, cabinetsTaxPercentage),
+        breakdown: withServerTotal(calculateCategoryTotal(cabinets, cabinetsMarginPercentage, cabinetsTaxPercentage),
+          serverCategoryTotals?.cabinets, cabinetsTaxPercentage, cabinets.length),
         marginPercentage: cabinetsMarginPercentage,
         taxPercentage: cabinetsTaxPercentage,
       },
@@ -107,7 +141,8 @@ export function CategoryTotals({
         icon: DoorClosed,
         color: 'text-text-600',
         items: doors,
-        breakdown: calculateCategoryTotal(doors, doorsMarginPercentage, doorsTaxPercentage),
+        breakdown: withServerTotal(calculateCategoryTotal(doors, doorsMarginPercentage, doorsTaxPercentage),
+          serverCategoryTotals?.doors, doorsTaxPercentage, doors.length),
         marginPercentage: doorsMarginPercentage,
         taxPercentage: doorsTaxPercentage,
       },
@@ -116,7 +151,8 @@ export function CategoryTotals({
         icon: Lightbulb,
         color: 'text-text-600',
         items: lighting,
-        breakdown: calculateCategoryTotal(lighting, lightingMarginPercentage, lightingTaxPercentage),
+        breakdown: withServerTotal(calculateCategoryTotal(lighting, lightingMarginPercentage, lightingTaxPercentage),
+          serverCategoryTotals?.lighting, lightingTaxPercentage, lighting.length),
         marginPercentage: lightingMarginPercentage,
         taxPercentage: lightingTaxPercentage,
       },
@@ -141,7 +177,12 @@ export function CategoryTotals({
   const miscWithMargin = otherExpensesBase + miscMargin;
   const miscTax = (miscWithMargin * miscellaneousTaxPercentage) / 100;
   const otherExpensesFinal = miscWithMargin + miscTax;
-  const grandTotal = categories.reduce((sum, cat) => sum + cat.breakdown.finalTotal, 0) + otherExpensesFinal;
+  // One unknown category makes the whole figure unknown - better a dash than a number that
+  // is quietly missing a category.
+  const anyUnknown = categories.some((cat) => cat.breakdown.finalTotal == null);
+  const grandTotal: number | null = anyUnknown
+    ? null
+    : categories.reduce((sum, cat) => sum + (cat.breakdown.finalTotal as number), 0) + otherExpensesFinal;
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -186,16 +227,20 @@ export function CategoryTotals({
                         </div>
                       </>
                     )}
-                    <div className="flex justify-between">
-                      <span className="text-text-600">Tax ({category.taxPercentage}%)</span>
-                      <span className="text-text-900 font-medium tabular-nums">
-                        ₹{category.breakdown.taxAmount.toLocaleString('en-IN')}
-                      </span>
-                    </div>
+                    {category.breakdown.finalTotal != null && (
+                      <div className="flex justify-between">
+                        <span className="text-text-600">Tax ({category.taxPercentage}%)</span>
+                        <span className="text-text-900 font-medium tabular-nums">
+                          ₹{Math.round(category.breakdown.taxAmount).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between pt-1.5 border-t border-background-600">
                       <span className="font-semibold text-text-800">Category Total</span>
                       <span className="font-semibold text-text-900 tabular-nums">
-                        ₹{category.breakdown.finalTotal.toLocaleString('en-IN')}
+                        {category.breakdown.finalTotal == null
+                          ? '—'
+                          : `₹${category.breakdown.finalTotal.toLocaleString('en-IN')}`}
                       </span>
                     </div>
                   </div>
@@ -254,7 +299,7 @@ export function CategoryTotals({
           <div className="flex justify-between items-baseline">
             <span className="text-[13px] font-[650] text-text-900">Grand Total</span>
             <span className="text-xl font-bold text-primary-600 tabular-nums">
-              ₹{grandTotal.toLocaleString('en-IN')}
+              {grandTotal == null ? '—' : `₹${grandTotal.toLocaleString('en-IN')}`}
             </span>
           </div>
         </div>

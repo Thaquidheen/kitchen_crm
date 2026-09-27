@@ -12,6 +12,7 @@ import type {
   AdminTodoCreate,
   AdminTodoUpdate,
   TaskCompletionStats,
+  EmployeeTaskBulkCreate,
 } from './types';
 
 export interface ApiResponse<T> {
@@ -200,6 +201,67 @@ export const taskAPI = baseApi.injectEndpoints({
       },
     }),
 
+    // ============ Assignment flow (admin -> staff) ============
+    // Added on top of the original employee-task endpoints; every mutation invalidates the bare
+    // Tasks tag so both bells, My To-dos and Team Tasks refresh together.
+
+    // Assign one task to several staff (SUPER_ADMIN only); one row per staff member
+    assignTasks: builder.mutation<EmployeeTask[], EmployeeTaskBulkCreate>({
+      query: (body) => ({ url: '/tasks/employee/assign-many', method: 'POST', body }),
+      invalidatesTags: ['Tasks'],
+      transformResponse: (response: ApiResponse<EmployeeTask[]>) => {
+        if (response.success && response.data) return response.data;
+        throw new Error(response.message || 'Failed to assign task');
+      },
+    }),
+
+    // Everything the current admin has assigned (Team Tasks tab)
+    getTasksAssignedByMe: builder.query<EmployeeTask[], void>({
+      query: () => '/tasks/employee/assigned-by-me',
+      providesTags: [{ type: 'Tasks', id: 'ASSIGNED_BY_ME' }, 'Tasks'],
+      transformResponse: (response: ApiResponse<EmployeeTask[]>) => response.data ?? [],
+    }),
+
+    // Admin bell feed: completed-but-unseen + overdue tasks I assigned
+    getAssignerAttention: builder.query<{ count: number; tasks: EmployeeTask[] }, void>({
+      query: () => '/tasks/employee/attention',
+      providesTags: [{ type: 'Tasks', id: 'ATTENTION' }, 'Tasks'],
+      transformResponse: (response: ApiResponse<{ count: number; tasks: EmployeeTask[] }>) =>
+        response.data ?? { count: 0, tasks: [] },
+    }),
+
+    // Staff bell feed: my open tasks due today or earlier, plus any not yet acknowledged
+    getMyDueTasks: builder.query<{ count: number; tasks: EmployeeTask[] }, void>({
+      query: () => '/tasks/employee/my-due',
+      providesTags: [{ type: 'Tasks', id: 'MY_DUE' }, 'Tasks'],
+      transformResponse: (response: ApiResponse<{ count: number; tasks: EmployeeTask[] }>) =>
+        response.data ?? { count: 0, tasks: [] },
+    }),
+
+    // Staff opened their list: every new assignment stops being "new"
+    acknowledgeAllMyTasks: builder.mutation<number, void>({
+      query: () => ({ url: '/tasks/employee/my/acknowledge-all', method: 'PUT' }),
+      invalidatesTags: ['Tasks'],
+      transformResponse: (response: ApiResponse<number>) => response.data ?? 0,
+    }),
+
+    // Admin has seen one completion (drops it from the bell)
+    markCompletionSeen: builder.mutation<EmployeeTask, number>({
+      query: (taskId) => ({ url: `/tasks/employee/${taskId}/seen`, method: 'PUT' }),
+      invalidatesTags: ['Tasks'],
+      transformResponse: (response: ApiResponse<EmployeeTask>) => {
+        if (response.success && response.data) return response.data;
+        throw new Error(response.message || 'Failed to update task');
+      },
+    }),
+
+    // Admin has seen every completion
+    markAllCompletionsSeen: builder.mutation<number, void>({
+      query: () => ({ url: '/tasks/employee/attention/seen-all', method: 'PUT' }),
+      invalidatesTags: ['Tasks'],
+      transformResponse: (response: ApiResponse<number>) => response.data ?? 0,
+    }),
+
     // ============ Admin Todos ============
 
     // Create admin todo (SUPER_ADMIN only)
@@ -357,6 +419,13 @@ export const {
   useDeleteTaskMutation,
   useGetTaskByIdQuery,
   useGetTaskCompletionStatsQuery,
+  useAssignTasksMutation,
+  useGetTasksAssignedByMeQuery,
+  useGetAssignerAttentionQuery,
+  useGetMyDueTasksQuery,
+  useAcknowledgeAllMyTasksMutation,
+  useMarkCompletionSeenMutation,
+  useMarkAllCompletionsSeenMutation,
   useCreateAdminTodoMutation,
   useGetTodosByDateQuery,
   useGetTodosByDateRangeQuery,

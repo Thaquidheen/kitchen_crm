@@ -133,14 +133,24 @@ export function ApplianceQuartzPage() {
   const [uploadQuotation, { isLoading: isUploading }] = useUploadApplianceQuotationMutation();
   const [removeQuotation] = useDeleteApplianceQuotationMutation();
 
+  /**
+   * Keep whichever dialog is open in step with what was just stored. PDFs can be attached from
+   * the edit form OR straight from the table (which opens the files dialog), so both have to be
+   * refreshed — updating only `editing` left the files dialog showing a stale list.
+   */
+  const syncEntry = (entry?: ApplianceEntry) => {
+    if (!entry) return;
+    setEditing((cur) => (cur && cur.id === entry.id ? entry : cur));
+    setFilesFor((cur) => (cur && cur.id === entry.id ? entry : cur));
+  };
+
   const handleQuotationUpload = async (id: number, ev: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(ev.target.files ?? []);
     ev.target.value = ''; // allow re-picking the same files
     if (!files.length) return;
     try {
       const res: any = await uploadQuotation({ id, files }).unwrap();
-      // Keep the open modal in step with what was just stored.
-      if (res?.data) setEditing(res.data);
+      syncEntry(res?.data);
       toast.success(res?.message || 'Quotation uploaded');
     } catch (e: any) {
       toast.error(e?.data?.message || 'Failed to upload quotation', { duration: 5000 });
@@ -150,7 +160,7 @@ export function ApplianceQuartzPage() {
   const handleQuotationDelete = async (id: number, fileId: number) => {
     try {
       const res: any = await removeQuotation({ id, fileId }).unwrap();
-      if (res?.data) setEditing(res.data);
+      syncEntry(res?.data);
       toast.success('Quotation removed');
     } catch (e: any) {
       toast.error(e?.data?.message || 'Failed to remove quotation');
@@ -523,32 +533,20 @@ export function ApplianceQuartzPage() {
                       <td className="px-3 py-[13px]">
                         <div className="flex items-center gap-2">
                           {pill(st.st, st.label)}
-                          {(e.quotationFiles?.length ?? 0) > 0 &&
-                            (e.quotationFiles!.length === 1 ? (
-                              <a
-                                href={fileUrl(e.quotationFiles![0].fileUrl)}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(ev) => ev.stopPropagation()}
-                                title={e.quotationFiles![0].fileName}
-                                className="w-7 h-7 rounded-lg flex items-center justify-center text-primary-600 hover:bg-primary-600/10 transition-colors shrink-0"
-                              >
-                                <FileText size={14} />
-                              </a>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={(ev) => {
-                                  ev.stopPropagation();
-                                  setFilesFor(e);
-                                }}
-                                title={`${e.quotationFiles!.length} quotation PDFs`}
-                                className="inline-flex items-center gap-1 h-7 px-2 rounded-lg text-primary-600 hover:bg-primary-600/10 transition-colors shrink-0"
-                              >
-                                <FileText size={14} />
-                                <span className="text-[11px] font-[650] tabular-nums">{e.quotationFiles!.length}</span>
-                              </button>
-                            ))}
+                          {(e.quotationFiles?.length ?? 0) > 0 && (
+                            <button
+                              type="button"
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                setFilesFor(e);
+                              }}
+                              title={`${e.quotationFiles!.length} quotation PDF${e.quotationFiles!.length === 1 ? '' : 's'} — open, add or remove`}
+                              className="inline-flex items-center gap-1 h-7 px-2 rounded-lg text-primary-600 hover:bg-primary-600/10 transition-colors shrink-0"
+                            >
+                              <FileText size={14} />
+                              <span className="text-[11px] font-[650] tabular-nums">{e.quotationFiles!.length}</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                       <td className="px-3 py-[13px] text-[12.5px] text-text-700 tabular-nums whitespace-nowrap">{fmtDate(e.createdAt)}</td>
@@ -572,6 +570,20 @@ export function ApplianceQuartzPage() {
                           >
                             <BellRing size={14} />
                           </button>
+                          <label
+                            onClick={(ev) => ev.stopPropagation()}
+                            title="Attach quotation PDF"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors cursor-pointer"
+                          >
+                            <Upload size={14} />
+                            <input
+                              type="file"
+                              accept="application/pdf"
+                              multiple
+                              className="hidden"
+                              onChange={(ev) => handleQuotationUpload(e.id, ev)}
+                            />
+                          </label>
                           <button
                             onClick={() => openEdit(e)}
                             title="Edit"
@@ -756,63 +768,63 @@ export function ApplianceQuartzPage() {
                 </div>
               </div>
 
-              {/* Quotation PDF — only relevant once the entry reaches the Quotation stage. */}
-              {fStatus === 'QUOTATION' && (
-                <div>
-                  <label className={labelCls}>Quotation PDF</label>
-                  {!editing ? (
-                    <p className="text-[12.5px] text-text-600">
-                      Save this entry first, then reopen it to attach quotations.
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {(editing.quotationFiles ?? []).map((f) => (
-                        <div
-                          key={f.id}
-                          className="flex items-center gap-2.5 p-3 rounded-xl border border-background-600 bg-background-700/40"
+              {/* Quotation PDF — attachable at ANY stage. This was gated behind
+                  fStatus === QUOTATION, which put it out of reach for a Lead or Potential entry
+                  even though the supplier PDF usually arrives before the stage is moved on. */}
+              <div>
+                <label className={labelCls}>Quotation PDF</label>
+                {!editing ? (
+                  <p className="text-[12.5px] text-text-600">
+                    Save this entry first, then reopen it to attach quotations.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {(editing.quotationFiles ?? []).map((f) => (
+                      <div
+                        key={f.id}
+                        className="flex items-center gap-2.5 p-3 rounded-xl border border-background-600 bg-background-700/40"
+                      >
+                        <FileText size={16} className="text-primary-600 shrink-0" />
+                        <a
+                          href={fileUrl(f.fileUrl)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex-1 min-w-0 text-[13px] text-text-900 hover:text-primary-600 truncate"
+                          title={f.fileName}
                         >
-                          <FileText size={16} className="text-primary-600 shrink-0" />
-                          <a
-                            href={fileUrl(f.fileUrl)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex-1 min-w-0 text-[13px] text-text-900 hover:text-primary-600 truncate"
-                            title={f.fileName}
-                          >
-                            {f.fileName}
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => handleQuotationDelete(editing.id, f.id)}
-                            title="Remove this quotation"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:text-error hover:bg-error/10 transition-colors shrink-0"
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ))}
-                      <label className="flex items-center justify-center gap-2 p-4 rounded-xl border border-dashed border-background-500 text-[13px] text-text-600 cursor-pointer hover:border-primary-600 hover:text-text-900 transition-colors">
-                        <Upload size={15} />
-                        {isUploading
-                          ? 'Uploading…'
-                          : (editing.quotationFiles?.length ?? 0) > 0
-                          ? 'Add more PDFs'
-                          : 'Upload quotation PDFs'}
-                        <input
-                          type="file"
-                          accept="application/pdf"
-                          multiple
-                          className="hidden"
-                          onChange={(ev) => handleQuotationUpload(editing.id, ev)}
-                        />
-                      </label>
-                      <p className="text-[11.5px] text-text-500">
-                        You can select several files at once. PDF only, up to 20MB each.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
+                          {f.fileName}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleQuotationDelete(editing.id, f.id)}
+                          title="Remove this quotation"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:text-error hover:bg-error/10 transition-colors shrink-0"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    <label className="flex items-center justify-center gap-2 p-4 rounded-xl border border-dashed border-background-500 text-[13px] text-text-600 cursor-pointer hover:border-primary-600 hover:text-text-900 transition-colors">
+                      <Upload size={15} />
+                      {isUploading
+                        ? 'Uploading…'
+                        : (editing.quotationFiles?.length ?? 0) > 0
+                        ? 'Add more PDFs'
+                        : 'Upload quotation PDFs'}
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        multiple
+                        className="hidden"
+                        onChange={(ev) => handleQuotationUpload(editing.id, ev)}
+                      />
+                    </label>
+                    <p className="text-[11.5px] text-text-500">
+                      You can select several files at once. PDF only, up to 20MB each.
+                    </p>
+                  </div>
+                )}
+              </div>
 
               <div>
                 <label className={labelCls}>Notes</label>
@@ -869,18 +881,42 @@ export function ApplianceQuartzPage() {
         <ModalBody>
           <div className="space-y-2">
             {(filesFor?.quotationFiles ?? []).map((f) => (
-              <a
+              <div
                 key={f.id}
-                href={fileUrl(f.fileUrl)}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-2.5 p-3 rounded-xl border border-background-600 hover:border-primary-600/50 hover:bg-background-700 transition-colors"
+                className="flex items-center gap-2.5 p-3 rounded-xl border border-background-600 hover:border-primary-600/50 transition-colors"
               >
                 <FileText size={16} className="text-primary-600 shrink-0" />
-                <span className="flex-1 min-w-0 text-[13px] text-text-900 truncate">{f.fileName}</span>
-                <span className="text-[11.5px] text-text-500 shrink-0">Open</span>
-              </a>
+                <a
+                  href={fileUrl(f.fileUrl)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 min-w-0 text-[13px] text-text-900 hover:text-primary-600 truncate"
+                  title={f.fileName}
+                >
+                  {f.fileName}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => filesFor && handleQuotationDelete(filesFor.id, f.id)}
+                  title="Remove this quotation"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:text-error hover:bg-error/10 transition-colors shrink-0"
+                >
+                  <X size={14} />
+                </button>
+              </div>
             ))}
+            <label className="flex items-center justify-center gap-2 p-4 rounded-xl border border-dashed border-background-500 text-[13px] text-text-600 cursor-pointer hover:border-primary-600 hover:text-text-900 transition-colors">
+              <Upload size={15} />
+              {isUploading ? 'Uploading…' : 'Add more PDFs'}
+              <input
+                type="file"
+                accept="application/pdf"
+                multiple
+                className="hidden"
+                onChange={(ev) => filesFor && handleQuotationUpload(filesFor.id, ev)}
+              />
+            </label>
+            <p className="m-0 text-[11.5px] text-text-500">PDF only, up to 20MB each.</p>
           </div>
         </ModalBody>
       </Modal>

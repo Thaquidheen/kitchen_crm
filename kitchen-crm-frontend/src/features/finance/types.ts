@@ -117,6 +117,10 @@ export interface FinanceSummary {
   collectedMargin: number;
   collectedMarginCashInHand: number;
   collectedMarginCashInAccount: number;
+  /** totalMargin − extraTotal: the margin after anything released beyond what was expensed. */
+  netMargin: number;
+  netMarginCashInHand: number;
+  netMarginCashInAccount: number;
   payments: FinancePayment[];
   expenses: FinanceExpense[];
   releases: FinanceRelease[];

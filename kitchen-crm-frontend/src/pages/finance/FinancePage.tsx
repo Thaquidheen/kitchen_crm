@@ -6,7 +6,7 @@
 
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Eye, Plus, Wallet } from 'lucide-react';
+import { Search, Eye, Plus, Wallet, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -16,7 +16,9 @@ import {
   useGetFinanceListQuery,
   useGetEligibleFinanceCustomersQuery,
   useCreateFinanceMutation,
+  useDeleteFinanceMutation,
 } from '@/features/finance/financeAPI';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { inr } from '@/features/finance/constants';
 import { getFinanceDetailRoute } from '@/routes/routes.config';
 
@@ -44,6 +46,10 @@ export function FinancePage() {
   const [committedCA, setCommittedCA] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Deleting a finance record takes its payments, expenses, releases and receipt files with it,
+  // so it goes through a confirm dialog that says so rather than a bare icon click.
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+
   const { data: listData, isLoading } = useGetFinanceListQuery({ search: search || undefined, page: 0, size: 100 });
   const rows = listData?.content ?? [];
   const totalElements = listData?.totalElements ?? 0;
@@ -53,6 +59,18 @@ export function FinancePage() {
     { skip: !createOpen }
   );
   const [createFinance, { isLoading: isCreating }] = useCreateFinanceMutation();
+  const [deleteFinance, { isLoading: isDeleting }] = useDeleteFinanceMutation();
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteFinance(deleteTarget.financeId).unwrap();
+      toast.success('Finance record deleted');
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to delete finance record');
+    }
+    setDeleteTarget(null);
+  };
 
   const totals = useMemo(() => {
     let booked = 0;
@@ -171,7 +189,7 @@ export function FinancePage() {
                 <th className={thClass}>Balance</th>
                 <th className={thClass}>Expenses</th>
                 <th className={thClass}>Margin</th>
-                <th className="px-3.5 py-[9px] text-right text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 w-[70px]">
+                <th className="px-3.5 py-[9px] text-right text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 w-[92px]">
                   Actions
                 </th>
               </tr>
@@ -273,7 +291,7 @@ export function FinancePage() {
                         {inr(r.totalMargin)}
                       </td>
                       <td className="px-3.5 py-[13px]">
-                        <div className="flex justify-end">
+                        <div className="flex justify-end gap-0.5">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -283,6 +301,18 @@ export function FinancePage() {
                             className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors"
                           >
                             <Eye size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget(r);
+                            }}
+                            title="Delete finance record"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:text-error transition-colors"
+                            onMouseEnter={(ev) => { (ev.currentTarget as HTMLButtonElement).style.background = 'var(--st-lost-bg)'; (ev.currentTarget as HTMLButtonElement).style.color = 'var(--st-lost-fg)'; }}
+                            onMouseLeave={(ev) => { (ev.currentTarget as HTMLButtonElement).style.background = 'transparent'; (ev.currentTarget as HTMLButtonElement).style.color = ''; }}
+                          >
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>
@@ -403,6 +433,22 @@ export function FinancePage() {
           </Button>
         </ModalFooter>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Finance Record"
+        message={
+          deleteTarget
+            ? `Delete the finance record for ${deleteTarget.customerName}? Every payment, expense, ` +
+              'payment release and uploaded receipt on it is deleted too. This cannot be undone.'
+            : ''
+        }
+        confirmText={isDeleting ? 'Deleting…' : 'Delete'}
+        type="danger"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

@@ -341,7 +341,8 @@ public class ProductionCustomTaskServiceImpl implements ProductionCustomTaskServ
 
     @Override
     public ApiResponse<ProductionCustomTaskDto> setTaskReminder(Long taskId, java.time.LocalDateTime remindAt,
-                                                                String notes, String createdBy) {
+                                                                String notes, String createdBy,
+                                                                Long createdByUserId) {
         ProductionCustomTask task = taskRepository.findById(taskId).orElse(null);
         if (task == null) {
             return ApiResponse.error("Task not found");
@@ -359,7 +360,7 @@ public class ProductionCustomTaskServiceImpl implements ProductionCustomTaskServ
         reminderDto.setSource("PRODUCTION");
 
         ApiResponse<com.fleetmanagement.kitchencrmbackend.modules.customer.dto.CustomerReminderDto> created =
-                customerReminderService.createReminder(reminderDto, createdBy);
+                customerReminderService.createReminder(reminderDto, createdBy, createdByUserId);
         if (!Boolean.TRUE.equals(created.getSuccess()) || created.getData() == null) {
             return ApiResponse.error(created.getMessage() != null ? created.getMessage() : "Failed to create reminder");
         }

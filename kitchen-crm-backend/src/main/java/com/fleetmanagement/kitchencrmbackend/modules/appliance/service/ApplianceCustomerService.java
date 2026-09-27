@@ -30,11 +30,11 @@ public interface ApplianceCustomerService {
     ApiResponse<Map<String, Object>> getStatistics(ApplianceCustomer.Category category);
 
     /** Follow-up call history for an entry, newest call first. */
-    ApiResponse<List<ApplianceFollowUpDto>> getFollowUps(Long id);
+    ApiResponse<List<ApplianceFollowUpDto>> getFollowUps(Long id, long viewerId);
 
     /** Logs a call and refreshes the entry's denormalised lastCalledAt. */
-    ApiResponse<ApplianceFollowUpDto> addFollowUp(Long id, ApplianceFollowUpRequest request, String author);
+    ApiResponse<ApplianceFollowUpDto> addFollowUp(Long id, ApplianceFollowUpRequest request, String author, Long authorUserId);
 
     /** Removes one logged call (must belong to the entry) and refreshes lastCalledAt. */
-    ApiResponse<String> deleteFollowUp(Long id, Long followUpId);
+    ApiResponse<String> deleteFollowUp(Long id, Long followUpId, long viewerId);
 }

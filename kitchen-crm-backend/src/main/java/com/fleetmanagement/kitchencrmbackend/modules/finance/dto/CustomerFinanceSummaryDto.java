@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * The whole finance detail page in one payload: header, income block with derived
  * balances, payments, expense block with derived split/release figures, releases,
- * vendor totals and both margins. Nothing here is stored — see FinanceServiceImpl.
+ * vendor totals and all three margins (total, net, cash). Nothing here is stored — see FinanceServiceImpl.
  */
 @Data
 @NoArgsConstructor
@@ -79,6 +79,17 @@ public class CustomerFinanceSummaryDto {
     private BigDecimal collectedMargin;
     private BigDecimal collectedMarginCashInHand;
     private BigDecimal collectedMarginCashInAccount;
+
+    /**
+     * totalMargin minus extraTotal: the margin after every rupee that has gone or will go to
+     * vendors — what was expensed PLUS anything released beyond it. totalMargin assumes vendors
+     * are paid exactly what was expensed; an over-release is real money out, so it comes off here.
+     * Per bucket this is committed - max(expensed, released). Like totalMargin, the buckets only
+     * re-sum to the total when committedSplitMismatch is false.
+     */
+    private BigDecimal netMargin;
+    private BigDecimal netMarginCashInHand;
+    private BigDecimal netMarginCashInAccount;
 
     private List<PaymentDto> payments = new ArrayList<>();
     private List<ExpenseDto> expenses = new ArrayList<>();

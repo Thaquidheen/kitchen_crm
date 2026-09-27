@@ -1,5 +1,8 @@
 package com.fleetmanagement.kitchencrmbackend.modules.task.controller;
 
+import com.fleetmanagement.kitchencrmbackend.modules.task.dto.EmployeeTaskBulkCreateDto;
+import java.util.Map;
+
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.task.dto.EmployeeTaskCreateDto;
 import com.fleetmanagement.kitchencrmbackend.modules.task.dto.EmployeeTaskDto;
@@ -140,9 +143,69 @@ public class EmployeeTaskController {
         return ResponseEntity.ok(taskService.getMyTasks(currentUser.getId(), date));
     }
 
+    // ---- Assignment flow (admin -> staff). Literal paths are matched before /{taskId}. ----
+
+    /** Assign one task to several staff at once (one row each). */
+    @PostMapping("/assign-many")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<EmployeeTaskDto>>> assignMany(
+            @Valid @RequestBody EmployeeTaskBulkCreateDto dto,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        ApiResponse<List<EmployeeTaskDto>> response = taskService.assignMany(dto, currentUser.getId());
+        return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    /** Everything the current admin has assigned, newest due first (Team Tasks tab). */
+    @GetMapping("/assigned-by-me")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<EmployeeTaskDto>>> getAssignedByMe(
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        return ResponseEntity.ok(taskService.getTasksAssignedBy(currentUser.getId()));
+    }
+
+    /** Admin bell feed: {count, tasks[]} - completed-but-unseen and overdue tasks I assigned. */
+    @GetMapping("/attention")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getAttention(
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        return ResponseEntity.ok(taskService.getAssignerAttention(currentUser.getId()));
+    }
+
+    @PutMapping("/attention/seen-all")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<Integer>> markAllCompletionsSeen(
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        return ResponseEntity.ok(taskService.markAllCompletionsSeen(currentUser.getId()));
+    }
+
+    @PutMapping("/{taskId}/seen")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<EmployeeTaskDto>> markCompletionSeen(
+            @PathVariable Long taskId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        ApiResponse<EmployeeTaskDto> response = taskService.markCompletionSeen(taskId, currentUser.getId());
+        return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    /** Staff bell feed: {count, tasks[]} - my open tasks due today or earlier, plus any new ones. */
+    @GetMapping("/my-due")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getMyDue(
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        return ResponseEntity.ok(taskService.getMyDueTasks(currentUser.getId()));
+    }
+
+    /** Called when the staff member opens their list: every new assignment stops being "new". */
+    @PutMapping("/my/acknowledge-all")
+    public ResponseEntity<ApiResponse<Integer>> acknowledgeAll(
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        return ResponseEntity.ok(taskService.acknowledgeAllMine(currentUser.getId()));
+    }
+
     @GetMapping("/{taskId}")
-    public ResponseEntity<ApiResponse<EmployeeTaskDto>> getTaskById(@PathVariable Long taskId) {
-        ApiResponse<EmployeeTaskDto> response = taskService.getTaskById(taskId);
+    public ResponseEntity<ApiResponse<EmployeeTaskDto>> getTaskById(
+            @PathVariable Long taskId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        ApiResponse<EmployeeTaskDto> response = taskService.getTaskById(taskId, currentUser.getId());
         if (response.getSuccess()) {
             return ResponseEntity.ok(response);
         } else {

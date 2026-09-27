@@ -34,7 +34,8 @@ import java.util.stream.Collectors;
 /**
  * Income & Expenses per customer. Every balance and margin is derived here, never stored:
  * received sums come from finance_income_payments, released sums from finance_vendor_releases,
- * totalMargin = totalAmount - SUM(expenses), collectedMargin = SUM(payments) - SUM(releases).
+ * totalMargin = totalAmount - SUM(expenses), collectedMargin = SUM(payments) - SUM(releases),
+ * netMargin = totalMargin - extraTotal (extra = released beyond expensed, clamped per bucket).
  * Over-collection is allowed and flagged, not blocked, so real money can always be recorded.
  */
 @Slf4j
@@ -731,6 +732,14 @@ public class FinanceServiceImpl implements FinanceService {
         dto.setTotalMarginCashInAccount(dto.getCommittedCashInAccount().subtract(expenseCA));
         dto.setCollectedMarginCashInHand(receivedCH.subtract(releasedCH));
         dto.setCollectedMarginCashInAccount(receivedCA.subtract(releasedCA));
+
+        // Net margin: total margin minus anything released BEYOND what was expensed. Total margin
+        // assumes vendors are paid exactly what was expensed; an over-release is real money gone,
+        // so it comes off. Per bucket this is committed - max(expensed, released). extraCH/CA are
+        // already clamped at zero above, so a bucket that is merely outstanding is untouched.
+        dto.setNetMarginCashInHand(dto.getTotalMarginCashInHand().subtract(extraCH));
+        dto.setNetMarginCashInAccount(dto.getTotalMarginCashInAccount().subtract(extraCA));
+        dto.setNetMargin(dto.getTotalMargin().subtract(dto.getExtraTotal()));
 
         // Balance may go negative on either side; it is shown, never hidden.
         for (CustomerFinanceSummaryDto.VendorTotalDto vt : vendorMap.values()) {
