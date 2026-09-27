@@ -71,6 +71,26 @@ const off = laserMeter.on('measurement', (m) => {
 });
 ```
 
+## Drawing (plan sketch)
+
+Site Measurement opens on **Drawing** (a **List** tab shows the same values as a guided list). It
+follows the workflow of floor-plan survey apps:
+
+1. Start from a shape (rectangle, L, U) or **Draw room** by tapping corners — walls snap straight
+   and square; tap the first corner to close the room ("Finish without closing" for a single run).
+2. **Tap a wall** and take the reading (Bluetooth meter, keyboard meter or keypad). Measured walls
+   are locked and drawn solid; the others are estimated (dashed, "≈") and resized so the room
+   closes. If every wall is measured and the room still doesn't close, the gap is shown.
+3. Add **doors, windows, openings, service points, cabinets and appliances** by tapping a wall;
+   drag them along the wall; measure offset / width / height / sill in the side panel.
+4. **Elevation** shows one wall straight on with heights (sills, sockets, pipes, cabinets).
+5. **Notes and arrows** for anything else; export the plan as **PNG** or **SVG**.
+
+Geometry lives in `core/sketch/` (pure, tested): `geometry.ts` (snapping, hit tests, templates,
+area/perimeter and the redraw-to-scale solver), `targets.ts` (what to measure, same keys as the
+list view), `placement.ts` (item positions from measured values). The drawing is saved as
+`layout.sketch` in the site measurement's layout JSON — no backend change.
+
 ## Adding a new meter
 
 1. Admin → Laser Meter → **Device Lab**. Connect to the meter (any BLE device is listed).

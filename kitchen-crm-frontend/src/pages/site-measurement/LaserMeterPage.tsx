@@ -10,7 +10,7 @@ import {
   AdapterAdmin,
   ConnectLaserButton,
   DeviceLabPanel,
-  GuidedMeasurePanel,
+  MeasureWorkspace,
   LaserSettings,
   getBleSupport,
   useApplyLaserSettings,
@@ -18,13 +18,14 @@ import {
   useLaserSettings,
   useSyncAdapters,
   DEFAULT_LAYOUT,
+  type RoomLayout,
 } from '@/features/laser-meter';
 
 /** A throwaway two-wall sequence to check the meter works before going on site. */
 const TryItOut = () => {
   const [settings] = useLaserSettings();
   useApplyLaserSettings(settings);
-  const [layout] = useState({ ...DEFAULT_LAYOUT, wallCount: 2, includeCeiling: true });
+  const [layout, setLayout] = useState<RoomLayout>({ ...DEFAULT_LAYOUT, wallCount: 2, includeCeiling: true });
   const guided = useGuidedMeasure(layout, settings.sequence, {
     autoAdvance: settings.autoAdvance,
     beep: settings.beep,
@@ -32,12 +33,14 @@ const TryItOut = () => {
   });
   const ble = getBleSupport();
   return (
-    <div className="max-w-2xl">
+    <div>
       <p className="m-0 mb-3 text-[13px] text-text-600">
         Practice area — nothing here is saved. Connect your meter (or choose keyboard / manual mode) and take a
         few readings.
       </p>
-      <GuidedMeasurePanel
+      <MeasureWorkspace
+        layout={layout}
+        onLayoutChange={setLayout}
         guided={guided}
         settings={settings}
         bleSupported={ble.supported}

@@ -4,7 +4,9 @@
  * configurable. Pure functions only.
  */
 
-export type TargetGroup = 'walls' | 'ceiling' | 'openings' | 'services';
+import type { SketchPlan } from './sketch/types';
+
+export type TargetGroup = 'walls' | 'ceiling' | 'openings' | 'services' | 'cabinets';
 export type OpeningField = 'offset' | 'width' | 'height' | 'sill';
 export type ServiceField = 'offset' | 'height';
 export type OpeningKind = 'door' | 'window' | 'opening';
@@ -30,6 +32,8 @@ export interface RoomLayout {
   includeCeiling: boolean;
   openings: OpeningSpec[];
   servicePoints: ServicePointSpec[];
+  /** Plan drawing. When present (with walls), it defines what gets measured. */
+  sketch?: SketchPlan | null;
 }
 
 export interface SequenceConfig {
@@ -52,7 +56,7 @@ export interface MeasureTarget {
 }
 
 export const DEFAULT_SEQUENCE_CONFIG: SequenceConfig = {
-  order: ['walls', 'ceiling', 'openings', 'services'],
+  order: ['walls', 'ceiling', 'openings', 'services', 'cabinets'],
   openingFields: ['offset', 'width', 'height', 'sill'],
   serviceFields: ['offset', 'height'],
 };
@@ -69,6 +73,7 @@ export const GROUP_LABELS: Record<TargetGroup, string> = {
   ceiling: 'Ceiling',
   openings: 'Openings',
   services: 'Service points',
+  cabinets: 'Cabinets & appliances',
 };
 
 const OPENING_KIND_LABEL: Record<OpeningKind, string> = {
@@ -230,5 +235,15 @@ export const sanitizeLayout = (raw: Partial<RoomLayout> | null | undefined): Roo
     includeCeiling: raw?.includeCeiling ?? true,
     openings: Array.isArray(raw?.openings) ? raw.openings.filter((o) => o && o.id) : [],
     servicePoints: Array.isArray(raw?.servicePoints) ? raw.servicePoints.filter((p) => p && p.id) : [],
+    sketch: raw?.sketch && Array.isArray(raw.sketch.corners) ? sanitizeSketch(raw.sketch) : null,
   };
 };
+
+const sanitizeSketch = (sk: SketchPlan): SketchPlan => ({
+  version: 1,
+  corners: sk.corners.filter((c) => c && Number.isFinite(c.x) && Number.isFinite(c.y)),
+  walls: Array.isArray(sk.walls) ? sk.walls.filter((w) => w && w.id) : [],
+  closed: !!sk.closed,
+  items: Array.isArray(sk.items) ? sk.items.filter((i) => i && i.id && i.wallId) : [],
+  annotations: Array.isArray(sk.annotations) ? sk.annotations.filter((a) => a && a.id) : [],
+});
