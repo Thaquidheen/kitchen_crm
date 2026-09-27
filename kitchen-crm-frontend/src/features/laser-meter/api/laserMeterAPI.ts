@@ -31,6 +31,37 @@ export const recordToConfig = (r: LaserAdapterRecord): LaserAdapterConfig => ({
   active: r.active,
 });
 
+export interface LaserAdapterWrite {
+  adapterKey: string;
+  displayName: string;
+  active: boolean;
+  config: LaserAdapterConfig;
+}
+
+export interface LaserAdapterAuditRecord {
+  id: number;
+  adapterId: number | null;
+  adapterKey: string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE';
+  beforeConfig: LaserAdapterConfig | null;
+  afterConfig: LaserAdapterConfig | null;
+  actorEmail: string | null;
+  actorName: string | null;
+  createdAt: string | null;
+}
+
+export interface DeviceLabLogRecord {
+  id: number;
+  title: string;
+  deviceName: string | null;
+  adapterKey: string | null;
+  notes: string | null;
+  entryCount: number;
+  log?: Record<string, unknown> | null;
+  createdBy: string | null;
+  createdAt: string | null;
+}
+
 export interface SiteMeasurementRecord {
   customerId: number;
   layout: RoomLayout | null;
@@ -71,6 +102,73 @@ export const laserMeterAPI = baseApi.injectEndpoints({
       providesTags: [{ type: 'LaserAdapters', id: 'ACTIVE' }],
     }),
 
+    // ---------------------------------------------------------------- admin: adapters
+
+    getLaserAdapters: builder.query<LaserAdapterRecord[], void>({
+      query: () => API_ENDPOINTS.LASER_METER.ADAPTERS,
+      transformResponse: (response: ApiResponse<LaserAdapterRecord[]>) => response.data ?? [],
+      providesTags: [{ type: 'LaserAdapters', id: 'LIST' }],
+    }),
+
+    createLaserAdapter: builder.mutation<LaserAdapterRecord, LaserAdapterWrite>({
+      query: (body) => ({ url: API_ENDPOINTS.LASER_METER.ADAPTERS, method: 'POST', body }),
+      transformResponse: (response: ApiResponse<LaserAdapterRecord>) => response.data as LaserAdapterRecord,
+      invalidatesTags: [
+        { type: 'LaserAdapters', id: 'LIST' },
+        { type: 'LaserAdapters', id: 'ACTIVE' },
+        { type: 'LaserAdapters', id: 'AUDIT' },
+      ],
+    }),
+
+    updateLaserAdapter: builder.mutation<LaserAdapterRecord, LaserAdapterWrite & { id: number }>({
+      query: ({ id, ...body }) => ({ url: API_ENDPOINTS.LASER_METER.ADAPTER_BY_ID(id), method: 'PUT', body }),
+      transformResponse: (response: ApiResponse<LaserAdapterRecord>) => response.data as LaserAdapterRecord,
+      invalidatesTags: [
+        { type: 'LaserAdapters', id: 'LIST' },
+        { type: 'LaserAdapters', id: 'ACTIVE' },
+        { type: 'LaserAdapters', id: 'AUDIT' },
+      ],
+    }),
+
+    deleteLaserAdapter: builder.mutation<void, number>({
+      query: (id) => ({ url: API_ENDPOINTS.LASER_METER.ADAPTER_BY_ID(id), method: 'DELETE' }),
+      invalidatesTags: [
+        { type: 'LaserAdapters', id: 'LIST' },
+        { type: 'LaserAdapters', id: 'ACTIVE' },
+        { type: 'LaserAdapters', id: 'AUDIT' },
+      ],
+    }),
+
+    getLaserAdapterAudit: builder.query<LaserAdapterAuditRecord[], number | void>({
+      query: (id) => (typeof id === 'number' ? API_ENDPOINTS.LASER_METER.ADAPTER_AUDIT(id) : API_ENDPOINTS.LASER_METER.AUDIT),
+      transformResponse: (response: ApiResponse<LaserAdapterAuditRecord[]>) => response.data ?? [],
+      providesTags: [{ type: 'LaserAdapters', id: 'AUDIT' }],
+    }),
+
+    // ---------------------------------------------------------------- admin: device lab logs
+
+    getDeviceLabLogs: builder.query<DeviceLabLogRecord[], void>({
+      query: () => API_ENDPOINTS.LASER_METER.LAB_LOGS,
+      transformResponse: (response: ApiResponse<DeviceLabLogRecord[]>) => response.data ?? [],
+      providesTags: [{ type: 'DeviceLabLogs', id: 'LIST' }],
+    }),
+
+    getDeviceLabLog: builder.query<DeviceLabLogRecord, number>({
+      query: (id) => API_ENDPOINTS.LASER_METER.LAB_LOG_BY_ID(id),
+      transformResponse: (response: ApiResponse<DeviceLabLogRecord>) => response.data as DeviceLabLogRecord,
+    }),
+
+    saveDeviceLabLog: builder.mutation<
+      DeviceLabLogRecord,
+      { title: string; deviceName?: string | null; adapterKey?: string | null; notes?: string | null; log: Record<string, unknown> }
+    >({
+      query: (body) => ({ url: API_ENDPOINTS.LASER_METER.LAB_LOGS, method: 'POST', body }),
+      transformResponse: (response: ApiResponse<DeviceLabLogRecord>) => response.data as DeviceLabLogRecord,
+      invalidatesTags: [{ type: 'DeviceLabLogs', id: 'LIST' }],
+    }),
+
+    // ---------------------------------------------------------------- site measurements
+
     getSiteMeasurement: builder.query<SiteMeasurementRecord, number>({
       query: (customerId) => API_ENDPOINTS.SITE_MEASUREMENTS.BY_CUSTOMER(customerId),
       transformResponse: (response: ApiResponse<SiteMeasurementRecord>) =>
@@ -92,6 +190,14 @@ export const laserMeterAPI = baseApi.injectEndpoints({
 });
 
 export const {
+  useGetLaserAdaptersQuery,
+  useCreateLaserAdapterMutation,
+  useUpdateLaserAdapterMutation,
+  useDeleteLaserAdapterMutation,
+  useGetLaserAdapterAuditQuery,
+  useGetDeviceLabLogsQuery,
+  useLazyGetDeviceLabLogQuery,
+  useSaveDeviceLabLogMutation,
   useGetActiveLaserAdaptersQuery,
   useGetSiteMeasurementQuery,
   useSaveSiteMeasurementMutation,

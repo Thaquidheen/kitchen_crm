@@ -5,8 +5,11 @@
 
 import { useState } from 'react';
 import { Tabs } from '@/components/ui';
+import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 import {
+  AdapterAdmin,
   ConnectLaserButton,
+  DeviceLabPanel,
   GuidedMeasurePanel,
   LaserSettings,
   getBleSupport,
@@ -46,9 +49,17 @@ const TryItOut = () => {
 
 const LaserMeterPage = () => {
   useSyncAdapters();
+  const isAdmin = useIsSuperAdmin();
   const tabs = [
     { label: 'Try it out', content: <TryItOut /> },
     { label: 'Settings', content: <LaserSettings /> },
+    // Admin tools. The API enforces this too; hiding the tabs just keeps staff screens simple.
+    ...(isAdmin
+      ? [
+          { label: 'Device Lab', content: <DeviceLabPanel /> },
+          { label: 'Adapters', content: <AdapterAdmin /> },
+        ]
+      : []),
   ];
 
   return (

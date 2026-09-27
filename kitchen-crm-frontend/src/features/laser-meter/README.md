@@ -86,12 +86,56 @@ const off = laserMeter.on('measurement', (m) => {
 A protocol too complex for config (multi-packet frames, checksums, handshakes) gets a
 code adapter: implement `LaserMeterAdapter` and call `adapterRegistry.registerCode(...)`.
 
+## Backend
+
+Spring Boot module `modules/lasermeter` (adapters, audit, lab logs) and `modules/measurement`
+(site measurements). Flyway: `V116__Create_site_measurements.sql`, `V117__Create_laser_meter_adapters.sql`.
+
+| Table | Purpose |
+|---|---|
+| `laser_meter_adapters` | adapter config (`config` JSON), `adapter_key` (unique), `active`, `created_by` / `updated_by` |
+| `laser_meter_adapter_audit` | every create / update / delete with before + after config and the actor |
+| `device_lab_logs` | Device Lab sessions saved for developers |
+| `site_measurements` | one per customer: room layout JSON |
+| `site_measurement_values` | one per field: `value_mm` + `source`, `device_adapter_id`, `raw`, `captured_at`, `edited_after_capture` |
+
+| Endpoint | Who |
+|---|---|
+| `GET /api/v1/laser-meter/adapters/active` | any signed-in user |
+| `GET/POST /api/v1/laser-meter/adapters`, `GET/PUT/DELETE /…/adapters/{id}` | super admin |
+| `GET /…/adapters/{id}/audit`, `GET /…/adapters/audit` | super admin |
+| `GET/POST /api/v1/laser-meter/lab-logs`, `GET /…/lab-logs/{id}` | super admin |
+| `GET/PUT /api/v1/site-measurements/customer/{customerId}` | any signed-in user |
+
+The adapter ID is immutable once created (measurements store it); deactivate instead of deleting.
+The server validates configs with `LaserMeterAdapterValidator` (same rules as `adapterValidation.ts`).
+
+## Code adapters
+
+For protocols that don't fit the config model (multi-packet frames, checksums, handshakes):
+
+```ts
+import { laserMeter, type LaserMeterAdapter } from '@/features/laser-meter';
+
+const myAdapter: LaserMeterAdapter = {
+  id: 'vendor-model', displayName: 'Vendor Model', kind: 'code', active: true,
+  ble: { filters: [{ namePrefix: 'VM' }], optionalServices: [], serviceUuid: '…', measurementCharUuid: '…' },
+  minMm: 50, maxMm: 60000,
+  parse: (bytes) => /* pure: bytes → { ok: true, valueMm } | { ok: false, reason } */,
+  setup: async (io) => io.write('…service', '…char', Uint8Array.of(0x01)), // optional handshake
+};
+laserMeter.registry.registerCode(myAdapter); // e.g. in main.tsx
+```
+
 ## Running
 
 ```
 cd kitchen-crm-frontend
-npm test          # unit tests
+npm test          # unit tests (vitest)
 npm run dev       # dev server — "Simulate reading" and the mock device appear in dev mode
+
+cd kitchen-crm-backend
+./mvnw test -Dtest=LaserMeterAdapterValidatorTest   # adapter config validation
 ```
 
 Dev tools can also be enabled in production builds from Laser Meter → Settings → "Developer tools".

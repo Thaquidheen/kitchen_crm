@@ -7,7 +7,7 @@
  */
 
 // Singletons
-export { laserMeter, laserSettingsStore } from './instance';
+export { laserMeter, laserSettingsStore, deviceLab } from './instance';
 
 // Core (framework-agnostic)
 export * from './core/types';
@@ -57,6 +57,12 @@ export { MeasureField } from './components/MeasureField';
 export { GuidedMeasurePanel } from './components/GuidedMeasurePanel';
 export { RoomLayoutEditor } from './components/RoomLayoutEditor';
 export { LaserSettings } from './components/LaserSettings';
+export { AdapterAdmin } from './components/AdapterAdmin';
+export { AdapterEditor } from './components/AdapterEditor';
+export { DeviceLab } from './components/device-lab/DeviceLab';
+export { DeviceLabPanel } from './components/device-lab/DeviceLabPanel';
+export { probeDecodings, rankAcrossMarks, type DecodingCandidate } from './core/decodingProbe';
+export { LabSession } from './core/connections/bleLab';
 
 // API
 export {
