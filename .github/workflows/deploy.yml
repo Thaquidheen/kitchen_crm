@@ -15,10 +15,62 @@ jobs:
           host: 157.173.114.116
           username: root
           password: ${{ secrets.SERVER_PASSWORD }}
+          command_timeout: 30m
           script: |
+            # Any failing step fails the run. Before this, a refused `git pull` still ended green
+            # and the old code was simply rebuilt from cache.
+            set -eu
             cd /root/kitchen-crm
-            git pull origin main
-            docker compose -p kitchen-crm-backend -f docker-compose.prod.yml up -d --no-deps --build backend
-            docker compose -p kitchen-crm-backend -f docker-compose.prod.yml up -d --no-deps --build frontend
-            docker compose -p kitchen-crm-backend -f docker-compose.prod.yml up -d --no-deps --build nginx
-            echo "Deployment complete!"
+            COMPOSE="docker compose -p kitchen-crm-backend -f docker-compose.prod.yml"
+            TS=$(date +%Y%m%d-%H%M%S)
+            BK=/root/deploy-backups/$TS
+            mkdir -p "$BK"
+
+            echo "== Backing up database to $BK/db.sql.gz"
+            docker exec kitchen_crm_mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --databases kitchen_crm' > "$BK/db.sql"
+            gzip "$BK/db.sql"
+            git rev-parse HEAD > "$BK/previous-commit.txt"
+            docker tag kitchen-crm-backend-backend:latest "kitchen-crm-backend-backend:before-$TS" || true
+            docker tag kitchen-crm-backend-frontend:latest "kitchen-crm-backend-frontend:before-$TS" || true
+
+            echo "== Updating code"
+            git fetch origin main
+            # Files uploaded by hand (not committed on the server) that main now contains would make
+            # `git pull` refuse to run. Move exactly those aside into the backup; main has them.
+            git ls-files --others --exclude-standard | sort > "$BK/untracked.txt"
+            git ls-tree -r --name-only origin/main | sort > "$BK/incoming.txt"
+            comm -12 "$BK/untracked.txt" "$BK/incoming.txt" > "$BK/moved-aside.txt"
+            while IFS= read -r f; do
+              mkdir -p "$BK/untracked/$(dirname "$f")"
+              mv "$f" "$BK/untracked/$f"
+            done < "$BK/moved-aside.txt"
+            echo "Moved aside $(wc -l < "$BK/moved-aside.txt") hand-uploaded file(s)"
+            # Hand edits to committed files: keep them in a patch + stash, then take main.
+            if ! git diff --quiet || ! git diff --cached --quiet; then
+              git diff HEAD > "$BK/local-changes.patch"
+              git stash push -m "deploy $TS: local edits on server"
+              echo "Stashed local edits (also saved to $BK/local-changes.patch)"
+            fi
+            git pull --no-edit origin main
+            echo "Now at: $(git log --oneline -1)"
+
+            echo "== Building and restarting"
+            START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            $COMPOSE up -d --no-deps --build backend
+            $COMPOSE up -d --no-deps --build frontend
+            $COMPOSE up -d --no-deps --build nginx
+
+            echo "== Waiting for the backend to start"
+            for i in $(seq 1 60); do
+              if docker logs kitchen_crm_backend --since "$START" 2>&1 | grep -q "Started .* in "; then
+                docker logs kitchen_crm_backend --since "$START" 2>&1 | grep -iE "Migrating schema|Successfully applied|Schema .* is up to date|Started .* in " || true
+                echo "Deployment complete! Backup: $BK"
+                exit 0
+              fi
+              sleep 5
+            done
+            echo "Backend did not start within 5 minutes. Last log lines:"
+            docker logs kitchen_crm_backend --since "$START" --tail 80 2>&1 || true
+            echo "Roll back: docker tag kitchen-crm-backend-backend:before-$TS kitchen-crm-backend-backend:latest && $COMPOSE up -d --no-deps backend"
+            echo "Database backup: $BK/db.sql.gz"
+            exit 1
