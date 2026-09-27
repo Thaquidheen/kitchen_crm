@@ -27,5 +27,6 @@ public interface ProductionCustomTaskService {
 
     /** Creates a customer reminder for the task and links it, so the task shows a chip. */
     ApiResponse<ProductionCustomTaskDto> setTaskReminder(Long taskId, java.time.LocalDateTime remindAt,
-                                                         String notes, String createdBy);
+                                                         String notes, String createdBy,
+                                                         Long createdByUserId);
 }

@@ -488,6 +488,17 @@ export interface QuotationKitchen {
 }
 
 export interface QuotationKitchenFormData {
+  /**
+   * Per-category totals as last computed BY THE SERVER (margin and tax already applied).
+   * Carried through the form so the pricing panel can show a real figure to staff, who are
+   * sent neither unit prices nor margins and so cannot derive them in the browser.
+   */
+  /** The kitchen total as computed by the server — the only correct figure for staff. */
+  totalAmount?: number | null;
+  accessoriesFinalTotal?: number | null;
+  cabinetsFinalTotal?: number | null;
+  doorsFinalTotal?: number | null;
+  lightingFinalTotal?: number | null;
   kitchenName: string;
   kitchenOrder: number;
   transportationPrice: number;

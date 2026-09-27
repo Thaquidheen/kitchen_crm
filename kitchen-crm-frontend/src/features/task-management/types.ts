@@ -22,6 +22,14 @@ export interface EmployeeTask {
   status: TaskStatus;
   createdAt?: string;
   updatedAt?: string;
+  /** Set once the assignee has opened their list since assignment; absent = "New" to them. */
+  acknowledgedAt?: string;
+  /** Set once the assigner has seen the completion; absent on a done task = awaiting review. */
+  completionSeenAt?: string;
+  /** Server-derived (business timezone): open and past its date. */
+  overdue?: boolean;
+  /** Server-derived: open and not yet acknowledged by the assignee. */
+  newForAssignee?: boolean;
 }
 
 export interface EmployeeTaskCreate {
@@ -41,6 +49,16 @@ export interface EmployeeTaskUpdate {
   notes?: string;
   priority?: TaskPriority;
   status?: TaskStatus;
+}
+
+/** One task, several staff - the server creates one row per id. */
+export interface EmployeeTaskBulkCreate {
+  employeeIds: number[];
+  taskTitle: string;
+  taskDescription?: string;
+  taskDate: string; // ISO date string (the due date)
+  notes?: string;
+  priority?: TaskPriority;
 }
 
 // Admin Todo types

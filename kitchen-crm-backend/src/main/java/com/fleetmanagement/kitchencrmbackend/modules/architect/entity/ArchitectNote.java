@@ -32,6 +32,10 @@ public class ArchitectNote {
     @Column(name = "created_by")
     private String createdBy;
 
+    /** Creator id — notes are private to their author (NULL = legacy row, super-admin only). */
+    @Column(name = "created_by_user_id")
+    private Long createdByUserId;
+
     // App-set in the business timezone so it lines up with everything else the app displays.
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

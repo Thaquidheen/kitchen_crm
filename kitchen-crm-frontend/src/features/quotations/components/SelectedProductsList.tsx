@@ -62,6 +62,8 @@ interface LightingItem {
 }
 
 export interface SelectedProductsListProps {
+  /** Server-computed grand total - the only correct figure for staff (see CategoryTotals). */
+  serverGrandTotal?: number | null;
   accessories: AccessoryItem[];
   cabinets: CabinetItem[];
   doors: DoorItem[];
@@ -97,6 +99,7 @@ interface ElevationGroup {
 }
 
 export function SelectedProductsList({
+  serverGrandTotal,
   accessories,
   cabinets,
   doors,
@@ -121,6 +124,19 @@ export function SelectedProductsList({
   onEditDoor
 }: SelectedProductsListProps) {
   const isSuperAdmin = useIsSuperAdmin();
+
+  // Which cabinet each linked door belongs to. A door created for a cabinet carries the same
+  // _tempPairId; without showing it, every door row is the same shutter name and they cannot be
+  // told apart.
+  const cabinetByPairId = useMemo(() => {
+    const map = new Map<number, string>();
+    cabinets.forEach((c) => {
+      if (c._tempPairId != null) {
+        map.set(c._tempPairId, c.cabinetTypeName || c.description || 'Cabinet');
+      }
+    });
+    return map;
+  }, [cabinets]);
   const [expandedElevations, setExpandedElevations] = useState<Record<string, boolean>>({});
 
   // Group all items by elevation
@@ -248,6 +264,9 @@ export function SelectedProductsList({
   const miscTax = (miscWithMargin * miscellaneousTaxPercentage) / 100;
   const otherExpensesTotal = miscWithMargin + miscTax;
   const grandTotal = productTotal + otherExpensesTotal;
+  // Staff are not sent unit prices, so the figure above is 0 for them - show the stored total.
+  const displayGrandTotal =
+    !isSuperAdmin && serverGrandTotal != null ? Number(serverGrandTotal) : grandTotal;
 
   const toggleElevation = (elevationName: string) => {
     setExpandedElevations(prev => ({
@@ -262,6 +281,15 @@ export function SelectedProductsList({
     originalIndex: number
   ) => {
     const displayName = item.description || item.cabinetTypeName || item.doorTypeName || item.name || `Item ${originalIndex + 1}`;
+    // For a door, the useful identity is its size and the cabinet it was made for.
+    const doorSize =
+      category === 'doors' && item.widthMm && item.heightMm
+        ? `${item.widthMm}×${item.heightMm}mm`
+        : undefined;
+    const doorOnCabinet =
+      category === 'doors' && item._tempPairId != null
+        ? cabinetByPairId.get(item._tempPairId)
+        : undefined;
     const uniqueKey = `${category}-${originalIndex}-${item.id || item.cabinetTypeId || item.doorTypeId || item._tempPairId || originalIndex}`;
 
     const showEdit = (category === 'cabinets' && onEditCabinet) || (category === 'doors' && onEditDoor);
@@ -278,6 +306,12 @@ export function SelectedProductsList({
             {category === 'cabinets' && item.materialName && (
               <span className="text-text-500 ml-1">· {item.materialName}</span>
             )}
+            {doorSize && <span className="text-text-500 ml-1">· {doorSize}</span>}
+            {doorOnCabinet ? (
+              <span className="text-text-500 ml-1">· on {doorOnCabinet}</span>
+            ) : category === 'doors' ? (
+              <span className="text-text-500 ml-1">· standalone</span>
+            ) : null}
             {category === 'cabinets' && (item as any).innerPanelTypeName && (item as any).innerPanelQuantity > 0 && (
               <span className="text-text-500 ml-1">· {(item as any).innerPanelTypeName} x{(item as any).innerPanelQuantity}</span>
             )}
@@ -450,7 +484,7 @@ export function SelectedProductsList({
       <Card className="p-3 sm:p-4 bg-primary-600/[0.06] border-primary-600/40 rounded-xl">
         <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-text-600 mb-0.5">Grand Total</div>
         <div className="text-lg sm:text-xl font-bold text-primary-600 tabular-nums break-all">
-          ₹{grandTotal.toLocaleString('en-IN')}
+          ₹{displayGrandTotal.toLocaleString('en-IN')}
         </div>
       </Card>
     </div>

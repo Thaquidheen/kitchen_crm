@@ -2,8 +2,8 @@
  * FinanceCustomerPage — one customer's money story, and the Income | Expenses tabs. One summary
  * query powers everything.
  *
- * The KPI strip is two rows: money with the CUSTOMER (total, received, balance, total margin) and
- * money with the VENDORS (expenses, released, outstanding, extra, cash margin). Every figure
+ * The KPI strip is two rows: money with the CUSTOMER (total, received, balance, total margin, net margin) and
+ * money with the VENDORS (expenses, released, outstanding, extra, net amount available). Every figure
  * carries its Cash-in-Hand / Cash-in-Account split, and each tile is tinted with its own --st-*
  * token so a figure is found by colour rather than by reading nine labels.
  */
@@ -208,7 +208,7 @@ export function FinanceCustomerPage() {
         </div>
 
         {/* KPI strip — row 1: money with the CUSTOMER */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-px border-t border-background-600 bg-background-600">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-px border-t border-background-600 bg-background-600">
           {kpi('Total Amount', inr(summary.totalAmount), {
             tone: 'design',
             split: { ch: n(summary.committedCashInHand), ca: n(summary.committedCashInAccount) },
@@ -230,6 +230,17 @@ export function FinanceCustomerPage() {
               ca: n(summary.totalMarginCashInAccount),
             },
             negative: summary.totalMargin < 0,
+          })}
+          {/* Net = total margin minus extra (over-released) expenses; equals total margin when
+              nothing was released beyond what was expensed, so the sub-line only appears then. */}
+          {kpi('Net Margin', inr(n(summary.netMargin)), {
+            tone: 'confirmed',
+            sub: n(summary.extraTotal) > 0 ? 'Total margin − extra expenses' : undefined,
+            split: {
+              ch: n(summary.netMarginCashInHand),
+              ca: n(summary.netMarginCashInAccount),
+            },
+            negative: n(summary.netMargin) < 0,
           })}
         </div>
 
@@ -257,7 +268,7 @@ export function FinanceCustomerPage() {
             split: { ch: n(summary.extraCashInHand), ca: n(summary.extraCashInAccount) },
             sub: n(summary.extraTotal) > 0 ? 'Released beyond expensed' : undefined,
           })}
-          {kpi('Cash Margin', inr(summary.collectedMargin), {
+          {kpi('Net Amount Available', inr(summary.collectedMargin), {
             tone: 'confirmed',
             split: {
               ch: n(summary.collectedMarginCashInHand),
@@ -279,7 +290,7 @@ export function FinanceCustomerPage() {
               Committed C/H {inr(summary.committedCashInHand)} + C/A {inr(summary.committedCashInAccount)} ={' '}
               {inr(n(summary.committedCashInHand) + n(summary.committedCashInAccount))}, which does not match the
               total amount {inr(summary.totalAmount)}. The C/H and C/A margin figures will not add up to Total
-              Margin until the header is corrected.
+              Margin or Net Margin until the header is corrected.
             </span>
           </div>
         )}

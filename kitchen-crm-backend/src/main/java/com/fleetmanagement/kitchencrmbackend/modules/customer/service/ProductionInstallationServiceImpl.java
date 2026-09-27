@@ -47,9 +47,6 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
     private ProductionCustomTaskRepository productionCustomTaskRepository;
 
     @Autowired
-    private CustomerReminderService customerReminderService;
-
-    @Autowired
     private CustomerReminderRepository customerReminderRepository;
 
     @Autowired
@@ -107,9 +104,10 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
         // Every job starts with the company's standard 3-stage checklist pre-loaded.
         seedStandardStages(savedInstallation, createdBy);
 
-        // Date-driven SOP items get reminders up front, on this new job only. A reminder
-        // failure must never fail job creation, so this is best-effort.
-        createSopReminders(savedInstallation, customer, createdBy);
+        // No reminders are created here on purpose. A job used to start with two SOP reminders
+        // ("30th-day site verification" and "Procure accessories & hardware") already set, which
+        // filled the bell and the Reminders page with items nobody asked for. Reminders are now
+        // opt-in only: the bell on a checklist task creates one (see setTaskReminder).
 
         // Create workflow history
         createWorkflowHistory(customer, "Production Installation Created", "NOT_STARTED",
@@ -134,37 +132,6 @@ public class ProductionInstallationServiceImpl implements ProductionInstallation
                 + ProductionStageTemplate.STAGES.size() + " stages");
     }
 
-    /**
-     * Reminders for the SOP's date-driven checkpoints. The 30th-day site verification is
-     * anchored to today; the accessories procurement reminder is anchored to the estimated
-     * completion date minus 5 days when that date is known and still in the future.
-     */
-    private void createSopReminders(ProductionInstallation installation, Customer customer, String createdBy) {
-        try {
-            CustomerReminderDto thirtieth = new CustomerReminderDto();
-            thirtieth.setCustomerId(customer.getId());
-            thirtieth.setTitle("30th-day site verification — " + customer.getName());
-            thirtieth.setNotes("Electrical, plumbing, floor & wall tiling — then inform client about installation");
-            thirtieth.setRemindAt(LocalDate.now().plusDays(30).atTime(10, 0));
-            // Tagged PRODUCTION so the Production chip lists them and deleting the job purges them.
-            thirtieth.setSource(CustomerReminder.ReminderSource.PRODUCTION.name());
-            customerReminderService.createReminder(thirtieth, createdBy);
-
-            LocalDate est = installation.getEstimatedCompletionDate();
-            if (est != null && est.minusDays(5).isAfter(LocalDate.now())) {
-                CustomerReminderDto procure = new CustomerReminderDto();
-                procure.setCustomerId(customer.getId());
-                procure.setTitle("Procure accessories & hardware — " + customer.getName());
-                procure.setNotes("5 days before delivery — accessories, light and wires (anchored to est. completion "
-                        + est + ")");
-                procure.setRemindAt(est.minusDays(5).atTime(10, 0));
-                procure.setSource(CustomerReminder.ReminderSource.PRODUCTION.name());
-                customerReminderService.createReminder(procure, createdBy);
-            }
-        } catch (Exception e) {
-            // Best-effort: the job and checklist exist either way.
-        }
-    }
 
     /** Seeds the standard SOP as task groups. Returns the number of tasks created. */
     private int seedStandardStages(ProductionInstallation installation, String createdBy) {

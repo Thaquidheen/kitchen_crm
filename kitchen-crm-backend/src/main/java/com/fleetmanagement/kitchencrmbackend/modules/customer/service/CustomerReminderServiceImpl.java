@@ -10,6 +10,7 @@ import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.CustomerReminder;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerReminderRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerRepository;
+import com.fleetmanagement.kitchencrmbackend.security.ViewerScope;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -82,7 +83,8 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
     }
 
     @Override
-    public ApiResponse<CustomerReminderDto> createReminder(CustomerReminderDto dto, String createdBy) {
+    public ApiResponse<CustomerReminderDto> createReminder(CustomerReminderDto dto, String createdBy,
+                                                           Long createdByUserId) {
         boolean hasCustomer = dto.getCustomerId() != null;
         boolean hasAppliance = dto.getApplianceCustomerId() != null;
         boolean hasArchitect = dto.getArchitectId() != null;
@@ -123,15 +125,18 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
             reminder.setNotifiedAt(LocalDateTime.now());
         }
         reminder.setCreatedBy(createdBy);
+        // Owner of record. Everything else gates visibility on this, so it must be set here and
+        // nowhere else - a reminder created without one would be invisible to its own author.
+        reminder.setCreatedByUserId(createdByUserId);
         // Internal flows stamp their origin (FOLLOW_UP, PRODUCTION); everything else is MANUAL.
         reminder.setSource(parseSource(dto.getSource()));
         return ApiResponse.success("Reminder created", convertToDto(reminderRepository.save(reminder)));
     }
 
     @Override
-    public ApiResponse<CustomerReminderDto> updateReminder(Long id, CustomerReminderDto dto) {
+    public ApiResponse<CustomerReminderDto> updateReminder(Long id, CustomerReminderDto dto, long viewerId) {
         CustomerReminder reminder = reminderRepository.findById(id).orElse(null);
-        if (reminder == null) {
+        if (reminder == null || !visibleTo(reminder, viewerId)) {
             return ApiResponse.error("Reminder not found");
         }
         if (dto.getTitle() != null && !dto.getTitle().isBlank()) reminder.setTitle(dto.getTitle());
@@ -156,9 +161,9 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
     }
 
     @Override
-    public ApiResponse<String> markDone(Long id) {
+    public ApiResponse<String> markDone(Long id, long viewerId) {
         CustomerReminder reminder = reminderRepository.findById(id).orElse(null);
-        if (reminder == null) {
+        if (reminder == null || !visibleTo(reminder, viewerId)) {
             return ApiResponse.error("Reminder not found");
         }
         reminder.setStatus(DONE);
@@ -167,8 +172,9 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
     }
 
     @Override
-    public ApiResponse<String> deleteReminder(Long id) {
-        if (!reminderRepository.existsById(id)) {
+    public ApiResponse<String> deleteReminder(Long id, long viewerId) {
+        CustomerReminder reminder = reminderRepository.findById(id).orElse(null);
+        if (reminder == null || !visibleTo(reminder, viewerId)) {
             return ApiResponse.error("Reminder not found");
         }
         reminderRepository.deleteById(id);
@@ -176,20 +182,21 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
     }
 
     @Override
-    public ApiResponse<List<CustomerReminderDto>> getRemindersForCustomer(Long customerId) {
-        return ApiResponse.success(reminderRepository.findByCustomerIdOrderByRemindAtDesc(customerId)
+    public ApiResponse<List<CustomerReminderDto>> getRemindersForCustomer(Long customerId, long viewerId) {
+        return ApiResponse.success(reminderRepository.findForCustomer(customerId, viewerId)
                 .stream().map(this::convertToDto).toList());
     }
 
     @Override
-    public ApiResponse<List<CustomerReminderDto>> getRemindersForApplianceCustomer(Long applianceCustomerId) {
-        return ApiResponse.success(reminderRepository.findByApplianceCustomerIdOrderByRemindAtDesc(applianceCustomerId)
+    public ApiResponse<List<CustomerReminderDto>> getRemindersForApplianceCustomer(Long applianceCustomerId,
+                                                                                   long viewerId) {
+        return ApiResponse.success(reminderRepository.findForApplianceCustomer(applianceCustomerId, viewerId)
                 .stream().map(this::convertToDto).toList());
     }
 
     @Override
-    public ApiResponse<List<CustomerReminderDto>> getOpenReminders() {
-        return ApiResponse.success(reminderRepository.findByStatusInOrderByRemindAtAsc(OPEN_STATUSES)
+    public ApiResponse<List<CustomerReminderDto>> getOpenReminders(long viewerId) {
+        return ApiResponse.success(reminderRepository.findOpen(OPEN_STATUSES, viewerId)
                 .stream().map(this::convertToDto).toList());
     }
 
@@ -199,9 +206,9 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
      * scheduled sweep has not run since midnight.
      */
     @Override
-    public ApiResponse<Map<String, Object>> getNotifications() {
+    public ApiResponse<Map<String, Object>> getNotifications(long viewerId) {
         List<CustomerReminderDto> due = reminderRepository
-                .findByStatusNotAndRemindAtLessThanOrderByRemindAtAsc(DONE, startOfTomorrow())
+                .findDueForBell(DONE, startOfTomorrow(), viewerId)
                 .stream().map(this::convertToDto).toList();
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("count", due.size());
@@ -217,7 +224,8 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
 
     @Override
     public ApiResponse<Page<CustomerReminderDto>> getReminders(String bucket, String search,
-                                                                String source, int page, int size) {
+                                                                String source, int page, int size,
+                                                                long viewerId) {
         LocalDateTime todayStart = today().atStartOfDay();
         LocalDateTime tomorrowStart = startOfTomorrow();
 
@@ -261,36 +269,34 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
         String q = (search == null || search.isBlank()) ? "%" : "%" + search.trim().toLowerCase() + "%";
         Pageable pageable = PageRequest.of(Math.max(page, 0), size <= 0 ? 20 : size, sort);
         Page<CustomerReminderDto> result = reminderRepository
-                .search(statuses, sources, ownerFilter, from, to, q, pageable)
+                .search(statuses, sources, ownerFilter, from, to, q, viewerId, pageable)
                 .map(this::convertToDto);
         return ApiResponse.success(result);
     }
 
     @Override
-    public ApiResponse<Map<String, Long>> getReminderStats() {
+    public ApiResponse<Map<String, Long>> getReminderStats(long viewerId) {
         LocalDateTime todayStart = today().atStartOfDay();
         LocalDateTime tomorrowStart = startOfTomorrow();
 
-        long todayCount = reminderRepository
-                .countByStatusNotAndRemindAtGreaterThanEqualAndRemindAtLessThan(DONE, todayStart, tomorrowStart);
-        long overdue = reminderRepository.countByStatusNotAndRemindAtLessThan(DONE, todayStart);
-        long upcoming = reminderRepository.countByStatusNotAndRemindAtGreaterThanEqual(DONE, tomorrowStart);
-        Long done = reminderRepository.countByStatus(DONE);
+        long todayCount = reminderRepository.countOpenBetween(DONE, todayStart, tomorrowStart, viewerId);
+        long overdue = reminderRepository.countOpenBefore(DONE, todayStart, viewerId);
+        long upcoming = reminderRepository.countOpenFrom(DONE, tomorrowStart, viewerId);
+        long done = reminderRepository.countWithStatus(DONE, viewerId);
 
         Map<String, Long> stats = new LinkedHashMap<>();
         stats.put("all", todayCount + overdue + upcoming);
         stats.put("today", todayCount);
         stats.put("overdue", overdue);
         stats.put("upcoming", upcoming);
-        stats.put("done", done == null ? 0L : done);
+        stats.put("done", done);
 
         // Per-source chip counts for the Reminders page (open reminders, all buckets).
-        stats.put("customers", reminderRepository
-                .countByStatusNotAndSourceInAndCustomerIsNotNull(DONE, CUSTOMER_SOURCES));
+        stats.put("customers", reminderRepository.countOpenCustomerOwned(DONE, CUSTOMER_SOURCES, viewerId));
         stats.put("production", reminderRepository
-                .countByStatusNotAndSource(DONE, CustomerReminder.ReminderSource.PRODUCTION));
-        stats.put("appliance", reminderRepository.countByStatusNotAndApplianceCustomerIsNotNull(DONE));
-        stats.put("architect", reminderRepository.countByStatusNotAndArchitectIsNotNull(DONE));
+                .countOpenBySource(DONE, CustomerReminder.ReminderSource.PRODUCTION, viewerId));
+        stats.put("appliance", reminderRepository.countOpenApplianceOwned(DONE, viewerId));
+        stats.put("architect", reminderRepository.countOpenArchitectOwned(DONE, viewerId));
         return ApiResponse.success(stats);
     }
 
@@ -310,6 +316,15 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
             r.setNotifiedAt(now);
         }
         reminderRepository.saveAll(dueNow);
+    }
+
+    /**
+     * Can this viewer see this row? ViewerScope.ALL is the super admin; anyone else matches only
+     * their own. A legacy row (null owner) is therefore super-admin-only, by design.
+     */
+    private boolean visibleTo(CustomerReminder r, long viewerId) {
+        return viewerId == ViewerScope.ALL
+                || (r.getCreatedByUserId() != null && r.getCreatedByUserId() == viewerId);
     }
 
     /** Unknown or absent source strings become MANUAL rather than a 500. */
@@ -355,6 +370,7 @@ public class CustomerReminderServiceImpl implements CustomerReminderService {
         dto.setStatus(r.getStatus());
         dto.setNotifiedAt(r.getNotifiedAt());
         dto.setCreatedBy(r.getCreatedBy());
+        dto.setCreatedByUserId(r.getCreatedByUserId());
         dto.setCreatedAt(r.getCreatedAt());
 
         LocalDate date = r.getRemindAt().toLocalDate();

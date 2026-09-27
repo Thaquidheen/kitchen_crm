@@ -1,5 +1,8 @@
 package com.fleetmanagement.kitchencrmbackend.modules.task.service;
 
+import com.fleetmanagement.kitchencrmbackend.modules.task.dto.EmployeeTaskBulkCreateDto;
+import java.util.Map;
+
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.task.dto.EmployeeTaskCreateDto;
 import com.fleetmanagement.kitchencrmbackend.modules.task.dto.EmployeeTaskDto;
@@ -69,9 +72,28 @@ public interface EmployeeTaskService {
     /**
      * Get task by ID
      */
-    ApiResponse<EmployeeTaskDto> getTaskById(Long taskId);
+    ApiResponse<EmployeeTaskDto> getTaskById(Long taskId, Long userId);
+
+    // ---- Assignment flow (admin -> staff) ----
+
+    /** One task to several staff (one row each). SUPER_ADMIN only at the controller. */
+    ApiResponse<List<EmployeeTaskDto>> assignMany(EmployeeTaskBulkCreateDto dto, Long assignedByUserId);
+
+    /** Everything this admin has assigned, newest due first. */
+    ApiResponse<List<EmployeeTaskDto>> getTasksAssignedBy(Long adminId);
+
+    /** Staff bell feed: {count, tasks[]} - open tasks due today or earlier, plus any not yet acknowledged. */
+    ApiResponse<Map<String, Object>> getMyDueTasks(Long userId);
+
+    /** Admin bell feed: {count, tasks[]} - completed-but-unseen and overdue tasks this admin assigned. */
+    ApiResponse<Map<String, Object>> getAssignerAttention(Long adminId);
+
+    /** Stamp acknowledged_at on all my open, unseen assignments; returns how many. */
+    ApiResponse<Integer> acknowledgeAllMine(Long userId);
+
+    /** The assigner has seen this completion (drops it from their bell). */
+    ApiResponse<EmployeeTaskDto> markCompletionSeen(Long taskId, Long adminId);
+
+    /** The assigner has seen every completion; returns how many. */
+    ApiResponse<Integer> markAllCompletionsSeen(Long adminId);
 }
-
-
-
-

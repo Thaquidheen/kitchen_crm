@@ -18,7 +18,8 @@ interface CategorySectionProps {
   taxPercent: number;
   onMarginChange?: (value: number) => void;
   onTaxChange: (value: number) => void;
-  total: { marginAmount: number; finalTotal: number };
+  /** finalTotal null = not knowable for this viewer yet (staff, before the first save). */
+  total: { marginAmount: number; finalTotal: number | null };
   showMargins: boolean;
 }
 
@@ -136,9 +137,12 @@ function CategorySection({
           <div className="flex justify-between items-center">
             <span className="text-xs text-text-600">Category Total</span>
             <span className="text-[13px] font-semibold text-text-900 tabular-nums">
-              ₹{total.finalTotal.toLocaleString('en-IN')}
+              {total.finalTotal == null ? '—' : `₹${total.finalTotal.toLocaleString('en-IN')}`}
             </span>
           </div>
+          {total.finalTotal == null && (
+            <p className="mt-1 mb-0 text-[11px] text-text-500">Available once the quotation is saved.</p>
+          )}
         </div>
       </div>
     </div>
@@ -187,6 +191,19 @@ export interface CategoryPricingPanelProps {
   onMiscellaneousMarginChange?: (value: number) => void;
   onMiscellaneousTaxChange?: (value: number) => void;
 
+  /**
+   * Per-category totals as computed and stored by the SERVER (already include margin and tax).
+   * Staff are sent neither unit prices nor margins, so they cannot derive these in the browser —
+   * these are the only correct figures for them. A super admin still computes live, so that
+   * editing a margin or tax updates the total immediately.
+   */
+  serverCategoryTotals?: {
+    accessories?: number | null;
+    cabinets?: number | null;
+    doors?: number | null;
+    lighting?: number | null;
+  };
+
   // User role for conditional rendering
   userRole?: 'ROLE_SUPER_ADMIN' | 'ROLE_STAFF';
 
@@ -220,6 +237,7 @@ export function CategoryPricingPanel({
   miscellaneousTaxPercentage = 18,
   onMiscellaneousMarginChange,
   onMiscellaneousTaxChange,
+  serverCategoryTotals,
   // Fail closed. This defaulted to ROLE_SUPER_ADMIN, so any call site that forgot the optional
   // prop would have shown staff the margins.
   userRole = 'ROLE_STAFF',
@@ -264,19 +282,48 @@ export function CategoryPricingPanel({
       };
     };
 
-    return {
-      accessories: calculateCategoryTotal(categorySubtotals.accessories, accessoriesMargin, accessoriesTax),
-      cabinets: calculateCategoryTotal(categorySubtotals.cabinets, cabinetsMargin, cabinetsTax),
-      doors: calculateCategoryTotal(categorySubtotals.doors, doorsMargin, doorsTax),
-      lighting: calculateCategoryTotal(categorySubtotals.lighting, lightingMargin, lightingTax),
+    // For a viewer without the inputs (staff), the computed figure is meaningless — it is 0
+    // because the prices were withheld. Substitute the server figure. An empty category is a
+    // genuine 0; a non-empty one with no server figure is simply not known yet.
+    const resolve = (
+      computed: { marginAmount: number; finalTotal: number },
+      server: number | null | undefined,
+      itemCount: number,
+    ) => {
+      if (showMargins) return computed;
+      if (server != null) return { ...computed, finalTotal: Number(server) };
+      return { ...computed, finalTotal: itemCount === 0 ? 0 : null };
     };
-  }, [categorySubtotals, accessoriesMargin, accessoriesTax, cabinetsMargin, cabinetsTax, doorsMargin, doorsTax, lightingMargin, lightingTax]);
 
-  const grandTotal = categoryTotals.accessories.finalTotal +
-    categoryTotals.cabinets.finalTotal +
-    categoryTotals.doors.finalTotal +
-    categoryTotals.lighting.finalTotal +
-    otherExpensesTotal;
+    return {
+      accessories: resolve(
+        calculateCategoryTotal(categorySubtotals.accessories, accessoriesMargin, accessoriesTax),
+        serverCategoryTotals?.accessories, accessories.length),
+      cabinets: resolve(
+        calculateCategoryTotal(categorySubtotals.cabinets, cabinetsMargin, cabinetsTax),
+        serverCategoryTotals?.cabinets, cabinets.length),
+      doors: resolve(
+        calculateCategoryTotal(categorySubtotals.doors, doorsMargin, doorsTax),
+        serverCategoryTotals?.doors, doors.length),
+      lighting: resolve(
+        calculateCategoryTotal(categorySubtotals.lighting, lightingMargin, lightingTax),
+        serverCategoryTotals?.lighting, lighting.length),
+    };
+  }, [categorySubtotals, accessoriesMargin, accessoriesTax, cabinetsMargin, cabinetsTax, doorsMargin,
+      doorsTax, lightingMargin, lightingTax, showMargins, serverCategoryTotals,
+      accessories.length, cabinets.length, doors.length, lighting.length]);
+
+  // One unknown category makes the grand total unknown too — better an em dash than a number
+  // that is quietly missing a category.
+  const categoryFinals = [
+    categoryTotals.accessories.finalTotal,
+    categoryTotals.cabinets.finalTotal,
+    categoryTotals.doors.finalTotal,
+    categoryTotals.lighting.finalTotal,
+  ];
+  const grandTotal: number | null = categoryFinals.some((v) => v == null)
+    ? null
+    : categoryFinals.reduce((sum, v) => (sum as number) + (v as number), 0)! + otherExpensesTotal;
 
   return (
     <Card className="p-4 sm:p-5 bg-background-800 border-background-600 rounded-xl">
@@ -374,7 +421,7 @@ export function CategoryPricingPanel({
           <div className="flex items-baseline justify-between">
             <span className="text-[13px] font-[650] text-text-900">Grand Total</span>
             <span className="text-xl font-bold text-primary-600 tabular-nums">
-              ₹{grandTotal.toLocaleString('en-IN')}
+              {grandTotal == null ? '—' : `₹${grandTotal.toLocaleString('en-IN')}`}
             </span>
           </div>
         </div>

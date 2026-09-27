@@ -182,18 +182,21 @@ public class ApplianceCustomerServiceImpl implements ApplianceCustomerService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<ApplianceFollowUpDto>> getFollowUps(Long id) {
+    public ApiResponse<List<ApplianceFollowUpDto>> getFollowUps(Long id, long viewerId) {
         if (!repository.existsById(id)) {
             return ApiResponse.error("Entry not found");
         }
+        // Only the caller's own call notes (a super admin sees all). The "last called" date on
+        // the list stays global - see the repository note.
         List<ApplianceFollowUpDto> followUps = followUpRepository
-                .findByApplianceCustomerIdOrderByCalledAtDescIdDesc(id)
+                .findForApplianceCustomer(id, viewerId)
                 .stream().map(this::toFollowUpDto).toList();
         return ApiResponse.success(followUps);
     }
 
     @Override
-    public ApiResponse<ApplianceFollowUpDto> addFollowUp(Long id, ApplianceFollowUpRequest request, String author) {
+    public ApiResponse<ApplianceFollowUpDto> addFollowUp(Long id, ApplianceFollowUpRequest request, String author,
+                                                         Long authorUserId) {
         ApplianceCustomer entity = repository.findById(id).orElse(null);
         if (entity == null) {
             return ApiResponse.error("Entry not found");
@@ -206,6 +209,7 @@ public class ApplianceCustomerServiceImpl implements ApplianceCustomerService {
         entry.setCalledAt(request.getCalledAt() != null ? request.getCalledAt() : LocalDateTime.now());
         entry.setNote(request.getNote().trim());
         entry.setCreatedBy(author);
+        entry.setCreatedByUserId(authorUserId);
         entry.setCreatedAt(LocalDateTime.now());
         ApplianceCustomerFollowUp saved = followUpRepository.saveAndFlush(entry);
         syncLastCalledAt(entity);
@@ -213,14 +217,18 @@ public class ApplianceCustomerServiceImpl implements ApplianceCustomerService {
     }
 
     @Override
-    public ApiResponse<String> deleteFollowUp(Long id, Long followUpId) {
+    public ApiResponse<String> deleteFollowUp(Long id, Long followUpId, long viewerId) {
         ApplianceCustomer entity = repository.findById(id).orElse(null);
         if (entity == null) {
             return ApiResponse.error("Entry not found");
         }
         ApplianceCustomerFollowUp target = followUpRepository.findById(followUpId).orElse(null);
+        // Same answer for missing, foreign-entry and foreign-author rows: never leak existence.
+        boolean mine = viewerId == -1L
+                || (target != null && target.getCreatedByUserId() != null
+                    && target.getCreatedByUserId() == viewerId);
         if (target == null || target.getApplianceCustomer() == null
-                || !id.equals(target.getApplianceCustomer().getId())) {
+                || !id.equals(target.getApplianceCustomer().getId()) || !mine) {
             return ApiResponse.error("Follow-up not found on this entry");
         }
         followUpRepository.delete(target);

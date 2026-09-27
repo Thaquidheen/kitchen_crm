@@ -16,6 +16,8 @@ import { useGetCustomerStatisticsQuery } from '@/features/customers/customersAPI
 import { useGetQuotationsQuery, useGetRemindersQuery, useGetReminderStatsQuery } from '@/app/baseApi';
 import ROUTES from '@/routes/routes.config';
 import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
+import { useAppSelector } from '@/app/hooks';
+import KitchenBuildPanel from '@/components/kitchen/KitchenBuildPanel';
 
 type RangeKey = '7D' | '30D' | '3M' | '1Y';
 const RANGES: { key: RangeKey; months: number; label: string; prev: string }[] = [
@@ -80,6 +82,10 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const [range, setRange] = useState<RangeKey>('30D');
   const isSuperAdmin = useIsSuperAdmin();
+  // Greet whoever is signed in. This used to read "Super Admin" for everyone, so a staff member
+  // was greeted by their manager's title.
+  const authUser = useAppSelector((state) => state.auth.user);
+  const displayName = authUser?.username?.trim() || 'there';
 
   const { data: summary, refetch: refetchSummary } = useGetDashboardSummaryQuery();
   // Skipped for staff: the endpoint is super-admin only now, and firing it would just 403.
@@ -247,10 +253,14 @@ export function DashboardPage() {
 
   return (
     <div className="w-full">
+      {/* Scroll-driven kitchen build. It attaches itself to #dashboard-main (the app's real
+          scroll container) and adds its own scroll length; everything below is untouched. */}
+      <KitchenBuildPanel />
+
       {/* Header */}
       <div className="flex items-end gap-4 flex-wrap mb-[18px]">
         <div>
-          <h1 className="m-0 text-[22px] font-[650] tracking-[-0.01em] text-text-900">{greeting}, Super Admin</h1>
+          <h1 className="m-0 text-[22px] font-[650] tracking-[-0.01em] text-text-900">{greeting}, {displayName}</h1>
           <p className="mt-[5px] mb-0 text-[13px] text-text-700">{dateLine}</p>
         </div>
         <div className="flex-1" />
@@ -533,7 +543,7 @@ export function DashboardPage() {
               View all
             </button>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" data-lenis-prevent>
             <table className="w-full min-w-[520px]">
               <thead>
                 <tr className="border-t border-background-600 bg-background-700">

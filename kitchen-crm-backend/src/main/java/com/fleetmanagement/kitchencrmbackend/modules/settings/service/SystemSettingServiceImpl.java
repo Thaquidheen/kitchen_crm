@@ -137,6 +137,33 @@ public class SystemSettingServiceImpl implements SystemSettingService {
     }
 
     @Override
+    public Map<String, String> getPriorityColors() {
+        Map<String, String> colors = new HashMap<>();
+        colors.put("LOW", getSettingValue("task_priority_color_LOW", "#9CA3AF"));
+        colors.put("MEDIUM", getSettingValue("task_priority_color_MEDIUM", "#3B82F6"));
+        colors.put("HIGH", getSettingValue("task_priority_color_HIGH", "#F97316"));
+        colors.put("URGENT", getSettingValue("task_priority_color_URGENT", "#EF4444"));
+        return colors;
+    }
+
+    @Override
+    @Transactional
+    public void updatePriorityColors(Map<String, String> colors) {
+        colors.forEach((level, hex) -> {
+            if (level == null) return;
+            String key = "task_priority_color_" + level.toUpperCase();
+            SystemSetting setting = systemSettingRepository.findBySettingKey(key)
+                    .orElseGet(() -> {
+                        SystemSetting s = new SystemSetting();
+                        s.setSettingKey(key);
+                        return s;
+                    });
+            setting.setSettingValue(hex != null ? hex : "");
+            systemSettingRepository.save(setting);
+        });
+    }
+
+    @Override
     public String getSettingValue(String key, String defaultValue) {
         return systemSettingRepository.findBySettingKey(key)
                 .map(SystemSetting::getSettingValue)

@@ -37,6 +37,11 @@ public interface SystemSettingService {
      * Get company information settings
      * @return Map of company setting keys to values
      */
+Map<String, String> getPriorityColors();
+
+    /** Upsert the per-priority task colours (keys task_priority_color_LOW/MEDIUM/HIGH/URGENT -> hex). */
+    void updatePriorityColors(Map<String, String> colors);
+
     Map<String, String> getCompanySettings();
     
     /**

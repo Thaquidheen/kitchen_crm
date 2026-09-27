@@ -52,10 +52,17 @@ export interface CompanyLogoData {
   hasLogo: string;
 }
 
+export interface PriorityColors {
+  LOW: string;
+  MEDIUM: string;
+  HIGH: string;
+  URGENT: string;
+}
+
 export const settingsApi = createApi({
   reducerPath: 'settingsApi',
   baseQuery,
-  tagTypes: ['Margins', 'CompanySettings', 'DashboardSettings', 'CompanyLogo'],
+  tagTypes: ['Margins', 'CompanySettings', 'DashboardSettings', 'CompanyLogo', 'PriorityColors'],
   endpoints: (builder) => ({
     getMargins: builder.query<ApiResponse<MarginsData>, void>({
       query: () => '/margins',
@@ -80,6 +87,18 @@ export const settingsApi = createApi({
         body: settings,
       }),
       invalidatesTags: ['CompanySettings'],
+    }),
+    getPriorityColors: builder.query<ApiResponse<PriorityColors>, void>({
+      query: () => '/priority-colors',
+      providesTags: ['PriorityColors'],
+    }),
+    updatePriorityColors: builder.mutation<ApiResponse<string>, PriorityColors>({
+      query: (colors) => ({
+        url: '/priority-colors',
+        method: 'PUT',
+        body: colors,
+      }),
+      invalidatesTags: ['PriorityColors'],
     }),
     getDashboardSettings: builder.query<ApiResponse<DashboardSettings>, void>({
       query: () => '/dashboard',
@@ -126,6 +145,8 @@ export const {
   useGetCompanyLogoQuery,
   useUploadCompanyLogoMutation,
   useDeleteCompanyLogoMutation,
+  useGetPriorityColorsQuery,
+  useUpdatePriorityColorsMutation,
 } = settingsApi;
 
 // Re-export types for convenience

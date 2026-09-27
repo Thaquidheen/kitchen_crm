@@ -1,5 +1,12 @@
 package com.fleetmanagement.kitchencrmbackend.modules.task.service;
 
+import com.fleetmanagement.kitchencrmbackend.modules.task.dto.EmployeeTaskBulkCreateDto;
+import org.springframework.beans.factory.annotation.Value;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.entity.User;
 import com.fleetmanagement.kitchencrmbackend.modules.auth.repository.UserRepository;
@@ -29,6 +36,15 @@ public class EmployeeTaskServiceImpl implements EmployeeTaskService {
 
     @Autowired
     private UserRepository userRepository;
+
+    // Same day-granularity convention as reminders and to-dos: the server runs UTC, but
+    // "today" (for due / overdue) is the business day in this zone.
+    @Value("${app.business-timezone:Asia/Kolkata}")
+    private String businessTimezone;
+
+    private LocalDate today() {
+        return LocalDate.now(ZoneId.of(businessTimezone));
+    }
 
     @Override
     public ApiResponse<EmployeeTaskDto> createTask(EmployeeTaskCreateDto createDto, Long assignedByUserId) {
@@ -99,13 +115,20 @@ public class EmployeeTaskServiceImpl implements EmployeeTaskService {
             return ApiResponse.error("Task not found");
         }
 
-        // Staff can only mark their own tasks as complete
-        if (!task.getAssignedTo().getId().equals(completedByUserId)) {
+        // The assignee completes their own work; the assigner may also close it on their behalf.
+        boolean byAssignee = task.getAssignedTo().getId().equals(completedByUserId);
+        boolean byAssigner = task.getAssignedBy().getId().equals(completedByUserId);
+        if (!byAssignee && !byAssigner) {
             return ApiResponse.error("You can only mark your own tasks as complete");
         }
 
         task.setCompleted(true);
         task.setCompletedAt(LocalDateTime.now());
+        // A completion is "news" for the assigner until they see it - unless they closed it themselves.
+        task.setCompletionSeenAt(byAssigner ? LocalDateTime.now() : null);
+        if (task.getAcknowledgedAt() == null) {
+            task.setAcknowledgedAt(LocalDateTime.now());
+        }
         if (task.getStatus() == EmployeeTask.TaskStatus.PENDING || task.getStatus() == EmployeeTask.TaskStatus.IN_PROGRESS) {
             task.setStatus(EmployeeTask.TaskStatus.COMPLETED);
         }
@@ -121,8 +144,18 @@ public class EmployeeTaskServiceImpl implements EmployeeTaskService {
             return ApiResponse.error("Task not found");
         }
 
+        // Reopen: the assignee (undo) or the assigner (send it back). Clearing the seen-stamp means
+        // a later re-completion shows up in the assigner's bell again.
+        if (!task.getAssignedTo().getId().equals(updatedByUserId)
+                && !task.getAssignedBy().getId().equals(updatedByUserId)) {
+            return ApiResponse.error("You can only reopen your own tasks");
+        }
         task.setCompleted(false);
         task.setCompletedAt(null);
+        task.setCompletionSeenAt(null);
+        if (task.getStatus() == EmployeeTask.TaskStatus.COMPLETED) {
+            task.setStatus(EmployeeTask.TaskStatus.PENDING);
+        }
 
         EmployeeTask updated = taskRepository.save(task);
         return ApiResponse.success("Task marked as incomplete", convertToDto(updated));
@@ -157,7 +190,7 @@ public class EmployeeTaskServiceImpl implements EmployeeTaskService {
 
     @Override
     public ApiResponse<List<EmployeeTaskDto>> getTasksByEmployee(Long employeeId) {
-        List<EmployeeTask> tasks = taskRepository.findByAssignedToId(employeeId);
+        List<EmployeeTask> tasks = taskRepository.findByAssignedToIdOrderByTaskDateAscIdAsc(employeeId);
         List<EmployeeTaskDto> dtos = tasks.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
@@ -262,12 +295,94 @@ public class EmployeeTaskServiceImpl implements EmployeeTaskService {
     }
 
     @Override
-    public ApiResponse<EmployeeTaskDto> getTaskById(Long taskId) {
+    public ApiResponse<EmployeeTaskDto> getTaskById(Long taskId, Long userId) {
         EmployeeTask task = taskRepository.findById(taskId).orElse(null);
         if (task == null) {
             return ApiResponse.error("Task not found");
         }
+        // Same answer for missing and foreign tasks so existence is never leaked.
+        if (!task.getAssignedTo().getId().equals(userId) && !task.getAssignedBy().getId().equals(userId)) {
+            return ApiResponse.error("Task not found");
+        }
         return ApiResponse.success(convertToDto(task));
+    }
+
+    @Override
+    public ApiResponse<List<EmployeeTaskDto>> assignMany(EmployeeTaskBulkCreateDto dto, Long assignedByUserId) {
+        User admin = userRepository.findById(assignedByUserId).orElse(null);
+        if (admin == null) {
+            return ApiResponse.error("Admin user not found");
+        }
+        EmployeeTask.TaskPriority priority = dto.getPriority() != null
+                ? EmployeeTask.TaskPriority.valueOf(dto.getPriority()) : EmployeeTask.TaskPriority.MEDIUM;
+        List<EmployeeTaskDto> created = new ArrayList<>();
+        // De-duplicate so a double-toggled checkbox cannot assign the same task twice.
+        for (Long employeeId : new LinkedHashSet<>(dto.getEmployeeIds())) {
+            User employee = userRepository.findById(employeeId).orElse(null);
+            if (employee == null) {
+                return ApiResponse.error("Staff member not found: " + employeeId);
+            }
+            EmployeeTask task = new EmployeeTask();
+            task.setAssignedTo(employee);
+            task.setAssignedBy(admin);
+            task.setTaskTitle(dto.getTaskTitle().trim());
+            task.setTaskDescription(dto.getTaskDescription());
+            task.setTaskDate(dto.getTaskDate());
+            task.setNotes(dto.getNotes());
+            task.setPriority(priority);
+            task.setStatus(EmployeeTask.TaskStatus.PENDING);
+            task.setCompleted(false);
+            created.add(convertToDto(taskRepository.save(task)));
+        }
+        return ApiResponse.success("Task assigned to " + created.size() + " staff member"
+                + (created.size() == 1 ? "" : "s"), created);
+    }
+
+    @Override
+    public ApiResponse<List<EmployeeTaskDto>> getTasksAssignedBy(Long adminId) {
+        return ApiResponse.success(taskRepository.findByAssignedByIdOrderByTaskDateDescIdDesc(adminId)
+                .stream().map(this::convertToDto).collect(Collectors.toList()));
+    }
+
+    @Override
+    public ApiResponse<Map<String, Object>> getMyDueTasks(Long userId) {
+        List<EmployeeTask> due = taskRepository.findDueForAssignee(userId, today());
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("count", due.size());
+        payload.put("tasks", due.stream().map(this::convertToDto).collect(Collectors.toList()));
+        return ApiResponse.success(payload);
+    }
+
+    @Override
+    public ApiResponse<Map<String, Object>> getAssignerAttention(Long adminId) {
+        List<EmployeeTask> items = taskRepository.findAttentionForAssigner(adminId, today());
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("count", items.size());
+        payload.put("tasks", items.stream().map(this::convertToDto).collect(Collectors.toList()));
+        return ApiResponse.success(payload);
+    }
+
+    @Override
+    public ApiResponse<Integer> acknowledgeAllMine(Long userId) {
+        return ApiResponse.success(taskRepository.acknowledgeAllForAssignee(userId, LocalDateTime.now()));
+    }
+
+    @Override
+    public ApiResponse<EmployeeTaskDto> markCompletionSeen(Long taskId, Long adminId) {
+        EmployeeTask task = taskRepository.findById(taskId).orElse(null);
+        if (task == null || !task.getAssignedBy().getId().equals(adminId)) {
+            return ApiResponse.error("Task not found");
+        }
+        if (Boolean.TRUE.equals(task.getCompleted()) && task.getCompletionSeenAt() == null) {
+            task.setCompletionSeenAt(LocalDateTime.now());
+            task = taskRepository.save(task);
+        }
+        return ApiResponse.success(convertToDto(task));
+    }
+
+    @Override
+    public ApiResponse<Integer> markAllCompletionsSeen(Long adminId) {
+        return ApiResponse.success(taskRepository.markAllCompletionsSeen(adminId, LocalDateTime.now()));
     }
 
     private EmployeeTaskDto convertToDto(EmployeeTask task) {
@@ -287,6 +402,11 @@ public class EmployeeTaskServiceImpl implements EmployeeTaskService {
         dto.setStatus(task.getStatus().name());
         dto.setCreatedAt(task.getCreatedAt());
         dto.setUpdatedAt(task.getUpdatedAt());
+        dto.setAcknowledgedAt(task.getAcknowledgedAt());
+        dto.setCompletionSeenAt(task.getCompletionSeenAt());
+        boolean open = !Boolean.TRUE.equals(task.getCompleted());
+        dto.setOverdue(open && task.getTaskDate() != null && task.getTaskDate().isBefore(today()));
+        dto.setNewForAssignee(open && task.getAcknowledgedAt() == null);
         return dto;
     }
 }

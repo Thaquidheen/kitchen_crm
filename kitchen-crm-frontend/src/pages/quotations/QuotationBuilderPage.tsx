@@ -439,6 +439,12 @@ export function QuotationBuilderPage() {
           customerPlanImageId: pi.customerPlanImageId,
           designPhaseFileId: pi.designPhaseFileId,
         })),
+        // Server-computed totals: the only correct figures for a staff viewer.
+        totalAmount: k.totalAmount,
+        accessoriesFinalTotal: k.accessoriesFinalTotal,
+        cabinetsFinalTotal: k.cabinetsFinalTotal,
+        doorsFinalTotal: k.doorsFinalTotal,
+        lightingFinalTotal: k.lightingFinalTotal,
         accessories: mergeDuplicateAccessories((k.accessories || []).map(mapLoadedAccessory)),
         ...(() => {
           const paired = pairCabinetsAndDoors(k.cabinets || [], k.doors || []);
@@ -1645,6 +1651,12 @@ export function QuotationBuilderPage() {
                     {/* Category Pricing Panel */}
                     <div className="mt-6">
                       <CategoryPricingPanel
+                        serverCategoryTotals={{
+                          accessories: (existingQuotation as any)?.accessoriesFinalTotal,
+                          cabinets: (existingQuotation as any)?.cabinetsFinalTotal,
+                          doors: (existingQuotation as any)?.doorsFinalTotal,
+                          lighting: (existingQuotation as any)?.lightingFinalTotal,
+                        }}
                         accessories={formData.accessories || []}
                         cabinets={formData.cabinets || []}
                         doors={formData.doors || []}
@@ -1677,6 +1689,12 @@ export function QuotationBuilderPage() {
                     {/* Category Totals */}
                     <div className="mt-6">
                       <CategoryTotals
+                        serverCategoryTotals={{
+                          accessories: (existingQuotation as any)?.accessoriesFinalTotal,
+                          cabinets: (existingQuotation as any)?.cabinetsFinalTotal,
+                          doors: (existingQuotation as any)?.doorsFinalTotal,
+                          lighting: (existingQuotation as any)?.lightingFinalTotal,
+                        }}
                         accessories={formData.accessories || []}
                         cabinets={formData.cabinets || []}
                         doors={formData.doors || []}
@@ -1880,6 +1898,8 @@ export function QuotationBuilderPage() {
 
                 {/* Preview */}
                 <QuotationPreview
+                  serverGrandTotal={(existingQuotation as any)?.totalAmount}
+                  serverTaxAmount={(existingQuotation as any)?.taxAmount}
                   customer={selectedCustomer}
                   accessories={formData.accessories || []}
                   cabinets={formData.cabinets || []}
@@ -1966,6 +1986,7 @@ export function QuotationBuilderPage() {
                       {kitchen.kitchenName}
                     </h4>
                     <SelectedProductsList
+                      serverGrandTotal={(kitchen as any)?.totalAmount}
                       accessories={kitchen.accessories || []}
                       cabinets={kitchen.cabinets || []}
                       doors={kitchen.doors || []}
@@ -2034,6 +2055,7 @@ export function QuotationBuilderPage() {
             ) : (
               // Show global products (backward compatibility)
               <SelectedProductsList
+                serverGrandTotal={(existingQuotation as any)?.totalAmount}
                 accessories={formData.accessories || []}
                 cabinets={formData.cabinets || []}
                 doors={formData.doors || []}

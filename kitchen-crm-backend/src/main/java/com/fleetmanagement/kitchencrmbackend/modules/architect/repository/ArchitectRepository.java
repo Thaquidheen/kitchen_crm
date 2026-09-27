@@ -19,9 +19,11 @@ public interface ArchitectRepository extends JpaRepository<Architect, Long> {
      * finders this repository used to expose — which would have become eight combinations once
      * partner type was added. Same shape as ApplianceCustomerRepository.findByFilters.
      *
-     * <p>Search is a genuine OR across name/firm/principal/contact. The previous implementation
-     * searched by name and only fell back to firm when the name search returned nothing, so a
-     * term matching a single record by name hid every firm match.
+     * <p>Search is a genuine OR across every column the table actually shows - name, firm,
+     * principal, contact, location and email. The previous implementation searched by name and
+     * only fell back to firm when the name search returned nothing, so a term matching a single
+     * record by name hid every firm match; and location/email were missing entirely, so typing a
+     * place like "CALICUT" - a column right there in the list - always came back empty.
      */
     @Query("SELECT a FROM Architect a WHERE " +
             "(:partnerType IS NULL OR a.partnerType = :partnerType) AND " +
@@ -33,7 +35,9 @@ public interface ArchitectRepository extends JpaRepository<Architect, Long> {
             " OR LOWER(a.architectureName) LIKE LOWER(CONCAT('%', :search, '%')) " +
             " OR LOWER(a.firm) LIKE LOWER(CONCAT('%', :search, '%')) " +
             " OR LOWER(a.principalArchitectName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            " OR LOWER(a.contactNumber) LIKE LOWER(CONCAT('%', :search, '%')))")
+            " OR LOWER(a.contactNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            " OR LOWER(a.location) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            " OR LOWER(a.email) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Architect> findByFilters(@Param("partnerType") Architect.PartnerType partnerType,
                                   @Param("visited") Boolean visited,
                                   @Param("highlighted") Boolean highlighted,

@@ -63,6 +63,14 @@ public class CustomerReminder extends Auditable {
     private String createdBy;
 
     /**
+     * Creator, as a real user id. Visibility is gated on this: staff see only their own rows,
+     * a super admin sees all. NULL means a legacy row whose creator could not be resolved from
+     * the old display-name column (V117) - those stay super-admin-only rather than being guessed.
+     */
+    @Column(name = "created_by_user_id")
+    private Long createdByUserId;
+
+    /**
      * Which flow created this reminder, so the bell and the Reminders page can filter by module.
      * Production and follow-up rows used to be indistinguishable from manual ones (V102).
      */

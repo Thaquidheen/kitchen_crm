@@ -27,7 +27,8 @@ public class CustomerFollowUpServiceImpl implements CustomerFollowUpService {
     private CustomerReminderService reminderService;
 
     @Override
-    public ApiResponse<CustomerFollowUpDto> createFollowUp(CustomerFollowUpDto dto, String createdBy) {
+    public ApiResponse<CustomerFollowUpDto> createFollowUp(CustomerFollowUpDto dto, String createdBy,
+                                                          Long createdByUserId) {
         Customer customer = customerRepository.findById(dto.getCustomerId()).orElse(null);
         if (customer == null) {
             return ApiResponse.error("Customer not found");
@@ -38,6 +39,7 @@ public class CustomerFollowUpServiceImpl implements CustomerFollowUpService {
         followUp.setNotes(dto.getNotes());
         followUp.setNextFollowUpAt(dto.getNextFollowUpAt());
         followUp.setCreatedBy(createdBy);
+        followUp.setCreatedByUserId(createdByUserId);
         CustomerFollowUp saved = followUpRepository.save(followUp);
 
         // A scheduled next follow-up becomes a reminder so the header bell notifies on time.
@@ -48,21 +50,24 @@ public class CustomerFollowUpServiceImpl implements CustomerFollowUpService {
             reminder.setNotes(dto.getNotes());
             reminder.setRemindAt(dto.getNextFollowUpAt());
             reminder.setSource("FOLLOW_UP");
-            reminderService.createReminder(reminder, createdBy);
+            reminderService.createReminder(reminder, createdBy, createdByUserId);
         }
 
         return ApiResponse.success("Follow-up recorded", convertToDto(saved));
     }
 
     @Override
-    public ApiResponse<List<CustomerFollowUpDto>> getFollowUpsForCustomer(Long customerId) {
-        return ApiResponse.success(followUpRepository.findByCustomerIdOrderByCreatedAtDesc(customerId)
+    public ApiResponse<List<CustomerFollowUpDto>> getFollowUpsForCustomer(Long customerId, long viewerId) {
+        return ApiResponse.success(followUpRepository.findForCustomer(customerId, viewerId)
                 .stream().map(this::convertToDto).toList());
     }
 
     @Override
-    public ApiResponse<String> deleteFollowUp(Long id) {
-        if (!followUpRepository.existsById(id)) {
+    public ApiResponse<String> deleteFollowUp(Long id, long viewerId) {
+        CustomerFollowUp existing = followUpRepository.findById(id).orElse(null);
+        // Same answer for missing and foreign rows so existence is never leaked.
+        if (existing == null || (viewerId != -1L
+                && (existing.getCreatedByUserId() == null || existing.getCreatedByUserId() != viewerId))) {
             return ApiResponse.error("Follow-up not found");
         }
         followUpRepository.deleteById(id);

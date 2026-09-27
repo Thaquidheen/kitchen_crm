@@ -248,7 +248,7 @@ export function ArchitectsPage() {
             <input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Filter by name, firm, contact…"
+              placeholder="Filter by name, firm, contact, location…"
               className="w-full h-[34px] pl-[34px] pr-3 rounded-[10px] border border-background-600 bg-background-900 text-text-900 text-[13px] outline-none focus:border-primary-600 transition-colors placeholder:text-text-500"
             />
           </div>

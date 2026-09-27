@@ -15,9 +15,24 @@ import java.util.List;
 @Repository
 public interface CustomerReminderRepository extends JpaRepository<CustomerReminder, Long> {
 
-    List<CustomerReminder> findByCustomerIdOrderByRemindAtDesc(Long customerId);
+    /*
+     * Every read below is scoped to the creator: pass ViewerScope.ALL (-1) for a super admin,
+     * or a user id to see only that person's rows. The scope is a required parameter rather
+     * than an optional filter so a new read path cannot silently be left unscoped.
+     * Rows with a NULL created_by_user_id (legacy) never equal a real id, so they are visible
+     * only under ALL - i.e. to a super admin.
+     */
+    String SCOPE = "(:viewerId = -1 OR r.createdByUserId = :viewerId)";
 
-    List<CustomerReminder> findByApplianceCustomerIdOrderByRemindAtDesc(Long applianceCustomerId);
+    @Query("SELECT r FROM CustomerReminder r WHERE r.customer.id = :customerId AND " + SCOPE
+            + " ORDER BY r.remindAt DESC")
+    List<CustomerReminder> findForCustomer(@Param("customerId") Long customerId,
+                                           @Param("viewerId") long viewerId);
+
+    @Query("SELECT r FROM CustomerReminder r WHERE r.applianceCustomer.id = :applianceCustomerId AND " + SCOPE
+            + " ORDER BY r.remindAt DESC")
+    List<CustomerReminder> findForApplianceCustomer(@Param("applianceCustomerId") Long applianceCustomerId,
+                                                    @Param("viewerId") long viewerId);
 
     // Scheduler: pending reminders whose day has arrived
     List<CustomerReminder> findByStatusAndRemindAtBefore(CustomerReminder.ReminderStatus status, LocalDateTime time);
@@ -26,17 +41,24 @@ public interface CustomerReminderRepository extends JpaRepository<CustomerRemind
     List<CustomerReminder> findByStatusOrderByRemindAtDesc(CustomerReminder.ReminderStatus status);
 
     // Reminders list: not-done reminders ordered soonest first
-    List<CustomerReminder> findByStatusInOrderByRemindAtAsc(List<CustomerReminder.ReminderStatus> statuses);
+    @Query("SELECT r FROM CustomerReminder r WHERE r.status IN :statuses AND " + SCOPE
+            + " ORDER BY r.remindAt ASC")
+    List<CustomerReminder> findOpen(@Param("statuses") List<CustomerReminder.ReminderStatus> statuses,
+                                    @Param("viewerId") long viewerId);
 
-    Long countByStatus(CustomerReminder.ReminderStatus status);
+    @Query("SELECT COUNT(r) FROM CustomerReminder r WHERE r.status = :status AND " + SCOPE)
+    long countWithStatus(@Param("status") CustomerReminder.ReminderStatus status,
+                         @Param("viewerId") long viewerId);
 
     /**
      * Bell feed: every open reminder dated today or earlier. Bounded by the start of tomorrow
      * rather than by "now", so a reminder is visible for the whole of its own day.
      */
     @EntityGraph(attributePaths = {"customer", "applianceCustomer", "architect"})
-    List<CustomerReminder> findByStatusNotAndRemindAtLessThanOrderByRemindAtAsc(
-            CustomerReminder.ReminderStatus excludedStatus, LocalDateTime endExclusive);
+    @Query("SELECT r FROM CustomerReminder r WHERE r.status <> :excludedStatus AND r.remindAt < :endExclusive AND " + SCOPE + " ORDER BY r.remindAt ASC")
+    List<CustomerReminder> findDueForBell(@Param("excludedStatus") CustomerReminder.ReminderStatus excludedStatus,
+                                          @Param("endExclusive") LocalDateTime endExclusive,
+                                          @Param("viewerId") long viewerId);
 
     /**
      * Purge one module's reminders for a customer — used when a production job is deleted so its
@@ -65,6 +87,7 @@ public interface CustomerReminderRepository extends JpaRepository<CustomerRemind
             + "     OR (:ownerFilter = 'CUSTOMER' AND r.customer IS NOT NULL) "
             + "     OR (:ownerFilter = 'APPLIANCE' AND r.applianceCustomer IS NOT NULL) "
             + "     OR (:ownerFilter = 'ARCHITECT' AND r.architect IS NOT NULL)) "
+            + "AND (:viewerId = -1 OR r.createdByUserId = :viewerId) "
             + "AND r.remindAt >= :from AND r.remindAt < :to "
             + "AND (LOWER(r.title) LIKE :q OR LOWER(COALESCE(c.name, a.name, ar.architectureName, '')) LIKE :q)",
            countQuery = "SELECT COUNT(r) FROM CustomerReminder r "
@@ -75,6 +98,7 @@ public interface CustomerReminderRepository extends JpaRepository<CustomerRemind
             + "     OR (:ownerFilter = 'CUSTOMER' AND r.customer IS NOT NULL) "
             + "     OR (:ownerFilter = 'APPLIANCE' AND r.applianceCustomer IS NOT NULL) "
             + "     OR (:ownerFilter = 'ARCHITECT' AND r.architect IS NOT NULL)) "
+            + "AND (:viewerId = -1 OR r.createdByUserId = :viewerId) "
             + "AND r.remindAt >= :from AND r.remindAt < :to "
             + "AND (LOWER(r.title) LIKE :q OR LOWER(COALESCE(c.name, a.name, ar.architectureName, '')) LIKE :q)")
     Page<CustomerReminder> search(@Param("statuses") List<CustomerReminder.ReminderStatus> statuses,
@@ -83,27 +107,40 @@ public interface CustomerReminderRepository extends JpaRepository<CustomerRemind
                                   @Param("from") LocalDateTime from,
                                   @Param("to") LocalDateTime to,
                                   @Param("q") String q,
+                                  @Param("viewerId") long viewerId,
                                   Pageable pageable);
 
     // Per-source chip counts (open = not DONE), matching the bell's partitioning: appliance by
     // owner, production by source, customers = the remaining customer-owned rows.
-    long countByStatusNotAndApplianceCustomerIsNotNull(CustomerReminder.ReminderStatus excludedStatus);
+    @Query("SELECT COUNT(r) FROM CustomerReminder r WHERE r.status <> :excludedStatus AND r.applianceCustomer IS NOT NULL AND " + SCOPE)
+    long countOpenApplianceOwned(@Param("excludedStatus") CustomerReminder.ReminderStatus excludedStatus,
+                                 @Param("viewerId") long viewerId);
 
-    long countByStatusNotAndArchitectIsNotNull(CustomerReminder.ReminderStatus excludedStatus);
+    @Query("SELECT COUNT(r) FROM CustomerReminder r WHERE r.status <> :excludedStatus AND r.architect IS NOT NULL AND " + SCOPE)
+    long countOpenArchitectOwned(@Param("excludedStatus") CustomerReminder.ReminderStatus excludedStatus,
+                                 @Param("viewerId") long viewerId);
 
-    long countByStatusNotAndSource(CustomerReminder.ReminderStatus excludedStatus,
-                                   CustomerReminder.ReminderSource source);
+    @Query("SELECT COUNT(r) FROM CustomerReminder r WHERE r.status <> :excludedStatus AND r.source = :source AND " + SCOPE)
+    long countOpenBySource(@Param("excludedStatus") CustomerReminder.ReminderStatus excludedStatus,
+                           @Param("source") CustomerReminder.ReminderSource source,
+                           @Param("viewerId") long viewerId);
 
-    long countByStatusNotAndSourceInAndCustomerIsNotNull(CustomerReminder.ReminderStatus excludedStatus,
-                                                         List<CustomerReminder.ReminderSource> sources);
+    @Query("SELECT COUNT(r) FROM CustomerReminder r WHERE r.status <> :excludedStatus AND r.source IN :sources AND r.customer IS NOT NULL AND " + SCOPE)
+    long countOpenCustomerOwned(@Param("excludedStatus") CustomerReminder.ReminderStatus excludedStatus,
+                                @Param("sources") List<CustomerReminder.ReminderSource> sources,
+                                @Param("viewerId") long viewerId);
 
     // Chip counts. "Open" = anything not DONE.
-    long countByStatusNotAndRemindAtGreaterThanEqualAndRemindAtLessThan(
-            CustomerReminder.ReminderStatus excludedStatus, LocalDateTime from, LocalDateTime to);
+    @Query("SELECT COUNT(r) FROM CustomerReminder r WHERE r.status <> :excludedStatus AND r.remindAt >= :from AND r.remindAt < :to AND " + SCOPE)
+    long countOpenBetween(@Param("excludedStatus") CustomerReminder.ReminderStatus excludedStatus,
+                          @Param("from") LocalDateTime from, @Param("to") LocalDateTime to,
+                          @Param("viewerId") long viewerId);
 
-    long countByStatusNotAndRemindAtLessThan(
-            CustomerReminder.ReminderStatus excludedStatus, LocalDateTime to);
+    @Query("SELECT COUNT(r) FROM CustomerReminder r WHERE r.status <> :excludedStatus AND r.remindAt < :to AND " + SCOPE)
+    long countOpenBefore(@Param("excludedStatus") CustomerReminder.ReminderStatus excludedStatus,
+                         @Param("to") LocalDateTime to, @Param("viewerId") long viewerId);
 
-    long countByStatusNotAndRemindAtGreaterThanEqual(
-            CustomerReminder.ReminderStatus excludedStatus, LocalDateTime from);
+    @Query("SELECT COUNT(r) FROM CustomerReminder r WHERE r.status <> :excludedStatus AND r.remindAt >= :from AND " + SCOPE)
+    long countOpenFrom(@Param("excludedStatus") CustomerReminder.ReminderStatus excludedStatus,
+                       @Param("from") LocalDateTime from, @Param("viewerId") long viewerId);
 }

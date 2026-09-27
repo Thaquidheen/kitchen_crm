@@ -8,11 +8,14 @@
  */
 
 import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FilterChips } from '../../components/shared/FilterChips';
 import { fmtReminderDate as fmtDate, fmtReminderTime as fmtTime } from '../../utils/reminderFormat';
-import { Search, Plus, Check, Pencil, Trash2, BellRing, ListTodo } from 'lucide-react';
+import { Search, Plus, Check, Pencil, Trash2, BellRing, ListTodo, Users } from 'lucide-react';
 import { MyTodosTab } from './MyTodosTab';
+import { TeamTasksTab } from './TeamTasksTab';
+import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 import toast from 'react-hot-toast';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -29,6 +32,7 @@ import {
   useDeleteReminderMutation,
 } from '@/app/baseApi';
 import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
+import { useGetStaffQuery } from '@/features/staff/staffAPI';
 
 interface Reminder {
   id: number;
@@ -97,14 +101,31 @@ export function RemindersPage() {
     return ['CUSTOMERS', 'PRODUCTION', 'APPLIANCE', 'ARCHITECT'].includes(s0) ? s0 : '';
   });
 
+  const isSuperAdmin = useIsSuperAdmin();
+
+  // Reminders are private to whoever created them. A super admin sees everyone by default and
+  // can narrow to one person; the server ignores this for staff, so it is only ever a narrowing.
+  const { data: staffList = [] } = useGetStaffQuery(undefined, { skip: !isSuperAdmin });
+  const creatorParam = searchParams.get('createdBy');
+  const createdByUserId = isSuperAdmin && creatorParam ? Number(creatorParam) : undefined;
+  const setCreatedBy = (id: string) => {
+    const next: Record<string, string> = {};
+    searchParams.forEach((v, k) => {
+      if (k !== 'createdBy') next[k] = v;
+    });
+    if (id) next.createdBy = id;
+    setSearchParams(next, { replace: true });
+  };
+
   const { data, isLoading } = useGetRemindersQuery({
     bucket,
     search: search || undefined,
     source: sourceFilter || undefined,
+    createdByUserId,
     page,
     size: 20,
   });
-  const { data: stats } = useGetReminderStatsQuery();
+  const { data: stats } = useGetReminderStatsQuery(createdByUserId ? { createdByUserId } : undefined);
 
   const reminders: Reminder[] = data?.content ?? [];
   const totalElements: number = data?.totalElements ?? 0;
@@ -237,9 +258,13 @@ export function RemindersPage() {
   const chipCount = (key: string) => Number((stats as any)?.[key] ?? 0);
   const openTotal = chipCount('all');
 
-  const tab = searchParams.get('tab') === 'todos' ? 'todos' : 'reminders';
-  const setTab = (t: 'reminders' | 'todos') =>
-    setSearchParams(t === 'todos' ? { tab: 'todos' } : {}, { replace: true });
+  // Team Tasks (assign work to staff) is a super-admin tab; a staff deep link to it falls back.
+  // (isSuperAdmin and the creator filter are declared at the top — the queries need them.)
+  const tabParam = searchParams.get('tab');
+  const tab: 'reminders' | 'todos' | 'team' =
+    tabParam === 'todos' ? 'todos' : tabParam === 'team' && isSuperAdmin ? 'team' : 'reminders';
+  const setTab = (t: 'reminders' | 'todos' | 'team') =>
+    setSearchParams(t === 'reminders' ? {} : { tab: t }, { replace: true });
 
   return (
     <div className="w-full">
@@ -278,7 +303,8 @@ export function RemindersPage() {
           [
             { key: 'reminders', label: 'Customer Reminders', icon: <BellRing size={14} /> },
             { key: 'todos', label: 'My To-dos', icon: <ListTodo size={14} /> },
-          ] as const
+            ...(isSuperAdmin ? [{ key: 'team', label: 'Team Tasks', icon: <Users size={14} /> }] : []),
+          ] as { key: 'reminders' | 'todos' | 'team'; label: string; icon: ReactNode }[]
         ).map((t) => {
           const active = tab === t.key;
           return (
@@ -306,8 +332,41 @@ export function RemindersPage() {
 
       {tab === 'todos' ? (
         <MyTodosTab />
+      ) : tab === 'team' ? (
+        <TeamTasksTab />
       ) : (
         <>
+      {/* Whose reminders. Everyone sees only their own; a super admin sees all and can narrow
+          to one person. Hidden for staff, for whom it would be a one-option no-op. */}
+      {isSuperAdmin && staffList.length > 0 && (
+        <div className="flex items-center gap-2 mb-2.5">
+          <label className="text-[12px] text-text-600 whitespace-nowrap">Created by</label>
+          <select
+            value={creatorParam ?? ''}
+            onChange={(ev) => {
+              setCreatedBy(ev.target.value);
+              setPage(0);
+            }}
+            className="h-[32px] px-2.5 rounded-[10px] border border-background-600 bg-background-900 text-text-900 text-[12.5px] outline-none focus:border-primary-600"
+          >
+            <option value="">Everyone</option>
+            {staffList.map((s) => (
+              <option key={s.id} value={String(s.id)}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          {creatorParam && (
+            <button
+              onClick={() => { setCreatedBy(''); setPage(0); }}
+              className="text-[12px] font-medium text-primary-600 hover:underline"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Module chips — mirrors the bell's filter; counts are open reminders across buckets */}
       <div className="mb-2.5">
         <FilterChips
@@ -323,7 +382,8 @@ export function RemindersPage() {
             setSourceFilter(k);
             setPage(0);
             const next: Record<string, string> = {};
-            if (searchParams.get('tab') === 'todos') next.tab = 'todos';
+            const tp = searchParams.get('tab');
+            if (tp === 'todos' || tp === 'team') next.tab = tp;
             if (k) next.source = k;
             setSearchParams(next, { replace: true });
           }}

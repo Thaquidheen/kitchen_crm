@@ -1,9 +1,11 @@
 /**
  * NotificationBell
- * The navbar bell, extracted from Header. Pools the user's due to-dos and the shared reminder
- * feed, but lets the user filter by module — All / To-dos / Customers / Production / Appliance / Architects —
- * and groups rows Overdue vs Today (the payload's server-computed `bucket`, which the old inline
- * bell ignored: "Today's reminders" was silently mostly overdue).
+ * The navbar bell, extracted from Header. Pools the user's due to-dos, the tasks an admin assigned
+ * to them, the shared reminder feed and — for a super admin — the team feed (tasks they assigned
+ * that were completed, or are overdue). One chip row filters by module: All / To-dos / Assigned to
+ * me / Team / Customers / Production / Appliance / Architects. Rows are grouped Overdue vs Today
+ * (the payload's server-computed `bucket`; the old inline bell ignored it and "Today's reminders"
+ * was silently mostly overdue), with completed team work in its own group so "done" news leads.
  *
  * Times render via the shared string-splitting formatters — the old bell ran naive
  * LocalDateTimes through new Date(), shifting them into the browser's timezone.
@@ -11,15 +13,25 @@
 
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlarmClock, Bell, Check } from 'lucide-react';
+import { AlarmClock, Bell, Check, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useGetReminderNotificationsQuery, useMarkReminderDoneMutation } from '../../app/baseApi';
-import { useGetMyDueTodosQuery, useMarkTodoCompleteMutation } from '../../features/task-management/taskAPI';
+import {
+  useGetMyDueTodosQuery,
+  useMarkTodoCompleteMutation,
+  useGetMyDueTasksQuery,
+  useGetAssignerAttentionQuery,
+  useMarkTaskCompleteMutation,
+  useMarkCompletionSeenMutation,
+} from '../../features/task-management/taskAPI';
+import type { EmployeeTask } from '../../features/task-management/types';
+import { useIsSuperAdmin } from '../../features/auth/useIsSuperAdmin';
+import { usePriorityStyle, PRIORITY_LABEL } from '../../features/task-management/usePriorityStyle';
 import { ROUTES } from '../../routes/routes.config';
 import { FilterChips } from '../shared/FilterChips';
 import { fmtReminderDateTime } from '../../utils/reminderFormat';
 
-type SourceKey = '' | 'TODOS' | 'CUSTOMERS' | 'PRODUCTION' | 'APPLIANCE' | 'ARCHITECT';
+type SourceKey = '' | 'TODOS' | 'ASSIGNED' | 'TEAM' | 'CUSTOMERS' | 'PRODUCTION' | 'APPLIANCE' | 'ARCHITECT';
 
 interface BellReminder {
   id: number;
@@ -34,7 +46,7 @@ interface BellReminder {
   source?: string;
 }
 
-/** Source presentation: dot token + caption. To-dos handled separately. */
+/** Source presentation: dot token + caption. To-dos and tasks handled separately. */
 const SOURCE_META: Record<string, { st: string; label: string }> = {
   CUSTOMERS: { st: 'design', label: 'Customer' },
   FOLLOW_UP: { st: 'design', label: 'Follow-up' },
@@ -42,9 +54,11 @@ const SOURCE_META: Record<string, { st: string; label: string }> = {
   APPLIANCE: { st: 'quote', label: 'Appliance & Quartz' },
   ARCHITECT: { st: 'lead', label: 'Architect' },
   TODOS: { st: 'draft', label: 'To-do' },
+  ASSIGNED: { st: 'potential', label: 'Assigned to me' },
+  TEAM: { st: 'confirmed', label: 'Team' },
 };
 
-const sourceKeyOf = (r: BellReminder): Exclude<SourceKey, '' | 'TODOS'> => {
+const sourceKeyOf = (r: BellReminder): 'CUSTOMERS' | 'PRODUCTION' | 'APPLIANCE' | 'ARCHITECT' => {
   if (r.ownerType === 'APPLIANCE') return 'APPLIANCE';
   if (r.ownerType === 'ARCHITECT') return 'ARCHITECT';
   if (r.source === 'PRODUCTION') return 'PRODUCTION';
@@ -53,14 +67,17 @@ const sourceKeyOf = (r: BellReminder): Exclude<SourceKey, '' | 'TODOS'> => {
 
 /** Caption meta for one reminder row — follow-ups sit under Customers but say what they are. */
 const metaOf = (r: BellReminder) =>
-  r.source === 'FOLLOW_UP' && r.ownerType !== 'APPLIANCE'
-    ? SOURCE_META.FOLLOW_UP
-    : SOURCE_META[sourceKeyOf(r)];
+  r.source === 'FOLLOW_UP' && r.ownerType !== 'APPLIANCE' ? SOURCE_META.FOLLOW_UP : SOURCE_META[sourceKeyOf(r)];
+
+/** dd/mm/yyyy from an ISO day, without new Date(). */
+const fmtDue = (iso?: string) => (iso ? iso.split('-').reverse().join('/') : '');
 
 const MAX_ROWS = 8;
 
 export function NotificationBell({ enabled }: { enabled: boolean }) {
   const navigate = useNavigate();
+  const isSuperAdmin = useIsSuperAdmin();
+  const pstyle = usePriorityStyle();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<SourceKey>('');
 
@@ -72,50 +89,71 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     pollingInterval: 60000,
     skip: !enabled,
   });
+  // Tasks an admin assigned to me: due today or earlier, plus any I have not yet opened.
+  const { data: dueTaskNotif } = useGetMyDueTasksQuery(undefined, {
+    pollingInterval: 60000,
+    skip: !enabled,
+  });
+  // Tasks I assigned that were completed (unseen) or are overdue — super admin only.
+  const { data: attentionNotif } = useGetAssignerAttentionQuery(undefined, {
+    pollingInterval: 60000,
+    skip: !enabled || !isSuperAdmin,
+  });
   const [markReminderDone] = useMarkReminderDoneMutation();
   const [markTodoComplete] = useMarkTodoCompleteMutation();
+  const [markTaskComplete] = useMarkTaskCompleteMutation();
+  const [markCompletionSeen] = useMarkCompletionSeenMutation();
 
   const reminders: BellReminder[] = notifData?.reminders ?? [];
   const todos = todoNotif?.todos ?? [];
-  const badgeCount = (notifData?.count ?? 0) + (todoNotif?.count ?? 0);
+  const dueTasks: EmployeeTask[] = dueTaskNotif?.tasks ?? [];
+  const attention: EmployeeTask[] = isSuperAdmin ? (attentionNotif?.tasks ?? []) : [];
+  const badgeCount =
+    (notifData?.count ?? 0) + (todoNotif?.count ?? 0) + (dueTaskNotif?.count ?? 0) + (isSuperAdmin ? attentionNotif?.count ?? 0 : 0);
 
   const counts = useMemo(() => {
-    const c: Record<Exclude<SourceKey, '' | 'TODOS'>, number> = {
-      CUSTOMERS: 0,
-      PRODUCTION: 0,
-      APPLIANCE: 0,
-      ARCHITECT: 0,
-    };
+    const c = { CUSTOMERS: 0, PRODUCTION: 0, APPLIANCE: 0, ARCHITECT: 0 };
     for (const r of reminders) c[sourceKeyOf(r)] += 1;
     return c;
   }, [reminders]);
 
   const chips = [
-    { key: '', label: 'All', count: reminders.length + todos.length },
+    { key: '', label: 'All', count: reminders.length + todos.length + dueTasks.length + attention.length },
     { key: 'TODOS', label: 'To-dos', st: SOURCE_META.TODOS.st, count: todos.length },
+    { key: 'ASSIGNED', label: 'Assigned to me', st: SOURCE_META.ASSIGNED.st, count: dueTasks.length },
+    ...(isSuperAdmin ? [{ key: 'TEAM', label: 'Team', st: SOURCE_META.TEAM.st, count: attention.length }] : []),
     { key: 'CUSTOMERS', label: 'Customers', st: SOURCE_META.CUSTOMERS.st, count: counts.CUSTOMERS },
     { key: 'PRODUCTION', label: 'Production', st: SOURCE_META.PRODUCTION.st, count: counts.PRODUCTION },
     { key: 'APPLIANCE', label: 'Appliance', st: SOURCE_META.APPLIANCE.st, count: counts.APPLIANCE },
     { key: 'ARCHITECT', label: 'Architects', st: SOURCE_META.ARCHITECT.st, count: counts.ARCHITECT },
   ];
 
+  const isTaskFilter = filter === 'TODOS' || filter === 'ASSIGNED' || filter === 'TEAM';
   const visibleReminders =
-    filter === '' ? reminders : filter === 'TODOS' ? [] : reminders.filter((r) => sourceKeyOf(r) === filter);
+    filter === '' ? reminders : isTaskFilter ? [] : reminders.filter((r) => sourceKeyOf(r) === filter);
   const visibleTodos = filter === '' || filter === 'TODOS' ? todos : [];
+  const visibleAssigned = filter === '' || filter === 'ASSIGNED' ? dueTasks : [];
+  const visibleTeam = filter === '' || filter === 'TEAM' ? attention : [];
 
   // Server-computed bucket: everything in this feed is today-or-earlier, so it is either
-  // OVERDUE or TODAY. To-dos due before today count as overdue by their date string.
+  // OVERDUE or TODAY. To-dos due before today count as overdue by their date string; assigned
+  // tasks carry a server-derived `overdue`; team items split by completed (news) vs open (overdue).
   const todayStr = new Date().toISOString().slice(0, 10);
   const overdueTodos = visibleTodos.filter((t: any) => t.todoDate && t.todoDate < todayStr);
   const todayTodos = visibleTodos.filter((t: any) => !t.todoDate || t.todoDate >= todayStr);
   const overdueReminders = visibleReminders.filter((r) => r.bucket === 'OVERDUE');
   const todayReminders = visibleReminders.filter((r) => r.bucket !== 'OVERDUE');
+  const overdueAssigned = visibleAssigned.filter((t) => t.overdue);
+  const todayAssigned = visibleAssigned.filter((t) => !t.overdue);
+  const completedTeam = visibleTeam.filter((t) => t.completed);
+  const overdueTeam = visibleTeam.filter((t) => !t.completed);
 
-  const totalVisible = visibleReminders.length + visibleTodos.length;
+  const totalVisible = visibleReminders.length + visibleTodos.length + visibleAssigned.length + visibleTeam.length;
 
   const viewAll = () => {
     setOpen(false);
-    if (filter === 'TODOS') navigate(`${ROUTES.REMINDERS}?tab=todos`);
+    if (filter === 'TODOS' || filter === 'ASSIGNED') navigate(`${ROUTES.REMINDERS}?tab=todos`);
+    else if (filter === 'TEAM') navigate(`${ROUTES.REMINDERS}?tab=team`);
     else if (filter === '') navigate(ROUTES.REMINDERS);
     else navigate(`${ROUTES.REMINDERS}?source=${filter}`);
   };
@@ -123,9 +161,11 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const openReminder = (r: BellReminder) => {
     setOpen(false);
     navigate(
-      r.ownerType === 'APPLIANCE' ? ROUTES.APPLIANCE_QUARTZ
-        : r.ownerType === 'ARCHITECT' ? ROUTES.ARCHITECTS
-        : `/customers/${r.ownerId ?? r.customerId}`
+      r.ownerType === 'APPLIANCE'
+        ? ROUTES.APPLIANCE_QUARTZ
+        : r.ownerType === 'ARCHITECT'
+          ? ROUTES.ARCHITECTS
+          : `/customers/${r.ownerId ?? r.customerId}`
     );
   };
 
@@ -147,12 +187,26 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     }
   };
 
-  const GroupHeader = ({ label, tone }: { label: string; tone: 'lost' | 'nego' }) => (
+  const doneTask = async (id: number) => {
+    try {
+      await markTaskComplete(id).unwrap();
+      toast.success('Done — your admin has been notified');
+    } catch {
+      toast.error('Failed to complete task');
+    }
+  };
+
+  const seenTask = async (id: number) => {
+    try {
+      await markCompletionSeen(id).unwrap();
+    } catch {
+      toast.error('Failed to update task');
+    }
+  };
+
+  const GroupHeader = ({ label, tone }: { label: string; tone: 'lost' | 'nego' | 'confirmed' }) => (
     <div className="px-4 py-1.5 bg-background-700/50 border-y border-background-600 first:border-t-0">
-      <span
-        className="text-[10.5px] font-semibold uppercase tracking-[0.06em]"
-        style={{ color: `var(--st-${tone}-fg)` }}
-      >
+      <span className="text-[10.5px] font-semibold uppercase tracking-[0.06em]" style={{ color: `var(--st-${tone}-fg)` }}>
         {label}
       </span>
     </div>
@@ -169,19 +223,77 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
       >
         <p className="text-[13px] text-text-900 font-medium">{t.todoTitle}</p>
         <p className="text-[11.5px] text-text-600 mt-0.5 flex items-center gap-1.5">
-          <span
-            className="w-[6px] h-[6px] rounded-full shrink-0"
-            style={{ background: `var(--st-${SOURCE_META.TODOS.st}-fg)` }}
-          />
-          To-do{t.todoDate ? ` · due ${t.todoDate.split('-').reverse().join('/')}` : ''}
+          <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: `var(--st-${SOURCE_META.TODOS.st}-fg)` }} />
+          To-do{t.todoDate ? ` · due ${fmtDue(t.todoDate)}` : ''}
         </p>
       </button>
-      <button
-        onClick={() => doneTodo(t.id)}
-        className="mt-1 inline-flex items-center gap-1 text-xs text-success hover:underline"
-      >
+      <button onClick={() => doneTodo(t.id)} className="mt-1 inline-flex items-center gap-1 text-xs text-success hover:underline">
         <Check size={12} /> Mark done
       </button>
+    </div>
+  );
+
+  /** A task assigned to me: priority stripe, "New" until I open my list, done from here. */
+  const AssignedRow = ({ t }: { t: EmployeeTask }) => (
+    <div className="px-4 py-2.5 hover:bg-background-700 transition-colors" style={{ borderLeft: `3px solid ${pstyle.hex(t.priority)}` }}>
+      <button
+        className="text-left w-full"
+        onClick={() => {
+          setOpen(false);
+          navigate(`${ROUTES.REMINDERS}?tab=todos`);
+        }}
+      >
+        <p className="text-[13px] text-text-900 font-medium flex items-center gap-2">
+          <span className="truncate">{t.taskTitle}</span>
+          {t.newForAssignee && (
+            <span
+              className="shrink-0 text-[10px] font-bold uppercase tracking-wide px-1.5 py-[1px] rounded-full"
+              style={{ background: 'var(--st-potential-bg)', color: 'var(--st-potential-fg)' }}
+            >
+              New
+            </span>
+          )}
+          <span className="shrink-0 text-[10px] font-semibold px-1.5 py-[1px] rounded" style={pstyle.pill(t.priority)}>
+            {PRIORITY_LABEL[t.priority] ?? t.priority}
+          </span>
+        </p>
+        <p className="text-[11.5px] text-text-600 mt-0.5 flex items-center gap-1.5">
+          <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: `var(--st-${SOURCE_META.ASSIGNED.st}-fg)` }} />
+          Assigned by {t.assignedByName} · due {fmtDue(t.taskDate)}
+        </p>
+      </button>
+      <button onClick={() => doneTask(t.id)} className="mt-1 inline-flex items-center gap-1 text-xs text-success hover:underline">
+        <Check size={12} /> Mark done
+      </button>
+    </div>
+  );
+
+  /** A task I assigned: either "completed by X" (dismiss with Seen) or "overdue · X". */
+  const TeamRow = ({ t }: { t: EmployeeTask }) => (
+    <div className="px-4 py-2.5 hover:bg-background-700 transition-colors">
+      <button
+        className="text-left w-full"
+        onClick={() => {
+          setOpen(false);
+          navigate(`${ROUTES.REMINDERS}?tab=team`);
+        }}
+      >
+        <p className="text-[13px] text-text-900 font-medium">{t.taskTitle}</p>
+        <p className="text-[11.5px] text-text-600 mt-0.5 flex items-center gap-1.5">
+          <span
+            className="w-[6px] h-[6px] rounded-full shrink-0"
+            style={{ background: t.completed ? 'var(--st-confirmed-fg)' : 'var(--st-lost-fg)' }}
+          />
+          {t.completed
+            ? `Completed by ${t.assignedToUserName}${t.completedAt ? ` · ${fmtReminderDateTime(t.completedAt)}` : ''}`
+            : `${t.assignedToUserName} · was due ${fmtDue(t.taskDate)}`}
+        </p>
+      </button>
+      {t.completed && (
+        <button onClick={() => seenTask(t.id)} className="mt-1 inline-flex items-center gap-1 text-xs text-success hover:underline">
+          <Eye size={12} /> Seen
+        </button>
+      )}
     </div>
   );
 
@@ -192,39 +304,46 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
         <button className="text-left w-full" onClick={() => openReminder(r)}>
           <p className="text-[13px] text-text-900 font-medium">{r.title}</p>
           <p className="text-[11.5px] text-text-600 mt-0.5 flex items-center gap-1.5">
-            <span
-              className="w-[6px] h-[6px] rounded-full shrink-0"
-              style={{ background: `var(--st-${meta.st}-fg)` }}
-            />
+            <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: `var(--st-${meta.st}-fg)` }} />
             {meta.label} · {r.ownerName ?? r.customerName} · {fmtReminderDateTime(r.remindAt)}
           </p>
         </button>
-        <button
-          onClick={() => doneReminder(r.id)}
-          className="mt-1 inline-flex items-center gap-1 text-xs text-success hover:underline"
-        >
+        <button onClick={() => doneReminder(r.id)} className="mt-1 inline-flex items-center gap-1 text-xs text-success hover:underline">
           <Check size={12} /> Mark done
         </button>
       </div>
     );
   };
 
-  // Cap what the popover renders; "View all" carries the rest. Overdue first — it is the
-  // group that actually needs attention.
+  // Cap what the popover renders; "View all" carries the rest. Overdue first — it is the group
+  // that actually needs attention — then completed team work (news), then today.
   let budget = MAX_ROWS;
   const take = <T,>(arr: T[]): T[] => {
     const slice = arr.slice(0, Math.max(0, budget));
     budget -= slice.length;
     return slice;
   };
+  const shownOverdueAssigned = take(overdueAssigned);
+  const shownOverdueTeam = take(overdueTeam);
   const shownOverdueTodos = take(overdueTodos);
   const shownOverdueReminders = take(overdueReminders);
+  const shownCompletedTeam = take(completedTeam);
+  const shownTodayAssigned = take(todayAssigned);
   const shownTodayTodos = take(todayTodos);
   const shownTodayReminders = take(todayReminders);
   const shownCount =
-    shownOverdueTodos.length + shownOverdueReminders.length + shownTodayTodos.length + shownTodayReminders.length;
-  const hasOverdue = shownOverdueTodos.length + shownOverdueReminders.length > 0;
-  const hasToday = shownTodayTodos.length + shownTodayReminders.length > 0;
+    shownOverdueAssigned.length +
+    shownOverdueTeam.length +
+    shownOverdueTodos.length +
+    shownOverdueReminders.length +
+    shownCompletedTeam.length +
+    shownTodayAssigned.length +
+    shownTodayTodos.length +
+    shownTodayReminders.length;
+  const hasOverdue =
+    shownOverdueAssigned.length + shownOverdueTeam.length + shownOverdueTodos.length + shownOverdueReminders.length > 0;
+  const hasCompletedTeam = shownCompletedTeam.length > 0;
+  const hasToday = shownTodayAssigned.length + shownTodayTodos.length + shownTodayReminders.length > 0;
 
   return (
     <div className="relative">
@@ -257,12 +376,7 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
 
             {/* Source chips */}
             <div className="px-3 py-2.5 border-b border-background-600">
-              <FilterChips
-                dense
-                items={chips}
-                value={filter}
-                onChange={(k) => setFilter(k as SourceKey)}
-              />
+              <FilterChips dense items={chips} value={filter} onChange={(k) => setFilter(k as SourceKey)} />
             </div>
 
             {/* Rows */}
@@ -277,6 +391,12 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
                     <>
                       <GroupHeader label="Overdue" tone="lost" />
                       <div className="divide-y divide-background-600">
+                        {shownOverdueAssigned.map((t) => (
+                          <AssignedRow key={`a${t.id}`} t={t} />
+                        ))}
+                        {shownOverdueTeam.map((t) => (
+                          <TeamRow key={`m${t.id}`} t={t} />
+                        ))}
                         {shownOverdueTodos.map((t: any) => (
                           <TodoRow key={`t${t.id}`} t={t} />
                         ))}
@@ -286,10 +406,23 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
                       </div>
                     </>
                   )}
+                  {hasCompletedTeam && (
+                    <>
+                      <GroupHeader label="Completed by your team" tone="confirmed" />
+                      <div className="divide-y divide-background-600">
+                        {shownCompletedTeam.map((t) => (
+                          <TeamRow key={`m${t.id}`} t={t} />
+                        ))}
+                      </div>
+                    </>
+                  )}
                   {hasToday && (
                     <>
                       <GroupHeader label="Today" tone="nego" />
                       <div className="divide-y divide-background-600">
+                        {shownTodayAssigned.map((t) => (
+                          <AssignedRow key={`a${t.id}`} t={t} />
+                        ))}
                         {shownTodayTodos.map((t: any) => (
                           <TodoRow key={`t${t.id}`} t={t} />
                         ))}
