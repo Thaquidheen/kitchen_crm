@@ -89,7 +89,7 @@ code adapter: implement `LaserMeterAdapter` and call `adapterRegistry.registerCo
 ## Backend
 
 Spring Boot module `modules/lasermeter` (adapters, audit, lab logs) and `modules/measurement`
-(site measurements). Flyway: `V116__Create_site_measurements.sql`, `V117__Create_laser_meter_adapters.sql`.
+(site measurements). Flyway: `V150__Create_site_measurements.sql`, `V151__Create_laser_meter_adapters.sql` (numbered well above the V116+ migrations that exist only on the production server, to avoid clashes).
 
 | Table | Purpose |
 |---|---|
