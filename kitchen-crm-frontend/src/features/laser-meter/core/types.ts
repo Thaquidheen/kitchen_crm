@@ -165,6 +165,8 @@ export interface LaserState {
   /** Epoch ms of the next reconnect attempt, while `reconnecting`. */
   nextRetryAt: number | null;
   lastError: string | null;
+  /** Automatic reconnect gave up; the UI should offer a Reconnect button. */
+  needsManualReconnect: boolean;
   /** A previously used device that can be reconnected without the chooser. */
   rememberedDevice: RememberedDevice | null;
 }

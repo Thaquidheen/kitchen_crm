@@ -200,6 +200,22 @@ export const API_ENDPOINTS = {
     BASE: '/users/staff',
     BY_ID: (id: number) => `/users/staff/${id}`,
   },
+
+  // Site Measurement Mode (structured room measurements per customer)
+  SITE_MEASUREMENTS: {
+    BY_CUSTOMER: (customerId: number) => `/site-measurements/customer/${customerId}`,
+  },
+
+  // Laser meter adapters (admin-managed device configs) and Device Lab logs
+  LASER_METER: {
+    ADAPTERS: '/laser-meter/adapters',
+    ADAPTERS_ACTIVE: '/laser-meter/adapters/active',
+    ADAPTER_BY_ID: (id: number) => `/laser-meter/adapters/${id}`,
+    ADAPTER_AUDIT: (id: number) => `/laser-meter/adapters/${id}/audit`,
+    AUDIT: '/laser-meter/adapters/audit',
+    LAB_LOGS: '/laser-meter/lab-logs',
+    LAB_LOG_BY_ID: (id: number) => `/laser-meter/lab-logs/${id}`,
+  },
 } as const;
 
 export default API_ENDPOINTS;

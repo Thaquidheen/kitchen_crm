@@ -128,6 +128,7 @@ describe('LaserMeterService with the mock device', () => {
     await timers.advance(18000);
     expect(svc.getState().status).toBe('disconnected');
     expect(svc.getState().lastError).toMatch(/Reconnect/);
+    expect(svc.getState().needsManualReconnect).toBe(true);
     mock.available = true;
     expect(await svc.retryNow()).toBe(true);
     expect(svc.getState().status).toBe('connected');

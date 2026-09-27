@@ -19,6 +19,7 @@ export const ROUTES = {
   // Customer routes
   CUSTOMERS: '/customers',
   CUSTOMERS_DETAIL: '/customers/:id',
+  SITE_MEASUREMENT: '/customers/:id/site-measurement',
 
 
   // Production routes
@@ -65,10 +66,14 @@ export const ROUTES = {
 
   // Staff routes
   STAFF: '/staff',
+
+  // Laser meter: settings for everyone; Device Lab + adapters tabs for admins
+  LASER_METER: '/laser-meter',
 } as const;
 
 // Helper functions to generate dynamic routes
 export const getCustomerDetailRoute = (id: number) => `/customers/${id}`;
+export const getSiteMeasurementRoute = (id: number) => `/customers/${id}/site-measurement`;
 export const getProductionDetailRoute = (customerId: number) =>
   `/production/customer/${customerId}`;
 export const getQuotationDetailRoute = (id: number) => `/quotations/${id}`;

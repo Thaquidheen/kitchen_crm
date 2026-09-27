@@ -21,6 +21,7 @@ import {
   IdCard,
   Refrigerator,
   BellRing,
+  Ruler,
 } from 'lucide-react';
 import clsx from 'clsx';
 import logo from '../../assets/logo.png';
@@ -67,6 +68,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Production', path: ROUTES.PRODUCTION, icon: <Hammer size={18} /> },
       { label: 'Products', path: ROUTES.PRODUCTS, icon: <Package size={18} /> },
+      { label: 'Laser Meter', path: ROUTES.LASER_METER, icon: <Ruler size={18} /> },
     ],
   },
   {

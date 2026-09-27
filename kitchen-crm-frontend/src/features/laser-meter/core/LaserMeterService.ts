@@ -13,6 +13,9 @@
 
 import { failureReason } from './types';
 import type {
+  KeyboardCapture,
+  KeystrokeTimingConfig,
+  KeystrokeVerdict,
   LaserMeasurement,
   LaserMeterAdapter,
   LaserState,
@@ -32,6 +35,9 @@ import {
 } from './reconnect';
 import type { ConnectionHost, LaserConnection } from './connections/Connection';
 import { MockConnection } from './connections/MockConnection';
+import { KeyboardConnection } from './connections/KeyboardConnection';
+import { parseHidInput, type HidDefaultUnit } from './hidInputParser';
+import { classifyKeystrokes, DEFAULT_KEYSTROKE_TIMING } from './keystrokeTiming';
 
 export interface LogEntry {
   at: number;
@@ -45,6 +51,21 @@ export type LaserEvents = {
   state: LaserState;
   log: LogEntry;
 };
+
+export interface KeyboardOptions {
+  defaultUnit: HidDefaultUnit;
+  timing: KeystrokeTimingConfig;
+  acceptHumanTyping: boolean;
+  minMm: number;
+  maxMm: number;
+}
+
+export interface KeyboardCaptureResult {
+  accepted: boolean;
+  verdict: KeystrokeVerdict;
+  measurement?: LaserMeasurement;
+  reason?: string;
+}
 
 export interface LaserServiceDeps {
   registry?: AdapterRegistry;
@@ -67,6 +88,7 @@ export const initialLaserState = (): LaserState => ({
   reconnectAttempt: 0,
   nextRetryAt: null,
   lastError: null,
+  needsManualReconnect: false,
   rememberedDevice: null,
 });
 
@@ -79,6 +101,13 @@ export class LaserMeterService {
   protected connection: LaserConnection | null = null;
   private readonly reconnector: ReconnectScheduler;
   private logEntries: LogEntry[] = [];
+  private keyboardOpts: KeyboardOptions = {
+    defaultUnit: 'auto',
+    timing: DEFAULT_KEYSTROKE_TIMING,
+    acceptHumanTyping: true,
+    minMm: 50,
+    maxMm: 15000,
+  };
 
   constructor(deps: LaserServiceDeps = {}) {
     this.timers = deps.timers ?? realTimers;
@@ -94,7 +123,13 @@ export class LaserMeterService {
         },
         onSucceeded: () => {
           this.log('Reconnected');
-          this.update({ status: 'connected', reconnectAttempt: 0, nextRetryAt: null, lastError: null });
+          this.update({
+            status: 'connected',
+            reconnectAttempt: 0,
+            nextRetryAt: null,
+            lastError: null,
+            needsManualReconnect: false,
+          });
         },
         onGaveUp: () => {
           this.log('Automatic reconnect gave up', 'warn');
@@ -103,6 +138,7 @@ export class LaserMeterService {
             reconnectAttempt: 0,
             nextRetryAt: null,
             lastError: 'Connection lost. Tap Reconnect when the meter is on and nearby.',
+            needsManualReconnect: true,
           });
         },
       },
@@ -186,7 +222,8 @@ export class LaserMeterService {
       source,
       raw,
       at: this.timers.now(),
-      adapterId: source === 'manual' ? null : this.state.adapterId,
+      // Keyboard meters have no adapter (the OS does the talking); only BLE readings carry one.
+      adapterId: source === 'laser_ble' ? this.state.adapterId : null,
     };
     this.log(`Reading ${valueMm} mm (${source})`);
     this.emitter.emit('measurement', m);
@@ -203,7 +240,7 @@ export class LaserMeterService {
   protected async useConnection(conn: LaserConnection): Promise<void> {
     await this.teardown();
     this.connection = conn;
-    this.update({ mode: conn.mode, lastError: null });
+    this.update({ mode: conn.mode, lastError: null, needsManualReconnect: false });
     try {
       await conn.connect();
     } catch (e) {
@@ -233,12 +270,19 @@ export class LaserMeterService {
       canTrigger: false,
       reconnectAttempt: 0,
       nextRetryAt: null,
+      needsManualReconnect: false,
     });
   }
 
   async disconnect(): Promise<void> {
     await this.teardown();
     this.log('Disconnected by user');
+  }
+
+  /** Bluetooth-direct mode, not yet connected: connecting needs a user gesture (Connect button). */
+  async prepareBle(): Promise<void> {
+    await this.teardown();
+    this.update({ mode: 'ble', lastError: null });
   }
 
   /** Manual mode: no device; values are typed. Always available. */
@@ -255,6 +299,40 @@ export class LaserMeterService {
     return conn;
   }
 
+  // ------------------------------------------------------------------ keyboard (HID) mode
+
+  configureKeyboard(patch: Partial<KeyboardOptions>): void {
+    this.keyboardOpts = { ...this.keyboardOpts, ...patch };
+  }
+
+  /** Keyboard mode: readings arrive as typed text in the capture input. */
+  async enableKeyboard(): Promise<void> {
+    await this.useConnection(new KeyboardConnection(this.host));
+  }
+
+  /**
+   * Called by the capture input when a burst of keystrokes ends (Enter / Tab / idle).
+   * Timing decides provenance: a fast burst is the meter (laser_hid); slow typing is a person
+   * (manual) — accepted or refused per the `acceptHumanTyping` option.
+   */
+  submitKeyboardCapture(capture: KeyboardCapture): KeyboardCaptureResult {
+    const { verdict } = classifyKeystrokes(capture.timestamps, this.keyboardOpts.timing);
+    if (verdict === 'human' && !this.keyboardOpts.acceptHumanTyping) {
+      const reason = 'That looked like typing by hand. Use "Type manually" to enter a value yourself.';
+      this.reject(capture.text, reason, 'manual');
+      return { accepted: false, verdict, reason };
+    }
+    const source: MeasurementSource = verdict === 'device' ? 'laser_hid' : 'manual';
+    const result = parseHidInput(capture.text, this.keyboardOpts);
+    if (!result.ok) {
+      const reason = failureReason(result);
+      this.reject(capture.text, reason, source);
+      return { accepted: false, verdict, reason };
+    }
+    const measurement = this.accept(result.valueMm, source, capture.text);
+    return { accepted: true, verdict, measurement };
+  }
+
   get mock(): MockConnection | null {
     return this.connection instanceof MockConnection ? this.connection : null;
   }
@@ -269,8 +347,12 @@ export class LaserMeterService {
     const ok = await this.connection.reconnect().catch(() => false);
     this.update(
       ok
-        ? { status: 'connected', lastError: null }
-        : { status: 'disconnected', lastError: 'Could not reconnect. Is the meter on and nearby?' }
+        ? { status: 'connected', lastError: null, needsManualReconnect: false }
+        : {
+            status: 'disconnected',
+            lastError: 'Could not reconnect. Is the meter on and nearby?',
+            needsManualReconnect: true,
+          }
     );
     return ok;
   }
@@ -291,6 +373,17 @@ export class LaserMeterService {
     const mock = this.mock;
     if (mock?.isConnected) {
       mock.emitReading(value);
+      return;
+    }
+    if (this.state.mode === 'keyboard') {
+      // Behave like a meter "typing" metres at ~8 ms per key, ending with Enter.
+      const text = (value / 1000).toFixed(3);
+      const t0 = this.timers.now();
+      this.submitKeyboardCapture({
+        text,
+        timestamps: Array.from(text, (_c, i) => t0 + i * 8),
+        terminator: 'enter',
+      });
       return;
     }
     const source: MeasurementSource = this.state.mode === 'ble' ? 'laser_ble' : 'manual';
