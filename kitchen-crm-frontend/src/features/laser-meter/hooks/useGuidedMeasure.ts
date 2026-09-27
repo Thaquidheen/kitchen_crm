@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import {
-  buildSequence,
   firstOpenTargetKey,
   nextTargetKey,
   prevTargetKey,
@@ -8,6 +7,7 @@ import {
   type RoomLayout,
   type SequenceConfig,
 } from '../core/guidedSequence';
+import { targetsForLayout } from '../core/sketch/targets';
 import {
   initialSession,
   sessionReducer,
@@ -33,7 +33,7 @@ export const useGuidedMeasure = (
   sequence: SequenceConfig,
   opts: GuidedMeasureOptions
 ) => {
-  const targets = useMemo(() => buildSequence(layout, sequence), [layout, sequence]);
+  const targets = useMemo(() => targetsForLayout(layout, sequence), [layout, sequence]);
   const [state, dispatch] = useReducer(sessionReducer, undefined, () => initialSession());
   const stateRef = useRef(state);
   stateRef.current = state;

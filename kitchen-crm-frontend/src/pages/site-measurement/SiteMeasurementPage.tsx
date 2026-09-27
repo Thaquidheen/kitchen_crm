@@ -5,15 +5,14 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, ChevronUp, History, Save, Settings2 } from 'lucide-react';
+import { ArrowLeft, History, Save, Settings2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button, Modal, Spinner } from '@/components/ui';
 import { useGetCustomerByIdQuery } from '@/features/customers/customersAPI';
 import {
   ConnectLaserButton,
-  GuidedMeasurePanel,
+  MeasureWorkspace,
   LaserSettings,
-  RoomLayoutEditor,
   laserMeter,
   resolveMode,
   getBleSupport,
@@ -51,7 +50,6 @@ const SiteMeasurementPage = () => {
   const ble = useMemo(() => getBleSupport(), []);
 
   const [layout, setLayout] = useState<RoomLayout>(DEFAULT_LAYOUT);
-  const [layoutOpen, setLayoutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -89,7 +87,6 @@ const SiteMeasurementPage = () => {
     const hasServerData = !!record.layout || record.values.length > 0;
     setLayout(hasServerData ? sanitizeLayout(record.layout) : DEFAULT_LAYOUT);
     load(record.values);
-    setLayoutOpen(!hasServerData);
     const draft = loadDraft(draftScope);
     if (draftIsNewer(draft, record.updatedAt)) {
       setPendingDraft(draft);
@@ -160,7 +157,7 @@ const SiteMeasurementPage = () => {
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto pb-24">
+    <div className="w-full max-w-[1400px] mx-auto pb-24">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <button
@@ -218,30 +215,9 @@ const SiteMeasurementPage = () => {
         </div>
       )}
 
-      {/* Room layout */}
-      <div className="mb-4 rounded-[10px] border border-background-600 bg-background-800">
-        <button
-          type="button"
-          onClick={() => setLayoutOpen((o) => !o)}
-          className="w-full flex items-center justify-between px-3 py-2.5 text-[14px] font-semibold text-text-900"
-          aria-expanded={layoutOpen}
-        >
-          <span>
-            Room layout
-            <span className="ml-2 font-normal text-[12.5px] text-text-600">
-              {layout.wallCount} walls · {layout.openings.length} openings · {layout.servicePoints.length} service points
-            </span>
-          </span>
-          {layoutOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-        {layoutOpen && (
-          <div className="px-3 pb-3">
-            <RoomLayoutEditor layout={layout} onChange={setLayout} />
-          </div>
-        )}
-      </div>
-
-      <GuidedMeasurePanel
+      <MeasureWorkspace
+        layout={layout}
+        onLayoutChange={setLayout}
         guided={guided}
         settings={settings}
         bleSupported={ble.supported}
