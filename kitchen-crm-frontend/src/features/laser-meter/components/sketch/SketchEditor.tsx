@@ -211,16 +211,34 @@ export const SketchEditor = ({ layout, onLayoutChange, guided, settings, bleSupp
     setPlan({ ...base, corners, walls, items }, true);
   };
 
-  /** Add a corner in the middle of a wall (e.g. to model a chimney breast). */
+  /**
+   * Add a corner in the middle of a wall (e.g. to model a chimney breast). The wall's measured
+   * length no longer describes either half, so both halves get new ids and start unmeasured (undo
+   * brings the original wall and its measurement back). Items keep their place along the wall.
+   */
   const splitWall = (wallIndex: number) => {
     const base = solved.corners.map((c) => ({ ...c }));
     const a = base[wallIndex];
     const b = base[(wallIndex + 1) % base.length];
     const mid = { id: newSketchId('c'), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     const corners = [...base.slice(0, wallIndex + 1), mid, ...base.slice(wallIndex + 1)];
+    const oldId = plan.walls[wallIndex].id;
+    const firstId = nextWallId(plan);
+    const secondId = String(Number(firstId) + 1);
     const walls = [...plan.walls];
-    walls.splice(wallIndex + 1, 0, { id: nextWallId(plan) });
-    setPlan({ ...plan, corners, walls }, true);
+    walls.splice(wallIndex, 1, { id: firstId }, { id: secondId });
+    const half = (solved.lengths[wallIndex] ?? 0) / 2;
+    const items = plan.items.map((it) => {
+      if (it.wallId !== oldId) {
+        return it;
+      }
+      return it.offsetMm >= half
+        ? { ...it, wallId: secondId, offsetMm: Math.round(it.offsetMm - half) }
+        : { ...it, wallId: firstId };
+    });
+    setPlan({ ...plan, corners, walls, items }, true);
+    setSelection({ kind: 'wall', id: firstId });
+    guided.setCurrent(`wall.${firstId}.length`);
   };
 
   const startTemplate = (t: RoomTemplate) => {
@@ -244,50 +262,39 @@ export const SketchEditor = ({ layout, onLayoutChange, guided, settings, bleSupp
     requestAnimationFrame(() => canvasRef.current?.fit());
   };
 
-  const exportPng = () => {
-    const svg = canvasRef.current?.svg();
-    if (!svg) {
+  const download = (blob: Blob, name: string) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
+  const exportPng = async () => {
+    const r = await canvasRef.current?.exportMarkup();
+    if (!r) {
       return;
     }
-    const xml = new XMLSerializer().serializeToString(svg);
     const img = new Image();
-    const w = svg.clientWidth;
-    const h = svg.clientHeight;
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      canvas.width = w * 2;
-      canvas.height = h * 2;
+      canvas.width = r.width;
+      canvas.height = r.height;
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         return;
       }
-      ctx.scale(2, 2);
-      ctx.drawImage(img, 0, 0, w, h);
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          return;
-        }
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'site-plan.png';
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-      });
+      ctx.drawImage(img, 0, 0, r.width, r.height);
+      canvas.toBlob((blob) => blob && download(blob, 'site-plan.png'));
     };
-    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(r.xml)}`;
   };
 
-  const exportSvg = () => {
-    const svg = canvasRef.current?.svg();
-    if (!svg) {
-      return;
+  const exportSvg = async () => {
+    const r = await canvasRef.current?.exportMarkup();
+    if (r) {
+      download(new Blob([r.xml], { type: 'image/svg+xml' }), 'site-plan.svg');
     }
-    const xml = new XMLSerializer().serializeToString(svg);
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml' }));
-    a.download = 'site-plan.svg';
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
 
   // Escape returns to the select tool (when not typing in a field).
