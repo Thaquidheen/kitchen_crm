@@ -311,9 +311,35 @@ public class FinanceServiceImpl implements FinanceService {
 
     /** Returns an error message, or null when the dto was applied cleanly. */
     private String applyExpense(FinanceExpense expense, ExpenseRequestDto dto, CustomerFinance finance) {
-        BigDecimal pctSum = nz(dto.getCashInHandPct()).add(nz(dto.getCashInAccountPct()));
-        if (pctSum.subtract(BigDecimal.valueOf(100)).abs().compareTo(BigDecimal.valueOf(0.01)) > 0) {
-            return "Cash in hand % and cash in account % must add up to 100";
+        // The amount is optional: a line can be written down first and priced later (zero until then).
+        BigDecimal amount = nz(dto.getAmount());
+        boolean priced = amount.signum() > 0;
+        BigDecimal exactCashInHand = null;
+        BigDecimal cashInHandPct;
+        BigDecimal cashInAccountPct;
+        if (dto.getCashInHandAmount() != null && priced) {
+            // Split entered in rupees: that amount is stored as-is and the percentages are only
+            // its 2dp echo, kept so the % columns (and the previous jar) still have a value.
+            exactCashInHand = dto.getCashInHandAmount().setScale(2, RoundingMode.HALF_UP);
+            if (exactCashInHand.compareTo(amount) > 0) {
+                return "Cash in hand cannot be more than the expense amount";
+            }
+            cashInHandPct = exactCashInHand.multiply(BigDecimal.valueOf(100))
+                    .divide(amount, 2, RoundingMode.HALF_UP);
+            cashInAccountPct = BigDecimal.valueOf(100).subtract(cashInHandPct);
+        } else if (dto.getCashInHandAmount() != null && dto.getCashInHandAmount().signum() > 0) {
+            return "Enter the expense amount before splitting it into cash in hand and cash in account";
+        } else if (dto.getCashInHandPct() == null && dto.getCashInAccountPct() == null) {
+            // Nothing said about the split (typical for a line with no amount yet): all cash in hand.
+            cashInHandPct = BigDecimal.valueOf(100);
+            cashInAccountPct = BigDecimal.ZERO;
+        } else {
+            BigDecimal pctSum = nz(dto.getCashInHandPct()).add(nz(dto.getCashInAccountPct()));
+            if (pctSum.subtract(BigDecimal.valueOf(100)).abs().compareTo(BigDecimal.valueOf(0.01)) > 0) {
+                return "Cash in hand % and cash in account % must add up to 100";
+            }
+            cashInHandPct = nz(dto.getCashInHandPct());
+            cashInAccountPct = nz(dto.getCashInAccountPct());
         }
         if (dto.getQuotationId() != null) {
             Quotation quotation = quotationRepository.findById(dto.getQuotationId()).orElse(null);
@@ -338,9 +364,10 @@ public class FinanceServiceImpl implements FinanceService {
             expense.setVendor(null);
         }
         expense.setTitle(dto.getTitle().trim());
-        expense.setAmount(dto.getAmount());
-        expense.setCashInHandPct(nz(dto.getCashInHandPct()));
-        expense.setCashInAccountPct(nz(dto.getCashInAccountPct()));
+        expense.setAmount(amount);
+        expense.setCashInHandPct(cashInHandPct);
+        expense.setCashInAccountPct(cashInAccountPct);
+        expense.setCashInHandAmount(exactCashInHand);
         expense.setExpenseDate(dto.getExpenseDate());
         expense.setNote(dto.getNote());
         return null;
@@ -664,10 +691,11 @@ public class FinanceServiceImpl implements FinanceService {
         }
 
         // The C/H and C/A totals are accumulated in the loops below rather than fetched as their
-        // own SUM queries. The per-line split is amount x pct/100 rounded HALF_UP to 2dp, so a
-        // SQL-side SUM(amount * pct / 100) would round once at the end and drift from the C/H Amt
-        // column the user can actually see. Summing the same values that get rendered is the only
-        // way the tile total and the column agree.
+        // own SUM queries. The per-line split is either the exact rupees entered or amount x
+        // pct/100 rounded HALF_UP to 2dp, so a SQL-side SUM(amount * pct / 100) would ignore the
+        // exact lines, round once at the end and drift from the C/H Amt column the user can
+        // actually see. Summing the same values that get rendered is the only way the tile total
+        // and the column agree.
         BigDecimal expenseCH = BigDecimal.ZERO;
         BigDecimal expenseCA = BigDecimal.ZERO;
         // Vendor balances likewise: both sides come from the already-loaded lists, so per-vendor
@@ -695,9 +723,14 @@ public class FinanceServiceImpl implements FinanceService {
             ed.setAmount(nz(e.getAmount()));
             ed.setCashInHandPct(nz(e.getCashInHandPct()));
             ed.setCashInAccountPct(nz(e.getCashInAccountPct()));
-            BigDecimal chAmount = nz(e.getAmount()).multiply(nz(e.getCashInHandPct()))
-                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            // min(): a line whose amount was lowered by the previous jar (which does not know the
+            // exact column) must not show more cash in hand than the line is worth.
+            BigDecimal chAmount = e.getCashInHandAmount() != null
+                    ? e.getCashInHandAmount().min(nz(e.getAmount()))
+                    : nz(e.getAmount()).multiply(nz(e.getCashInHandPct()))
+                            .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
             BigDecimal caAmount = nz(e.getAmount()).subtract(chAmount);
+            ed.setSplitByAmount(e.getCashInHandAmount() != null);
             ed.setCashInHandAmount(chAmount);
             ed.setCashInAccountAmount(caAmount);
             expenseCH = expenseCH.add(chAmount);

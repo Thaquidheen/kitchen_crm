@@ -132,6 +132,8 @@ public class CustomerFinanceSummaryDto {
         private BigDecimal cashInAccountPct;
         private BigDecimal cashInHandAmount;
         private BigDecimal cashInAccountAmount;
+        /** True when the split was entered as exact rupees (the percentages are then derived). */
+        private boolean splitByAmount;
         private Long vendorId;
         private String vendorName;
         private Long quotationId;

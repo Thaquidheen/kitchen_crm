@@ -121,8 +121,13 @@ export const ReleaseFormModal: React.FC<ReleaseFormModalProps> = ({
     return { vendorLines: mine, otherLines: others };
   }, [expenses, vendorId]);
 
-  const lineLabel = (ex: FinanceExpense) =>
-    ex.pendingAmount > 0 ? `${ex.title} — ${inr(ex.pendingAmount)} pending` : `${ex.title} — cleared`;
+  // A line can exist before its amount is known — that is not the same thing as cleared.
+  const lineLabel = (ex: FinanceExpense) => {
+    if (!(ex.amount > 0)) {
+      return `${ex.title} — amount not added yet`;
+    }
+    return ex.pendingAmount > 0 ? `${ex.title} — ${inr(ex.pendingAmount)} pending` : `${ex.title} — cleared`;
+  };
 
   // Over-release: measured against the vendor balance, or the linked line's pending when a line
   // is chosen. Editing an existing release compares against balance + its own current amount so
@@ -134,6 +139,9 @@ export const ReleaseFormModal: React.FC<ReleaseFormModalProps> = ({
     if (expenseId) {
       const line = expenses.find((ex) => String(ex.id) === expenseId);
       if (line) {
+        if (!(line.amount > 0)) {
+          return 'This expense line has no amount yet, so there is nothing to measure the release against';
+        }
         const lineSelf = release && release.expenseId === line.id ? release.amount : 0;
         const room = line.pendingAmount + lineSelf;
         if (amt > room) return `${inr(amt - room)} more than this line's pending amount`;
