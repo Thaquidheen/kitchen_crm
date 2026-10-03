@@ -14,8 +14,8 @@ import java.time.LocalDate;
 
 /**
  * One planned expense line for a customer (title from the suggestion list or free text)
- * with a cash-in-hand / cash-in-account percentage split. The split amounts and the
- * released/pending balances are derived in the DTO, never stored.
+ * with a cash-in-hand / cash-in-account split, entered either as percentages or as exact
+ * rupees. The released/pending balances are derived in the DTO, never stored.
  */
 @Entity
 @Table(name = "finance_expenses")
@@ -44,6 +44,13 @@ public class FinanceExpense extends Auditable {
 
     @Column(name = "cash_in_account_pct", nullable = false, precision = 5, scale = 2)
     private BigDecimal cashInAccountPct = BigDecimal.ZERO;
+
+    /**
+     * Exact cash-in-hand rupees when the split was entered as amounts; null when it was entered
+     * as percentages. When set it is the truth and the two percentages are only its rounded echo.
+     */
+    @Column(name = "cash_in_hand_amount", precision = 14, scale = 2)
+    private BigDecimal cashInHandAmount;
 
     /** Optional: who the money goes to. Vendor-less lines (Installation, Incentive) stay legal. */
     @ManyToOne(fetch = FetchType.LAZY)

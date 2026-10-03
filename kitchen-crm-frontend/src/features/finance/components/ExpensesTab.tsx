@@ -147,13 +147,39 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ summary }) => {
                     <td className="px-3 py-3 text-[12.5px] text-text-800 whitespace-nowrap overflow-hidden text-ellipsis max-w-[140px]">
                       {e.vendorName ?? <span className="text-text-500">—</span>}
                     </td>
-                    <td className="px-3 py-3 text-[13px] font-[650] text-text-900 tabular-nums whitespace-nowrap">
-                      {inr(e.amount)}
-                    </td>
-                    <td className="px-3 py-3 text-[12.5px] text-text-700 tabular-nums">{e.cashInHandPct}%</td>
-                    <td className="px-3 py-3 text-[12.5px] text-text-700 tabular-nums">{e.cashInAccountPct}%</td>
-                    <td className="px-3 py-3 text-[12.5px] text-text-800 tabular-nums whitespace-nowrap">{inr(e.cashInHandAmount)}</td>
-                    <td className="px-3 py-3 text-[12.5px] text-text-800 tabular-nums whitespace-nowrap">{inr(e.cashInAccountAmount)}</td>
+                    {e.amount > 0 ? (
+                      <>
+                        <td className="px-3 py-3 text-[13px] font-[650] text-text-900 tabular-nums whitespace-nowrap">
+                          {inr(e.amount)}
+                        </td>
+                        <td className="px-3 py-3 text-[12.5px] text-text-700 tabular-nums">{e.cashInHandPct}%</td>
+                        <td className="px-3 py-3 text-[12.5px] text-text-700 tabular-nums">{e.cashInAccountPct}%</td>
+                        <td className="px-3 py-3 text-[12.5px] text-text-800 tabular-nums whitespace-nowrap">{inr(e.cashInHandAmount)}</td>
+                        <td className="px-3 py-3 text-[12.5px] text-text-800 tabular-nums whitespace-nowrap">{inr(e.cashInAccountAmount)}</td>
+                      </>
+                    ) : (
+                      // Written down before it was priced: offer the amount, show no made-up split.
+                      <>
+                        <td className="px-3 py-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingExpense(e);
+                              setExpenseFormOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1 px-2 py-[3px] rounded-full border border-dashed border-background-600 text-[11px] font-semibold text-primary-600 whitespace-nowrap hover:bg-background-600 transition-colors"
+                          >
+                            <Plus size={11} />
+                            Add amount
+                          </button>
+                        </td>
+                        {[0, 1, 2, 3].map((i) => (
+                          <td key={i} className="px-3 py-3 text-[12.5px] text-text-500">
+                            —
+                          </td>
+                        ))}
+                      </>
+                    )}
                     <td className="px-3 py-3">
                       {e.quotationNumber ? (
                         <span
@@ -169,7 +195,11 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ summary }) => {
                     </td>
                     <td className="px-3 py-3 text-[12.5px] text-text-800 tabular-nums whitespace-nowrap">{inr(e.releasedAmount)}</td>
                     <td className="px-3 py-3">
-                      {e.pendingAmount > 0 ? (
+                      {!(e.amount > 0) ? (
+                        <span className="inline-flex px-2 py-[3px] rounded-full text-[11px] font-semibold whitespace-nowrap bg-background-700 border border-background-600 text-text-600">
+                          No amount yet
+                        </span>
+                      ) : e.pendingAmount > 0 ? (
                         <span
                           className="inline-flex px-2 py-[3px] rounded-full text-[11px] font-semibold tabular-nums whitespace-nowrap"
                           style={{ background: 'var(--st-potential-bg)', color: 'var(--st-potential-fg)' }}

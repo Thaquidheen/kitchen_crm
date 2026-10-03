@@ -2,7 +2,6 @@ package com.fleetmanagement.kitchencrmbackend.modules.finance.dto;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,17 +17,23 @@ public class ExpenseRequestDto {
     @NotBlank(message = "Expense name is required")
     private String title;
 
-    @NotNull(message = "Amount is required")
-    @DecimalMin(value = "0", inclusive = false, message = "Amount must be greater than zero")
+    /** Optional: a line is often written down first and priced later. Missing means zero. */
+    @DecimalMin(value = "0", message = "Amount cannot be negative")
     private BigDecimal amount;
 
-    @NotNull(message = "Cash in hand percentage is required")
+    /** Percentage split. With neither sent (and no {@link #cashInHandAmount}) the line is all cash in hand. */
     @DecimalMin(value = "0", message = "Percentage cannot be negative")
     private BigDecimal cashInHandPct;
 
-    @NotNull(message = "Cash in account percentage is required")
     @DecimalMin(value = "0", message = "Percentage cannot be negative")
     private BigDecimal cashInAccountPct;
+
+    /**
+     * Exact cash-in-hand rupees. When present the split is by amount: cash in account is the
+     * rest of {@link #amount} and the percentages are derived, whatever was sent for them.
+     */
+    @DecimalMin(value = "0", message = "Cash in hand amount cannot be negative")
+    private BigDecimal cashInHandAmount;
 
     /** Optional vendor this expense is for; must reference an active vendor when present. */
     private Long vendorId;

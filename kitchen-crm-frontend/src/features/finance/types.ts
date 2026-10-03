@@ -30,6 +30,8 @@ export interface FinanceExpense {
   cashInAccountPct: number;
   cashInHandAmount: number;
   cashInAccountAmount: number;
+  /** True when the split was entered as exact rupees — the two percentages are then derived. */
+  splitByAmount?: boolean;
   vendorId?: number;
   vendorName?: string;
   quotationId?: number;
@@ -162,6 +164,8 @@ export interface ExpenseRequest {
   vendorId?: number | null;
   cashInHandPct: number;
   cashInAccountPct: number;
+  /** Exact cash-in-hand rupees; when sent, the server keeps it and derives the percentages. */
+  cashInHandAmount?: number | null;
   quotationId?: number | null;
   expenseDate?: string;
   note?: string;

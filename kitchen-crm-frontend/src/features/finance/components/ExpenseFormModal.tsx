@@ -1,7 +1,8 @@
 /**
  * ExpenseFormModal — expense name (suggestion combobox + free text), optional vendor
- * (feeds the per-vendor release balances), amount, auto-complementing C/H % + C/A % pair
- * with live computed amounts, optional quotation link, date and note.
+ * (feeds the per-vendor release balances), amount, the C/H + C/A split, optional quotation
+ * link, date and note. The split is typed either as percentages (rupees shown underneath) or
+ * as exact rupees (percentages shown underneath); either way the two fields complete each other.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -16,6 +17,22 @@ import VendorFormModal from '@/features/vendors/components/VendorFormModal';
 import { useAddFinanceExpenseMutation, useUpdateFinanceExpenseMutation } from '../financeAPI';
 import type { FinanceExpense } from '../types';
 import { FINANCE_EXPENSE_SUGGESTIONS, inr } from '../constants';
+import { amountOf, complementOf, parseField, pctOf, resolveSplit, round2, type SplitMode } from '../expenseSplit';
+
+/** Which way the split was typed last time — the next new expense opens the same way. */
+const SPLIT_MODE_KEY = 'finance.expenseSplitMode';
+const rememberedSplitMode = (): SplitMode => {
+  try {
+    return localStorage.getItem(SPLIT_MODE_KEY) === 'AMOUNT' ? 'AMOUNT' : 'PCT';
+  } catch {
+    return 'PCT';
+  }
+};
+
+const SPLIT_MODES = [
+  { key: 'PCT', label: 'Percent %' },
+  { key: 'AMOUNT', label: 'Amount ₹' },
+] as const;
 
 interface ExpenseFormModalProps {
   isOpen: boolean;
@@ -28,8 +45,13 @@ interface ExpenseFormModalProps {
 export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onClose, financeId, customerId, expense }) => {
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
+  const [splitMode, setSplitMode] = useState<SplitMode>('PCT');
   const [chPct, setChPct] = useState('100');
   const [caPct, setCaPct] = useState('0');
+  const [chAmt, setChAmt] = useState('');
+  const [caAmt, setCaAmt] = useState('');
+  // The rupee field typed last: it stays put when the total changes, the other one follows.
+  const [amtAnchor, setAmtAnchor] = useState<'CH' | 'CA'>('CH');
   const [vendorId, setVendorId] = useState('');
   const [vendorModalOpen, setVendorModalOpen] = useState(false);
   const [quotationId, setQuotationId] = useState('');
@@ -55,9 +77,15 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onCl
   useEffect(() => {
     if (isOpen) {
       setTitle(expense?.title ?? '');
-      setAmount(expense ? String(expense.amount) : '');
+      // An expense saved without an amount has no real split yet, so it opens like a new one.
+      const priced = !!expense && expense.amount > 0;
+      setAmount(priced ? String(expense.amount) : '');
+      setSplitMode(priced ? (expense.splitByAmount ? 'AMOUNT' : 'PCT') : rememberedSplitMode());
       setChPct(expense ? String(expense.cashInHandPct) : '100');
       setCaPct(expense ? String(expense.cashInAccountPct) : '0');
+      setChAmt(priced ? String(expense.cashInHandAmount) : '');
+      setCaAmt(priced ? String(expense.cashInAccountAmount) : '');
+      setAmtAnchor('CH');
       setVendorId(expense?.vendorId ? String(expense.vendorId) : '');
       setQuotationId(expense?.quotationId ? String(expense.quotationId) : '');
       setExpenseDate(expense?.expenseDate ?? '');
@@ -81,24 +109,98 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onCl
   const chAmount = Math.round(amt * (Number(chPct) || 0)) / 100;
   const caAmount = amt - chAmount;
 
+  // Same pairing for the rupee fields: typing one fills the other with the rest of the amount.
+  const onChAmt = (v: string) => {
+    setChAmt(v);
+    setAmtAnchor('CH');
+    const rest = amt > 0 ? complementOf(amt, v) : null;
+    if (rest !== null) {
+      setCaAmt(rest);
+    }
+  };
+  const onCaAmt = (v: string) => {
+    setCaAmt(v);
+    setAmtAnchor('CA');
+    const rest = amt > 0 ? complementOf(amt, v) : null;
+    if (rest !== null) {
+      setChAmt(rest);
+    }
+  };
+  const onAmount = (v: string) => {
+    setAmount(v);
+    const total = Number(v) || 0;
+    if (splitMode !== 'AMOUNT' || total <= 0) {
+      return;
+    }
+    const rest = complementOf(total, amtAnchor === 'CH' ? chAmt : caAmt);
+    if (rest === null) {
+      return;
+    }
+    if (amtAnchor === 'CH') {
+      setCaAmt(rest);
+    } else {
+      setChAmt(rest);
+    }
+  };
+
+  // Switching carries the current split across, so nothing typed is lost.
+  const switchSplitMode = (next: SplitMode) => {
+    if (next === splitMode) {
+      return;
+    }
+    if (next === 'AMOUNT') {
+      if (amt > 0) {
+        const ch = amountOf(Number(chPct) || 0, amt);
+        setChAmt(String(ch));
+        setCaAmt(String(round2(amt - ch)));
+      }
+      setAmtAnchor('CH');
+    } else {
+      const ch = parseField(chAmt);
+      if (amt > 0 && ch !== null && ch <= amt) {
+        const pct = pctOf(ch, amt);
+        setChPct(String(pct));
+        setCaPct(String(round2(100 - pct)));
+      }
+    }
+    setSplitMode(next);
+    try {
+      localStorage.setItem(SPLIT_MODE_KEY, next);
+    } catch {
+      /* a remembered preference only */
+    }
+  };
+
+  const chTyped = parseField(chAmt);
+  const caTyped = parseField(caAmt);
+  // Rupees the two fields do not cover yet (negative = they add up to more than the amount).
+  const splitGap = chTyped !== null && caTyped !== null ? round2(amt - chTyped - caTyped) : 0;
+  const chShare = amt > 0 && chTyped !== null ? pctOf(chTyped, amt) : null;
+  const caShare =
+    amt > 0 && caTyped !== null ? (chShare !== null && splitGap === 0 ? round2(100 - chShare) : pctOf(caTyped, amt)) : null;
+
   const handleSave = async () => {
     if (!title.trim()) {
       toast.error('Enter the expense name');
       return;
     }
-    if (!amt || amt <= 0) {
-      toast.error('Enter an amount greater than zero');
+    // The amount may be left empty and added later; only a wrong one is refused.
+    if (amount.trim() !== '' && (Number.isNaN(Number(amount)) || Number(amount) < 0)) {
+      toast.error('The amount cannot be negative');
       return;
     }
-    if (Math.abs((Number(chPct) || 0) + (Number(caPct) || 0) - 100) > 0.01) {
-      toast.error('C/H % and C/A % must add up to 100');
+    const split =
+      splitMode === 'PCT' ? resolveSplit('PCT', amt, chPct, caPct) : resolveSplit('AMOUNT', amt, chAmt, caAmt, inr);
+    if (split.error) {
+      toast.error(split.error);
       return;
     }
     const body = {
       title: title.trim(),
       amount: amt,
-      cashInHandPct: Number(chPct) || 0,
-      cashInAccountPct: Number(caPct) || 0,
+      cashInHandPct: split.cashInHandPct,
+      cashInAccountPct: split.cashInAccountPct,
+      cashInHandAmount: split.cashInHandAmount,
       vendorId: vendorId ? Number(vendorId) : null,
       quotationId: quotationId ? Number(quotationId) : null,
       expenseDate: expenseDate || undefined,
@@ -169,23 +271,102 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({ isOpen, onCl
             </p>
           </div>
 
-          <Input
-            label="Amount (₹) *"
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="e.g. 200000"
-          />
+          <div>
+            <Input
+              label="Amount (₹)"
+              type="number"
+              value={amount}
+              onChange={(e) => onAmount(e.target.value)}
+              placeholder="e.g. 200000"
+            />
+            <p className="mt-1 mb-0 text-[11.5px] text-text-500">Not known yet? Leave it empty and add it later.</p>
+          </div>
 
-          <div className="grid grid-cols-2 gap-3.5">
-            <div>
-              <Input label="Cash in Hand %" type="number" value={chPct} onChange={(e) => onChPct(e.target.value)} />
-              <p className="mt-1 mb-0 text-[11.5px] text-text-500 tabular-nums">= {inr(chAmount)}</p>
+          <div>
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <span className="block text-xs sm:text-sm font-medium text-text-700">Cash split</span>
+              <div
+                role="group"
+                aria-label="Enter the cash split as"
+                className="inline-flex p-[3px] gap-[3px] rounded-[10px] border border-background-600 bg-background-800"
+              >
+                {SPLIT_MODES.map((m) => {
+                  const active = splitMode === m.key;
+                  return (
+                    <button
+                      key={m.key}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => switchSplitMode(m.key)}
+                      className={`px-2.5 py-1 rounded-[7px] text-[11.5px] transition-colors ${
+                        active ? 'font-semibold text-text-900' : 'font-medium text-text-600 hover:text-text-900'
+                      }`}
+                      style={
+                        active
+                          ? { background: 'color-mix(in oklab, var(--color-primary-600) 16%, transparent)' }
+                          : undefined
+                      }
+                    >
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div>
-              <Input label="Cash in Account %" type="number" value={caPct} onChange={(e) => onCaPct(e.target.value)} />
-              <p className="mt-1 mb-0 text-[11.5px] text-text-500 tabular-nums">= {inr(caAmount)}</p>
-            </div>
+
+            {splitMode === 'PCT' ? (
+              <div className="grid grid-cols-2 gap-3.5">
+                <div>
+                  <Input label="Cash in Hand %" type="number" value={chPct} onChange={(e) => onChPct(e.target.value)} />
+                  <p className="mt-1 mb-0 text-[11.5px] text-text-500 tabular-nums">= {inr(chAmount)}</p>
+                </div>
+                <div>
+                  <Input label="Cash in Account %" type="number" value={caPct} onChange={(e) => onCaPct(e.target.value)} />
+                  <p className="mt-1 mb-0 text-[11.5px] text-text-500 tabular-nums">= {inr(caAmount)}</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <Input
+                      label="Cash in Hand (₹)"
+                      type="number"
+                      value={chAmt}
+                      onChange={(e) => onChAmt(e.target.value)}
+                      placeholder="e.g. 73450"
+                    />
+                    <p className="mt-1 mb-0 text-[11.5px] text-text-500 tabular-nums">
+                      = {chShare === null ? '—' : `${chShare}%`}
+                    </p>
+                  </div>
+                  <div>
+                    <Input
+                      label="Cash in Account (₹)"
+                      type="number"
+                      value={caAmt}
+                      onChange={(e) => onCaAmt(e.target.value)}
+                      placeholder="the rest"
+                    />
+                    <p className="mt-1 mb-0 text-[11.5px] text-text-500 tabular-nums">
+                      = {caShare === null ? '—' : `${caShare}%`}
+                    </p>
+                  </div>
+                </div>
+                {amt > 0 && splitGap !== 0 && (
+                  <p className="mt-1.5 mb-0 text-[11.5px] font-medium tabular-nums" style={{ color: 'var(--st-lost-fg)' }}>
+                    {splitGap > 0
+                      ? `${inr(splitGap)} of the amount is not split yet`
+                      : `The split is ${inr(-splitGap)} more than the amount`}
+                  </p>
+                )}
+                {amt <= 0 && (
+                  <p className="mt-1.5 mb-0 text-[11.5px] text-text-500">
+                    The split can be filled in once the amount is added.
+                  </p>
+                )}
+              </>
+            )}
           </div>
 
           <div>
