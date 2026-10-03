@@ -18,6 +18,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -180,17 +182,30 @@ public class FinanceServiceImpl implements FinanceService {
         if (finance == null) {
             return ApiResponse.error("Finance record not found");
         }
-        // Remove receipt files from disk first; the DB rows go with the cascade.
-        List<Long> paymentIds = paymentRepository.findByFinanceIdOrderByPaymentDateAscIdAsc(financeId)
-                .stream().map(FinanceIncomePayment::getId).toList();
-        List<Long> expenseIds = expenseRepository.findByFinanceIdOrderByIdAsc(financeId)
-                .stream().map(FinanceExpense::getId).toList();
-        List<Long> releaseIds = releaseRepository.findByFinanceIdOrderByReleaseDateAscIdAsc(financeId)
-                .stream().map(FinanceVendorRelease::getId).toList();
-        if (!paymentIds.isEmpty()) receiptRepository.findByPaymentIdIn(paymentIds).forEach(f -> deleteStoredFile(f.getFileUrl()));
-        if (!expenseIds.isEmpty()) receiptRepository.findByExpenseIdIn(expenseIds).forEach(f -> deleteStoredFile(f.getFileUrl()));
-        if (!releaseIds.isEmpty()) receiptRepository.findByReleaseIdIn(releaseIds).forEach(f -> deleteStoredFile(f.getFileUrl()));
+        List<FinanceIncomePayment> payments = paymentRepository.findByFinanceIdOrderByPaymentDateAscIdAsc(financeId);
+        List<FinanceExpense> expenses = expenseRepository.findByFinanceIdOrderByIdAsc(financeId);
+        List<FinanceVendorRelease> releases = releaseRepository.findByFinanceIdOrderByReleaseDateAscIdAsc(financeId);
+        List<FinanceReceiptFile> receipts = new ArrayList<>();
+        if (!payments.isEmpty()) {
+            receipts.addAll(receiptRepository.findByPaymentIdIn(payments.stream().map(FinanceIncomePayment::getId).toList()));
+        }
+        if (!expenses.isEmpty()) {
+            receipts.addAll(receiptRepository.findByExpenseIdIn(expenses.stream().map(FinanceExpense::getId).toList()));
+        }
+        if (!releases.isEmpty()) {
+            receipts.addAll(receiptRepository.findByReleaseIdIn(releases.stream().map(FinanceVendorRelease::getId).toList()));
+        }
+        List<String> fileUrls = receipts.stream().map(FinanceReceiptFile::getFileUrl).toList();
+        // These rows are loaded (managed) to find their receipt files, so they are removed explicitly,
+        // leaves first. Leaving them to the DB cascade failed every delete of a record with payments:
+        // at flush a managed payment still pointing at the removed finance row is a
+        // TransientObjectException, and the whole delete rolled back.
+        receiptRepository.deleteAll(receipts);
+        releaseRepository.deleteAll(releases);
+        paymentRepository.deleteAll(payments);
+        expenseRepository.deleteAll(expenses);
         financeRepository.delete(finance);
+        deleteStoredFilesAfterCommit(fileUrls);
         return ApiResponse.success("Finance record deleted");
     }
 
@@ -228,8 +243,12 @@ public class FinanceServiceImpl implements FinanceService {
             return ApiResponse.error("Payment not found");
         }
         CustomerFinance finance = payment.getFinance();
-        receiptRepository.findByPaymentId(paymentId).forEach(f -> deleteStoredFile(f.getFileUrl()));
+        // Receipts first: a loaded receipt still pointing at the removed payment fails the flush.
+        List<FinanceReceiptFile> receipts = receiptRepository.findByPaymentId(paymentId);
+        List<String> fileUrls = receipts.stream().map(FinanceReceiptFile::getFileUrl).toList();
+        receiptRepository.deleteAll(receipts);
         paymentRepository.delete(payment);
+        deleteStoredFilesAfterCommit(fileUrls);
         return ApiResponse.success("Payment deleted", buildSummary(finance));
     }
 
@@ -281,8 +300,12 @@ public class FinanceServiceImpl implements FinanceService {
             return ApiResponse.error("Expense not found");
         }
         CustomerFinance finance = expense.getFinance();
-        receiptRepository.findByExpenseId(expenseId).forEach(f -> deleteStoredFile(f.getFileUrl()));
+        // Receipts first: a loaded receipt still pointing at the removed expense fails the flush.
+        List<FinanceReceiptFile> receipts = receiptRepository.findByExpenseId(expenseId);
+        List<String> fileUrls = receipts.stream().map(FinanceReceiptFile::getFileUrl).toList();
+        receiptRepository.deleteAll(receipts);
         expenseRepository.delete(expense);
+        deleteStoredFilesAfterCommit(fileUrls);
         return ApiResponse.success("Expense deleted", buildSummary(finance));
     }
 
@@ -363,8 +386,12 @@ public class FinanceServiceImpl implements FinanceService {
             return ApiResponse.error("Release not found");
         }
         CustomerFinance finance = release.getFinance();
-        receiptRepository.findByReleaseId(releaseId).forEach(f -> deleteStoredFile(f.getFileUrl()));
+        // Receipts first: a loaded receipt still pointing at the removed release fails the flush.
+        List<FinanceReceiptFile> receipts = receiptRepository.findByReleaseId(releaseId);
+        List<String> fileUrls = receipts.stream().map(FinanceReceiptFile::getFileUrl).toList();
+        receiptRepository.deleteAll(receipts);
         releaseRepository.delete(release);
+        deleteStoredFilesAfterCommit(fileUrls);
         return ApiResponse.success("Release deleted", buildSummary(finance));
     }
 
@@ -479,8 +506,9 @@ public class FinanceServiceImpl implements FinanceService {
             receiptRepository.delete(file);
             return ApiResponse.error("File had no owner and was removed");
         }
-        deleteStoredFile(file.getFileUrl());
+        String fileUrl = file.getFileUrl();
         receiptRepository.delete(file);
+        deleteStoredFilesAfterCommit(Collections.singletonList(fileUrl));
         return ApiResponse.success("File removed", buildSummary(finance));
     }
 
@@ -537,6 +565,28 @@ public class FinanceServiceImpl implements FinanceService {
         record.setFileName(stored.originalName());
         record.setUploadedAt(LocalDateTime.now());
         return record;
+    }
+
+    /**
+     * Remove receipt files from disk only once the transaction has committed. Deleting them before the
+     * rows meant a delete that then failed and rolled back had already destroyed the files (this lost
+     * a real receipt while finance deletes were failing).
+     */
+    private void deleteStoredFilesAfterCommit(List<String> urls) {
+        List<String> targets = urls.stream().filter(u -> u != null && !u.isBlank()).toList();
+        if (targets.isEmpty()) {
+            return;
+        }
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    targets.forEach(u -> deleteStoredFile(u));
+                }
+            });
+        } else {
+            targets.forEach(this::deleteStoredFile);
+        }
     }
 
     private void deleteStoredFile(String url) {

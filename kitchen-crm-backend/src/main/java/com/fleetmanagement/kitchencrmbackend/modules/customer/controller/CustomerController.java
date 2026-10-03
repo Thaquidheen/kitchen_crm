@@ -124,9 +124,15 @@ public class CustomerController {
             @PathVariable Long id,
             @RequestParam Customer.CustomerStatus status,
             @RequestParam(required = false) String reason,
+            @RequestParam(required = false) Long designerId,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(
+                    iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate designDueDate,
+            @RequestParam(required = false) String designPriority,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
+        // Moving to Design needs a designer (see CustomerService); every other status ignores the extras.
         return ResponseEntity.ok(customerService.updateCustomerStatus(
-                id, status, currentUser.getName(), reason));
+                id, status, currentUser.getName(), reason, designerId, designDueDate, designPriority,
+                currentUser.getId()));
     }
 }

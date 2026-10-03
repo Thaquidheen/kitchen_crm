@@ -15,6 +15,11 @@ import com.fleetmanagement.kitchencrmbackend.modules.task.dto.EmployeeTaskDto;
 import com.fleetmanagement.kitchencrmbackend.modules.task.dto.EmployeeTaskUpdateDto;
 import com.fleetmanagement.kitchencrmbackend.modules.task.dto.TaskCompletionStatsDto;
 import com.fleetmanagement.kitchencrmbackend.modules.task.entity.EmployeeTask;
+import com.fleetmanagement.kitchencrmbackend.modules.task.entity.EmployeeTaskReply;
+import com.fleetmanagement.kitchencrmbackend.modules.task.dto.EmployeeTaskReplyDto;
+import com.fleetmanagement.kitchencrmbackend.modules.task.repository.EmployeeTaskReplyRepository;
+import java.util.Collection;
+import java.util.Collections;
 import com.fleetmanagement.kitchencrmbackend.modules.task.repository.EmployeeTaskRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,6 +41,9 @@ public class EmployeeTaskServiceImpl implements EmployeeTaskService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private EmployeeTaskReplyRepository replyRepository;
 
     // Same day-granularity convention as reminders and to-dos: the server runs UTC, but
     // "today" (for due / overdue) is the business day in this zone.
@@ -164,36 +172,28 @@ public class EmployeeTaskServiceImpl implements EmployeeTaskService {
     @Override
     public ApiResponse<List<EmployeeTaskDto>> getTasksByEmployeeAndDate(Long employeeId, LocalDate date) {
         List<EmployeeTask> tasks = taskRepository.findByAssignedToIdAndTaskDate(employeeId, date);
-        List<EmployeeTaskDto> dtos = tasks.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
+        List<EmployeeTaskDto> dtos = toDtos(tasks);
         return ApiResponse.success(dtos);
     }
 
     @Override
     public ApiResponse<List<EmployeeTaskDto>> getTasksByDate(LocalDate date) {
         List<EmployeeTask> tasks = taskRepository.findByTaskDate(date);
-        List<EmployeeTaskDto> dtos = tasks.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
+        List<EmployeeTaskDto> dtos = toDtos(tasks);
         return ApiResponse.success(dtos);
     }
 
     @Override
     public ApiResponse<List<EmployeeTaskDto>> getTasksByEmployeeAndDateRange(Long employeeId, LocalDate fromDate, LocalDate toDate) {
         List<EmployeeTask> tasks = taskRepository.findByAssignedToIdAndTaskDateBetween(employeeId, fromDate, toDate);
-        List<EmployeeTaskDto> dtos = tasks.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
+        List<EmployeeTaskDto> dtos = toDtos(tasks);
         return ApiResponse.success(dtos);
     }
 
     @Override
     public ApiResponse<List<EmployeeTaskDto>> getTasksByEmployee(Long employeeId) {
         List<EmployeeTask> tasks = taskRepository.findByAssignedToIdOrderByTaskDateAscIdAsc(employeeId);
-        List<EmployeeTaskDto> dtos = tasks.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
+        List<EmployeeTaskDto> dtos = toDtos(tasks);
         return ApiResponse.success(dtos);
     }
 
@@ -340,8 +340,7 @@ public class EmployeeTaskServiceImpl implements EmployeeTaskService {
 
     @Override
     public ApiResponse<List<EmployeeTaskDto>> getTasksAssignedBy(Long adminId) {
-        return ApiResponse.success(taskRepository.findByAssignedByIdOrderByTaskDateDescIdDesc(adminId)
-                .stream().map(this::convertToDto).collect(Collectors.toList()));
+        return ApiResponse.success(toDtos(taskRepository.findByAssignedByIdOrderByTaskDateDescIdDesc(adminId)));
     }
 
     @Override
@@ -349,7 +348,7 @@ public class EmployeeTaskServiceImpl implements EmployeeTaskService {
         List<EmployeeTask> due = taskRepository.findDueForAssignee(userId, today());
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("count", due.size());
-        payload.put("tasks", due.stream().map(this::convertToDto).collect(Collectors.toList()));
+        payload.put("tasks", toDtos(due));
         return ApiResponse.success(payload);
     }
 
@@ -358,7 +357,7 @@ public class EmployeeTaskServiceImpl implements EmployeeTaskService {
         List<EmployeeTask> items = taskRepository.findAttentionForAssigner(adminId, today());
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("count", items.size());
-        payload.put("tasks", items.stream().map(this::convertToDto).collect(Collectors.toList()));
+        payload.put("tasks", toDtos(items));
         return ApiResponse.success(payload);
     }
 
@@ -385,7 +384,99 @@ public class EmployeeTaskServiceImpl implements EmployeeTaskService {
         return ApiResponse.success(taskRepository.markAllCompletionsSeen(adminId, LocalDateTime.now()));
     }
 
+    // ---- Reply thread ----
+
+    @Override
+    public ApiResponse<EmployeeTaskDto> addReply(Long taskId, Long userId, String userName, String message) {
+        EmployeeTask task = taskRepository.findById(taskId).orElse(null);
+        // Same answer for missing and foreign tasks so existence is never leaked.
+        if (task == null || userId == null) {
+            return ApiResponse.error("Task not found");
+        }
+        boolean isAssignee = task.getAssignedTo().getId().equals(userId);
+        boolean isAssigner = task.getAssignedBy().getId().equals(userId);
+        if (!isAssignee && !isAssigner) {
+            return ApiResponse.error("Task not found");
+        }
+        String text = message == null ? "" : message.trim();
+        if (text.isEmpty()) {
+            return ApiResponse.error("Type a reply first");
+        }
+        if (text.length() > 2000) {
+            return ApiResponse.error("Replies are limited to 2000 characters");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        EmployeeTaskReply reply = new EmployeeTaskReply();
+        reply.setTask(task);
+        reply.setAuthorUserId(userId);
+        reply.setAuthorName(userName);
+        // If someone assigned a task to themselves, their messages count as the assignee's.
+        reply.setFromAssignee(isAssignee);
+        reply.setMessage(text);
+        reply.setCreatedAt(now);
+        replyRepository.save(reply);
+        // Writing in the thread means you have read it.
+        if (isAssignee) {
+            task.setAssigneeRepliesSeenAt(now);
+        }
+        if (isAssigner) {
+            task.setAssignerRepliesSeenAt(now);
+        }
+        task = taskRepository.save(task);
+        return ApiResponse.success("Reply sent", convertToDto(task));
+    }
+
+    @Override
+    public ApiResponse<EmployeeTaskDto> markRepliesSeen(Long taskId, Long userId) {
+        EmployeeTask task = taskRepository.findById(taskId).orElse(null);
+        if (task == null || userId == null) {
+            return ApiResponse.error("Task not found");
+        }
+        boolean isAssignee = task.getAssignedTo().getId().equals(userId);
+        boolean isAssigner = task.getAssignedBy().getId().equals(userId);
+        if (!isAssignee && !isAssigner) {
+            return ApiResponse.error("Task not found");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (isAssignee) {
+            task.setAssigneeRepliesSeenAt(now);
+        }
+        if (isAssigner) {
+            task.setAssignerRepliesSeenAt(now);
+        }
+        task = taskRepository.save(task);
+        return ApiResponse.success(convertToDto(task));
+    }
+
+    /** Threads for many tasks in one query (chunked), keyed by task id. */
+    private Map<Long, List<EmployeeTaskReply>> repliesFor(Collection<EmployeeTask> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Long> ids = tasks.stream().map(EmployeeTask::getId).distinct().collect(Collectors.toList());
+        Map<Long, List<EmployeeTaskReply>> byTask = new HashMap<>();
+        for (int i = 0; i < ids.size(); i += 500) {
+            List<Long> chunk = ids.subList(i, Math.min(ids.size(), i + 500));
+            for (EmployeeTaskReply r : replyRepository.findForTasks(chunk)) {
+                byTask.computeIfAbsent(r.getTask().getId(), k -> new ArrayList<>()).add(r);
+            }
+        }
+        return byTask;
+    }
+
+    private List<EmployeeTaskDto> toDtos(List<EmployeeTask> tasks) {
+        Map<Long, List<EmployeeTaskReply>> threads = repliesFor(tasks);
+        return tasks.stream()
+                .map(t -> convertToDto(t, threads.getOrDefault(t.getId(), Collections.emptyList())))
+                .collect(Collectors.toList());
+    }
+
     private EmployeeTaskDto convertToDto(EmployeeTask task) {
+        return convertToDto(task, repliesFor(Collections.singletonList(task))
+                .getOrDefault(task.getId(), Collections.emptyList()));
+    }
+
+    private EmployeeTaskDto convertToDto(EmployeeTask task, List<EmployeeTaskReply> thread) {
         EmployeeTaskDto dto = new EmployeeTaskDto();
         dto.setId(task.getId());
         dto.setAssignedToUserId(task.getAssignedTo().getId());
@@ -407,7 +498,36 @@ public class EmployeeTaskServiceImpl implements EmployeeTaskService {
         boolean open = !Boolean.TRUE.equals(task.getCompleted());
         dto.setOverdue(open && task.getTaskDate() != null && task.getTaskDate().isBefore(today()));
         dto.setNewForAssignee(open && task.getAcknowledgedAt() == null);
+
+        List<EmployeeTaskReplyDto> replies = new ArrayList<>(thread.size());
+        int unreadForAssigner = 0;
+        int unreadForAssignee = 0;
+        LocalDateTime last = null;
+        for (EmployeeTaskReply r : thread) {
+            replies.add(new EmployeeTaskReplyDto(r.getId(), r.getAuthorUserId(), r.getAuthorName(),
+                    r.getFromAssignee(), r.getMessage(), r.getCreatedAt()));
+            boolean fromAssignee = Boolean.TRUE.equals(r.getFromAssignee());
+            if (fromAssignee && isAfter(r.getCreatedAt(), task.getAssignerRepliesSeenAt())) {
+                unreadForAssigner++;
+            }
+            if (!fromAssignee && isAfter(r.getCreatedAt(), task.getAssigneeRepliesSeenAt())) {
+                unreadForAssignee++;
+            }
+            if (last == null || (r.getCreatedAt() != null && r.getCreatedAt().isAfter(last))) {
+                last = r.getCreatedAt();
+            }
+        }
+        dto.setReplies(replies);
+        dto.setReplyCount(replies.size());
+        dto.setUnreadForAssigner(unreadForAssigner);
+        dto.setUnreadForAssignee(unreadForAssignee);
+        dto.setLastReplyAt(last);
         return dto;
+    }
+
+    /** A reply is unread when it was written after the reader last looked (or they never did). */
+    private static boolean isAfter(LocalDateTime written, LocalDateTime seen) {
+        return seen == null || (written != null && written.isAfter(seen));
     }
 }
 

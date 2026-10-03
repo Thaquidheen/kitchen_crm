@@ -19,8 +19,6 @@ import {
   Clock,
   Pencil,
   Trash2,
-  FileText,
-  IndianRupee,
   Ruler,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -29,13 +27,19 @@ import {
   useUpdateCustomerStatusMutation,
   useDeleteCustomerMutation,
 } from '../../features/customers/customersAPI';
-import { useGetQuotationsByCustomerQuery } from '../../app/baseApi';
 import { CustomerFormModal } from '../../features/customers/components/CustomerFormModal';
 import { CustomerFollowUps } from '../../features/customers/components/CustomerFollowUps';
 import { CustomerReminders } from '../../features/customers/components/CustomerReminders';
 import { CustomerActivityPanel } from '../../features/customers/components/CustomerActivityPanel';
 import { CustomerProductionTab } from '../../features/customers/components/CustomerProductionTab';
+import {
+  CustomerQuotationsTab,
+  CustomerQuotationsSummary,
+} from '../../features/customers/components/CustomerQuotationsTab';
 import { StatusChangeModal } from '../../features/customers/components/StatusChangeModal';
+import type { DesignAssignment } from '../../features/design/components/DesignerPicker';
+import { useGetCustomerDesignJobQuery } from '../../features/design/designAPI';
+import { DesignStatusPill } from '../../features/design/designUi';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { STATUS_PILL } from '../../features/customers/components/CustomerList';
 import { ProjectNetworkChips } from '../../features/customers/components/ProjectNetworkChips';
@@ -78,9 +82,9 @@ const CustomerDetailPage: React.FC = () => {
   const customerId = params.id ? Number(params.id) : undefined;
 
   const { data: customer, isLoading, error } = useGetCustomerByIdQuery(customerId!, { skip: !customerId });
-  const { data: quotationsRaw } = useGetQuotationsByCustomerQuery(customerId!, { skip: !customerId });
 
   const [updateStatus] = useUpdateCustomerStatusMutation();
+  const { data: designJob } = useGetCustomerDesignJobQuery(customerId!, { skip: !customerId });
   const [deleteCustomer, { isLoading: isDeleting }] = useDeleteCustomerMutation();
 
   const [activeTab, setActiveTab] = useState('Overview');
@@ -116,22 +120,23 @@ const CustomerDetailPage: React.FC = () => {
   }
 
   const pill = STATUS_PILL[customer.status] ?? { st: 'lead', label: customer.status };
-  const quotationsPage = (quotationsRaw as any)?.data;
-  const quotationCount: number = quotationsPage?.totalElements ?? 0;
-  const totalValue: number = (quotationsPage?.content ?? []).reduce(
-    (sum: number, q: any) => sum + (Number(q.totalAmount) || 0),
-    0
-  );
 
-  const handleStatusChange = async (note: string) => {
+  const handleStatusChange = async (note: string, design?: DesignAssignment) => {
     if (!pendingStatus) return;
     setIsSavingStatus(true);
     try {
-      await updateStatus({ id: customerId, status: pendingStatus, reason: note }).unwrap();
+      await updateStatus({
+        id: customerId,
+        status: pendingStatus,
+        reason: note,
+        designerId: design?.designerId ?? undefined,
+        designDueDate: design?.dueDate || undefined,
+        designPriority: design?.priority,
+      }).unwrap();
       toast.success(`Status updated to ${STATUS_PILL[pendingStatus]?.label ?? pendingStatus}`);
       setPendingStatus(null);
     } catch (e: any) {
-      toast.error(e?.data?.message || 'Failed to update status');
+      toast.error(e?.message || e?.data?.message || 'Failed to update status');
     } finally {
       setIsSavingStatus(false);
     }
@@ -156,15 +161,6 @@ const CustomerDetailPage: React.FC = () => {
     { icon: <Users size={15} />, label: 'Project network', value: <ProjectNetworkChips customer={customer} /> },
     { icon: <Calendar size={15} />, label: 'Created', value: fmtDate(customer.createdAt) },
     { icon: <Clock size={15} />, label: 'Last updated', value: fmtDate(customer.updatedAt) },
-  ];
-
-  const stats = [
-    { icon: <FileText size={16} />, label: 'Quotations', value: String(quotationCount) },
-    {
-      icon: <IndianRupee size={16} />,
-      label: 'Total Value',
-      value: `₹${totalValue.toLocaleString('en-IN')}`,
-    },
   ];
 
   return (
@@ -198,6 +194,14 @@ const CustomerDetailPage: React.FC = () => {
             Customer #{customer.id}
             {customer.place ? ` · ${customer.place}` : ''} · Created {fmtDate(customer.createdAt)}
           </p>
+          {designJob && designJob.designerName && (
+            <div className="mt-1 flex items-center gap-1.5 flex-wrap text-[12px] text-text-700">
+              <span>
+                Designer: <span className="font-semibold text-text-900">{designJob.designerName}</span>
+              </span>
+              <DesignStatusPill status={designJob.status} />
+            </div>
+          )}
         </div>
 
         <div className="flex-1" />
@@ -291,25 +295,9 @@ const CustomerDetailPage: React.FC = () => {
 
           {/* Right column */}
           <div className="space-y-4 min-w-0">
-            {/* Stat cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {stats.map((s) => (
-                <div key={s.label} className="bg-background-800 border border-background-600 rounded-[14px] px-4 py-3.5 flex items-center gap-3">
-                  <div
-                    className="w-9 h-9 rounded-[10px] flex items-center justify-center text-primary-600 shrink-0"
-                    style={{ background: 'color-mix(in oklab, var(--color-primary-600) 14%, transparent)' }}
-                  >
-                    {s.icon}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[10.5px] font-semibold tracking-[0.07em] uppercase text-text-500">{s.label}</div>
-                    <div className="text-[17px] font-[650] text-text-900 tabular-nums whitespace-nowrap overflow-hidden text-ellipsis">
-                      {s.value}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {/* Quotations — each version with its own value. Versions are alternatives, so they
+                are never summed into one "total value". */}
+            <CustomerQuotationsSummary customerId={customer.id} onViewAll={() => setActiveTab('Quotations')} />
 
             {/* Follow-ups (reminders have their own tab) */}
             <CustomerFollowUps customerId={customer.id} />
@@ -322,6 +310,8 @@ const CustomerDetailPage: React.FC = () => {
         <div className="space-y-4">
           <CustomerReminders customerId={customer.id} />
         </div>
+      ) : activeTab === 'Quotations' ? (
+        <CustomerQuotationsTab customerId={customer.id} />
       ) : activeTab === 'Production' ? (
         <CustomerProductionTab customerId={customer.id} />
       ) : (
@@ -341,6 +331,7 @@ const CustomerDetailPage: React.FC = () => {
         targetStatus={pendingStatus}
         currentStatus={customer.status as CustomerStatus}
         isSubmitting={isSavingStatus}
+        currentDesignerId={designJob?.designerId ?? null}
       />
 
       {/* Edit modal */}

@@ -12,9 +12,11 @@ import type { ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FilterChips } from '../../components/shared/FilterChips';
 import { fmtReminderDate as fmtDate, fmtReminderTime as fmtTime } from '../../utils/reminderFormat';
-import { Search, Plus, Check, Pencil, Trash2, BellRing, ListTodo, Users } from 'lucide-react';
+import { Search, Plus, Check, Pencil, Trash2, BellRing, ListTodo, Users, Palette } from 'lucide-react';
 import { MyTodosTab } from './MyTodosTab';
 import { TeamTasksTab } from './TeamTasksTab';
+import { DesignsTab } from './DesignsTab';
+import { useGetDesignMeQuery } from '@/features/design/designAPI';
 import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 import toast from 'react-hot-toast';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
@@ -261,9 +263,18 @@ export function RemindersPage() {
   // Team Tasks (assign work to staff) is a super-admin tab; a staff deep link to it falls back.
   // (isSuperAdmin and the creator filter are declared at the top — the queries need them.)
   const tabParam = searchParams.get('tab');
-  const tab: 'reminders' | 'todos' | 'team' =
-    tabParam === 'todos' ? 'todos' : tabParam === 'team' && isSuperAdmin ? 'team' : 'reminders';
-  const setTab = (t: 'reminders' | 'todos' | 'team') =>
+  // Designs: designers see their own designs here; admins see the designs that need them.
+  const { data: designMe } = useGetDesignMeQuery();
+  const canSeeDesigns = isSuperAdmin || !!designMe?.designer;
+  const tab: 'reminders' | 'todos' | 'team' | 'designs' =
+    tabParam === 'todos'
+      ? 'todos'
+      : tabParam === 'team' && isSuperAdmin
+        ? 'team'
+        : tabParam === 'designs' && canSeeDesigns
+          ? 'designs'
+          : 'reminders';
+  const setTab = (t: 'reminders' | 'todos' | 'team' | 'designs') =>
     setSearchParams(t === 'reminders' ? {} : { tab: t }, { replace: true });
 
   return (
@@ -280,7 +291,9 @@ export function RemindersPage() {
           <p className="mt-[5px] mb-0 text-[13px] text-text-700">
             {tab === 'todos'
               ? 'Your private task list — nobody else sees it.'
-              : 'A reminder shows for its whole day, from midnight — the time is just a note.'}
+              : tab === 'designs'
+                ? 'Designs and their status — new assignments, notes and anything overdue.'
+                : 'A reminder shows for its whole day, from midnight — the time is just a note.'}
           </p>
         </div>
         <div className="flex-1" />
@@ -304,7 +317,8 @@ export function RemindersPage() {
             { key: 'reminders', label: 'Customer Reminders', icon: <BellRing size={14} /> },
             { key: 'todos', label: 'My To-dos', icon: <ListTodo size={14} /> },
             ...(isSuperAdmin ? [{ key: 'team', label: 'Team Tasks', icon: <Users size={14} /> }] : []),
-          ] as { key: 'reminders' | 'todos' | 'team'; label: string; icon: ReactNode }[]
+            ...(canSeeDesigns ? [{ key: 'designs', label: 'Designs', icon: <Palette size={14} /> }] : []),
+          ] as { key: 'reminders' | 'todos' | 'team' | 'designs'; label: string; icon: ReactNode }[]
         ).map((t) => {
           const active = tab === t.key;
           return (
@@ -334,6 +348,8 @@ export function RemindersPage() {
         <MyTodosTab />
       ) : tab === 'team' ? (
         <TeamTasksTab />
+      ) : tab === 'designs' ? (
+        <DesignsTab viewer={isSuperAdmin ? 'admin' : 'designer'} />
       ) : (
         <>
       {/* Whose reminders. Everyone sees only their own; a super admin sees all and can narrow

@@ -30,6 +30,24 @@ export interface EmployeeTask {
   overdue?: boolean;
   /** Server-derived: open and not yet acknowledged by the assignee. */
   newForAssignee?: boolean;
+  /** Reply thread between the assignee and the assigner, oldest first. */
+  replies?: EmployeeTaskReply[];
+  replyCount?: number;
+  /** Assignee replies the assigner has not read yet. */
+  unreadForAssigner?: number;
+  /** Assigner replies the assignee has not read yet. */
+  unreadForAssignee?: number;
+  lastReplyAt?: string;
+}
+
+export interface EmployeeTaskReply {
+  id: number;
+  authorUserId?: number | null;
+  authorName?: string | null;
+  /** true = written by the assignee (staff), false = by the admin who assigned it. */
+  fromAssignee: boolean;
+  message: string;
+  createdAt: string;
 }
 
 export interface EmployeeTaskCreate {

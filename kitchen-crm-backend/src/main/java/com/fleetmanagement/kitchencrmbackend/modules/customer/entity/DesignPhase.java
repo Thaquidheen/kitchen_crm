@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -93,6 +94,48 @@ public class DesignPhase extends Auditable {
 
     @Column(name = "design_files_path")
     private String designFilesPath;
+
+    // ---- Design job scheduling + notification stamps (V153) ----
+
+    /** Order in the designer's queue; 1 = do first. */
+    @Column(name = "queue_position")
+    private Integer queuePosition;
+
+    @Column(name = "due_date")
+    private LocalDate dueDate;
+
+    /** LOW | MEDIUM | HIGH | URGENT (null = MEDIUM). */
+    @Column(name = "priority", length = 20)
+    private String priority;
+
+    @Column(name = "assigned_at")
+    private LocalDateTime assignedAt;
+
+    @Column(name = "assigned_by_user_id")
+    private Long assignedByUserId;
+
+    @Column(name = "started_at")
+    private LocalDateTime startedAt;
+
+    /** When the designer marked the design complete. */
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    /** Admin has seen the completion; null on a completed job = news in the admin bell. */
+    @Column(name = "completion_seen_at")
+    private LocalDateTime completionSeenAt;
+
+    /** Designer has seen the assignment / latest admin change; null = news in the designer bell. */
+    @Column(name = "designer_seen_at")
+    private LocalDateTime designerSeenAt;
+
+    /** When the admin last read the designer's notes. */
+    @Column(name = "admin_notes_seen_at")
+    private LocalDateTime adminNotesSeenAt;
+
+    /** When the designer last read the admin's notes. */
+    @Column(name = "designer_notes_seen_at")
+    private LocalDateTime designerNotesSeenAt;
 
     public enum DesignStatus {
         PLANNING,                    // Initial planning phase

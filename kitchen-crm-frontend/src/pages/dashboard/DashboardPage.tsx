@@ -72,7 +72,7 @@ const sparkPoints = (vals: number[]) => {
 const QSTATUS: Record<string, { st: string; label: string }> = {
   DRAFT: { st: 'draft', label: 'Draft' },
   ON_HOLD: { st: 'nego', label: 'On Hold' },
-  COMPLETE: { st: 'confirmed', label: 'Complete' },
+  COMPLETE: { st: 'confirmed', label: 'Completed' },
   APPROVED: { st: 'lead', label: 'Approved' },
   CANCELLED: { st: 'lost', label: 'Cancelled' },
   PENDING: { st: 'potential', label: 'Pending' },

@@ -39,6 +39,14 @@ public class User extends Auditable {
     @Column(nullable = false)
     private Boolean active = true;
 
+    /** Staff type label (V153): SALES | DESIGNER | ADMIN_STAFF. Not a login role; null = not set. */
+    @Column(name = "staff_type", length = 20)
+    private String staffType;
+
+    /** Designer availability an admin sets (V153): AVAILABLE | BUSY | ON_LEAVE; null = not set. */
+    @Column(name = "designer_status", length = 20)
+    private String designerStatus;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),

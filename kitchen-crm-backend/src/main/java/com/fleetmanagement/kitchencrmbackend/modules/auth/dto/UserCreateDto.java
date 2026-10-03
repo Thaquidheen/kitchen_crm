@@ -34,6 +34,9 @@ public class UserCreateDto {
     private String password;
 
     private String phoneNumber;
+
+    /** SALES | DESIGNER | ADMIN_STAFF (optional). */
+    private String staffType;
 }
 
 

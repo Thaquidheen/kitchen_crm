@@ -94,6 +94,12 @@ public interface EmployeeTaskService {
     /** The assigner has seen this completion (drops it from their bell). */
     ApiResponse<EmployeeTaskDto> markCompletionSeen(Long taskId, Long adminId);
 
+    /** Post a reply on a task; only its assignee or assigner may. Returns the task with its thread. */
+    ApiResponse<EmployeeTaskDto> addReply(Long taskId, Long userId, String userName, String message);
+
+    /** The caller (assignee or assigner) has read the thread: the other side's replies stop being unread. */
+    ApiResponse<EmployeeTaskDto> markRepliesSeen(Long taskId, Long userId);
+
     /** The assigner has seen every completion; returns how many. */
     ApiResponse<Integer> markAllCompletionsSeen(Long adminId);
 }

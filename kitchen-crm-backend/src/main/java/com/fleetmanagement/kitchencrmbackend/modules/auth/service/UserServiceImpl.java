@@ -107,6 +107,13 @@ public class UserServiceImpl implements UserService {
             user.setPassword(passwordEncoder.encode(plainPassword));
             user.setPhoneNumber(userCreateDto.getPhoneNumber());
             user.setActive(true);
+            if (userCreateDto.getStaffType() != null && !userCreateDto.getStaffType().isBlank()) {
+                String type = normalizeStaffType(userCreateDto.getStaffType());
+                if (type == null) {
+                    return ApiResponse.error("Staff type must be Sales, Designer or Admin staff");
+                }
+                user.setStaffType(type);
+            }
 
             // Assign ROLE_STAFF
             Role staffRole = roleRepository.findByName(Role.RoleName.ROLE_STAFF)
@@ -161,6 +168,17 @@ public class UserServiceImpl implements UserService {
             }
             if (userUpdateDto.getActive() != null) {
                 user.setActive(userUpdateDto.getActive());
+            }
+            if (userUpdateDto.getStaffType() != null) {
+                if (userUpdateDto.getStaffType().isBlank()) {
+                    user.setStaffType(null);
+                } else {
+                    String type = normalizeStaffType(userUpdateDto.getStaffType());
+                    if (type == null) {
+                        return ApiResponse.error("Staff type must be Sales, Designer or Admin staff");
+                    }
+                    user.setStaffType(type);
+                }
             }
 
             User updatedUser = userRepository.save(user);
@@ -339,8 +357,19 @@ public class UserServiceImpl implements UserService {
                 .map(role -> role.getName().name())
                 .collect(Collectors.toSet());
         dto.setRoles(roleNames);
+        dto.setStaffType(user.getStaffType());
+        dto.setDesignerStatus(user.getDesignerStatus());
 
         return dto;
+    }
+
+    /** SALES | DESIGNER | ADMIN_STAFF (case-insensitive, "admin staff" accepted), or null when invalid. */
+    private static String normalizeStaffType(String raw) {
+        String v = raw.trim().toUpperCase().replace(' ', '_');
+        return switch (v) {
+            case "SALES", "DESIGNER", "ADMIN_STAFF" -> v;
+            default -> null;
+        };
     }
 }
 

@@ -22,10 +22,13 @@ import {
   Refrigerator,
   BellRing,
   Ruler,
+  Palette,
 } from 'lucide-react';
 import clsx from 'clsx';
 import logo from '../../assets/logo.png';
 import { ROUTES } from '../../routes/routes.config';
+import { useGetDesignMeQuery } from '../../features/design/designAPI';
+import { DesignersPanel } from '../../features/design/components/DesignersPanel';
 
 export interface MenuItem {
   label: string;
@@ -33,6 +36,8 @@ export interface MenuItem {
   icon: React.ReactNode;
   badge?: string;
   adminOnly?: boolean;
+  /** Shown to super admins and to staff whose type is Designer. */
+  designersAndAdmins?: boolean;
 }
 
 export interface NavGroup {
@@ -66,6 +71,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Operations',
     items: [
+      { label: 'Designs', path: ROUTES.DESIGNS, icon: <Palette size={18} />, designersAndAdmins: true },
       { label: 'Production', path: ROUTES.PRODUCTION, icon: <Hammer size={18} /> },
       { label: 'Products', path: ROUTES.PRODUCTS, icon: <Package size={18} /> },
       { label: 'Laser Meter', path: ROUTES.LASER_METER, icon: <Ruler size={18} /> },
@@ -96,6 +102,8 @@ export const Sidebar = ({ isCollapsed, onToggle, isMobileOpen = false, onMobileC
   const location = useLocation();
   const currentUser = useAppSelector((state) => state.auth.user);
   const isSuperAdmin = currentUser?.role === 'ROLE_SUPER_ADMIN';
+  const { data: designMe } = useGetDesignMeQuery(undefined, { skip: !currentUser });
+  const isDesigner = !!designMe?.designer;
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + '/');
@@ -174,7 +182,10 @@ export const Sidebar = ({ isCollapsed, onToggle, isMobileOpen = false, onMobileC
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2.5 py-3 flex flex-col gap-4">
           {navGroups.map((group) => {
-            const items = group.items.filter((item) => !item.adminOnly || isSuperAdmin);
+            const items = group.items.filter(
+              (item) =>
+                (!item.adminOnly || isSuperAdmin) && (!item.designersAndAdmins || isSuperAdmin || isDesigner)
+            );
             if (items.length === 0) return null;
             return (
               <div key={group.label} className="flex flex-col gap-0.5">
@@ -215,6 +226,15 @@ export const Sidebar = ({ isCollapsed, onToggle, isMobileOpen = false, onMobileC
               </div>
             );
           })}
+          {/* Who is designing what — admins only (designers see their own work under Designs). */}
+          {isSuperAdmin && (
+            <DesignersPanel
+              collapsed={isCollapsed}
+              onNavigate={() => {
+                if (isMobileOpen) onMobileClose?.();
+              }}
+            />
+          )}
         </nav>
 
         {/* Footer */}

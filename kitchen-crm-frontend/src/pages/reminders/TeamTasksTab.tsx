@@ -4,10 +4,13 @@
  * everything assigned: completed work waiting for review leads, then overdue / today / upcoming.
  * Assignees complete tasks from their own My To-dos; this is where the admin sees it land, and the
  * bell's "Team" chip carries the same completed-unseen and overdue items.
+ * Staff can reply on a task (a doubt, a question): unread replies lead the list as "New replies",
+ * the reply text shows under the task, and "Reply" opens the whole thread to answer.
  */
 
-import React, { useMemo, useState } from 'react';
-import { Users, Pencil, Trash2, RotateCcw, Eye, CheckCheck, Check, CalendarDays } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Users, Pencil, Trash2, RotateCcw, Eye, CheckCheck, Check, CalendarDays, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -30,8 +33,13 @@ import type { EmployeeTask } from '@/features/task-management/types';
 import { usePriorityStyle, PRIORITY_LABEL } from '@/features/task-management/usePriorityStyle';
 import { fmtReminderDateTime } from '@/utils/reminderFormat';
 import { daysFromToday, dueCaption, localToday } from './taskDates';
+import {
+  TaskReplyThread,
+  latestReplyFromOtherSide,
+  unreadRepliesFor,
+} from '@/features/task-management/components/TaskReplyThread';
 
-type StatusKey = '' | 'REVIEW' | 'OVERDUE' | 'OPEN' | 'DONE';
+type StatusKey = '' | 'REPLIES' | 'REVIEW' | 'OVERDUE' | 'OPEN' | 'DONE';
 
 interface Group {
   key: string;
@@ -51,10 +59,10 @@ const iconBtnCls =
 
 export const TeamTasksTab: React.FC = () => {
   const { data: staff = [] } = useGetStaffQuery();
-  // Staff complete tasks in their own browser, which cannot invalidate this one's cache —
-  // so poll (same cadence as the bell) and refetch on focus, or this list goes stale and
+  // Staff complete tasks and reply in their own browser, which cannot invalidate this one's cache —
+  // so poll (every 15 s, so replies show up live) and refetch on focus, or this list goes stale and
   // contradicts the bell.
-  const { data: tasks = [], isLoading } = useGetTasksAssignedByMeQuery(undefined, { pollingInterval: 60000, refetchOnFocus: true, refetchOnReconnect: true, refetchOnMountOrArgChange: true });
+  const { data: tasks = [], isLoading } = useGetTasksAssignedByMeQuery(undefined, { pollingInterval: 15000, refetchOnFocus: true, refetchOnReconnect: true, refetchOnMountOrArgChange: true });
   const [assignTasks, { isLoading: isAssigning }] = useAssignTasksMutation();
   const [updateTask, { isLoading: isUpdating }] = useUpdateTaskMutation();
   const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
@@ -83,6 +91,29 @@ export const TeamTasksTab: React.FC = () => {
   const [ePriority, setEPriority] = useState('MEDIUM');
   const [eNotes, setENotes] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<EmployeeTask | null>(null);
+
+  // Reply threads open under their task
+  const [openThreads, setOpenThreads] = useState<Set<number>>(new Set());
+  const toggleThread = (id: number) =>
+    setOpenThreads((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  // Deep link from the bell (?task=ID): open that task's thread and bring it into view, once.
+  const [searchParams] = useSearchParams();
+  const linkedTask = Number(searchParams.get('task') ?? 0);
+  const linkedDone = useRef(0);
+  useEffect(() => {
+    if (!linkedTask || linkedDone.current === linkedTask || !tasks.some((t) => t.id === linkedTask)) return;
+    linkedDone.current = linkedTask;
+    setOpenThreads((prev) => new Set(prev).add(linkedTask));
+    requestAnimationFrame(() =>
+      document.getElementById(`team-task-${linkedTask}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    );
+  }, [linkedTask, tasks]);
 
   const activeStaff = staff.filter((s) => s.active !== false);
   const togglePick = (id: number) =>
@@ -133,6 +164,7 @@ export const TeamTasksTab: React.FC = () => {
 
   const counts = useMemo(
     () => ({
+      replies: filtered.filter((t) => unreadRepliesFor(t, 'assigner') > 0).length,
       review: filtered.filter((t) => t.completed && !t.completionSeenAt).length,
       overdue: filtered.filter((t) => !t.completed && t.taskDate < today).length,
       open: filtered.filter((t) => !t.completed).length,
@@ -144,20 +176,33 @@ export const TeamTasksTab: React.FC = () => {
   const groups: Group[] = useMemo(() => {
     const byDate = (a: EmployeeTask, b: EmployeeTask) => a.taskDate.localeCompare(b.taskDate);
     const byDoneDesc = (a: EmployeeTask, b: EmployeeTask) => (b.completedAt ?? '').localeCompare(a.completedAt ?? '');
-    const open = filtered.filter((t) => !t.completed);
+    // A task with unread replies is listed once, under "New replies"; once read it drops back into
+    // its normal group — nothing is shown twice.
+    const hasNew = (t: EmployeeTask) => unreadRepliesFor(t, 'assigner') > 0;
+    const replied = filtered.filter(hasNew).sort((a, b) => (b.lastReplyAt ?? '').localeCompare(a.lastReplyAt ?? ''));
+    const rest = filtered.filter((t) => !hasNew(t));
+    const open = rest.filter((t) => !t.completed);
     const all: Group[] = [
+      {
+        key: 'replies',
+        label: 'New replies from staff',
+        st: 'potential',
+        items: replied,
+        hint: 'open the thread to read and answer',
+      },
       {
         key: 'review',
         label: 'Completed — awaiting your review',
         st: 'confirmed',
-        items: filtered.filter((t) => t.completed && !t.completionSeenAt).sort(byDoneDesc),
+        items: rest.filter((t) => t.completed && !t.completionSeenAt).sort(byDoneDesc),
         hint: 'mark seen to clear them from your bell',
       },
       { key: 'overdue', label: 'Overdue', st: 'lost', items: open.filter((t) => t.taskDate < today).sort(byDate) },
       { key: 'today', label: 'Due today', st: 'potential', items: open.filter((t) => t.taskDate === today) },
       { key: 'upcoming', label: 'Upcoming', st: 'lead', items: open.filter((t) => t.taskDate > today).sort(byDate) },
-      { key: 'done', label: 'Completed', st: 'draft', items: filtered.filter((t) => t.completed && !!t.completionSeenAt).sort(byDoneDesc) },
+      { key: 'done', label: 'Completed', st: 'draft', items: rest.filter((t) => t.completed && !!t.completionSeenAt).sort(byDoneDesc) },
     ];
+    if (status === 'REPLIES') return all.filter((g) => g.key === 'replies');
     if (status === 'REVIEW') return all.filter((g) => g.key === 'review');
     if (status === 'OVERDUE') return all.filter((g) => g.key === 'overdue');
     if (status === 'OPEN') return all.filter((g) => g.key === 'overdue' || g.key === 'today' || g.key === 'upcoming');
@@ -391,6 +436,7 @@ export const TeamTasksTab: React.FC = () => {
           <FilterChips
             items={[
               { key: '', label: 'All', count: filtered.length },
+              ...(counts.replies > 0 ? [{ key: 'REPLIES', label: 'New replies', st: 'potential', count: counts.replies }] : []),
               { key: 'REVIEW', label: 'Awaiting review', st: 'confirmed', count: counts.review },
               { key: 'OVERDUE', label: 'Overdue', st: 'lost', count: counts.overdue },
               { key: 'OPEN', label: 'Open', st: 'lead', count: counts.open },
@@ -441,9 +487,13 @@ export const TeamTasksTab: React.FC = () => {
                 )}
               </div>
               <div className="divide-y divide-background-600">
-                {g.items.map((t) => (
+                {g.items.map((t) => {
+                  const unread = unreadRepliesFor(t, 'assigner');
+                  const staffReply = latestReplyFromOtherSide(t, 'assigner');
+                  const threadOpen = openThreads.has(t.id);
+                  return (
+                  <div key={t.id} id={`team-task-${t.id}`}>
                   <div
-                    key={t.id}
                     className="flex items-center gap-3 px-4 py-2.5 transition-colors group"
                     style={pstyle.row(t.priority, t.completed)}
                   >
@@ -471,8 +521,47 @@ export const TeamTasksTab: React.FC = () => {
                             : ' · not opened yet'}
                         {t.taskDescription ? ` · ${t.taskDescription}` : ''}
                       </div>
+                      {staffReply && !threadOpen && (
+                        <button
+                          type="button"
+                          onClick={() => toggleThread(t.id)}
+                          className="mt-1 flex items-start gap-1.5 max-w-full text-left text-[12.5px] rounded-md"
+                          title="Open the reply thread"
+                        >
+                          <MessageCircle
+                            size={13}
+                            className="mt-[2px] shrink-0"
+                            style={{ color: unread > 0 ? 'var(--st-potential-fg)' : 'var(--color-text-500)' }}
+                          />
+                          <span className={`line-clamp-3 whitespace-pre-wrap break-words ${unread > 0 ? 'text-text-900 font-medium' : 'text-text-700'}`}>
+                            <span className="font-semibold">{staffReply.authorName || t.assignedToUserName}:</span> {staffReply.message}
+                            <span className="text-text-500 font-normal"> · {fmtReminderDateTime(staffReply.createdAt)}</span>
+                          </span>
+                        </button>
+                      )}
                     </div>
                     {!t.completed && priorityPill(t.priority)}
+                    <button
+                      type="button"
+                      onClick={() => toggleThread(t.id)}
+                      title={threadOpen ? 'Hide replies' : 'Open the reply thread'}
+                      aria-expanded={threadOpen}
+                      className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[12px] font-medium whitespace-nowrap transition-colors border"
+                      style={
+                        unread > 0
+                          ? { background: 'var(--st-potential-bg)', color: 'var(--st-potential-fg)', borderColor: 'transparent' }
+                          : threadOpen
+                            ? {
+                                background: 'color-mix(in oklab, var(--color-primary-600) 14%, transparent)',
+                                color: 'var(--color-primary-600)',
+                                borderColor: 'transparent',
+                              }
+                            : { background: 'var(--color-background-800)', color: 'var(--color-text-700)', borderColor: 'var(--color-background-600)' }
+                      }
+                    >
+                      <MessageCircle size={13} />
+                      {unread > 0 ? `${unread} new` : t.replyCount ? `${t.replyCount}` : 'Reply'}
+                    </button>
                     {t.completed && !t.completionSeenAt && (
                       <button
                         onClick={() => doSeen(t)}
@@ -503,7 +592,10 @@ export const TeamTasksTab: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                ))}
+                  {threadOpen && <TaskReplyThread task={t} viewer="assigner" autoFocus />}
+                  </div>
+                  );
+                })}
               </div>
             </div>
           );

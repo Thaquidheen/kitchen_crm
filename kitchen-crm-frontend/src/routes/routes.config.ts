@@ -47,6 +47,7 @@ export const ROUTES = {
 
   // Reminder routes
   REMINDERS: '/reminders',
+  DESIGNS: '/designs',
 
 
   // Finance routes (Income & Expenses, super-admin only)

@@ -19,6 +19,10 @@ public class UserDto {
     private String phoneNumber;
     private Boolean active;
     private Set<String> roles;
+    /** SALES | DESIGNER | ADMIN_STAFF, null when not set. */
+    private String staffType;
+    /** AVAILABLE | BUSY | ON_LEAVE (designers), null when not set. */
+    private String designerStatus;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
