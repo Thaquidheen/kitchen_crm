@@ -77,12 +77,18 @@ const clearAuthStorage = (): void => {
 // API base URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
+// Sentinel for "the refresh endpoint could not be reached" (offline, DNS, 5xx). That is NOT a
+// rejected session: a surveyor measuring offline must not be logged out just because the access
+// token aged past its 15 minutes while there was no signal. Only a definitive answer from the
+// server (4xx / success:false) ends the session.
+const REFRESH_UNREACHABLE = 'unreachable' as const;
+
 // Function to refresh access token
 const refreshAccessToken = async (): Promise<{
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
-} | null> => {
+} | null | typeof REFRESH_UNREACHABLE> => {
   const { refreshToken } = getStoredTokens();
 
   if (!refreshToken) {
@@ -97,6 +103,10 @@ const refreshAccessToken = async (): Promise<{
       },
       body: JSON.stringify({ refreshToken }),
     });
+
+    if (response.status >= 500) {
+      return REFRESH_UNREACHABLE;
+    }
 
     if (!response.ok) {
       return null;
@@ -114,7 +124,8 @@ const refreshAccessToken = async (): Promise<{
 
     return null;
   } catch {
-    return null;
+    // fetch() only throws on network failure (offline, DNS, connection refused).
+    return REFRESH_UNREACHABLE;
   }
 };
 
@@ -173,7 +184,10 @@ const baseQueryWithReauth: BaseQueryFn<
         const currentTokens = getStoredTokens();
         if (currentTokens.accessToken && willTokenExpireSoon(currentTokens.accessToken, 60)) {
           const newTokens = await refreshAccessToken();
-          if (newTokens) {
+          if (newTokens === REFRESH_UNREACHABLE) {
+            // Offline / server down: keep the session and let the request fail on its own
+            // (FETCH_ERROR). The next request once back online refreshes normally.
+          } else if (newTokens) {
             saveTokens(newTokens.accessToken, newTokens.refreshToken, newTokens.expiresIn);
             api.dispatch(
               tokenRefreshed({
@@ -215,7 +229,9 @@ const baseQueryWithReauth: BaseQueryFn<
         const release = await refreshMutex.acquire();
         try {
           const newTokens = await refreshAccessToken();
-          if (newTokens) {
+          if (newTokens === REFRESH_UNREACHABLE) {
+            // Could not reach the refresh endpoint: return the 401 as-is, keep the session.
+          } else if (newTokens) {
             saveTokens(newTokens.accessToken, newTokens.refreshToken, newTokens.expiresIn);
             api.dispatch(
               tokenRefreshed({
@@ -292,6 +308,7 @@ export const baseApi = createApi({
     'SiteMeasurements',
     'LaserAdapters',
     'DeviceLabLogs',
+    'Designs',
   ],
   endpoints: (builder) => ({
     // ==================== QUOTATION ENDPOINTS ====================
@@ -339,7 +356,9 @@ export const baseApi = createApi({
 
     // Get quotations by customer
     getQuotationsByCustomer: builder.query<any, number>({
-      query: (customerId) => `/quotations/customer/${customerId}`,
+      // One customer's quotations are few; fetch them all (the endpoint defaults to 10 per page,
+      // which silently cut the list and the overview short for customers with more versions).
+      query: (customerId) => `/quotations/customer/${customerId}?page=0&size=200`,
       providesTags: (_result, _error, customerId) => [
         { type: 'Quotations', id: `customer-${customerId}` }
       ],

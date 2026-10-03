@@ -11,6 +11,10 @@ export interface Staff {
   roles?: string[];
   createdAt?: string;
   updatedAt?: string;
+  /** SALES | DESIGNER | ADMIN_STAFF — a label, not a login role. */
+  staffType?: 'SALES' | 'DESIGNER' | 'ADMIN_STAFF' | null;
+  /** Set by an admin for designers: AVAILABLE | BUSY | ON_LEAVE. */
+  designerStatus?: 'AVAILABLE' | 'BUSY' | 'ON_LEAVE' | null;
 }
 
 export interface StaffCreate {
@@ -18,6 +22,7 @@ export interface StaffCreate {
   email: string;
   password: string;
   phoneNumber?: string;
+  staffType?: string;
 }
 
 export interface StaffUpdate {
@@ -25,6 +30,8 @@ export interface StaffUpdate {
   email?: string;
   phoneNumber?: string;
   active?: boolean;
+  /** Blank clears the type. */
+  staffType?: string;
 }
 
 

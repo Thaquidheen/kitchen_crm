@@ -21,5 +21,13 @@ public interface CustomerService {
     ApiResponse<CustomerDto> updateCustomer(Long id, CustomerDto customerDto, String updatedBy);
     ApiResponse<String> deleteCustomer(Long id);
     ApiResponse<String> updateCustomerStatus(Long id, Customer.CustomerStatus newStatus, String changedBy, String reason);
+
+    /**
+     * Status change that, when moving to DESIGN_STAGE, assigns the design to a Designer-type staff member
+     * (required unless the customer already has a live design job with a designer).
+     */
+    ApiResponse<String> updateCustomerStatus(Long id, Customer.CustomerStatus newStatus, String changedBy, String reason,
+                                             Long designerId, java.time.LocalDate designDueDate, String designPriority,
+                                             Long changedByUserId);
     ApiResponse<Map<String, Long>> getCustomerStatistics();
 }

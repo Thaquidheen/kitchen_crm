@@ -16,6 +16,7 @@ import {
   useDeleteStaffPermanentlyMutation,
 } from '@/features/staff/staffAPI';
 import type { Staff } from '@/features/staff/types';
+import { STAFF_TYPE_LABEL } from '@/features/design/designUi';
 import StaffFormModal from '@/features/staff/components/StaffFormModal';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
@@ -47,6 +48,7 @@ const thClass =
 export function StaffPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [stage, setStage] = useState<StaffFilter>('all');
+  const [typeFilter, setTypeFilter] = useState<'' | 'SALES' | 'DESIGNER' | 'ADMIN_STAFF' | 'NONE'>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [deactivateTarget, setDeactivateTarget] = useState<Staff | null>(null);
@@ -64,8 +66,10 @@ export function StaffPage() {
   const inactiveCount = staffList.length - activeCount;
 
   const visibleStaff = useMemo(() => {
-    const byStage = staffList.filter((s: Staff) =>
-      stage === 'all' ? true : stage === 'active' ? s.active : !s.active
+    const byStage = staffList.filter(
+      (s: Staff) =>
+        (stage === 'all' ? true : stage === 'active' ? s.active : !s.active) &&
+        (typeFilter === '' ? true : typeFilter === 'NONE' ? !s.staffType : s.staffType === typeFilter)
     );
     const q = searchTerm.trim().toLowerCase();
     if (!q) return byStage;
@@ -75,7 +79,7 @@ export function StaffPage() {
         s.email.toLowerCase().includes(q) ||
         s.phoneNumber?.toLowerCase().includes(q)
     );
-  }, [staffList, stage, searchTerm]);
+  }, [staffList, stage, searchTerm, typeFilter]);
 
   const handleDeactivate = async () => {
     if (!deactivateTarget) return;
@@ -255,6 +259,18 @@ export function StaffPage() {
               className="w-full h-[34px] pl-[34px] pr-3 rounded-[10px] border border-background-600 bg-background-900 text-text-900 text-[13px] outline-none focus:border-primary-600 transition-colors placeholder:text-text-500"
             />
           </div>
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+            aria-label="Filter by staff type"
+            className="h-[34px] px-2.5 rounded-[10px] border border-background-600 bg-background-900 text-text-900 text-[13px] outline-none focus:border-primary-600"
+          >
+            <option value="">All types</option>
+            <option value="SALES">Sales</option>
+            <option value="DESIGNER">Designers</option>
+            <option value="ADMIN_STAFF">Admin staff</option>
+            <option value="NONE">Type not set</option>
+          </select>
         </div>
 
         {/* Table */}
@@ -326,9 +342,14 @@ export function StaffPage() {
                           <div className="w-8 h-8 rounded-[9px] bg-background-600 border border-background-500 flex items-center justify-center text-[11px] font-[650] text-text-700 shrink-0">
                             {initialsOf(staff.name)}
                           </div>
-                          <span className="text-[13.5px] font-semibold text-text-900 whitespace-nowrap overflow-hidden text-ellipsis">
-                            {staff.name}
-                          </span>
+                          <div className="min-w-0">
+                            <div className="text-[13.5px] font-semibold text-text-900 whitespace-nowrap overflow-hidden text-ellipsis">
+                              {staff.name}
+                            </div>
+                            <div className="text-[11.5px] text-text-600">
+                              {staff.staffType ? STAFF_TYPE_LABEL[staff.staffType] : 'Type not set'}
+                            </div>
+                          </div>
                         </div>
                       </td>
                       <td className="px-3 py-[13px] min-w-0">

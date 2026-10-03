@@ -215,7 +215,7 @@ export function getQuotationStatusLabel(status: string): string {
     case 'ON_HOLD':
       return 'On Hold';
     case 'COMPLETE':
-      return 'Complete';
+      return 'Completed';
     case 'APPROVED':
       return 'Approved';
     case 'CANCELLED':

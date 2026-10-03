@@ -52,6 +52,7 @@ import StaffPage from '../pages/staff/StaffPage';
 // Site measurement / laser meter
 import SiteMeasurementPage from '../pages/site-measurement/SiteMeasurementPage';
 import LaserMeterPage from '../pages/site-measurement/LaserMeterPage';
+import DesignsPage from '../pages/designs/DesignsPage';
 
 // Public Pages
 import ApprovalPage from '../pages/public/approval/ApprovalPage';
@@ -176,6 +177,11 @@ const routes = [
             element: <ApplianceQuartzPage />,
           },
 
+          // Designs (admins + Designer-type staff; the page itself shows each only what they may see)
+          {
+            path: ROUTES.DESIGNS,
+            element: <DesignsPage />,
+          },
           // Reminders
           {
             path: ROUTES.REMINDERS,

@@ -13,12 +13,17 @@ import { ArrowRight } from 'lucide-react';
 import { Modal, ModalBody, ModalFooter } from '../../../components/ui/Modal';
 import { STATUS_PILL } from './CustomerList';
 import type { CustomerStatus } from '../types';
+import { DesignerPicker, type DesignAssignment } from '../../design/components/DesignerPicker';
+import { defaultDueDate } from '../../design/designUi';
 
 export interface StatusChangeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  /** Receives the trimmed, non-empty note. */
-  onConfirm: (note: string) => void;
+  /**
+   * Receives the trimmed, non-empty note — and, when moving to Design, the chosen designer
+   * (always set then: the modal will not submit without one).
+   */
+  onConfirm: (note: string, design?: DesignAssignment) => void;
   /** Status being moved to. Null keeps the modal closed. */
   targetStatus: CustomerStatus | null;
   /** Current status — omitted for bulk changes, where rows differ. */
@@ -26,6 +31,8 @@ export interface StatusChangeModalProps {
   /** Number of customers affected; > 1 switches to the bulk wording. */
   count?: number;
   isSubmitting?: boolean;
+  /** Designer already assigned to this customer's design (preselected when moving to Design). */
+  currentDesignerId?: number | null;
 }
 
 /**
@@ -56,8 +63,15 @@ export function StatusChangeModal({
   currentStatus,
   count = 1,
   isSubmitting = false,
+  currentDesignerId = null,
 }: StatusChangeModalProps) {
   const [note, setNote] = useState('');
+  const [design, setDesign] = useState<DesignAssignment>({
+    designerId: null,
+    dueDate: defaultDueDate(),
+    priority: 'MEDIUM',
+  });
+  const toDesign = targetStatus === 'DESIGN_STAGE';
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Start every change with an empty box, and focus it so the note is the
@@ -65,18 +79,20 @@ export function StatusChangeModal({
   useEffect(() => {
     if (isOpen) {
       setNote('');
+      setDesign({ designerId: currentDesignerId ?? null, dueDate: defaultDueDate(), priority: 'MEDIUM' });
       const t = setTimeout(() => textareaRef.current?.focus(), 50);
       return () => clearTimeout(t);
     }
-  }, [isOpen]);
+  }, [isOpen, currentDesignerId]);
 
   const trimmed = note.trim();
-  const canSubmit = trimmed.length > 0 && !isSubmitting;
+  const needsDesigner = toDesign && !design.designerId;
+  const canSubmit = trimmed.length > 0 && !isSubmitting && !needsDesigner;
   const isBulk = count > 1;
 
   const submit = () => {
     if (!canSubmit) return;
-    onConfirm(trimmed);
+    onConfirm(trimmed, toDesign ? design : undefined);
   };
 
   return (
@@ -140,6 +156,18 @@ export function StatusChangeModal({
             ? 'This note is saved to the timeline of every selected customer.'
             : 'This note is saved to the customer’s timeline.'}
         </p>
+
+        {/* Moving to Design assigns the design to a designer (required). */}
+        {toDesign && (
+          <div className="mt-4 pt-4 border-t border-background-600">
+            <DesignerPicker value={design} onChange={setDesign} />
+            <p className="text-[11.5px] text-text-600 mt-1.5">
+              {isBulk
+                ? 'Each selected customer is added to this designer’s queue. The note becomes the design brief.'
+                : 'The design goes to the end of this designer’s queue. The note becomes the design brief.'}
+            </p>
+          </div>
+        )}
       </ModalBody>
 
       <ModalFooter>
@@ -154,7 +182,9 @@ export function StatusChangeModal({
           type="button"
           onClick={submit}
           disabled={!canSubmit}
-          title={trimmed.length === 0 ? 'Add a note to continue' : undefined}
+          title={
+            trimmed.length === 0 ? 'Add a note to continue' : needsDesigner ? 'Choose a designer to continue' : undefined
+          }
           className="btn-raised-accent inline-flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isSubmitting ? 'Saving…' : 'Update status'}

@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { useCreateStaffMutation, useUpdateStaffMutation } from '../staffAPI';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import toast from 'react-hot-toast';
 import type { Staff, StaffCreate } from '../types';
@@ -27,13 +28,23 @@ const createStaffSchema = z.object({
     .regex(/[A-Z]/, 'Password must contain an uppercase letter')
     .regex(/\d/, 'Password must contain a number'),
   phoneNumber: z.string().optional(),
+  staffType: z.enum(['', 'SALES', 'DESIGNER', 'ADMIN_STAFF']).optional(),
 });
 
 const updateStaffSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   phoneNumber: z.string().optional(),
+  staffType: z.enum(['', 'SALES', 'DESIGNER', 'ADMIN_STAFF']).optional(),
 });
+
+/** One type per person. Designers are the ones offered when a customer moves to Design. */
+const STAFF_TYPE_OPTIONS = [
+  { value: '', label: 'Not set' },
+  { value: 'SALES', label: 'Sales' },
+  { value: 'DESIGNER', label: 'Designer' },
+  { value: 'ADMIN_STAFF', label: 'Admin staff' },
+];
 
 type StaffFormData = z.infer<typeof createStaffSchema> | z.infer<typeof updateStaffSchema>;
 
@@ -59,6 +70,7 @@ export default function StaffFormModal({ isOpen, onClose, staff }: StaffFormModa
       email: '',
       ...(staff ? {} : { password: '' }),
       phoneNumber: '',
+      staffType: '',
     },
   });
 
@@ -69,6 +81,7 @@ export default function StaffFormModal({ isOpen, onClose, staff }: StaffFormModa
         name: staff.name,
         email: staff.email,
         phoneNumber: staff.phoneNumber || '',
+        staffType: staff.staffType ?? '',
       });
     } else {
       reset({
@@ -76,6 +89,7 @@ export default function StaffFormModal({ isOpen, onClose, staff }: StaffFormModa
         email: '',
         password: '',
         phoneNumber: '',
+        staffType: '',
       });
     }
   }, [staff, reset]);
@@ -88,6 +102,7 @@ export default function StaffFormModal({ isOpen, onClose, staff }: StaffFormModa
           name: data.name,
           email: data.email,
           phoneNumber: data.phoneNumber || undefined,
+          staffType: data.staffType ?? '',
         };
 
         await updateStaff({ id: staff.id, data: updateData }).unwrap();
@@ -104,6 +119,7 @@ export default function StaffFormModal({ isOpen, onClose, staff }: StaffFormModa
           email: data.email,
           password: data.password,
           phoneNumber: data.phoneNumber || undefined,
+          staffType: data.staffType || undefined,
         };
 
         await createStaff(staffData).unwrap();
@@ -151,6 +167,13 @@ export default function StaffFormModal({ isOpen, onClose, staff }: StaffFormModa
           {...register('phoneNumber')}
           error={errors.phoneNumber?.message}
           placeholder="Enter phone number"
+        />
+
+        <Select
+          label="Staff type"
+          {...register('staffType')}
+          options={STAFF_TYPE_OPTIONS}
+          helperText="Designers are the people offered when a customer moves to Design."
         />
 
         {!staff && (

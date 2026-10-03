@@ -13,7 +13,7 @@
 
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlarmClock, Bell, Check, Eye } from 'lucide-react';
+import { AlarmClock, Bell, Check, Eye, MessageCircle, Palette } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useGetReminderNotificationsQuery, useMarkReminderDoneMutation } from '../../app/baseApi';
 import {
@@ -30,8 +30,12 @@ import { usePriorityStyle, PRIORITY_LABEL } from '../../features/task-management
 import { ROUTES } from '../../routes/routes.config';
 import { FilterChips } from '../shared/FilterChips';
 import { fmtReminderDateTime } from '../../utils/reminderFormat';
+import { latestReplyFromOtherSide, unreadRepliesFor } from '../../features/task-management/components/TaskReplyThread';
+import { useGetDesignAttentionQuery, useGetDesignMeQuery, useGetMyDesignFeedQuery } from '../../features/design/designAPI';
+import { designNewsText } from '../../features/design/designUi';
+import type { DesignJob } from '../../features/design/types';
 
-type SourceKey = '' | 'TODOS' | 'ASSIGNED' | 'TEAM' | 'CUSTOMERS' | 'PRODUCTION' | 'APPLIANCE' | 'ARCHITECT';
+type SourceKey = '' | 'TODOS' | 'ASSIGNED' | 'TEAM' | 'DESIGNS' | 'CUSTOMERS' | 'PRODUCTION' | 'APPLIANCE' | 'ARCHITECT';
 
 interface BellReminder {
   id: number;
@@ -56,6 +60,7 @@ const SOURCE_META: Record<string, { st: string; label: string }> = {
   TODOS: { st: 'draft', label: 'To-do' },
   ASSIGNED: { st: 'potential', label: 'Assigned to me' },
   TEAM: { st: 'confirmed', label: 'Team' },
+  DESIGNS: { st: 'potential', label: 'Designs' },
 };
 
 const sourceKeyOf = (r: BellReminder): 'CUSTOMERS' | 'PRODUCTION' | 'APPLIANCE' | 'ARCHITECT' => {
@@ -89,14 +94,27 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     pollingInterval: 60000,
     skip: !enabled,
   });
-  // Tasks an admin assigned to me: due today or earlier, plus any I have not yet opened.
+  // Tasks an admin assigned to me: due today or earlier, any I have not yet opened, and any with an
+  // unread reply from the admin. 30 s: replies are a conversation, 60 s felt dead.
   const { data: dueTaskNotif } = useGetMyDueTasksQuery(undefined, {
-    pollingInterval: 60000,
+    pollingInterval: 30000,
     skip: !enabled,
   });
-  // Tasks I assigned that were completed (unseen) or are overdue — super admin only.
+  // Tasks I assigned that were completed (unseen), are overdue, or have an unread staff reply — super admin only.
   const { data: attentionNotif } = useGetAssignerAttentionQuery(undefined, {
-    pollingInterval: 60000,
+    pollingInterval: 30000,
+    skip: !enabled || !isSuperAdmin,
+  });
+  // Designs: a designer hears about new/changed designs and admin notes; an admin about completed
+  // designs, designer notes and overdue work.
+  const { data: designMe } = useGetDesignMeQuery(undefined, { skip: !enabled });
+  const isDesigner = !!designMe?.designer;
+  const { data: myDesignFeed } = useGetMyDesignFeedQuery(undefined, {
+    pollingInterval: 30000,
+    skip: !enabled || !isDesigner,
+  });
+  const { data: designAttention } = useGetDesignAttentionQuery(undefined, {
+    pollingInterval: 30000,
     skip: !enabled || !isSuperAdmin,
   });
   const [markReminderDone] = useMarkReminderDoneMutation();
@@ -108,8 +126,14 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const todos = todoNotif?.todos ?? [];
   const dueTasks: EmployeeTask[] = dueTaskNotif?.tasks ?? [];
   const attention: EmployeeTask[] = isSuperAdmin ? (attentionNotif?.tasks ?? []) : [];
+  const designSide: 'admin' | 'designer' = isSuperAdmin ? 'admin' : 'designer';
+  const designs: DesignJob[] = isSuperAdmin ? designAttention?.jobs ?? [] : isDesigner ? myDesignFeed?.jobs ?? [] : [];
   const badgeCount =
-    (notifData?.count ?? 0) + (todoNotif?.count ?? 0) + (dueTaskNotif?.count ?? 0) + (isSuperAdmin ? attentionNotif?.count ?? 0 : 0);
+    (notifData?.count ?? 0) +
+    (todoNotif?.count ?? 0) +
+    (dueTaskNotif?.count ?? 0) +
+    (isSuperAdmin ? attentionNotif?.count ?? 0 : 0) +
+    designs.length;
 
   const counts = useMemo(() => {
     const c = { CUSTOMERS: 0, PRODUCTION: 0, APPLIANCE: 0, ARCHITECT: 0 };
@@ -118,22 +142,26 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   }, [reminders]);
 
   const chips = [
-    { key: '', label: 'All', count: reminders.length + todos.length + dueTasks.length + attention.length },
+    { key: '', label: 'All', count: reminders.length + todos.length + dueTasks.length + attention.length + designs.length },
     { key: 'TODOS', label: 'To-dos', st: SOURCE_META.TODOS.st, count: todos.length },
     { key: 'ASSIGNED', label: 'Assigned to me', st: SOURCE_META.ASSIGNED.st, count: dueTasks.length },
     ...(isSuperAdmin ? [{ key: 'TEAM', label: 'Team', st: SOURCE_META.TEAM.st, count: attention.length }] : []),
+    ...(isSuperAdmin || isDesigner
+      ? [{ key: 'DESIGNS', label: 'Designs', st: SOURCE_META.DESIGNS.st, count: designs.length }]
+      : []),
     { key: 'CUSTOMERS', label: 'Customers', st: SOURCE_META.CUSTOMERS.st, count: counts.CUSTOMERS },
     { key: 'PRODUCTION', label: 'Production', st: SOURCE_META.PRODUCTION.st, count: counts.PRODUCTION },
     { key: 'APPLIANCE', label: 'Appliance', st: SOURCE_META.APPLIANCE.st, count: counts.APPLIANCE },
     { key: 'ARCHITECT', label: 'Architects', st: SOURCE_META.ARCHITECT.st, count: counts.ARCHITECT },
   ];
 
-  const isTaskFilter = filter === 'TODOS' || filter === 'ASSIGNED' || filter === 'TEAM';
+  const isTaskFilter = filter === 'TODOS' || filter === 'ASSIGNED' || filter === 'TEAM' || filter === 'DESIGNS';
   const visibleReminders =
     filter === '' ? reminders : isTaskFilter ? [] : reminders.filter((r) => sourceKeyOf(r) === filter);
   const visibleTodos = filter === '' || filter === 'TODOS' ? todos : [];
   const visibleAssigned = filter === '' || filter === 'ASSIGNED' ? dueTasks : [];
   const visibleTeam = filter === '' || filter === 'TEAM' ? attention : [];
+  const visibleDesigns = filter === '' || filter === 'DESIGNS' ? designs : [];
 
   // Server-computed bucket: everything in this feed is today-or-earlier, so it is either
   // OVERDUE or TODAY. To-dos due before today count as overdue by their date string; assigned
@@ -143,17 +171,24 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const todayTodos = visibleTodos.filter((t: any) => !t.todoDate || t.todoDate >= todayStr);
   const overdueReminders = visibleReminders.filter((r) => r.bucket === 'OVERDUE');
   const todayReminders = visibleReminders.filter((r) => r.bucket !== 'OVERDUE');
-  const overdueAssigned = visibleAssigned.filter((t) => t.overdue);
-  const todayAssigned = visibleAssigned.filter((t) => !t.overdue);
-  const completedTeam = visibleTeam.filter((t) => t.completed);
-  const overdueTeam = visibleTeam.filter((t) => !t.completed);
+  // A task with an unread reply is listed once, under "New replies"; the rest keep their buckets.
+  const repliedAssigned = visibleAssigned.filter((t) => unreadRepliesFor(t, 'assignee') > 0);
+  const repliedTeam = visibleTeam.filter((t) => unreadRepliesFor(t, 'assigner') > 0);
+  const restAssigned = visibleAssigned.filter((t) => unreadRepliesFor(t, 'assignee') === 0);
+  const restTeam = visibleTeam.filter((t) => unreadRepliesFor(t, 'assigner') === 0);
+  const overdueAssigned = restAssigned.filter((t) => t.overdue && !t.completed);
+  const todayAssigned = restAssigned.filter((t) => !t.overdue && !t.completed);
+  const completedTeam = restTeam.filter((t) => t.completed);
+  const overdueTeam = restTeam.filter((t) => !t.completed);
 
-  const totalVisible = visibleReminders.length + visibleTodos.length + visibleAssigned.length + visibleTeam.length;
+  const totalVisible =
+    visibleReminders.length + visibleTodos.length + visibleAssigned.length + visibleTeam.length + visibleDesigns.length;
 
   const viewAll = () => {
     setOpen(false);
     if (filter === 'TODOS' || filter === 'ASSIGNED') navigate(`${ROUTES.REMINDERS}?tab=todos`);
     else if (filter === 'TEAM') navigate(`${ROUTES.REMINDERS}?tab=team`);
+    else if (filter === 'DESIGNS') navigate(ROUTES.DESIGNS);
     else if (filter === '') navigate(ROUTES.REMINDERS);
     else navigate(`${ROUTES.REMINDERS}?source=${filter}`);
   };
@@ -297,6 +332,60 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     </div>
   );
 
+  /** A task with a reply I have not read: quotes the reply, opens the thread under the task. */
+  const ReplyRow = ({ t, side }: { t: EmployeeTask; side: 'assignee' | 'assigner' }) => {
+    const reply = latestReplyFromOtherSide(t, side);
+    const unread = unreadRepliesFor(t, side);
+    const who = reply?.authorName || (side === 'assigner' ? t.assignedToUserName : t.assignedByName);
+    return (
+      <div className="px-4 py-2.5 hover:bg-background-700 transition-colors">
+        <button
+          className="text-left w-full"
+          onClick={() => {
+            setOpen(false);
+            navigate(`${ROUTES.REMINDERS}?tab=${side === 'assigner' ? 'team' : 'todos'}&task=${t.id}`);
+          }}
+        >
+          <p className="text-[13px] text-text-900 font-medium flex items-center gap-1.5">
+            <MessageCircle size={13} className="shrink-0" style={{ color: 'var(--st-potential-fg)' }} />
+            <span className="truncate">{t.taskTitle}</span>
+          </p>
+          {reply && (
+            <p className="text-[12.5px] text-text-900 mt-1 line-clamp-2 whitespace-pre-wrap break-words">
+              <span className="font-semibold">{who}:</span> {reply.message}
+            </p>
+          )}
+          <p className="text-[11.5px] text-text-600 mt-0.5">
+            {unread > 1 ? `${unread} new replies` : 'New reply'}
+            {reply ? ` · ${fmtReminderDateTime(reply.createdAt)}` : ''} · tap to answer
+          </p>
+        </button>
+      </div>
+    );
+  };
+
+  /** A design that needs this person: why (completed / note / changes / overdue), opens the design. */
+  const DesignRow = ({ job }: { job: DesignJob }) => (
+    <div className="px-4 py-2.5 hover:bg-background-700 transition-colors">
+      <button
+        className="text-left w-full"
+        onClick={() => {
+          setOpen(false);
+          navigate(`${ROUTES.DESIGNS}?job=${job.id}`);
+        }}
+      >
+        <p className="text-[13px] text-text-900 font-medium flex items-center gap-1.5">
+          <Palette size={13} className="shrink-0" style={{ color: 'var(--st-potential-fg)' }} />
+          <span className="truncate">{job.customerName}</span>
+        </p>
+        <p className="text-[12.5px] text-text-900 mt-0.5 line-clamp-2 break-words">{designNewsText(job, designSide)}</p>
+        <p className="text-[11.5px] text-text-600 mt-0.5">
+          {designSide === 'admin' ? `Design · ${job.designerName ?? 'no designer'}` : 'Your design'} · tap to open
+        </p>
+      </button>
+    </div>
+  );
+
   const ReminderRow = ({ r }: { r: BellReminder }) => {
     const meta = metaOf(r);
     return (
@@ -323,6 +412,9 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     budget -= slice.length;
     return slice;
   };
+  const shownDesigns = take(visibleDesigns);
+  const shownRepliedTeam = take(repliedTeam);
+  const shownRepliedAssigned = take(repliedAssigned);
   const shownOverdueAssigned = take(overdueAssigned);
   const shownOverdueTeam = take(overdueTeam);
   const shownOverdueTodos = take(overdueTodos);
@@ -332,6 +424,9 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const shownTodayTodos = take(todayTodos);
   const shownTodayReminders = take(todayReminders);
   const shownCount =
+    shownDesigns.length +
+    shownRepliedTeam.length +
+    shownRepliedAssigned.length +
     shownOverdueAssigned.length +
     shownOverdueTeam.length +
     shownOverdueTodos.length +
@@ -343,6 +438,7 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const hasOverdue =
     shownOverdueAssigned.length + shownOverdueTeam.length + shownOverdueTodos.length + shownOverdueReminders.length > 0;
   const hasCompletedTeam = shownCompletedTeam.length > 0;
+  const hasReplies = shownRepliedTeam.length + shownRepliedAssigned.length > 0;
   const hasToday = shownTodayAssigned.length + shownTodayTodos.length + shownTodayReminders.length > 0;
 
   return (
@@ -387,6 +483,29 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
                 </p>
               ) : (
                 <>
+                  {shownDesigns.length > 0 && (
+                    <>
+                      <GroupHeader label="Designs" tone="nego" />
+                      <div className="divide-y divide-background-600">
+                        {shownDesigns.map((j) => (
+                          <DesignRow key={`d${j.id}`} job={j} />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {hasReplies && (
+                    <>
+                      <GroupHeader label="New replies" tone="nego" />
+                      <div className="divide-y divide-background-600">
+                        {shownRepliedTeam.map((t) => (
+                          <ReplyRow key={`rt${t.id}`} t={t} side="assigner" />
+                        ))}
+                        {shownRepliedAssigned.map((t) => (
+                          <ReplyRow key={`ra${t.id}`} t={t} side="assignee" />
+                        ))}
+                      </div>
+                    </>
+                  )}
                   {hasOverdue && (
                     <>
                       <GroupHeader label="Overdue" tone="lost" />

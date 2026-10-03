@@ -262,6 +262,27 @@ export const taskAPI = baseApi.injectEndpoints({
       transformResponse: (response: ApiResponse<number>) => response.data ?? 0,
     }),
 
+    // Reply on an assigned task (assignee asking a doubt, or the admin answering). Returns the task
+    // with its whole thread; invalidating 'Tasks' refreshes both sides' lists and bell feeds.
+    replyToTask: builder.mutation<EmployeeTask, { taskId: number; message: string }>({
+      query: ({ taskId, message }) => ({ url: `/tasks/employee/${taskId}/replies`, method: 'POST', body: { message } }),
+      invalidatesTags: ['Tasks'],
+      transformResponse: (response: ApiResponse<EmployeeTask>) => {
+        if (response.success && response.data) return response.data;
+        throw new Error(response.message || 'Failed to send reply');
+      },
+    }),
+
+    // The caller has read the thread: the other side's replies stop being unread (and leave the bell)
+    markTaskRepliesSeen: builder.mutation<EmployeeTask, number>({
+      query: (taskId) => ({ url: `/tasks/employee/${taskId}/replies/seen`, method: 'PUT' }),
+      invalidatesTags: ['Tasks'],
+      transformResponse: (response: ApiResponse<EmployeeTask>) => {
+        if (response.success && response.data) return response.data;
+        throw new Error(response.message || 'Failed to update task');
+      },
+    }),
+
     // ============ Admin Todos ============
 
     // Create admin todo (SUPER_ADMIN only)
@@ -426,6 +447,8 @@ export const {
   useAcknowledgeAllMyTasksMutation,
   useMarkCompletionSeenMutation,
   useMarkAllCompletionsSeenMutation,
+  useReplyToTaskMutation,
+  useMarkTaskRepliesSeenMutation,
   useCreateAdminTodoMutation,
   useGetTodosByDateQuery,
   useGetTodosByDateRangeQuery,

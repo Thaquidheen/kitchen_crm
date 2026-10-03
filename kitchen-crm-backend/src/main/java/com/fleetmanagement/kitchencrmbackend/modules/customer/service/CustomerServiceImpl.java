@@ -29,6 +29,9 @@ public class CustomerServiceImpl implements CustomerService {
     private CustomerRepository customerRepository;
 
     @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.design.service.DesignJobService designJobService;
+
+    @Autowired
     private CustomerPipelineRepository pipelineRepository;
 
     @Autowired
@@ -188,9 +191,26 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public ApiResponse<String> updateCustomerStatus(Long id, Customer.CustomerStatus newStatus,
                                                     String changedBy, String reason) {
+        return updateCustomerStatus(id, newStatus, changedBy, reason, null, null, null, null);
+    }
+
+    @Override
+    public ApiResponse<String> updateCustomerStatus(Long id, Customer.CustomerStatus newStatus, String changedBy,
+                                                    String reason, Long designerId, java.time.LocalDate designDueDate,
+                                                    String designPriority, Long changedByUserId) {
         Customer customer = customerRepository.findById(id).orElse(null);
         if (customer == null) {
             return ApiResponse.error("Customer not found");
+        }
+
+        // Moving to Design assigns the design to a designer. Validated before anything is written, so a
+        // missing/invalid designer leaves the status unchanged.
+        if (newStatus == Customer.CustomerStatus.DESIGN_STAGE) {
+            String designError = designJobService.ensureAssignedForDesignStage(
+                    customer, designerId, designDueDate, designPriority, reason, changedByUserId);
+            if (designError != null) {
+                return ApiResponse.error(designError);
+            }
         }
 
         String previousStatus = customer.getStatus().name();

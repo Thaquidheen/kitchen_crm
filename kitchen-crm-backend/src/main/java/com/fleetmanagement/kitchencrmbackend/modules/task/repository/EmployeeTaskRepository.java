@@ -91,8 +91,12 @@ public interface EmployeeTaskRepository extends JpaRepository<EmployeeTask, Long
      * Staff bell feed: my open tasks due today or earlier, PLUS any not yet acknowledged regardless
      * of date - a task assigned for next week must still be announced now, not on its day.
      */
-    @Query("SELECT t FROM EmployeeTask t WHERE t.assignedTo.id = :userId AND t.completed = false " +
-           "AND (t.taskDate <= :today OR t.acknowledgedAt IS NULL) ORDER BY t.taskDate ASC, t.id ASC")
+    @Query("SELECT t FROM EmployeeTask t WHERE t.assignedTo.id = :userId AND (" +
+           "(t.completed = false AND (t.taskDate <= :today OR t.acknowledgedAt IS NULL)) " +
+           // ...plus any task (open or done) with an assigner reply the assignee has not read.
+           "OR EXISTS (SELECT r.id FROM EmployeeTaskReply r WHERE r.task = t AND r.fromAssignee = false " +
+           "AND (t.assigneeRepliesSeenAt IS NULL OR r.createdAt > t.assigneeRepliesSeenAt))" +
+           ") ORDER BY t.taskDate ASC, t.id ASC")
     List<EmployeeTask> findDueForAssignee(@Param("userId") Long userId, @Param("today") LocalDate today);
 
     /**
@@ -100,7 +104,10 @@ public interface EmployeeTaskRepository extends JpaRepository<EmployeeTask, Long
      * ones past their date. Completed-unseen leads, newest completion first.
      */
     @Query("SELECT t FROM EmployeeTask t WHERE t.assignedBy.id = :adminId AND (" +
-           "(t.completed = true AND t.completionSeenAt IS NULL) OR (t.completed = false AND t.taskDate < :today)) " +
+           "(t.completed = true AND t.completionSeenAt IS NULL) OR (t.completed = false AND t.taskDate < :today) " +
+           // ...plus any task with an assignee reply the assigner has not read.
+           "OR EXISTS (SELECT r.id FROM EmployeeTaskReply r WHERE r.task = t AND r.fromAssignee = true " +
+           "AND (t.assignerRepliesSeenAt IS NULL OR r.createdAt > t.assignerRepliesSeenAt))) " +
            "ORDER BY t.completed DESC, t.completedAt DESC, t.taskDate ASC")
     List<EmployeeTask> findAttentionForAssigner(@Param("adminId") Long adminId, @Param("today") LocalDate today);
 

@@ -139,13 +139,38 @@ export const customersAPI = baseApi.injectEndpoints({
     }),
 
     // Update status
-    updateCustomerStatus: builder.mutation<ApiResponse<string>, { id: number; status: string; reason?: string }>(
+    updateCustomerStatus: builder.mutation<
+      ApiResponse<string>,
       {
-        query: ({ id, status, reason }) => ({
+        id: number;
+        status: string;
+        reason?: string;
+        /** Required by the server when moving to DESIGN_STAGE (unless a designer is already assigned). */
+        designerId?: number;
+        designDueDate?: string;
+        designPriority?: string;
+      }
+    >(
+      {
+        query: ({ id, status, reason, designerId, designDueDate, designPriority }) => ({
           url: API_ENDPOINTS.CUSTOMERS.STATUS(id),
           method: 'PATCH',
-          params: { status, reason },
+          params: {
+            status,
+            reason,
+            ...(designerId ? { designerId } : {}),
+            ...(designDueDate ? { designDueDate } : {}),
+            ...(designPriority ? { designPriority } : {}),
+          },
         }),
+        // The endpoint answers 200 with success:false when it refuses (e.g. "Choose a designer"),
+        // so treat that as an error: the caller shows the message and the optimistic status is undone.
+        transformResponse: (response: ApiResponse<string>) => {
+          if (response && response.success === false) {
+            throw new Error(response.message || 'Failed to update status');
+          }
+          return response;
+        },
         // Optimistic update
         async onQueryStarted({ id, status }, { dispatch, queryFulfilled }) {
           const patchResult = dispatch(
@@ -167,6 +192,8 @@ export const customersAPI = baseApi.injectEndpoints({
           // A status change writes a workflow-history row; without this the activity feed
           // would keep serving the pre-change list from cache.
           { type: 'Customers', id: `WORKFLOW-${id}` },
+          // Moving to Design assigns a designer (queues, workload, bells).
+          'Designs',
         ],
       }
     ),

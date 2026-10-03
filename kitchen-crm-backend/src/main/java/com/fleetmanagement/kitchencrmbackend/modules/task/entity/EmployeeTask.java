@@ -65,6 +65,14 @@ public class EmployeeTask extends Auditable {
     @Column(name = "completion_seen_at")
     private LocalDateTime completionSeenAt;
 
+    /** When the assigner last read the reply thread; assignee replies after it are unread (V152). */
+    @Column(name = "assigner_replies_seen_at")
+    private LocalDateTime assignerRepliesSeenAt;
+
+    /** When the assignee last read the reply thread; assigner replies after it are unread (V152). */
+    @Column(name = "assignee_replies_seen_at")
+    private LocalDateTime assigneeRepliesSeenAt;
+
     public enum TaskPriority {
         LOW, MEDIUM, HIGH, URGENT
     }

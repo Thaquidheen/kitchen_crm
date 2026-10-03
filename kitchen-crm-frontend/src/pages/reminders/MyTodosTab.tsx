@@ -58,7 +58,8 @@ export const MyTodosTab: React.FC = () => {
 
   // Tasks an admin assigned to me sit above my own list, with a chip row to view either alone.
   // The admin can reopen or re-assign from their own browser; poll so this reflects that.
-  const { data: assignedTasks = [] } = useGetMyTasksQuery({}, { pollingInterval: 60000, refetchOnFocus: true, refetchOnReconnect: true, refetchOnMountOrArgChange: true });
+  // 20 s: an admin's answer to a question asked on a task should show up while the person waits.
+  const { data: assignedTasks = [] } = useGetMyTasksQuery({}, { pollingInterval: 20000, refetchOnFocus: true, refetchOnReconnect: true, refetchOnMountOrArgChange: true });
   const [view, setView] = useState<'' | 'MINE' | 'ASSIGNED'>('');
   const showMine = view !== 'ASSIGNED';
   const showAssigned = view !== 'MINE' && assignedTasks.length > 0;

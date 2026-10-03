@@ -16,6 +16,7 @@ import {
 import { CustomerList, STATUS_PILL } from '@/features/customers/components/CustomerList';
 import { CustomerFormModal } from '@/features/customers/components/CustomerFormModal';
 import { StatusChangeModal } from '@/features/customers/components/StatusChangeModal';
+import type { DesignAssignment } from '@/features/design/components/DesignerPicker';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Plus, Download, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -76,21 +77,35 @@ export function CustomersPage() {
   };
 
   // The same note is written to every selected customer's timeline.
-  const handleBulkStatusChange = async (note: string) => {
+  const handleBulkStatusChange = async (note: string, design?: DesignAssignment) => {
     const status = bulkStatusChange;
     if (!status || selectedCustomers.length === 0) return;
     setIsSavingStatus(true);
     try {
-      await Promise.all(
-        selectedCustomers.map((id) => updateStatus({ id, status, reason: note }).unwrap())
-      );
+      // Sequential when assigning a designer, so each customer lands in the queue in order.
+      if (design) {
+        for (const id of selectedCustomers) {
+          await updateStatus({
+            id,
+            status,
+            reason: note,
+            designerId: design.designerId ?? undefined,
+            designDueDate: design.dueDate || undefined,
+            designPriority: design.priority,
+          }).unwrap();
+        }
+      } else {
+        await Promise.all(
+          selectedCustomers.map((id) => updateStatus({ id, status, reason: note }).unwrap())
+        );
+      }
       toast.success(
         `${selectedCustomers.length} customer(s) status updated to ${STATUS_PILL[status]?.label ?? status}`
       );
       setSelectedCustomers([]);
       setBulkStatusChange(null);
-    } catch (error) {
-      toast.error('Failed to update some customers');
+    } catch (error: any) {
+      toast.error(error?.message || error?.data?.message || 'Failed to update some customers');
       console.error(error);
     } finally {
       setIsSavingStatus(false);

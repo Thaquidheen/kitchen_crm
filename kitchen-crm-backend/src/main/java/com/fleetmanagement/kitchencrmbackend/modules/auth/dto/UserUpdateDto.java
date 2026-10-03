@@ -22,6 +22,9 @@ public class UserUpdateDto {
     private String phoneNumber;
 
     private Boolean active;
+
+    /** SALES | DESIGNER | ADMIN_STAFF; null = leave unchanged, blank = clear. */
+    private String staffType;
 }
 
 

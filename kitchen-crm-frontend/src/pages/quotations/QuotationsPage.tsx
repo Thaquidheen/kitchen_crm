@@ -16,7 +16,7 @@ import type { QuotationListParams } from '@/features/quotations/types';
 const STATUS_CHIPS: Array<{ status: string; st: string; label: string }> = [
   { status: 'DRAFT', st: 'draft', label: 'Draft' },
   { status: 'ON_HOLD', st: 'nego', label: 'On Hold' },
-  { status: 'COMPLETE', st: 'confirmed', label: 'Complete' },
+  { status: 'COMPLETE', st: 'confirmed', label: 'Completed' },
   { status: 'APPROVED', st: 'lead', label: 'Approved' },
   { status: 'CANCELLED', st: 'lost', label: 'Cancelled' },
 ];

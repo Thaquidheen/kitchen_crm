@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -34,6 +35,14 @@ public class EmployeeTaskDto {
     private Boolean overdue;
     /** Open and not yet acknowledged by the assignee - shows as "New" in their list and bell. */
     private Boolean newForAssignee;
+    /** The reply thread, oldest first. */
+    private List<EmployeeTaskReplyDto> replies;
+    private Integer replyCount;
+    /** Assignee replies the assigner has not read yet. */
+    private Integer unreadForAssigner;
+    /** Assigner replies the assignee has not read yet. */
+    private Integer unreadForAssignee;
+    private LocalDateTime lastReplyAt;
 }
 
 

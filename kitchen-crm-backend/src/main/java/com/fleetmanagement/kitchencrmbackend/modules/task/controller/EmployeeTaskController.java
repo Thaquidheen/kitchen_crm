@@ -7,6 +7,7 @@ import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.task.dto.EmployeeTaskCreateDto;
 import com.fleetmanagement.kitchencrmbackend.modules.task.dto.EmployeeTaskDto;
 import com.fleetmanagement.kitchencrmbackend.modules.task.dto.EmployeeTaskUpdateDto;
+import com.fleetmanagement.kitchencrmbackend.modules.task.dto.EmployeeTaskReplyCreateDto;
 import com.fleetmanagement.kitchencrmbackend.modules.task.dto.TaskCompletionStatsDto;
 import com.fleetmanagement.kitchencrmbackend.modules.task.service.EmployeeTaskService;
 import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
@@ -199,6 +200,29 @@ public class EmployeeTaskController {
     public ResponseEntity<ApiResponse<Integer>> acknowledgeAll(
             @AuthenticationPrincipal UserPrincipal currentUser) {
         return ResponseEntity.ok(taskService.acknowledgeAllMine(currentUser.getId()));
+    }
+
+    /** Reply on a task (its assignee or its assigner). Returns the task with the whole thread. */
+    @PostMapping("/{taskId}/replies")
+    public ResponseEntity<ApiResponse<EmployeeTaskDto>> addReply(
+            @PathVariable Long taskId,
+            @Valid @RequestBody EmployeeTaskReplyCreateDto dto,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        ApiResponse<EmployeeTaskDto> response = taskService.addReply(taskId,
+                currentUser != null ? currentUser.getId() : null,
+                currentUser != null ? currentUser.getName() : null,
+                dto.getMessage());
+        return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    /** The caller has read the thread: the other side's replies stop counting as unread. */
+    @PutMapping("/{taskId}/replies/seen")
+    public ResponseEntity<ApiResponse<EmployeeTaskDto>> markRepliesSeen(
+            @PathVariable Long taskId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        ApiResponse<EmployeeTaskDto> response = taskService.markRepliesSeen(taskId,
+                currentUser != null ? currentUser.getId() : null);
+        return response.getSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @GetMapping("/{taskId}")
