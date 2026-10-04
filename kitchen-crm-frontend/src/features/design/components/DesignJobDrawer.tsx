@@ -4,6 +4,7 @@
  * Designer: Start → upload the design PDF → Mark complete (admin is notified).
  * Admin: edit designer / due date / priority / brief, attach plan documents, Approve or Request
  * changes — and, once a version is approved, Request redesign to open the next one.
+ * Admin staff (coordinator): see the design and its files, and add or remove plan documents.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -45,7 +46,7 @@ import type { DesignFile, DesignPriority, DesignStatus } from '../types';
 
 interface Props {
   jobId: number | null;
-  viewer: 'admin' | 'designer';
+  viewer: 'admin' | 'coordinator' | 'designer';
   onClose: () => void;
 }
 
@@ -128,7 +129,8 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
   // Opening the job is seeing it: clears "new design" (designer) / "completed" (admin) from the bell.
   const seenFor = useRef<number | null>(null);
   useEffect(() => {
-    if (!job || seenFor.current === job.id) {return;}
+    // Admin staff looking at a design is not the admin or the designer having seen it.
+    if (!job || viewer === 'coordinator' || seenFor.current === job.id) {return;}
     const isNews = viewer === 'designer' ? job.newForDesigner : job.newForAdmin;
     if (isNews) {
       seenFor.current = job.id;
@@ -258,6 +260,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
   const approved = !!job && isApprovedDesign(job.status);
   const designerCanWork = viewer === 'designer' && !!job && isDesignerWork(job.status);
   const canUploadDesign = open && (viewer === 'admin' || designerCanWork);
+  const managesPlans = viewer === 'admin' || viewer === 'coordinator';
   const files = job?.files ?? [];
   const planDocuments = job?.planDocuments ?? [];
   const hasPdf = files.some((f) => isPdfFile(f.originalFileName));
@@ -396,12 +399,12 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                 ))}
 
               {/* Plan documents: what the admin hands to the designer */}
-              {(viewer === 'admin' || planDocuments.length > 0) && (
+              {(managesPlans || planDocuments.length > 0) && (
                 <div>
                   <div className="flex items-center gap-2">
                     <div className={sectionLabel}>Plan documents from admin ({planDocuments.length})</div>
                     <span className="flex-1" />
-                    {viewer === 'admin' && (
+                    {managesPlans && (
                       <>
                         <input
                           ref={planInput}
@@ -428,7 +431,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                           key={f.id}
                           file={f}
                           tag={version > 1 ? versionLabel(f.versionNo) : undefined}
-                          onRemove={viewer === 'admin' ? () => removeFile(f) : undefined}
+                          onRemove={managesPlans ? () => removeFile(f) : undefined}
                           removing={removing}
                         />
                       ))}
@@ -615,11 +618,13 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                 </div>
               )}
 
-              {/* Notes */}
-              <div>
-                <div className={sectionLabel}>Notes</div>
-                <DesignNotesThread job={job} viewer={viewer} />
-              </div>
+              {/* Notes: the conversation is between the admin and the designer */}
+              {viewer !== 'coordinator' && (
+                <div>
+                  <div className={sectionLabel}>Notes</div>
+                  <DesignNotesThread job={job} viewer={viewer} />
+                </div>
+              )}
             </div>
           )}
         </ModalBody>

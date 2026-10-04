@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, FileText, Palette, Paperclip, RotateCcw, Upload } from 'lucide-react';
 import { fileUrl } from '@/utils/fileUrl';
-import { useGetCustomerDesignJobQuery } from '../designAPI';
+import { useGetCustomerDesignJobQuery, useGetDesignMeQuery } from '../designAPI';
 import { DesignStatusPill, ORIGIN_LABEL, isApprovedDesign, isOpenDesign, isPdfFile, versionLabel } from '../designUi';
 import { RedesignModal } from './RedesignModal';
 import { UploadDesignModal } from './UploadDesignModal';
@@ -52,6 +52,9 @@ export const CustomerDesignCard: React.FC<Props> = ({ customerId, customerName, 
     pollingInterval: 60000,
     refetchOnFocus: true,
   });
+  const { data: designMe } = useGetDesignMeQuery();
+  // Admins and Admin staff work in the Designs page; everyone else only sees the design here.
+  const opensDesigns = isAdmin || !!designMe?.canAssign;
   const [uploadOpen, setUploadOpen] = useState(false);
   const [redesignOpen, setRedesignOpen] = useState(false);
   const [showEarlier, setShowEarlier] = useState(false);
@@ -71,7 +74,7 @@ export const CustomerDesignCard: React.FC<Props> = ({ customerId, customerName, 
         <Palette size={13} className="text-text-500" />
         <span className={sectionLabel}>Design</span>
         <span className="flex-1" />
-        {design && isAdmin && (
+        {design && opensDesigns && (
           <Link to={`/designs?job=${design.id}`} className="text-[12px] font-medium text-primary-600 hover:underline">
             Open in Designs
           </Link>

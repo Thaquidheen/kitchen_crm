@@ -23,7 +23,7 @@ import type { StatusChangeExtras } from '../useCustomerStatusChange';
 import { useIsSuperAdmin } from '../../auth/useIsSuperAdmin';
 import { DesignerPicker, type DesignAssignment } from '../../design/components/DesignerPicker';
 import { PlanDocumentsField } from '../../design/components/PlanDocumentsField';
-import { useGetCustomerDesignJobQuery } from '../../design/designAPI';
+import { useGetCustomerDesignJobQuery, useGetDesignMeQuery } from '../../design/designAPI';
 import {
   DESIGN_STATUS,
   defaultDueDate,
@@ -96,6 +96,9 @@ export function StatusChangeModal({
   const [planFiles, setPlanFiles] = useState<File[]>([]);
   const [designPdf, setDesignPdf] = useState<File | null>(null);
   const isAdmin = useIsSuperAdmin();
+  const { data: designMe } = useGetDesignMeQuery(undefined, { skip: !isOpen });
+  // Plan documents are handed over by admins and by Admin staff.
+  const canAttachPlans = isAdmin || !!designMe?.canAssign;
   const isBulk = count > 1;
   const toDesign = targetStatus === 'DESIGN_STAGE';
   const toQuotation = targetStatus === 'QUOTE_GIVEN';
@@ -247,8 +250,8 @@ export function StatusChangeModal({
                   : 'The design goes to the end of this designer’s queue. The note becomes the design brief.'}
               </p>
             </div>
-            {isAdmin && !isBulk && <PlanDocumentsField files={planFiles} onChange={setPlanFiles} disabled={isSubmitting} />}
-            {isAdmin && isBulk && (
+            {canAttachPlans && !isBulk && <PlanDocumentsField files={planFiles} onChange={setPlanFiles} disabled={isSubmitting} />}
+            {canAttachPlans && isBulk && (
               <p className="m-0 text-[11.5px] text-text-600">
                 Plan documents are added per customer afterwards, from each design.
               </p>
