@@ -26,6 +26,8 @@ public class DesignPhaseFileDto {
     private DesignPhaseFile.FileCategory fileCategory;
     private String description;
     private String uploadedBy;
+    /** Design version the file belongs to (null = 1). */
+    private Integer versionNo;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

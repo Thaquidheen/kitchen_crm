@@ -13,6 +13,11 @@ import java.util.Map;
  * Design jobs: one per customer (design_phase), assigned to a Designer-type staff member, ordered in
  * that designer's queue by an admin, with a note thread and file uploads. A designer sees only their
  * own jobs; admins see everything.
+ *
+ * A design moves the customer through the pipeline: approving it sends a customer in Design on to
+ * Quotation Stage, and a redesign of an approved design opens its next version and brings the
+ * customer back into Design. Quotation Stage needs an approved design — made here, or uploaded as
+ * an already existing one.
  */
 public interface DesignJobService {
 
@@ -34,7 +39,19 @@ public interface DesignJobService {
     String ensureAssignedForDesignStage(Customer customer, Long designerId, LocalDate dueDate, String priority,
                                         String brief, Long byUserId);
 
+    /**
+     * Called by the customer status change when moving to Quotation Stage: null when the customer
+     * has an approved design, otherwise the message telling the user what is missing.
+     */
+    String requireDesignForQuotationStage(Customer customer);
+
+    /** Customers at Quotation Stage or later with their design, or none when it was never uploaded. */
+    ApiResponse<List<DesignLibraryRowDto>> library();
+
     ApiResponse<DesignJobDto> assign(DesignAssignRequest request, Long adminId);
+
+    /** Opens the next version of an approved design and brings the customer back into Design. */
+    ApiResponse<DesignJobDto> requestRedesign(Long jobId, DesignRedesignRequest request, Long adminId, String adminName);
 
     ApiResponse<DesignJobDto> update(Long jobId, DesignJobUpdateRequest request, Long adminId);
 
@@ -52,6 +69,19 @@ public interface DesignJobService {
 
     ApiResponse<DesignJobDto> uploadFile(Long jobId, MultipartFile file, String description, Long callerId,
                                          String callerName, boolean admin);
+
+    /** Plan documents the admin hands to the designer; kept apart from the design files. */
+    ApiResponse<DesignJobDto> uploadPlanDocuments(Long jobId, MultipartFile[] files, String callerName);
+
+    ApiResponse<DesignJobDto> deleteFile(Long jobId, Long fileId, Long callerId, boolean admin);
+
+    /**
+     * Saves an already existing design PDF as the customer's approved design (a new version when
+     * one is already approved) and, when asked, moves the customer to Quotation Stage with the note.
+     */
+    ApiResponse<DesignJobDto> uploadCustomerDesign(Long customerId, MultipartFile file, String note,
+                                                   boolean moveToQuotation, Long callerId, String callerName,
+                                                   boolean admin);
 
     ApiResponse<List<DesignerSummaryDto>> designers();
 

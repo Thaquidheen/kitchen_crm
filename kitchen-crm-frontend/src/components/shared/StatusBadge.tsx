@@ -70,7 +70,7 @@ const statusConfig: Record<
   LEAD: { variant: 'info', label: 'Lead', dot: true },
   POTENTIAL: { variant: 'warning', label: 'Potential', dot: true },
   DESIGN_STAGE: { variant: 'info', label: 'Design Stage', dot: true },
-  QUOTE_GIVEN: { variant: 'warning', label: 'Quote Given', dot: true },
+  QUOTE_GIVEN: { variant: 'warning', label: 'Quotation Stage', dot: true },
   FOLLOW_UP: { variant: 'primary', label: 'Follow Up', dot: true },
   NEGOTIATIONS: { variant: 'warning', label: 'Negotiations', dot: true },
   CONFIRMED: { variant: 'success', label: 'Confirmed', dot: true },

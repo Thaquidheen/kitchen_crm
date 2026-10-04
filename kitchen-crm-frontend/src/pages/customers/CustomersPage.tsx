@@ -9,14 +9,13 @@ import { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import {
   useDeleteCustomerMutation,
-  useUpdateCustomerStatusMutation,
   useGetCustomerStatisticsQuery,
   customersAPI,
 } from '@/features/customers/customersAPI';
+import { useCustomerStatusChange, type StatusChangeExtras } from '@/features/customers/useCustomerStatusChange';
 import { CustomerList, STATUS_PILL } from '@/features/customers/components/CustomerList';
 import { CustomerFormModal } from '@/features/customers/components/CustomerFormModal';
 import { StatusChangeModal } from '@/features/customers/components/StatusChangeModal';
-import type { DesignAssignment } from '@/features/design/components/DesignerPicker';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Plus, Download, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -32,7 +31,7 @@ export const STAGE_META: Array<{
   { status: 'LEAD', st: 'lead', label: 'Leads', statsKey: 'lead' },
   { status: 'POTENTIAL', st: 'potential', label: 'Potential', statsKey: 'potential' },
   { status: 'DESIGN_STAGE', st: 'design', label: 'Design Stage', statsKey: 'design_stage' },
-  { status: 'QUOTE_GIVEN', st: 'quote', label: 'Quote Given', statsKey: 'quote_given' },
+  { status: 'QUOTE_GIVEN', st: 'quote', label: 'Quotation Stage', statsKey: 'quote_given' },
   { status: 'FOLLOW_UP', st: 'follow', label: 'Follow Up', statsKey: 'follow_up' },
   { status: 'NEGOTIATIONS', st: 'nego', label: 'Negotiations', statsKey: 'negotiations' },
   { status: 'CONFIRMED', st: 'confirmed', label: 'Confirmed', statsKey: 'confirmed' },
@@ -54,7 +53,7 @@ export function CustomersPage() {
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
   const [deleteCustomer] = useDeleteCustomerMutation();
-  const [updateStatus] = useUpdateCustomerStatusMutation();
+  const changeStatus = useCustomerStatusChange();
   const { data: stats } = useGetCustomerStatisticsQuery();
 
   const total = stats?.total ?? 0;
@@ -77,38 +76,41 @@ export function CustomersPage() {
   };
 
   // The same note is written to every selected customer's timeline.
-  const handleBulkStatusChange = async (note: string, design?: DesignAssignment) => {
+  const handleBulkStatusChange = async (note: string, extras: StatusChangeExtras) => {
     const status = bulkStatusChange;
-    if (!status || selectedCustomers.length === 0) return;
+    const ids = selectedCustomers;
+    if (!status || ids.length === 0) return;
     setIsSavingStatus(true);
-    try {
-      // Sequential when assigning a designer, so each customer lands in the queue in order.
-      if (design) {
-        for (const id of selectedCustomers) {
-          await updateStatus({
-            id,
-            status,
-            reason: note,
-            designerId: design.designerId ?? undefined,
-            designDueDate: design.dueDate || undefined,
-            designPriority: design.priority,
-          }).unwrap();
+    // One at a time: a designer's queue fills in order, and a customer the server refuses (no
+    // design for Quotation Stage, say) must not stop or hide the others.
+    const refused: number[] = [];
+    let firstError = '';
+    for (const id of ids) {
+      try {
+        const result = await changeStatus({ customerId: id, status, note, extras });
+        if (result.warning) {
+          toast.error(result.warning, { duration: 8000 });
         }
-      } else {
-        await Promise.all(
-          selectedCustomers.map((id) => updateStatus({ id, status, reason: note }).unwrap())
-        );
+      } catch (error: any) {
+        refused.push(id);
+        firstError = firstError || error?.message || error?.data?.message || 'Failed to update status';
       }
-      toast.success(
-        `${selectedCustomers.length} customer(s) status updated to ${STATUS_PILL[status]?.label ?? status}`
-      );
+    }
+    setIsSavingStatus(false);
+    const moved = ids.length - refused.length;
+    const label = STATUS_PILL[status]?.label ?? status;
+    if (refused.length === 0) {
+      toast.success(`${moved} customer(s) status updated to ${label}`);
       setSelectedCustomers([]);
       setBulkStatusChange(null);
-    } catch (error: any) {
-      toast.error(error?.message || error?.data?.message || 'Failed to update some customers');
-      console.error(error);
-    } finally {
-      setIsSavingStatus(false);
+    } else if (moved === 0) {
+      // Nothing changed: leave the window open so the reason can be fixed and retried.
+      toast.error(firstError);
+    } else {
+      toast.error(`${moved} moved to ${label}. ${refused.length} not moved: ${firstError}`, { duration: 9000 });
+      // The ones that did not move stay selected, so they are easy to open one by one.
+      setSelectedCustomers(refused);
+      setBulkStatusChange(null);
     }
   };
 
@@ -283,6 +285,8 @@ export function CustomersPage() {
         targetStatus={bulkStatusChange}
         count={selectedCustomers.length}
         isSubmitting={isSavingStatus}
+        // With one row ticked this is an ordinary single change: the design PDF can be uploaded here.
+        customerId={selectedCustomers.length === 1 ? selectedCustomers[0] : undefined}
       />
 
       {/* Customer Form Modal */}

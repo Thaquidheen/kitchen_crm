@@ -16,4 +16,6 @@ public class DesignFileUploadRequest {
     private Long customerId;
     private DesignPhaseFile.FileCategory fileCategory;
     private String description;
+    /** Design version the file belongs to; null leaves it unversioned (= 1). */
+    private Integer versionNo;
 }

@@ -68,7 +68,7 @@ export function CustomerStatistics() {
     LEAD: { label: 'Leads', icon: Clock, variant: 'warning' },
     POTENTIAL: { label: 'Potential', icon: TrendingUp, variant: 'primary' },
     DESIGN_STAGE: { label: 'Design Stage', icon: Palette, variant: 'primary' },
-    QUOTE_GIVEN: { label: 'Quote Given', icon: FileText, variant: 'warning' },
+    QUOTE_GIVEN: { label: 'Quotation Stage', icon: FileText, variant: 'warning' },
     FOLLOW_UP: { label: 'Follow Up', icon: Phone, variant: 'primary' },
     NEGOTIATIONS: { label: 'Negotiations', icon: MessageSquare, variant: 'warning' },
     CONFIRMED: { label: 'Confirmed', icon: UserCheck, variant: 'success' },

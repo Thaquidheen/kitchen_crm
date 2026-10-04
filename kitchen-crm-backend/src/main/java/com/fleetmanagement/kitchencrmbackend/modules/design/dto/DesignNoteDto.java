@@ -17,4 +17,6 @@ public class DesignNoteDto {
     private Boolean fromDesigner;
     private String message;
     private LocalDateTime createdAt;
+    /** Design version the note was written under. */
+    private Integer versionNo;
 }

@@ -49,7 +49,7 @@ export function CustomerFilters({
     { value: 'LEAD', label: 'Lead' },
     { value: 'POTENTIAL', label: 'Potential' },
     { value: 'DESIGN_STAGE', label: 'Design Stage' },
-    { value: 'QUOTE_GIVEN', label: 'Quote Given' },
+    { value: 'QUOTE_GIVEN', label: 'Quotation Stage' },
     { value: 'FOLLOW_UP', label: 'Follow Up' },
     { value: 'NEGOTIATIONS', label: 'Negotiations' },
     { value: 'CONFIRMED', label: 'Confirmed' },

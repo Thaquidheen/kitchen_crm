@@ -29,18 +29,13 @@ import {
   useGetUnassignedDesignsQuery,
   useReorderDesignJobsMutation,
   useSetDesignerStatusMutation,
+  useUploadPlanDocumentsMutation,
 } from '@/features/design/designAPI';
-import {
-  DESIGNER_STATUS,
-  DesignStatusPill,
-  DesignerStatusDot,
-  PriorityPill,
-  defaultDueDate,
-  dueText,
-  isDesignerWork,
-} from '@/features/design/designUi';
+import { defaultDueDate, DESIGNER_STATUS, DesignerStatusDot, DesignStatusPill, dueText, isDesignerWork, PriorityPill, versionLabel } from '@/features/design/designUi';
 import { DesignJobDrawer } from '@/features/design/components/DesignJobDrawer';
 import { DesignerPicker, type DesignAssignment } from '@/features/design/components/DesignerPicker';
+import { DesignLibrary } from '@/features/design/components/DesignLibrary';
+import { PlanDocumentsField } from '@/features/design/components/PlanDocumentsField';
 import type { DesignJob, DesignerStatus, UnassignedDesignCustomer } from '@/features/design/types';
 
 const card = 'bg-background-800 border border-background-600 rounded-[14px]';
@@ -88,6 +83,11 @@ const JobRowView: React.FC<
         </div>
         <div className="flex items-center gap-1.5 flex-wrap mt-1">
           <DesignStatusPill status={job.status} />
+          {(job.version ?? 1) > 1 && (
+            <span className="inline-flex items-center px-1.5 py-[1px] rounded-full border border-background-600 text-[10.5px] font-semibold text-text-800 tabular-nums">
+              {versionLabel(job.version)}
+            </span>
+          )}
           <PriorityPill priority={job.priority} />
           {due && (
             <span className="text-[11.5px]" style={{ color: job.overdue ? 'var(--st-lost-fg)' : 'var(--color-text-600)' }}>
@@ -234,28 +234,44 @@ const DesignerColumn: React.FC<{
 const AssignModal: React.FC<{ customer: UnassignedDesignCustomer | null; onClose: () => void }> = ({ customer, onClose }) => {
   const [value, setValue] = useState<DesignAssignment>({ designerId: null, dueDate: defaultDueDate(), priority: 'MEDIUM' });
   const [brief, setBrief] = useState('');
-  const [assign, { isLoading }] = useAssignDesignMutation();
+  const [planFiles, setPlanFiles] = useState<File[]>([]);
+  const [assign, { isLoading: assigning }] = useAssignDesignMutation();
+  const [uploadPlanDocuments, { isLoading: uploading }] = useUploadPlanDocumentsMutation();
+  const isLoading = assigning || uploading;
   useEffect(() => {
     if (customer) {
       setValue({ designerId: null, dueDate: defaultDueDate(), priority: 'MEDIUM' });
       setBrief('');
+      setPlanFiles([]);
     }
   }, [customer]);
   const submit = async () => {
     if (!customer || !value.designerId) {return;}
+    let job: DesignJob;
     try {
-      await assign({
+      job = await assign({
         customerId: customer.customerId,
         designerId: value.designerId,
         dueDate: value.dueDate || undefined,
         priority: value.priority,
         brief: brief.trim() || undefined,
       }).unwrap();
-      toast.success('Designer assigned');
-      onClose();
     } catch (e: any) {
       toast.error(e?.message || e?.data?.message || 'Failed to assign designer');
+      return;
     }
+    if (planFiles.length > 0) {
+      try {
+        await uploadPlanDocuments({ id: job.id, files: planFiles }).unwrap();
+      } catch (e: any) {
+        // The assignment itself is saved; only the attachments are missing.
+        toast.error(`Designer assigned, but the plan documents were not added: ${e?.message || e?.data?.message || 'upload failed'}`);
+        onClose();
+        return;
+      }
+    }
+    toast.success('Designer assigned');
+    onClose();
   };
   return (
     <Modal isOpen={customer !== null} onClose={onClose} title={customer ? `Assign designer · ${customer.customerName}` : ''} size="md">
@@ -272,6 +288,7 @@ const AssignModal: React.FC<{ customer: UnassignedDesignCustomer | null; onClose
               className="w-full px-3 py-2 rounded-[10px] border border-background-600 bg-background-900 text-text-900 text-[13px] outline-none focus:border-primary-600 resize-y placeholder:text-text-500"
             />
           </div>
+          <PlanDocumentsField files={planFiles} onChange={setPlanFiles} disabled={isLoading} />
         </div>
       </ModalBody>
       <ModalFooter>
@@ -456,6 +473,9 @@ const DesignsPage: React.FC = () => {
               )}
             </div>
           )}
+
+          {/* Admin: the design every customer past Design is quoted on */}
+          {isAdmin && <DesignLibrary onOpen={openJob} />}
 
           {showClosed && closed.length > 0 && (
             <div className={`${card} p-3.5`}>

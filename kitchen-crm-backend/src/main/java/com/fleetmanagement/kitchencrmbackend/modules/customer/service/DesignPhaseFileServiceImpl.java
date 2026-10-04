@@ -95,6 +95,7 @@ public class DesignPhaseFileServiceImpl implements DesignPhaseFileService {
             designFile.setFileCategory(request.getFileCategory() != null ? request.getFileCategory() : DesignPhaseFile.FileCategory.DESIGN);
             designFile.setDescription(request.getDescription());
             designFile.setUploadedBy(uploadedBy);
+            designFile.setVersionNo(request.getVersionNo());
 
             DesignPhaseFile savedFile = fileRepository.save(designFile);
 
@@ -283,6 +284,7 @@ public class DesignPhaseFileServiceImpl implements DesignPhaseFileService {
         dto.setFileCategory(file.getFileCategory());
         dto.setDescription(file.getDescription());
         dto.setUploadedBy(file.getUploadedBy());
+        dto.setVersionNo(file.getVersionNo());
         dto.setCreatedAt(file.getCreatedAt());
         dto.setUpdatedAt(file.getUpdatedAt());
         return dto;

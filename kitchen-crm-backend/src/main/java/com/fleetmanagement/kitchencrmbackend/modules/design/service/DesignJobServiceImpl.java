@@ -6,19 +6,26 @@ import com.fleetmanagement.kitchencrmbackend.modules.auth.repository.UserReposit
 import com.fleetmanagement.kitchencrmbackend.modules.customer.dto.DesignFileUploadRequest;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.dto.DesignPhaseFileDto;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer.CustomerStatus;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.DesignPhase;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.DesignPhase.DesignStatus;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.DesignPhaseFile;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.WorkflowHistory;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.DesignPhaseFileRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.WorkflowHistoryRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.service.DesignPhaseFileService;
 import com.fleetmanagement.kitchencrmbackend.modules.design.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.design.entity.DesignPhaseNote;
+import com.fleetmanagement.kitchencrmbackend.modules.design.entity.DesignPhaseVersion;
 import com.fleetmanagement.kitchencrmbackend.modules.design.repository.DesignJobRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.design.repository.DesignPhaseNoteRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.design.repository.DesignPhaseVersionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
@@ -38,19 +45,42 @@ public class DesignJobServiceImpl implements DesignJobService {
     /** The designer has work to do on these. */
     private static final Set<DesignStatus> DESIGNER_WORK = EnumSet.of(
             DesignStatus.PLANNING, DesignStatus.IN_PROGRESS, DesignStatus.REVISION_REQUIRED);
+    /** The current version is not approved yet: with the designer, or with the admin for review. */
+    private static final Set<DesignStatus> OPEN = EnumSet.of(
+            DesignStatus.PLANNING, DesignStatus.IN_PROGRESS, DesignStatus.REVISION_REQUIRED,
+            DesignStatus.PENDING_SUPERADMIN_APPROVAL);
+    /** The current version is approved: this is a design a quotation can be made from. */
+    private static final Set<DesignStatus> APPROVED_STATES = EnumSet.of(
+            DesignStatus.APPROVED_BY_ADMIN, DesignStatus.SUBMITTED, DesignStatus.FEEDBACK_RECEIVED,
+            DesignStatus.APPROVED, DesignStatus.FROZEN);
     /** Finished or stopped: not in any queue or bell. */
     private static final Set<DesignStatus> CLOSED = EnumSet.of(
             DesignStatus.APPROVED_BY_ADMIN, DesignStatus.SUBMITTED, DesignStatus.FEEDBACK_RECEIVED,
             DesignStatus.APPROVED, DesignStatus.FROZEN, DesignStatus.CANCELLED);
+    /** What an admin may set by hand; approving and redesigning have their own actions. */
+    private static final Set<DesignStatus> HAND_SET = EnumSet.of(
+            DesignStatus.PLANNING, DesignStatus.IN_PROGRESS, DesignStatus.CANCELLED);
+    /** Stages whose customers are listed with their design in the Designs module. */
+    private static final List<CustomerStatus> PAST_DESIGN = List.of(
+            CustomerStatus.QUOTE_GIVEN, CustomerStatus.FOLLOW_UP, CustomerStatus.NEGOTIATIONS, CustomerStatus.CONFIRMED);
+    /** A redesign pulls the customer back into Design — except from these, where only the design reopens. */
+    private static final Set<CustomerStatus> REDESIGN_KEEPS_STAGE = EnumSet.of(
+            CustomerStatus.DESIGN_STAGE, CustomerStatus.CONFIRMED, CustomerStatus.LOST);
 
     @Autowired
     private DesignJobRepository jobRepository;
     @Autowired
     private DesignPhaseNoteRepository noteRepository;
     @Autowired
+    private DesignPhaseVersionRepository versionRepository;
+    @Autowired
+    private DesignPhaseFileRepository fileRepository;
+    @Autowired
     private UserRepository userRepository;
     @Autowired
     private CustomerRepository customerRepository;
+    @Autowired
+    private WorkflowHistoryRepository workflowHistoryRepository;
     @Autowired
     private DesignPhaseFileService fileService;
 
@@ -113,17 +143,16 @@ public class DesignJobServiceImpl implements DesignJobService {
         if (jobs.isEmpty()) {
             return ApiResponse.success("No design job", null);
         }
-        DesignJobDto dto = toDtos(List.of(jobs.get(0))).get(0);
-        // The customer page shows who/what/when only — the conversation stays with admin + designer.
-        dto.setLatestNote(null);
-        return ApiResponse.success(dto);
+        // The customer page shows the design, its versions and files — the conversation stays
+        // with admin + designer.
+        return ApiResponse.success(withoutConversation(detail(jobs.get(0))));
     }
 
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<List<Map<String, Object>>> unassignedCustomers() {
         List<Map<String, Object>> rows = new ArrayList<>();
-        for (Customer c : jobRepository.findUnassignedDesignCustomers(Customer.CustomerStatus.DESIGN_STAGE,
+        for (Customer c : jobRepository.findUnassignedDesignCustomers(CustomerStatus.DESIGN_STAGE,
                 DesignStatus.CANCELLED)) {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("customerId", c.getId());
@@ -134,6 +163,38 @@ public class DesignJobServiceImpl implements DesignJobService {
         return ApiResponse.success(rows);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<List<DesignLibraryRowDto>> library() {
+        List<Customer> customers = customerRepository.findByStatusIn(PAST_DESIGN);
+        if (customers.isEmpty()) {
+            return ApiResponse.success(new ArrayList<>());
+        }
+        List<Long> customerIds = customers.stream().map(Customer::getId).toList();
+        // Newest design per customer (the query is newest-first).
+        Map<Long, DesignPhase> jobByCustomer = new LinkedHashMap<>();
+        for (DesignPhase job : jobRepository.findByCustomerIds(customerIds)) {
+            jobByCustomer.putIfAbsent(job.getCustomer().getId(), job);
+        }
+        Map<Long, DesignJobDto> dtoByCustomer = new HashMap<>();
+        for (DesignJobDto dto : toDtos(new ArrayList<>(jobByCustomer.values()))) {
+            dtoByCustomer.put(dto.getCustomerId(), withoutConversation(dto));
+        }
+        List<DesignLibraryRowDto> rows = new ArrayList<>(customers.size());
+        customers.stream()
+                .sorted(Comparator.comparing(c -> c.getName() == null ? "" : c.getName().toLowerCase()))
+                .forEach(c -> {
+                    DesignLibraryRowDto row = new DesignLibraryRowDto();
+                    row.setCustomerId(c.getId());
+                    row.setCustomerName(c.getName());
+                    row.setCustomerPlace(c.getPlace());
+                    row.setCustomerStatus(c.getStatus() != null ? c.getStatus().name() : null);
+                    row.setDesign(dtoByCustomer.get(c.getId()));
+                    rows.add(row);
+                });
+        return ApiResponse.success(rows);
+    }
+
     // ------------------------------------------------------------------ assignment
 
     @Override
@@ -141,8 +202,8 @@ public class DesignJobServiceImpl implements DesignJobService {
                                                String brief, Long byUserId) {
         DesignPhase existing = latestJob(customer.getId());
         if (designerId == null) {
-            // Already has a live job with a designer (e.g. moved out of Design and back): keep it.
-            if (existing != null && existing.getStaffAssigned() != null && status(existing) != DesignStatus.CANCELLED) {
+            // Still with a designer (e.g. moved out of Design and back): nothing to choose.
+            if (existing != null && existing.getStaffAssigned() != null && OPEN.contains(status(existing))) {
                 return null;
             }
             return "Choose a designer for this design";
@@ -157,15 +218,20 @@ public class DesignJobServiceImpl implements DesignJobService {
             return "Priority must be Low, Medium, High or Urgent";
         }
         // Valid — now write.
-        DesignPhase job = existing != null ? existing : newJob(customer);
-        boolean reopening = existing != null && CLOSED.contains(status(existing));
+        if (existing != null && APPROVED_STATES.contains(status(existing))) {
+            // Back into Design after an approved design: that is the next version of it.
+            startNextVersion(existing, designer, brief, dueDate, normalizedPriority, byUserId);
+            return null;
+        }
+        boolean isNew = existing == null;
+        DesignPhase job = isNew ? newJob(customer) : existing;
+        boolean cancelled = !isNew && status(job) == DesignStatus.CANCELLED;
         boolean newDesigner = job.getStaffAssigned() == null || !job.getStaffAssigned().getId().equals(designer.getId());
-        if (existing == null || reopening || newDesigner) {
+        if (isNew || cancelled || newDesigner) {
             assignTo(job, designer, byUserId);
         }
-        if (reopening) {
-            // Back into design after it was finished: that is another revision of the same design.
-            job.setRevisionCount(nz(job.getRevisionCount()) + 1);
+        if (cancelled) {
+            // A cancelled design picked up again continues as the same version.
             job.setDesignStatus(DesignStatus.PLANNING);
             job.setCompletedAt(null);
             job.setCompletionSeenAt(null);
@@ -180,7 +246,27 @@ public class DesignJobServiceImpl implements DesignJobService {
             job.setDesignRequirements(brief.trim());
         }
         jobRepository.save(job);
+        DesignPhaseVersion row = isNew
+                ? newVersionRow(job, DesignPhaseVersion.ORIGIN_DESIGNER, job.getDesignRequirements(), byUserId, userName(byUserId))
+                : currentVersionRow(job);
+        row.setDesignerUserId(designer.getId());
+        row.setDesignerName(designer.getName());
+        versionRepository.save(row);
         return null;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String requireDesignForQuotationStage(Customer customer) {
+        DesignPhase job = latestJob(customer.getId());
+        if (job != null && APPROVED_STATES.contains(status(job))) {
+            return null;
+        }
+        if (job != null && OPEN.contains(status(job))) {
+            String who = job.getStaffAssigned() != null ? job.getStaffAssigned().getName() : "a designer";
+            return "The design is still with " + who + ". The customer moves to Quotation Stage when the admin approves it.";
+        }
+        return "Upload the design PDF to move this customer to Quotation Stage";
     }
 
     @Override
@@ -194,14 +280,7 @@ public class DesignJobServiceImpl implements DesignJobService {
         if (error != null) {
             return ApiResponse.error(error);
         }
-        DesignPhase job = latestJob(customer.getId());
-        // assign() is an explicit admin action: a new designer always gets the job, even if one was set.
-        if (job != null && (job.getStaffAssigned() == null || !job.getStaffAssigned().getId().equals(request.getDesignerId()))) {
-            User designer = userRepository.findById(request.getDesignerId()).orElse(null);
-            assignTo(job, designer, adminId);
-            jobRepository.save(job);
-        }
-        return ApiResponse.success("Designer assigned", detail(job));
+        return ApiResponse.success("Designer assigned", detail(latestJob(customer.getId())));
     }
 
     @Override
@@ -233,9 +312,24 @@ public class DesignJobServiceImpl implements DesignJobService {
             } catch (IllegalArgumentException e) {
                 return ApiResponse.error("Unknown design status: " + request.getStatus());
             }
+            if (newStatus == status(job)) {
+                newStatus = null;
+            }
+        }
+        if (newStatus != null) {
+            if (APPROVED_STATES.contains(status(job))) {
+                return ApiResponse.error("This design is approved. Request a redesign to change it.");
+            }
+            if (!HAND_SET.contains(newStatus)) {
+                return ApiResponse.error("That status is set by the designer completing the design and the admin reviewing it");
+            }
         }
         if (newDesigner != null) {
             assignTo(job, newDesigner, adminId);
+            DesignPhaseVersion row = currentVersionRow(job);
+            row.setDesignerUserId(newDesigner.getId());
+            row.setDesignerName(newDesigner.getName());
+            versionRepository.save(row);
         }
         if (Boolean.TRUE.equals(request.getClearDueDate())) {
             job.setDueDate(null);
@@ -248,7 +342,7 @@ public class DesignJobServiceImpl implements DesignJobService {
         if (request.getBrief() != null) {
             job.setDesignRequirements(request.getBrief().isBlank() ? null : request.getBrief().trim());
         }
-        if (newStatus != null && newStatus != status(job)) {
+        if (newStatus != null) {
             job.setDesignStatus(newStatus);
             if (newStatus == DesignStatus.IN_PROGRESS && job.getStartedAt() == null) {
                 job.setStartedAt(LocalDateTime.now());
@@ -283,6 +377,46 @@ public class DesignJobServiceImpl implements DesignJobService {
         return ApiResponse.success("Order saved", toDtos(ordered));
     }
 
+    @Override
+    public ApiResponse<DesignJobDto> requestRedesign(Long jobId, DesignRedesignRequest request, Long adminId,
+                                                     String adminName) {
+        DesignPhase job = jobRepository.findById(jobId).orElse(null);
+        if (job == null) {
+            return ApiResponse.error("Design job not found");
+        }
+        if (!APPROVED_STATES.contains(status(job))) {
+            return ApiResponse.error("Only an approved design can be sent for redesign");
+        }
+        if (request.getNote() == null || request.getNote().isBlank()) {
+            return ApiResponse.error("Say what needs to change");
+        }
+        User designer = request.getDesignerId() == null ? null : userRepository.findById(request.getDesignerId()).orElse(null);
+        String designerError = validateDesigner(designer);
+        if (designerError != null) {
+            return ApiResponse.error(designerError);
+        }
+        String priority = normalizePriority(request.getPriority());
+        if (request.getPriority() != null && !request.getPriority().isBlank() && priority == null) {
+            return ApiResponse.error("Priority must be Low, Medium, High or Urgent");
+        }
+        String note = request.getNote().trim();
+        startNextVersion(job, designer, note, request.getDueDate(), priority, adminId);
+        // The request is also the first line of the new round's conversation.
+        saveNote(job, note, adminId, adminName, false);
+        job.setAdminNotesSeenAt(LocalDateTime.now());
+        jobRepository.save(job);
+
+        Customer customer = job.getCustomer();
+        boolean moved = false;
+        if (customer != null && !REDESIGN_KEEPS_STAGE.contains(customer.getStatus())) {
+            moved = moveCustomer(customer, CustomerStatus.DESIGN_STAGE, adminName,
+                    "Redesign requested (V" + version(job) + "): " + note);
+        }
+        return ApiResponse.success(moved
+                ? "Redesign requested — customer moved back to Design Stage"
+                : "Redesign requested", detail(job));
+    }
+
     // ------------------------------------------------------------------ designer actions
 
     @Override
@@ -312,9 +446,11 @@ public class DesignJobServiceImpl implements DesignJobService {
         if (!DESIGNER_WORK.contains(status(job))) {
             return ApiResponse.error("Only a design that is waiting, in progress or needs changes can be completed");
         }
-        long files = fileCount(job.getId());
-        if (files == 0) {
-            return ApiResponse.error("Upload the design file before marking it complete");
+        int version = version(job);
+        boolean hasPdf = fileRepository.findByDesignPhaseId(job.getId()).stream()
+                .anyMatch(f -> isDesignFile(f) && versionOf(f) == version && isPdf(f.getOriginalFileName()));
+        if (!hasPdf) {
+            return ApiResponse.error("Upload the design PDF before marking it complete");
         }
         LocalDateTime now = LocalDateTime.now();
         job.setDesignStatus(DesignStatus.PENDING_SUPERADMIN_APPROVAL);
@@ -329,6 +465,9 @@ public class DesignJobServiceImpl implements DesignJobService {
             job.setDesignerNotesSeenAt(now);
         }
         jobRepository.save(job);
+        DesignPhaseVersion row = currentVersionRow(job);
+        row.setCompletedAt(now);
+        versionRepository.save(row);
         return ApiResponse.success("Design sent to admin for review", detail(job));
     }
 
@@ -340,19 +479,28 @@ public class DesignJobServiceImpl implements DesignJobService {
         }
         String decision = request.getDecision() == null ? "" : request.getDecision().trim().toUpperCase();
         boolean hasNote = request.getNote() != null && !request.getNote().isBlank();
+        if (!"APPROVE".equals(decision) && !"CHANGES".equals(decision)) {
+            return ApiResponse.error("Decision must be APPROVE or CHANGES");
+        }
+        if (status(job) != DesignStatus.PENDING_SUPERADMIN_APPROVAL) {
+            return ApiResponse.error("This design is not waiting for review");
+        }
+        if ("CHANGES".equals(decision) && !hasNote) {
+            return ApiResponse.error("Say what needs to change");
+        }
         LocalDateTime now = LocalDateTime.now();
-        switch (decision) {
-            case "APPROVE" -> job.setDesignStatus(DesignStatus.APPROVED_BY_ADMIN);
-            case "CHANGES" -> {
-                if (!hasNote) {
-                    return ApiResponse.error("Say what needs to change");
-                }
-                job.setDesignStatus(DesignStatus.REVISION_REQUIRED);
-                job.setRevisionCount(nz(job.getRevisionCount()) + 1);
-            }
-            default -> {
-                return ApiResponse.error("Decision must be APPROVE or CHANGES");
-            }
+        boolean approve = "APPROVE".equals(decision);
+        if (approve) {
+            job.setDesignStatus(DesignStatus.APPROVED_BY_ADMIN);
+            DesignPhaseVersion row = currentVersionRow(job);
+            row.setApprovedAt(now);
+            row.setApprovedByUserId(adminId);
+            row.setApprovedByName(adminName);
+            versionRepository.save(row);
+        } else {
+            // Same version, another round: it is not approved yet.
+            job.setDesignStatus(DesignStatus.REVISION_REQUIRED);
+            job.setRevisionCount(nz(job.getRevisionCount()) + 1);
         }
         job.setCompletionSeenAt(now);
         job.setDesignerSeenAt(null); // news for the designer either way
@@ -361,7 +509,13 @@ public class DesignJobServiceImpl implements DesignJobService {
             job.setAdminNotesSeenAt(now);
         }
         jobRepository.save(job);
-        return ApiResponse.success("APPROVE".equals(decision) ? "Design approved" : "Changes requested", detail(job));
+        if (!approve) {
+            return ApiResponse.success("Changes requested", detail(job));
+        }
+        boolean moved = moveToQuotationIfInDesign(job.getCustomer(), adminName,
+                "Design V" + version(job) + " approved" + (hasNote ? ": " + request.getNote().trim() : ""));
+        return ApiResponse.success(moved ? "Design approved — customer moved to Quotation Stage" : "Design approved",
+                detail(job));
     }
 
     @Override
@@ -410,6 +564,8 @@ public class DesignJobServiceImpl implements DesignJobService {
         return ApiResponse.success(detail(job));
     }
 
+    // ------------------------------------------------------------------ files
+
     @Override
     public ApiResponse<DesignJobDto> uploadFile(Long jobId, MultipartFile file, String description, Long callerId,
                                                 String callerName, boolean admin) {
@@ -420,15 +576,158 @@ public class DesignJobServiceImpl implements DesignJobService {
         if (file == null || file.isEmpty()) {
             return ApiResponse.error("Choose a file to upload");
         }
-        DesignFileUploadRequest request = new DesignFileUploadRequest();
-        request.setDesignPhaseId(job.getId());
-        request.setFileCategory(DesignPhaseFile.FileCategory.DESIGN);
-        request.setDescription(description);
-        ApiResponse<DesignPhaseFileDto> stored = fileService.uploadDesignFile(file, request, callerName);
+        if (!OPEN.contains(status(job))) {
+            return ApiResponse.error(status(job) == DesignStatus.CANCELLED
+                    ? "This design is cancelled"
+                    : "This version is approved. A redesign opens the next version for new files.");
+        }
+        ApiResponse<DesignPhaseFileDto> stored = store(job, file, DesignPhaseFile.FileCategory.DESIGN, description, callerName);
         if (!Boolean.TRUE.equals(stored.getSuccess())) {
             return ApiResponse.error(stored.getMessage());
         }
         return ApiResponse.success("File uploaded", detail(job));
+    }
+
+    @Override
+    public ApiResponse<DesignJobDto> uploadPlanDocuments(Long jobId, MultipartFile[] files, String callerName) {
+        DesignPhase job = jobRepository.findById(jobId).orElse(null);
+        if (job == null) {
+            return ApiResponse.error("Design job not found");
+        }
+        List<MultipartFile> picked = files == null ? List.of()
+                : Arrays.stream(files).filter(f -> f != null && !f.isEmpty()).toList();
+        if (picked.isEmpty()) {
+            return ApiResponse.error("Choose the plan documents to add");
+        }
+        for (MultipartFile file : picked) {
+            ApiResponse<DesignPhaseFileDto> stored = store(job, file, DesignPhaseFile.FileCategory.PLAN, null, callerName);
+            if (!Boolean.TRUE.equals(stored.getSuccess())) {
+                // All or nothing: a half-attached set would look complete to the designer.
+                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+                return ApiResponse.error(file.getOriginalFilename() + ": " + stored.getMessage());
+            }
+        }
+        if (job.getStaffAssigned() != null) {
+            job.setDesignerSeenAt(null); // news for the designer
+        }
+        jobRepository.save(job);
+        return ApiResponse.success(picked.size() == 1 ? "Plan document added" : picked.size() + " plan documents added",
+                detail(job));
+    }
+
+    @Override
+    public ApiResponse<DesignJobDto> deleteFile(Long jobId, Long fileId, Long callerId, boolean admin) {
+        DesignPhase job = jobRepository.findById(jobId).orElse(null);
+        if (job == null || !canAccess(job, callerId, admin)) {
+            return ApiResponse.error("Design job not found");
+        }
+        DesignPhaseFile file = fileRepository.findById(fileId).orElse(null);
+        if (file == null || file.getDesignPhase() == null || !file.getDesignPhase().getId().equals(job.getId())) {
+            return ApiResponse.error("File not found");
+        }
+        if (!isDesignFile(file)) {
+            if (!admin) {
+                return ApiResponse.error("Only the admin can remove plan documents");
+            }
+        } else {
+            // A design file can be taken back only while its version is still being worked on.
+            if (versionOf(file) != version(job) || !OPEN.contains(status(job))) {
+                return ApiResponse.error("Files of an approved version cannot be removed");
+            }
+            if (!admin && !DESIGNER_WORK.contains(status(job))) {
+                return ApiResponse.error("This design is with the admin for review");
+            }
+        }
+        ApiResponse<String> deleted = fileService.deleteFile(fileId);
+        if (!Boolean.TRUE.equals(deleted.getSuccess())) {
+            return ApiResponse.error(deleted.getMessage());
+        }
+        return ApiResponse.success("File removed", detail(job));
+    }
+
+    @Override
+    public ApiResponse<DesignJobDto> uploadCustomerDesign(Long customerId, MultipartFile file, String note,
+                                                          boolean moveToQuotation, Long callerId, String callerName,
+                                                          boolean admin) {
+        Customer customer = customerRepository.findById(customerId).orElse(null);
+        if (customer == null) {
+            return ApiResponse.error("Customer not found");
+        }
+        if (file == null || file.isEmpty()) {
+            return ApiResponse.error("Choose the design PDF");
+        }
+        if (!isPdf(file.getOriginalFilename())) {
+            return ApiResponse.error("The design must be a PDF file");
+        }
+        boolean hasNote = note != null && !note.isBlank();
+        if (moveToQuotation && !hasNote) {
+            return ApiResponse.error("Write a note for the status change");
+        }
+        DesignPhase existing = latestJob(customerId);
+        boolean open = existing != null && OPEN.contains(status(existing));
+        if (open && !admin) {
+            String who = existing.getStaffAssigned() != null ? existing.getStaffAssigned().getName() : "a designer";
+            return ApiResponse.error("The design is still with " + who + ". The admin approves it from Designs.");
+        }
+        // Valid — now write.
+        LocalDateTime now = LocalDateTime.now();
+        DesignPhase job;
+        DesignPhaseVersion row;
+        if (existing == null) {
+            // The customer's design was made outside the system: it is version 1, approved as it is.
+            job = newJob(customer);
+            jobRepository.save(job);
+            row = newVersionRow(job, DesignPhaseVersion.ORIGIN_UPLOADED, hasNote ? note.trim() : null, callerId, callerName);
+        } else if (APPROVED_STATES.contains(status(existing))) {
+            // A newer design replaces the approved one as the next version.
+            job = existing;
+            DesignPhaseVersion previous = currentVersionRow(job);
+            if (previous.getApprovedAt() == null) {
+                previous.setApprovedAt(job.getCompletedAt() != null ? job.getCompletedAt() : now);
+                versionRepository.save(previous);
+            }
+            job.setCurrentVersion(version(job) + 1);
+            jobRepository.save(job);
+            row = newVersionRow(job, DesignPhaseVersion.ORIGIN_UPLOADED, hasNote ? note.trim() : null, callerId, callerName);
+        } else {
+            // Open (admin closes it with this file) or cancelled: the upload settles the current version.
+            job = existing;
+            row = currentVersionRow(job);
+            if (!open) {
+                row.setOrigin(DesignPhaseVersion.ORIGIN_UPLOADED);
+            }
+        }
+        ApiResponse<DesignPhaseFileDto> stored = store(job, file, DesignPhaseFile.FileCategory.DESIGN, null, callerName);
+        if (!Boolean.TRUE.equals(stored.getSuccess())) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return ApiResponse.error(stored.getMessage());
+        }
+        job.setDesignStatus(DesignStatus.APPROVED_BY_ADMIN);
+        if (job.getCompletedAt() == null || !open) {
+            job.setCompletedAt(now);
+        }
+        job.setCompletionSeenAt(now);
+        if (open && job.getStaffAssigned() != null) {
+            job.setDesignerSeenAt(null); // their design was settled without them: that is news
+        }
+        jobRepository.save(job);
+        if (row.getCompletedAt() == null) {
+            row.setCompletedAt(now);
+        }
+        row.setApprovedAt(now);
+        row.setApprovedByUserId(callerId);
+        row.setApprovedByName(callerName);
+        versionRepository.save(row);
+
+        String message = "Design saved";
+        if (moveToQuotation) {
+            if (moveCustomer(customer, CustomerStatus.QUOTE_GIVEN, callerName, note.trim())) {
+                message = "Design saved — customer moved to Quotation Stage";
+            }
+        } else if (moveToQuotationIfInDesign(customer, callerName, "Design V" + version(job) + " uploaded")) {
+            message = "Design saved — customer moved to Quotation Stage";
+        }
+        return ApiResponse.success(message, detail(job));
     }
 
     // ------------------------------------------------------------------ designers panel
@@ -536,6 +835,24 @@ public class DesignJobServiceImpl implements DesignJobService {
         return d.getDesignStatus() == null ? DesignStatus.PLANNING : d.getDesignStatus();
     }
 
+    /** Designs older than V155 have no version number: they are version 1. */
+    private static int version(DesignPhase d) {
+        return d.getCurrentVersion() == null ? 1 : d.getCurrentVersion();
+    }
+
+    private static int versionOf(DesignPhaseFile f) {
+        return f.getVersionNo() == null ? 1 : f.getVersionNo();
+    }
+
+    /** Everything that is not a plan document is the designer's (or the uploaded) design. */
+    private static boolean isDesignFile(DesignPhaseFile f) {
+        return f.getFileCategory() != DesignPhaseFile.FileCategory.PLAN;
+    }
+
+    private static boolean isPdf(String fileName) {
+        return fileName != null && fileName.trim().toLowerCase().endsWith(".pdf");
+    }
+
     private static boolean isDesignerWork(String status) {
         try {
             return status != null && DESIGNER_WORK.contains(DesignStatus.valueOf(status));
@@ -548,6 +865,10 @@ public class DesignJobServiceImpl implements DesignJobService {
         return v == null ? 0 : v;
     }
 
+    private String userName(Long userId) {
+        return userId == null ? null : userRepository.findById(userId).map(User::getName).orElse(null);
+    }
+
     private DesignPhase latestJob(Long customerId) {
         List<DesignPhase> jobs = jobRepository.findByCustomerNewestFirst(customerId);
         return jobs.isEmpty() ? null : jobs.get(0);
@@ -558,7 +879,73 @@ public class DesignJobServiceImpl implements DesignJobService {
         job.setCustomer(customer);
         job.setDesignStatus(DesignStatus.PLANNING);
         job.setRevisionCount(0);
+        job.setCurrentVersion(1);
         return job;
+    }
+
+    /** A fresh row for the job's current version. The job must already be saved. */
+    private DesignPhaseVersion newVersionRow(DesignPhase job, String origin, String requestNote, Long byUserId,
+                                             String byName) {
+        DesignPhaseVersion row = new DesignPhaseVersion();
+        row.setDesignPhase(job);
+        row.setVersionNo(version(job));
+        row.setOrigin(origin);
+        row.setRequestNote(requestNote);
+        row.setRequestedByUserId(byUserId);
+        row.setRequestedByName(byName);
+        row.setRequestedAt(LocalDateTime.now());
+        return versionRepository.save(row);
+    }
+
+    /**
+     * The row of the job's current version. Designs made before V155 got theirs from the
+     * migration; one the previous jar created during a rollback has none, so it is built here
+     * from what the job itself knows.
+     */
+    private DesignPhaseVersion currentVersionRow(DesignPhase job) {
+        return versionRepository.findVersion(job.getId(), version(job)).orElseGet(() -> {
+            DesignPhaseVersion row = new DesignPhaseVersion();
+            row.setDesignPhase(job);
+            row.setVersionNo(version(job));
+            row.setOrigin(DesignPhaseVersion.ORIGIN_DESIGNER);
+            if (job.getStaffAssigned() != null) {
+                row.setDesignerUserId(job.getStaffAssigned().getId());
+                row.setDesignerName(job.getStaffAssigned().getName());
+            }
+            row.setRequestNote(job.getDesignRequirements());
+            row.setRequestedByUserId(job.getAssignedByUserId());
+            row.setRequestedAt(job.getAssignedAt() != null ? job.getAssignedAt() : LocalDateTime.now());
+            row.setCompletedAt(job.getCompletedAt());
+            return versionRepository.save(row);
+        });
+    }
+
+    /** Reopens an approved design as its next version, in the given designer's queue. */
+    private void startNextVersion(DesignPhase job, User designer, String note, LocalDate dueDate, String priority,
+                                  Long byUserId) {
+        DesignPhaseVersion previous = currentVersionRow(job);
+        if (previous.getApprovedAt() == null) {
+            previous.setApprovedAt(job.getCompletedAt() != null ? job.getCompletedAt() : LocalDateTime.now());
+            versionRepository.save(previous);
+        }
+        job.setCurrentVersion(version(job) + 1);
+        assignTo(job, designer, byUserId);
+        job.setDesignStatus(DesignStatus.PLANNING);
+        job.setStartedAt(null);
+        job.setCompletedAt(null);
+        job.setCompletionSeenAt(null);
+        job.setDueDate(dueDate); // a new round gets its own date, or none
+        if (priority != null) {
+            job.setPriority(priority);
+        }
+        // The brief of a redesign is what has to change.
+        job.setDesignRequirements(note == null || note.isBlank() ? null : note.trim());
+        jobRepository.save(job);
+        DesignPhaseVersion row = newVersionRow(job, DesignPhaseVersion.ORIGIN_DESIGNER, job.getDesignRequirements(),
+                byUserId, userName(byUserId));
+        row.setDesignerUserId(designer.getId());
+        row.setDesignerName(designer.getName());
+        versionRepository.save(row);
     }
 
     /** Put the job at the end of the designer's queue and make it news for them. */
@@ -569,6 +956,44 @@ public class DesignJobServiceImpl implements DesignJobService {
         job.setAssignedAt(LocalDateTime.now());
         job.setAssignedByUserId(byUserId);
         job.setDesignerSeenAt(null);
+    }
+
+    /**
+     * Changes the customer's stage and writes the timeline entry, exactly as a manual status change
+     * does. Returns false when the customer is already there.
+     */
+    private boolean moveCustomer(Customer customer, CustomerStatus to, String changedBy, String reason) {
+        if (customer == null || customer.getStatus() == to) {
+            return false;
+        }
+        String previous = customer.getStatus() != null ? customer.getStatus().name() : null;
+        customer.setStatus(to);
+        customerRepository.save(customer);
+        WorkflowHistory history = new WorkflowHistory();
+        history.setCustomer(customer);
+        history.setPreviousState(previous);
+        history.setNewState(to.name());
+        history.setChangedBy(changedBy != null && !changedBy.isBlank() ? changedBy : "System");
+        history.setChangeReason(reason);
+        history.setTimestamp(LocalDateTime.now());
+        workflowHistoryRepository.save(history);
+        return true;
+    }
+
+    /** An approved design ends the Design stage: the customer goes on to Quotation Stage. */
+    private boolean moveToQuotationIfInDesign(Customer customer, String changedBy, String reason) {
+        return customer != null && customer.getStatus() == CustomerStatus.DESIGN_STAGE
+                && moveCustomer(customer, CustomerStatus.QUOTE_GIVEN, changedBy, reason);
+    }
+
+    private ApiResponse<DesignPhaseFileDto> store(DesignPhase job, MultipartFile file, DesignPhaseFile.FileCategory category,
+                                                  String description, String uploadedBy) {
+        DesignFileUploadRequest request = new DesignFileUploadRequest();
+        request.setDesignPhaseId(job.getId());
+        request.setFileCategory(category);
+        request.setDescription(description);
+        request.setVersionNo(version(job));
+        return fileService.uploadDesignFile(file, request, uploadedBy);
     }
 
     private static String validateDesigner(User designer) {
@@ -608,15 +1033,8 @@ public class DesignJobServiceImpl implements DesignJobService {
         note.setFromDesigner(fromDesigner);
         note.setMessage(message.trim());
         note.setCreatedAt(LocalDateTime.now());
+        note.setVersionNo(version(job));
         noteRepository.save(note);
-    }
-
-    private long fileCount(Long jobId) {
-        long n = 0;
-        for (Object[] row : jobRepository.countFiles(List.of(jobId))) {
-            n += ((Number) row[1]).longValue();
-        }
-        return n;
     }
 
     private Map<String, Object> feed(List<DesignJobDto> jobs) {
@@ -656,52 +1074,125 @@ public class DesignJobServiceImpl implements DesignJobService {
         return dto;
     }
 
-    private DesignJobDto detail(DesignPhase job) {
-        DesignJobDto dto = toDtos(List.of(job)).get(0);
-        ApiResponse<List<DesignPhaseFileDto>> files = fileService.getDesignPhaseFiles(job.getId());
-        dto.setFiles(files != null && Boolean.TRUE.equals(files.getSuccess()) && files.getData() != null
-                ? files.getData() : List.of());
+    /** The customer page and the library show the design, not the admin <-> designer thread. */
+    private static DesignJobDto withoutConversation(DesignJobDto dto) {
+        dto.setNotes(null);
+        dto.setLatestNote(null);
+        dto.setNoteCount(0);
+        dto.setUnreadForAdmin(0);
+        dto.setUnreadForDesigner(0);
         return dto;
     }
 
-    /** Batch conversion: one query for notes, one for file counts. Notes are attached in full. */
+    /** Summary plus the files: current design files, plan documents and every version's own files. */
+    private DesignJobDto detail(DesignPhase job) {
+        DesignJobDto dto = toDtos(List.of(job)).get(0);
+        int version = version(job);
+        List<DesignPhaseFile> files = fileRepository.findByDesignPhaseId(job.getId());
+        dto.setFiles(files.stream()
+                .filter(f -> isDesignFile(f) && versionOf(f) == version)
+                .map(DesignJobServiceImpl::fileDto)
+                .toList());
+        dto.setPlanDocuments(files.stream()
+                .filter(f -> !isDesignFile(f))
+                .sorted(Comparator.<DesignPhaseFile, Integer>comparing(DesignJobServiceImpl::versionOf).reversed()
+                        .thenComparing(DesignPhaseFile::getId))
+                .map(DesignJobServiceImpl::fileDto)
+                .toList());
+        List<DesignVersionDto> versions = new ArrayList<>();
+        for (DesignPhaseVersion row : versionRepository.findForJobs(List.of(job.getId()))) {
+            DesignVersionDto v = new DesignVersionDto();
+            v.setVersionNo(row.getVersionNo());
+            v.setOrigin(row.getOrigin());
+            v.setDesignerName(row.getDesignerName());
+            v.setRequestNote(row.getRequestNote());
+            v.setRequestedByName(row.getRequestedByName());
+            v.setRequestedAt(row.getRequestedAt());
+            v.setCompletedAt(row.getCompletedAt());
+            v.setApprovedAt(row.getApprovedAt());
+            v.setApprovedByName(row.getApprovedByName());
+            v.setFiles(files.stream()
+                    .filter(f -> isDesignFile(f) && versionOf(f) == row.getVersionNo())
+                    .map(DesignJobServiceImpl::fileDto)
+                    .toList());
+            versions.add(v);
+        }
+        dto.setVersions(versions);
+        return dto;
+    }
+
+    private static DesignPhaseFileDto fileDto(DesignPhaseFile f) {
+        DesignPhaseFileDto dto = new DesignPhaseFileDto();
+        dto.setId(f.getId());
+        dto.setDesignPhaseId(f.getDesignPhase() != null ? f.getDesignPhase().getId() : null);
+        dto.setFileName(f.getFileName());
+        dto.setOriginalFileName(f.getOriginalFileName());
+        dto.setFileUrl(f.getFileUrl());
+        dto.setFileSize(f.getFileSize());
+        dto.setFileType(f.getFileType());
+        dto.setFileCategory(f.getFileCategory());
+        dto.setDescription(f.getDescription());
+        dto.setUploadedBy(f.getUploadedBy());
+        dto.setVersionNo(versionOf(f));
+        dto.setCreatedAt(f.getCreatedAt());
+        dto.setUpdatedAt(f.getUpdatedAt());
+        return dto;
+    }
+
+    /** Batch conversion: one query each for notes, files and versions. Notes are attached in full. */
     private List<DesignJobDto> toDtos(List<DesignPhase> jobs) {
         if (jobs.isEmpty()) {
             return new ArrayList<>();
         }
         List<Long> ids = jobs.stream().map(DesignPhase::getId).filter(Objects::nonNull).toList();
         Map<Long, List<DesignPhaseNote>> notesByJob = new HashMap<>();
-        Map<Long, Long> filesByJob = new HashMap<>();
+        Map<Long, List<DesignPhaseFile>> filesByJob = new HashMap<>();
+        Map<Long, List<DesignPhaseVersion>> versionsByJob = new HashMap<>();
         if (!ids.isEmpty()) {
             for (DesignPhaseNote n : noteRepository.findForJobs(ids)) {
                 notesByJob.computeIfAbsent(n.getDesignPhase().getId(), k -> new ArrayList<>()).add(n);
             }
-            for (Object[] row : jobRepository.countFiles(ids)) {
-                filesByJob.put((Long) row[0], ((Number) row[1]).longValue());
+            for (DesignPhaseFile f : fileRepository.findForDesignPhases(ids)) {
+                filesByJob.computeIfAbsent(f.getDesignPhase().getId(), k -> new ArrayList<>()).add(f);
+            }
+            for (DesignPhaseVersion v : versionRepository.findForJobs(ids)) {
+                versionsByJob.computeIfAbsent(v.getDesignPhase().getId(), k -> new ArrayList<>()).add(v);
             }
         }
         LocalDate today = today();
         List<DesignJobDto> out = new ArrayList<>(jobs.size());
         for (DesignPhase d : jobs) {
-            out.add(toDto(d, notesByJob.getOrDefault(d.getId(), List.of()), filesByJob.getOrDefault(d.getId(), 0L), today));
+            out.add(toDto(d, notesByJob.getOrDefault(d.getId(), List.of()), filesByJob.getOrDefault(d.getId(), List.of()),
+                    versionsByJob.getOrDefault(d.getId(), List.of()), today));
         }
         return out;
     }
 
-    private DesignJobDto toDto(DesignPhase d, List<DesignPhaseNote> notes, long files, LocalDate today) {
+    private DesignJobDto toDto(DesignPhase d, List<DesignPhaseNote> notes, List<DesignPhaseFile> files,
+                               List<DesignPhaseVersion> versions, LocalDate today) {
         DesignStatus s = status(d);
+        int version = version(d);
         DesignJobDto dto = new DesignJobDto();
         dto.setId(d.getId());
         if (d.getCustomer() != null) {
             dto.setCustomerId(d.getCustomer().getId());
             dto.setCustomerName(d.getCustomer().getName());
             dto.setCustomerPlace(d.getCustomer().getPlace());
+            dto.setCustomerStatus(d.getCustomer().getStatus() != null ? d.getCustomer().getStatus().name() : null);
         }
         if (d.getStaffAssigned() != null) {
             dto.setDesignerId(d.getStaffAssigned().getId());
             dto.setDesignerName(d.getStaffAssigned().getName());
         }
         dto.setStatus(s.name());
+        dto.setVersion(version);
+        DesignPhaseVersion current = versions.stream()
+                .filter(v -> v.getVersionNo() != null && v.getVersionNo() == version).findFirst().orElse(null);
+        dto.setOrigin(current != null ? current.getOrigin() : DesignPhaseVersion.ORIGIN_DESIGNER);
+        if (current != null) {
+            dto.setApprovedAt(current.getApprovedAt());
+            dto.setApprovedByName(current.getApprovedByName());
+        }
         dto.setQueuePosition(d.getQueuePosition());
         dto.setDueDate(d.getDueDate());
         dto.setPriority(d.getPriority() == null ? "MEDIUM" : d.getPriority());
@@ -729,14 +1220,24 @@ public class DesignJobServiceImpl implements DesignJobService {
             nd.setFromDesigner(fromDesigner);
             nd.setMessage(n.getMessage());
             nd.setCreatedAt(n.getCreatedAt());
+            nd.setVersionNo(n.getVersionNo() == null ? 1 : n.getVersionNo());
             noteDtos.add(nd);
         }
         dto.setUnreadForAdmin(unreadForAdmin);
         dto.setUnreadForDesigner(unreadForDesigner);
         dto.setNoteCount(noteDtos.size());
-        dto.setFileCount((int) files);
         dto.setLatestNote(noteDtos.isEmpty() ? null : noteDtos.get(noteDtos.size() - 1));
         dto.setNotes(noteDtos);
+
+        List<DesignPhaseFile> design = files.stream().filter(f -> isDesignFile(f) && versionOf(f) == version).toList();
+        dto.setFileCount(design.size());
+        dto.setPlanDocumentCount((int) files.stream().filter(f -> !isDesignFile(f)).count());
+        // The file a quotation is made from: the newest PDF of the current version.
+        design.stream()
+                .filter(f -> isPdf(f.getOriginalFileName()))
+                .max(Comparator.comparing(DesignPhaseFile::getId))
+                .or(() -> design.stream().max(Comparator.comparing(DesignPhaseFile::getId)))
+                .ifPresent(f -> dto.setCurrentDesignFile(fileDto(f)));
         return dto;
     }
 

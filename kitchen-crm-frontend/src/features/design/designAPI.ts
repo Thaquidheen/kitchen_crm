@@ -3,6 +3,7 @@ import type { ApiResponse } from '@/types/api.types';
 import type {
   DesignFeed,
   DesignJob,
+  DesignLibraryRow,
   DesignMe,
   DesignPriority,
   DesignStatus,
@@ -101,6 +102,59 @@ export const designAPI = baseApi.injectEndpoints({
     reviewDesign: builder.mutation<DesignJob, { id: number; decision: 'APPROVE' | 'CHANGES'; note?: string }>({
       query: ({ id, ...body }) => ({ url: `/design-jobs/${id}/review`, method: 'PUT', body }),
       transformResponse: unwrap<DesignJob>('Failed to review design'),
+      // Approving moves a customer in Design on to Quotation Stage.
+      invalidatesTags: ['Designs', 'Customers'],
+    }),
+    requestRedesign: builder.mutation<
+      DesignJob,
+      { id: number; designerId: number; note: string; dueDate?: string; priority?: DesignPriority }
+    >({
+      query: ({ id, ...body }) => ({ url: `/design-jobs/${id}/redesign`, method: 'POST', body }),
+      transformResponse: unwrap<DesignJob>('Failed to request the redesign'),
+      // A redesign brings the customer back into Design.
+      invalidatesTags: ['Designs', 'Customers'],
+    }),
+    getDesignLibrary: builder.query<DesignLibraryRow[], void>({
+      query: () => '/design-jobs/library',
+      transformResponse: (r: ApiResponse<DesignLibraryRow[]>) => r.data ?? [],
+      providesTags: ['Designs'],
+    }),
+    uploadCustomerDesign: builder.mutation<
+      DesignJob,
+      { customerId: number; file: File; note?: string; moveToQuotation?: boolean }
+    >({
+      query: ({ customerId, file, note, moveToQuotation }) => {
+        const form = new FormData();
+        form.append('file', file);
+        if (note) {form.append('note', note);}
+        if (moveToQuotation) {form.append('moveToQuotation', 'true');}
+        return {
+          url: `/design-jobs/customer/${customerId}/design`,
+          method: 'POST',
+          body: form,
+          headers: { 'X-Skip-Json-Content-Type': 'true' },
+        };
+      },
+      transformResponse: unwrap<DesignJob>('Failed to save the design'),
+      invalidatesTags: ['Designs', 'Customers'],
+    }),
+    uploadPlanDocuments: builder.mutation<DesignJob, { id: number; files: File[] }>({
+      query: ({ id, files }) => {
+        const form = new FormData();
+        files.forEach((f) => form.append('files', f));
+        return {
+          url: `/design-jobs/${id}/plan-documents`,
+          method: 'POST',
+          body: form,
+          headers: { 'X-Skip-Json-Content-Type': 'true' },
+        };
+      },
+      transformResponse: unwrap<DesignJob>('Failed to add the plan documents'),
+      invalidatesTags: ['Designs'],
+    }),
+    deleteDesignFile: builder.mutation<DesignJob, { id: number; fileId: number }>({
+      query: ({ id, fileId }) => ({ url: `/design-jobs/${id}/files/${fileId}`, method: 'DELETE' }),
+      transformResponse: unwrap<DesignJob>('Failed to remove the file'),
       invalidatesTags: ['Designs'],
     }),
     addDesignNote: builder.mutation<DesignJob, { id: number; message: string }>({
@@ -150,6 +204,8 @@ export const {
   useGetDesignJobsQuery,
   useGetDesignJobQuery,
   useGetCustomerDesignJobQuery,
+  useLazyGetCustomerDesignJobQuery,
+  useGetDesignLibraryQuery,
   useGetUnassignedDesignsQuery,
   useAssignDesignMutation,
   useUpdateDesignJobMutation,
@@ -157,6 +213,10 @@ export const {
   useStartDesignMutation,
   useCompleteDesignMutation,
   useReviewDesignMutation,
+  useRequestRedesignMutation,
+  useUploadCustomerDesignMutation,
+  useUploadPlanDocumentsMutation,
+  useDeleteDesignFileMutation,
   useAddDesignNoteMutation,
   useMarkDesignSeenMutation,
   useUploadDesignFileMutation,
