@@ -15,6 +15,8 @@ import java.util.Optional;
 public interface CustomerRepository extends JpaRepository<Customer, Long>, JpaSpecificationExecutor<Customer> {
     Optional<Customer> findByEmail(String email);
     List<Customer> findByStatus(Customer.CustomerStatus status);
+
+    List<Customer> findByStatusIn(java.util.Collection<Customer.CustomerStatus> statuses);
     Boolean existsByEmail(String email);
 
     @Query("SELECT COUNT(c) FROM Customer c WHERE c.status = :status")

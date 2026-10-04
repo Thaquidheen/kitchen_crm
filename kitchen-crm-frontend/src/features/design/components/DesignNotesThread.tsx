@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAddDesignNoteMutation, useMarkDesignSeenMutation } from '../designAPI';
+import { versionLabel } from '../designUi';
 import type { DesignJob } from '../types';
 import { fmtReminderDateTime } from '@/utils/reminderFormat';
 
@@ -54,10 +55,20 @@ export const DesignNotesThread: React.FC<Props> = ({ job, viewer }) => {
         </p>
       ) : (
         <div ref={listRef} className="max-h-[240px] overflow-y-auto flex flex-col gap-2 py-1">
-          {notes.map((n) => {
+          {notes.map((n, i) => {
             const own = mine(n.fromDesigner);
+            // A redesign continues the same conversation: mark where each later version starts.
+            const startsVersion = i > 0 && (n.versionNo ?? 1) !== (notes[i - 1].versionNo ?? 1);
             return (
-              <div key={n.id} className={`flex ${own ? 'justify-end' : 'justify-start'}`}>
+              <React.Fragment key={n.id}>
+                {startsVersion && (
+                  <div className="flex items-center gap-2 text-[10.5px] font-semibold tracking-[0.08em] uppercase text-text-500">
+                    <span className="h-px flex-1 bg-background-600" />
+                    {versionLabel(n.versionNo)}
+                    <span className="h-px flex-1 bg-background-600" />
+                  </div>
+                )}
+              <div className={`flex ${own ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className="max-w-[85%] rounded-[12px] px-3 py-2"
                   style={
@@ -76,6 +87,7 @@ export const DesignNotesThread: React.FC<Props> = ({ job, viewer }) => {
                   <div className="text-[13px] text-text-900 whitespace-pre-wrap break-words">{n.message}</div>
                 </div>
               </div>
+              </React.Fragment>
             );
           })}
         </div>

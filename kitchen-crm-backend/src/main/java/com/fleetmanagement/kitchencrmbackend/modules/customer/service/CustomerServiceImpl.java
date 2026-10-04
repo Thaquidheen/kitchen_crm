@@ -213,6 +213,16 @@ public class CustomerServiceImpl implements CustomerService {
             }
         }
 
+        // Quotation Stage needs the customer's design: approved in Designs, or uploaded as an existing
+        // one (the upload endpoint moves the customer itself, so this path only confirms it is there).
+        if (newStatus == Customer.CustomerStatus.QUOTE_GIVEN
+                && customer.getStatus() != Customer.CustomerStatus.QUOTE_GIVEN) {
+            String designError = designJobService.requireDesignForQuotationStage(customer);
+            if (designError != null) {
+                return ApiResponse.error(designError);
+            }
+        }
+
         String previousStatus = customer.getStatus().name();
         customer.setStatus(newStatus);
         customerRepository.save(customer);

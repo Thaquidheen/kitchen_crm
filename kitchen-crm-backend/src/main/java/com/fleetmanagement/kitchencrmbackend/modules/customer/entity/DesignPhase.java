@@ -137,6 +137,10 @@ public class DesignPhase extends Auditable {
     @Column(name = "designer_notes_seen_at")
     private LocalDateTime designerNotesSeenAt;
 
+    /** Version in work, or the last one approved (V155). Null on designs older than that = 1. */
+    @Column(name = "current_version")
+    private Integer currentVersion;
+
     public enum DesignStatus {
         PLANNING,                    // Initial planning phase
         IN_PROGRESS,                 // Design work in progress

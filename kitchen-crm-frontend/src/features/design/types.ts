@@ -22,6 +22,9 @@ export type DesignStatus =
 
 export type DesignPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
+/** How a version came to be: made by an assigned designer, or uploaded as an existing design. */
+export type DesignOrigin = 'DESIGNER' | 'UPLOADED';
+
 export interface DesignNote {
   id: number;
   authorUserId?: number | null;
@@ -30,6 +33,8 @@ export interface DesignNote {
   fromDesigner: boolean;
   message: string;
   createdAt: string;
+  /** Design version the note was written under. */
+  versionNo?: number | null;
 }
 
 export interface DesignFile {
@@ -42,7 +47,25 @@ export interface DesignFile {
   fileCategory?: string | null;
   description?: string | null;
   uploadedBy?: string | null;
+  /** Design version the file belongs to. */
+  versionNo?: number | null;
   createdAt?: string | null;
+}
+
+/** One version of a customer's design with the design files that belong to it. */
+export interface DesignVersion {
+  versionNo: number;
+  origin: DesignOrigin;
+  designerName?: string | null;
+  /** The brief for version 1; what had to change for later versions. */
+  requestNote?: string | null;
+  requestedByName?: string | null;
+  requestedAt?: string | null;
+  completedAt?: string | null;
+  /** Null while the version is open (or was cancelled). */
+  approvedAt?: string | null;
+  approvedByName?: string | null;
+  files: DesignFile[];
 }
 
 export interface DesignJob {
@@ -50,9 +73,17 @@ export interface DesignJob {
   customerId: number;
   customerName: string;
   customerPlace?: string | null;
+  /** The customer's pipeline stage (CustomerStatus value). */
+  customerStatus?: string | null;
   designerId?: number | null;
   designerName?: string | null;
   status: DesignStatus;
+  /** Version in work, or the last one approved. */
+  version?: number | null;
+  origin?: DesignOrigin | null;
+  /** When the current version was approved; null while it is open. */
+  approvedAt?: string | null;
+  approvedByName?: string | null;
   queuePosition?: number | null;
   dueDate?: string | null;
   priority: DesignPriority;
@@ -69,11 +100,28 @@ export interface DesignJob {
   unreadForAdmin: number;
   unreadForDesigner: number;
   noteCount: number;
+  /** Design files of the current version (plan documents are counted apart). */
   fileCount: number;
+  planDocumentCount?: number | null;
+  /** Newest design PDF of the current version — the file a quotation is made from. */
+  currentDesignFile?: DesignFile | null;
   latestNote?: DesignNote | null;
   notes?: DesignNote[];
-  /** Detail responses only. */
+  /** Detail responses only: design files of the current version. */
   files?: DesignFile[];
+  /** Detail responses only: plan documents from the admin. */
+  planDocuments?: DesignFile[];
+  /** Detail responses only: every version, oldest first. */
+  versions?: DesignVersion[];
+}
+
+/** A customer at Quotation Stage or later, with their design — or none when it was never uploaded. */
+export interface DesignLibraryRow {
+  customerId: number;
+  customerName: string;
+  customerPlace?: string | null;
+  customerStatus: string;
+  design: DesignJob | null;
 }
 
 export interface DesignerSummary {

@@ -30,12 +30,12 @@ public interface DesignJobRepository extends JpaRepository<DesignPhase, Long> {
     @Query("SELECT d FROM DesignPhase d WHERE d.customer.id = :customerId ORDER BY d.id DESC")
     List<DesignPhase> findByCustomerNewestFirst(@Param("customerId") Long customerId);
 
+    @EntityGraph(attributePaths = {"customer", "staffAssigned"})
+    @Query("SELECT d FROM DesignPhase d WHERE d.customer.id IN :customerIds ORDER BY d.id DESC")
+    List<DesignPhase> findByCustomerIds(@Param("customerIds") Collection<Long> customerIds);
+
     @Query("SELECT COALESCE(MAX(d.queuePosition), 0) FROM DesignPhase d WHERE d.staffAssigned.id = :userId")
     Integer maxQueuePosition(@Param("userId") Long userId);
-
-    /** [jobId, fileCount] pairs for the given jobs. */
-    @Query("SELECT f.designPhase.id, COUNT(f) FROM DesignPhaseFile f WHERE f.designPhase.id IN :jobIds GROUP BY f.designPhase.id")
-    List<Object[]> countFiles(@Param("jobIds") Collection<Long> jobIds);
 
     /** Customers in the Design stage with no live design job that has a designer. */
     @Query("SELECT c FROM Customer c WHERE c.status = :stage AND NOT EXISTS ("

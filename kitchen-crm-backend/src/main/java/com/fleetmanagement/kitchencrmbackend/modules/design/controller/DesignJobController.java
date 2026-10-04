@@ -107,6 +107,29 @@ public class DesignJobController {
         return respond(service.getForCustomer(customerId));
     }
 
+    /** Customers at Quotation Stage or later with their design (or none). */
+    @GetMapping("/library")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<DesignLibraryRowDto>>> library() {
+        return respond(service.library());
+    }
+
+    /**
+     * An already existing design PDF for a customer. Any staff member may upload it (that is how a
+     * customer whose design was made elsewhere reaches Quotation Stage); only an admin may use it
+     * to settle a design a designer is still working on.
+     */
+    @PostMapping(value = "/customer/{customerId}/design", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<DesignJobDto>> uploadCustomerDesign(
+            @PathVariable Long customerId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "note", required = false) String note,
+            @RequestParam(value = "moveToQuotation", defaultValue = "false") boolean moveToQuotation,
+            @AuthenticationPrincipal UserPrincipal user) {
+        return respond(service.uploadCustomerDesign(customerId, file, note, moveToQuotation, id(user), name(user),
+                ViewerScope.isSuperAdmin(user)));
+    }
+
     // ---- admin management
 
     @PostMapping("/assign")
@@ -136,6 +159,22 @@ public class DesignJobController {
                                                             @Valid @RequestBody DesignReviewRequest body,
                                                             @AuthenticationPrincipal UserPrincipal user) {
         return respond(service.review(id, body, id(user), name(user)));
+    }
+
+    @PostMapping("/{id}/redesign")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<DesignJobDto>> redesign(@PathVariable Long id,
+                                                              @Valid @RequestBody DesignRedesignRequest body,
+                                                              @AuthenticationPrincipal UserPrincipal user) {
+        return respond(service.requestRedesign(id, body, id(user), name(user)));
+    }
+
+    @PostMapping(value = "/{id}/plan-documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<DesignJobDto>> uploadPlanDocuments(@PathVariable Long id,
+                                                                         @RequestParam("files") MultipartFile[] files,
+                                                                         @AuthenticationPrincipal UserPrincipal user) {
+        return respond(service.uploadPlanDocuments(id, files, name(user)));
     }
 
     // ---- job (admin or its designer)
@@ -178,5 +217,12 @@ public class DesignJobController {
                                                             @RequestParam(value = "description", required = false) String description,
                                                             @AuthenticationPrincipal UserPrincipal user) {
         return respond(service.uploadFile(id, file, description, id(user), name(user), ViewerScope.isSuperAdmin(user)));
+    }
+
+    @DeleteMapping("/{id}/files/{fileId}")
+    public ResponseEntity<ApiResponse<DesignJobDto>> deleteFile(@PathVariable Long id,
+                                                                @PathVariable Long fileId,
+                                                                @AuthenticationPrincipal UserPrincipal user) {
+        return respond(service.deleteFile(id, fileId, id(user), ViewerScope.isSuperAdmin(user)));
     }
 }

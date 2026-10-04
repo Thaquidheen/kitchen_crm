@@ -24,9 +24,10 @@ import {
 import toast from 'react-hot-toast';
 import {
   useGetCustomerByIdQuery,
-  useUpdateCustomerStatusMutation,
   useDeleteCustomerMutation,
 } from '../../features/customers/customersAPI';
+import { useCustomerStatusChange, type StatusChangeExtras } from '../../features/customers/useCustomerStatusChange';
+import { useIsSuperAdmin } from '../../features/auth/useIsSuperAdmin';
 import { CustomerFormModal } from '../../features/customers/components/CustomerFormModal';
 import { CustomerFollowUps } from '../../features/customers/components/CustomerFollowUps';
 import { CustomerReminders } from '../../features/customers/components/CustomerReminders';
@@ -37,7 +38,7 @@ import {
   CustomerQuotationsSummary,
 } from '../../features/customers/components/CustomerQuotationsTab';
 import { StatusChangeModal } from '../../features/customers/components/StatusChangeModal';
-import type { DesignAssignment } from '../../features/design/components/DesignerPicker';
+import { CustomerDesignCard } from '../../features/design/components/CustomerDesignCard';
 import { useGetCustomerDesignJobQuery } from '../../features/design/designAPI';
 import { DesignStatusPill } from '../../features/design/designUi';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
@@ -54,7 +55,7 @@ const STATUS_OPTIONS: Array<{ value: CustomerStatus; label: string }> = [
   { value: 'LEAD', label: 'Lead' },
   { value: 'POTENTIAL', label: 'Potential' },
   { value: 'DESIGN_STAGE', label: 'Design Stage' },
-  { value: 'QUOTE_GIVEN', label: 'Quote Given' },
+  { value: 'QUOTE_GIVEN', label: 'Quotation Stage' },
   { value: 'FOLLOW_UP', label: 'Follow Up' },
   { value: 'NEGOTIATIONS', label: 'Negotiations' },
   { value: 'CONFIRMED', label: 'Confirmed' },
@@ -83,7 +84,8 @@ const CustomerDetailPage: React.FC = () => {
 
   const { data: customer, isLoading, error } = useGetCustomerByIdQuery(customerId!, { skip: !customerId });
 
-  const [updateStatus] = useUpdateCustomerStatusMutation();
+  const changeStatus = useCustomerStatusChange();
+  const isAdmin = useIsSuperAdmin();
   const { data: designJob } = useGetCustomerDesignJobQuery(customerId!, { skip: !customerId });
   const [deleteCustomer, { isLoading: isDeleting }] = useDeleteCustomerMutation();
 
@@ -121,19 +123,15 @@ const CustomerDetailPage: React.FC = () => {
 
   const pill = STATUS_PILL[customer.status] ?? { st: 'lead', label: customer.status };
 
-  const handleStatusChange = async (note: string, design?: DesignAssignment) => {
+  const handleStatusChange = async (note: string, extras: StatusChangeExtras) => {
     if (!pendingStatus) return;
     setIsSavingStatus(true);
     try {
-      await updateStatus({
-        id: customerId,
-        status: pendingStatus,
-        reason: note,
-        designerId: design?.designerId ?? undefined,
-        designDueDate: design?.dueDate || undefined,
-        designPriority: design?.priority,
-      }).unwrap();
+      const result = await changeStatus({ customerId, status: pendingStatus, note, extras });
       toast.success(`Status updated to ${STATUS_PILL[pendingStatus]?.label ?? pendingStatus}`);
+      if (result.warning) {
+        toast.error(result.warning, { duration: 8000 });
+      }
       setPendingStatus(null);
     } catch (e: any) {
       toast.error(e?.message || e?.data?.message || 'Failed to update status');
@@ -275,22 +273,33 @@ const CustomerDetailPage: React.FC = () => {
 
       {activeTab === 'Overview' ? (
         <div className="grid grid-cols-1 lg:grid-cols-[330px_1fr] gap-4 items-start">
-          {/* Details card */}
-          <div className="bg-background-800 border border-background-600 rounded-[14px] p-4">
-            <div className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-text-500 mb-3">Details</div>
-            <div className="space-y-3.5">
-              {detailRows.map((row) => (
-                <div key={row.label} className="flex items-start gap-2.5">
-                  <span className="mt-0.5 text-text-500 shrink-0">{row.icon}</span>
-                  <div className="min-w-0">
-                    <div className="text-[10.5px] font-semibold tracking-[0.07em] uppercase text-text-500">
-                      {row.label}
+          {/* Left column */}
+          <div className="space-y-4 min-w-0">
+            {/* Details card */}
+            <div className="bg-background-800 border border-background-600 rounded-[14px] p-4">
+              <div className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-text-500 mb-3">Details</div>
+              <div className="space-y-3.5">
+                {detailRows.map((row) => (
+                  <div key={row.label} className="flex items-start gap-2.5">
+                    <span className="mt-0.5 text-text-500 shrink-0">{row.icon}</span>
+                    <div className="min-w-0">
+                      <div className="text-[10.5px] font-semibold tracking-[0.07em] uppercase text-text-500">
+                        {row.label}
+                      </div>
+                      <div className="text-[13px] text-text-900 mt-0.5 break-words">{row.value}</div>
                     </div>
-                    <div className="text-[13px] text-text-900 mt-0.5 break-words">{row.value}</div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
+
+            {/* The design this customer is quoted on, with its versions */}
+            <CustomerDesignCard
+              customerId={customer.id}
+              customerName={customer.name}
+              customerStatus={customer.status}
+              isAdmin={isAdmin}
+            />
           </div>
 
           {/* Right column */}
@@ -332,6 +341,7 @@ const CustomerDetailPage: React.FC = () => {
         currentStatus={customer.status as CustomerStatus}
         isSubmitting={isSavingStatus}
         currentDesignerId={designJob?.designerId ?? null}
+        customerId={customerId}
       />
 
       {/* Edit modal */}

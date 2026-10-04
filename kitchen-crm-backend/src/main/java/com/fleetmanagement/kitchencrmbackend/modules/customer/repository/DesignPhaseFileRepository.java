@@ -19,4 +19,8 @@ public interface DesignPhaseFileRepository extends JpaRepository<DesignPhaseFile
     List<DesignPhaseFile> findByCustomerId(@Param("customerId") Long customerId);
 
     Long countByDesignPhaseId(Long designPhaseId);
+
+    /** Every file of the given designs in one round trip, oldest first. */
+    @Query("SELECT f FROM DesignPhaseFile f WHERE f.designPhase.id IN :designPhaseIds ORDER BY f.id ASC")
+    List<DesignPhaseFile> findForDesignPhases(@Param("designPhaseIds") java.util.Collection<Long> designPhaseIds);
 }

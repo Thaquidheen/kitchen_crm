@@ -62,7 +62,7 @@ const STATUS_OPTIONS: Array<{ value: CustomerStatus; label: string }> = [
   { value: 'LEAD', label: 'Lead' },
   { value: 'POTENTIAL', label: 'Potential' },
   { value: 'DESIGN_STAGE', label: 'Design Stage' },
-  { value: 'QUOTE_GIVEN', label: 'Quote Given' },
+  { value: 'QUOTE_GIVEN', label: 'Quotation Stage' },
   { value: 'FOLLOW_UP', label: 'Follow Up' },
   { value: 'NEGOTIATIONS', label: 'Negotiations' },
   { value: 'CONFIRMED', label: 'Confirmed' },

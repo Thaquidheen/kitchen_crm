@@ -162,7 +162,7 @@ export const CustomerDetail: React.FC<CustomerDetailProps> = ({ customer }) => {
               <option value="LEAD">Lead</option>
               <option value="POTENTIAL">Potential</option>
               <option value="DESIGN_STAGE">Design Stage</option>
-              <option value="QUOTE_GIVEN">Quote Given</option>
+              <option value="QUOTE_GIVEN">Quotation Stage</option>
               <option value="FOLLOW_UP">Follow Up</option>
               <option value="NEGOTIATIONS">Negotiations</option>
               <option value="CONFIRMED">Confirmed</option>

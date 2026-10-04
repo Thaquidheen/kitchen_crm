@@ -236,7 +236,7 @@ export function DashboardPage() {
     { key: 'lead', label: 'Leads', count: Number(cs.lead ?? 0) },
     { key: 'potential', label: 'Potential', count: Number(cs.potential ?? 0) },
     { key: 'design', label: 'Design stage', count: Number(cs.design_stage ?? 0) },
-    { key: 'quote', label: 'Quote given', count: Number(cs.quote_given ?? 0) },
+    { key: 'quote', label: 'Quotation stage', count: Number(cs.quote_given ?? 0) },
     { key: 'follow', label: 'Follow up', count: Number(cs.follow_up ?? 0) },
     { key: 'nego', label: 'Negotiation', count: Number(cs.negotiations ?? 0) },
     { key: 'confirmed', label: 'Confirmed', count: Number(cs.confirmed ?? 0) },

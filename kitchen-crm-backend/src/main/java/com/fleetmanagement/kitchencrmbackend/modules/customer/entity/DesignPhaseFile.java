@@ -48,6 +48,10 @@ public class DesignPhaseFile extends Auditable {
     @Column(name = "uploaded_by")
     private String uploadedBy;
 
+    /** Design version this file belongs to (V155). Null on older files = 1. */
+    @Column(name = "version_no")
+    private Integer versionNo;
+
     public enum FileCategory {
         DESIGN,           // Design files (CAD, 3D models)
         PLAN,             // Floor plans, layouts

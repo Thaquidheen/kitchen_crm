@@ -41,4 +41,8 @@ public class DesignPhaseNote {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    /** Design version this note was written under (V155). Null on older notes = 1. */
+    @Column(name = "version_no")
+    private Integer versionNo;
 }

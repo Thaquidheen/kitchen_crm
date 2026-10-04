@@ -1,6 +1,6 @@
 /** Labels, colours and small display helpers for design jobs (shared by every design screen). */
 import React from 'react';
-import type { DesignJob, DesignPriority, DesignStatus, DesignerStatus, StaffType } from './types';
+import type { DesignJob, DesignOrigin, DesignPriority, DesignStatus, DesignerStatus, StaffType } from './types';
 
 export const STAFF_TYPE_LABEL: Record<StaffType, string> = {
   SALES: 'Sales',
@@ -39,6 +39,39 @@ const PRIORITY_ST: Record<DesignPriority, string> = { LOW: 'draft', MEDIUM: 'lea
 
 /** The designer still has work on these (queue + bell). */
 export const isDesignerWork = (s: DesignStatus) => s === 'PLANNING' || s === 'IN_PROGRESS' || s === 'REVISION_REQUIRED';
+
+/** The current version is not approved yet: with the designer, or with the admin for review. */
+export const isOpenDesign = (s: DesignStatus) => isDesignerWork(s) || s === 'PENDING_SUPERADMIN_APPROVAL';
+
+/** The current version is approved: a quotation can be made from this design. */
+export const isApprovedDesign = (s: DesignStatus) =>
+  s === 'APPROVED_BY_ADMIN' || s === 'SUBMITTED' || s === 'FEEDBACK_RECEIVED' || s === 'APPROVED' || s === 'FROZEN';
+
+export const ORIGIN_LABEL: Record<DesignOrigin, string> = {
+  DESIGNER: 'Designed here',
+  UPLOADED: 'Uploaded',
+};
+
+/** "V2". Designs made before versions existed are version 1. */
+export const versionLabel = (v?: number | null) => `V${v && v > 0 ? v : 1}`;
+
+export const isPdfFile = (name?: string | null) => !!name && name.trim().toLowerCase().endsWith('.pdf');
+
+/**
+ * What moving a customer to Quotation Stage needs, given their design (null = none saved).
+ * Mirrors the server rule so the status window can ask for the PDF before the request is made.
+ */
+export type QuotationGate = 'READY' | 'NEEDS_PDF' | 'WITH_DESIGNER';
+export const quotationGate = (job: Pick<DesignJob, 'status'> | null | undefined): QuotationGate => {
+  if (!job) {return 'NEEDS_PDF';}
+  if (isApprovedDesign(job.status)) {return 'READY';}
+  if (isOpenDesign(job.status)) {return 'WITH_DESIGNER';}
+  return 'NEEDS_PDF';
+};
+
+/** A redesign pulls the customer back into Design — except from these stages, where only the design reopens. */
+export const redesignKeepsStage = (customerStatus?: string | null) =>
+  customerStatus === 'DESIGN_STAGE' || customerStatus === 'CONFIRMED' || customerStatus === 'LOST';
 
 export const DesignStatusPill: React.FC<{ status: DesignStatus }> = ({ status }) => {
   const m = DESIGN_STATUS[status] ?? { label: status, st: 'draft' };
@@ -99,7 +132,15 @@ export const designNewsText = (job: DesignJob, side: 'admin' | 'designer'): stri
   }
   if (job.newForDesigner && job.status === 'REVISION_REQUIRED') {return 'Changes requested by admin';}
   if (job.newForDesigner && job.status === 'APPROVED_BY_ADMIN') {return 'Approved by admin';}
-  if (job.newForDesigner) {return 'New design assigned to you';}
+  if (job.newForDesigner) {
+    const docs = job.planDocumentCount ?? 0;
+    const withDocs = docs > 0 ? ` · ${docs} plan document${docs === 1 ? '' : 's'}` : '';
+    // A second or later version is a redesign of a design that was already approved.
+    if ((job.version ?? 1) > 1 && isDesignerWork(job.status)) {
+      return `Redesign requested (${versionLabel(job.version)})${job.brief ? `: ${job.brief}` : ''}${withDocs}`;
+    }
+    return `New design assigned to you${withDocs}`;
+  }
   if (job.unreadForDesigner > 0 && note && !note.fromDesigner) {return `Admin: ${note.message}`;}
   if (job.overdue) {return 'Overdue';}
   const due = dueText(job);
