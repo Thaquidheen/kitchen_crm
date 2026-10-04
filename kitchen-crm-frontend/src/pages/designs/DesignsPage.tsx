@@ -1,7 +1,12 @@
 /**
  * DesignsPage — customer designs assigned to designers.
- * Admin: completed designs to review, customers in Design without a designer, and one column per
- * designer (admin-set status, workload, drag to set which design is done first).
+ *
+ * Admin: two views that each fit one screen.
+ *  - Work board: columns side by side — designs to review, customers to assign, then one column
+ *    per designer (admin-set status, workload, drag to set which design is done first). Each
+ *    column scrolls on its own, so the page does not.
+ *  - Customer designs: the design every customer at Quotation Stage or later is quoted on, as a
+ *    table that scrolls in place.
  * Designer: only their own designs, in the order the admin set.
  */
 import React, { useEffect, useMemo, useState } from 'react';
@@ -24,6 +29,7 @@ import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 import {
   useAssignDesignMutation,
   useGetDesignJobsQuery,
+  useGetDesignLibraryQuery,
   useGetDesignMeQuery,
   useGetDesignersQuery,
   useGetUnassignedDesignsQuery,
@@ -40,6 +46,15 @@ import type { DesignJob, DesignerStatus, UnassignedDesignCustomer } from '@/feat
 
 const card = 'bg-background-800 border border-background-600 rounded-[14px]';
 const sectionTitle = 'text-[13px] font-semibold text-text-900';
+const countBadge = 'text-[11px] font-[650] px-1.5 py-px rounded-full bg-background-700 border border-background-600 text-text-700 tabular-nums';
+/**
+ * A board column is as tall as its content, up to the space left under the page header; past
+ * that its list scrolls. 196px = app header + page padding + this page's own title row.
+ */
+const columnShell = `${card} flex flex-col min-w-0 min-h-0 lg:max-h-[calc(100dvh-196px)]`;
+const columnBody = 'flex-1 min-h-0 overflow-y-auto px-3 pb-3 flex flex-col gap-1.5';
+
+type AdminView = 'work' | 'designs';
 
 interface RowProps {
   job: DesignJob;
@@ -190,44 +205,47 @@ const DesignerColumn: React.FC<{
   };
 
   return (
-    <div id={`designer-${designerId}`} className={`${card} p-3 flex flex-col gap-2 min-w-0`}>
-      <div className="flex items-center gap-2">
-        <DesignerStatusDot status={status} size={10} />
-        <span className="text-[14px] font-semibold text-text-900 truncate">{name}</span>
-        <span className="flex-1" />
-        <select
-          value={status ?? ''}
-          onChange={(e) => changeStatus(e.target.value)}
-          className="h-[30px] px-2 rounded-[8px] border border-background-600 bg-background-900 text-text-900 text-[12px] outline-none focus:border-primary-600"
-          aria-label={`Status of ${name}`}
-          title="Set this designer's status"
-        >
-          <option value="">Status…</option>
-          {(Object.keys(DESIGNER_STATUS) as DesignerStatus[]).map((s) => (
-            <option key={s} value={s}>
-              {DESIGNER_STATUS[s].label}
-            </option>
-          ))}
-        </select>
+    <section id={`designer-${designerId}`} className={columnShell} aria-label={`${name}'s designs`}>
+      <div className="px-3 pt-3 pb-2">
+        <div className="flex items-center gap-2">
+          <DesignerStatusDot status={status} size={10} />
+          <span className="text-[13.5px] font-semibold text-text-900 truncate">{name}</span>
+          <span className={countBadge}>{activeCount}</span>
+          <span className="flex-1" />
+          <select
+            value={status ?? ''}
+            onChange={(e) => changeStatus(e.target.value)}
+            className="h-[28px] px-1.5 rounded-[8px] border border-background-600 bg-background-900 text-text-900 text-[12px] outline-none focus:border-primary-600"
+            aria-label={`Status of ${name}`}
+            title="Set this designer's status"
+          >
+            <option value="">Status…</option>
+            {(Object.keys(DESIGNER_STATUS) as DesignerStatus[]).map((s) => (
+              <option key={s} value={s}>
+                {DESIGNER_STATUS[s].label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="mt-1 text-[11.5px] text-text-600">
+          {overdue > 0 && <span style={{ color: 'var(--st-lost-fg)' }}>{overdue} overdue · </span>}
+          {order.length > 1 ? 'Drag to set which comes first' : 'Designs in the order to do them'}
+        </div>
       </div>
-      <div className="text-[11.5px] text-text-600">
-        {activeCount} design{activeCount === 1 ? '' : 's'} assigned{overdue > 0 ? ` · ${overdue} overdue` : ''}
-        {order.length > 1 ? ' · drag to set which comes first' : ''}
-      </div>
-      {order.length === 0 ? (
-        <p className="m-0 py-3 text-center text-[12px] text-text-500">No designs in the queue.</p>
-      ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-          <SortableContext items={order.map((j) => j.id)} strategy={verticalListSortingStrategy}>
-            <div className="flex flex-col gap-1.5">
+      <div className={columnBody}>
+        {order.length === 0 ? (
+          <p className="m-0 py-4 text-center text-[12px] text-text-500">No designs in the queue.</p>
+        ) : (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+            <SortableContext items={order.map((j) => j.id)} strategy={verticalListSortingStrategy}>
               {order.map((j, i) => (
                 <SortableJobRow key={j.id} job={j} position={i + 1} viewer="admin" onOpen={onOpen} />
               ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      )}
-    </div>
+            </SortableContext>
+          </DndContext>
+        )}
+      </div>
+    </section>
   );
 };
 
@@ -317,28 +335,32 @@ const DesignsPage: React.FC = () => {
   const [assignFor, setAssignFor] = useState<UnassignedDesignCustomer | null>(null);
 
   const poll = { pollingInterval: 20000, refetchOnFocus: true, refetchOnMountOrArgChange: true } as const;
-  const { data: jobs = [], isLoading } = useGetDesignJobsQuery({ includeClosed: showClosed }, poll);
+  // The admin's second view needs the finished designs too, so they are always loaded for admins.
+  const { data: jobs = [], isLoading } = useGetDesignJobsQuery({ includeClosed: isAdmin || showClosed }, poll);
   const { data: designers = [] } = useGetDesignersQuery(undefined, { ...poll, skip: !isAdmin });
   const { data: unassigned = [] } = useGetUnassignedDesignsQuery(undefined, { ...poll, skip: !isAdmin });
+  const { data: library = [] } = useGetDesignLibraryQuery(undefined, { pollingInterval: 60000, skip: !isAdmin });
 
   const openJobId = Number(searchParams.get('job') ?? 0) || null;
-  const openJob = (id: number) => {
+  const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(searchParams);
-    next.set('job', String(id));
+    if (value === null) {
+      next.delete(key);
+    } else {
+      next.set(key, value);
+    }
     setSearchParams(next, { replace: true });
   };
-  const closeJob = () => {
-    const next = new URLSearchParams(searchParams);
-    next.delete('job');
-    setSearchParams(next, { replace: true });
-  };
+  const openJob = (id: number) => setParam('job', String(id));
+  const closeJob = () => setParam('job', null);
 
-  // ?designer=ID (from the sidebar panel): bring that designer's column into view.
+  // ?designer=ID (from the sidebar panel) always lands on the work board, at that designer's column.
   const focusDesigner = searchParams.get('designer');
+  const view: AdminView = !focusDesigner && searchParams.get('view') === 'designs' ? 'designs' : 'work';
   useEffect(() => {
     if (!focusDesigner) {return;}
     requestAnimationFrame(() =>
-      document.getElementById(`designer-${focusDesigner}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      document.getElementById(`designer-${focusDesigner}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
     );
   }, [focusDesigner, designers.length]);
 
@@ -355,6 +377,13 @@ const DesignsPage: React.FC = () => {
     }
     return m;
   }, [work]);
+  // Finished designs the customer table does not already show (cancelled, or the customer is in another stage).
+  const otherFinished = useMemo(() => {
+    const listed = new Set(library.map((r) => r.customerId));
+    return closed.filter((j) => !listed.has(j.customerId));
+  }, [closed, library]);
+  const missing = useMemo(() => library.filter((r) => !r.design).length, [library]);
+  const needsAdmin = review.length + unassigned.length;
 
   if (!isAdmin && me && !me.designer) {
     return (
@@ -366,10 +395,38 @@ const DesignsPage: React.FC = () => {
     );
   }
 
+  const tab = (key: AdminView, label: string, badge: React.ReactNode) => {
+    const active = view === key;
+    return (
+      <button
+        type="button"
+        role="tab"
+        aria-selected={active}
+        onClick={() => {
+          const next = new URLSearchParams(searchParams);
+          next.delete('designer');
+          if (key === 'work') {
+            next.delete('view');
+          } else {
+            next.set('view', key);
+          }
+          setSearchParams(next, { replace: true });
+        }}
+        className={`inline-flex items-center gap-2 h-8 px-3 rounded-[8px] text-[12.5px] whitespace-nowrap transition-colors ${
+          active ? 'font-semibold text-text-900' : 'font-medium text-text-600 hover:text-text-900'
+        }`}
+        style={active ? { background: 'color-mix(in oklab, var(--color-primary-600) 16%, transparent)' } : undefined}
+      >
+        {label}
+        {badge}
+      </button>
+    );
+  };
+
   return (
     <div className="w-full">
       <div className="flex items-end gap-4 flex-wrap mb-[18px]">
-        <div>
+        <div className="min-w-0">
           <h1 className="m-0 text-[22px] font-[650] tracking-[-0.01em] text-text-900">{isAdmin ? 'Designs' : 'My designs'}</h1>
           <p className="m-0 mt-1 text-[13px] text-text-600">
             {isAdmin
@@ -378,116 +435,173 @@ const DesignsPage: React.FC = () => {
           </p>
         </div>
         <span className="flex-1" />
-        <label className="inline-flex items-center gap-2 text-[12.5px] text-text-700 cursor-pointer select-none">
-          <input type="checkbox" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} />
-          Show finished
-        </label>
+        {isAdmin ? (
+          <div role="tablist" aria-label="Designs views" className="inline-flex p-[3px] gap-[3px] rounded-[11px] border border-background-600 bg-background-800">
+            {tab(
+              'work',
+              'Work board',
+              needsAdmin > 0 ? (
+                <span
+                  className="text-[11px] font-[650] px-1.5 py-px rounded-full tabular-nums"
+                  style={{ background: 'var(--st-potential-bg)', color: 'var(--st-potential-fg)' }}
+                  title={`${needsAdmin} waiting for you`}
+                >
+                  {needsAdmin}
+                </span>
+              ) : (
+                <span className={countBadge}>{work.length}</span>
+              ),
+            )}
+            {tab(
+              'designs',
+              'Customer designs',
+              <span className={countBadge} title={missing > 0 ? `${missing} without a design saved` : undefined}>
+                {missing > 0 ? `${missing} missing` : library.length}
+              </span>,
+            )}
+          </div>
+        ) : (
+          <label className="inline-flex items-center gap-2 text-[12.5px] text-text-700 cursor-pointer select-none">
+            <input type="checkbox" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} />
+            Show finished
+          </label>
+        )}
       </div>
 
       {isLoading ? (
         <div className={`${card} p-6 animate-pulse h-40`} />
-      ) : (
-        <div className="flex flex-col gap-4">
-          {/* Waiting for review */}
-          {review.length > 0 && (
-            <div className={`${card} p-3.5`} style={{ borderColor: 'var(--st-potential-fg)' }}>
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 size={15} style={{ color: 'var(--st-potential-fg)' }} />
-                <span className={sectionTitle}>{isAdmin ? 'Completed — waiting for your review' : 'Sent for review'}</span>
-                <span className="text-[12px] text-text-600 tabular-nums">{review.length}</span>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
-                {review.map((j) => (
-                  <JobRow key={j.id} job={j} viewer={viewer} onOpen={openJob} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Unassigned (admin) */}
-          {isAdmin && unassigned.length > 0 && (
-            <div className={`${card} p-3.5`}>
-              <div className="flex items-center gap-2 mb-2">
-                <UserPlus size={15} className="text-primary-600" />
-                <span className={sectionTitle}>In Design without a designer</span>
-                <span className="text-[12px] text-text-600 tabular-nums">{unassigned.length}</span>
-              </div>
-              <div className="flex flex-col divide-y divide-background-600">
-                {unassigned.map((c) => (
-                  <div key={c.customerId} className="flex items-center gap-3 py-2">
-                    <span className="text-[13px] font-medium text-text-900 truncate">{c.customerName}</span>
-                    {c.customerPlace && <span className="text-[12px] text-text-500 truncate">{c.customerPlace}</span>}
-                    <span className="flex-1" />
-                    <button
-                      type="button"
-                      onClick={() => setAssignFor(c)}
-                      className="btn-raised-accent inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12.5px] font-semibold"
-                    >
-                      Assign designer
-                    </button>
+      ) : isAdmin ? (
+        view === 'designs' ? (
+          <DesignLibrary onOpen={openJob} otherFinished={otherFinished} />
+        ) : designers.length === 0 && unassigned.length === 0 && review.length === 0 ? (
+          <div className={`${card} px-6 py-12 text-center`}>
+            <Palette size={26} className="mx-auto text-text-500" />
+            <div className="text-[14px] font-semibold text-text-900 mt-3">No designers yet</div>
+            <div className="text-[12.5px] text-text-700 mt-1">In Staff, set a staff member&apos;s type to Designer.</div>
+          </div>
+        ) : (
+          // The board: what needs the admin first, then one column per designer. On a wide
+          // screen the columns sit in one row and each scrolls on its own.
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-none lg:grid-flow-col lg:auto-cols-[minmax(248px,440px)] gap-3 items-start lg:overflow-x-auto pb-1">
+            {review.length > 0 && (
+              <section className={columnShell} style={{ borderColor: 'var(--st-potential-fg)' }} aria-label="Designs to review">
+                <div className="px-3 pt-3 pb-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={15} style={{ color: 'var(--st-potential-fg)' }} />
+                    <span className={sectionTitle}>To review</span>
+                    <span className={countBadge}>{review.length}</span>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                  <div className="mt-1 text-[11.5px] text-text-600">Completed by the designer. Approve or ask for changes.</div>
+                </div>
+                <div className={columnBody}>
+                  {review.map((j) => (
+                    <JobRow key={j.id} job={j} viewer="admin" onOpen={openJob} />
+                  ))}
+                </div>
+              </section>
+            )}
 
-          {/* Admin: one column per designer. Designer: their own queue. */}
-          {isAdmin ? (
-            designers.length === 0 ? (
-              <div className={`${card} px-6 py-12 text-center`}>
-                <Palette size={26} className="mx-auto text-text-500" />
-                <div className="text-[14px] font-semibold text-text-900 mt-3">No designers yet</div>
-                <div className="text-[12.5px] text-text-700 mt-1">In Staff, set a staff member&apos;s type to Designer.</div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-start">
-                {designers.map((d) => (
-                  <DesignerColumn
-                    key={d.id}
-                    designerId={d.id}
-                    name={d.name}
-                    status={d.designerStatus}
-                    activeCount={d.activeCount}
-                    overdue={d.overdue}
-                    jobs={byDesigner.get(d.id) ?? []}
-                    onOpen={openJob}
-                  />
-                ))}
-              </div>
-            )
-          ) : (
-            <div className={`${card} p-3.5`}>
-              <div className="flex items-center gap-2 mb-2">
-                <Palette size={15} className="text-primary-600" />
-                <span className={sectionTitle}>To do — in order</span>
-                <span className="text-[12px] text-text-600 tabular-nums">{work.length}</span>
-              </div>
+            {unassigned.length > 0 && (
+              <section className={columnShell} aria-label="Customers to assign">
+                <div className="px-3 pt-3 pb-2">
+                  <div className="flex items-center gap-2">
+                    <UserPlus size={15} className="text-primary-600" />
+                    <span className={sectionTitle}>To assign</span>
+                    <span className={countBadge}>{unassigned.length}</span>
+                  </div>
+                  <div className="mt-1 text-[11.5px] text-text-600">In Design Stage without a designer.</div>
+                </div>
+                <div className={columnBody}>
+                  {unassigned.map((c) => (
+                    <div
+                      key={c.customerId}
+                      className="flex items-center gap-2 pl-2.5 pr-1.5 py-1.5 rounded-[11px] border border-background-600 bg-background-900"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13px] font-semibold text-text-900 truncate">{c.customerName}</div>
+                        {c.customerPlace && <div className="text-[11.5px] text-text-500 truncate">{c.customerPlace}</div>}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAssignFor(c)}
+                        className="btn-raised-accent shrink-0 h-7 px-2.5 rounded-[8px] text-[12px] font-semibold"
+                      >
+                        Assign
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {designers.map((d) => (
+              <DesignerColumn
+                key={d.id}
+                designerId={d.id}
+                name={d.name}
+                status={d.designerStatus}
+                activeCount={d.activeCount}
+                overdue={d.overdue}
+                jobs={byDesigner.get(d.id) ?? []}
+                onOpen={openJob}
+              />
+            ))}
+
+            {designers.length === 0 && (
+              <section className={`${columnShell} px-4 py-8 text-center`}>
+                <Palette size={24} className="mx-auto text-text-500" />
+                <div className="text-[13.5px] font-semibold text-text-900 mt-2.5">No designers yet</div>
+                <div className="text-[12px] text-text-700 mt-1">In Staff, set a staff member&apos;s type to Designer.</div>
+              </section>
+            )}
+          </div>
+        )
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+          <section className={columnShell} aria-label="Designs to do">
+            <div className="px-3 pt-3 pb-2 flex items-center gap-2">
+              <Palette size={15} className="text-primary-600" />
+              <span className={sectionTitle}>To do — in order</span>
+              <span className={countBadge}>{work.length}</span>
+            </div>
+            <div className={columnBody}>
               {work.length === 0 ? (
                 <p className="m-0 py-4 text-center text-[12.5px] text-text-500">Nothing assigned to you right now.</p>
               ) : (
-                <div className="flex flex-col gap-1.5">
-                  {work.map((j, i) => (
-                    <JobRow key={j.id} job={j} position={i + 1} viewer="designer" onOpen={openJob} />
-                  ))}
-                </div>
+                work.map((j, i) => <JobRow key={j.id} job={j} position={i + 1} viewer="designer" onOpen={openJob} />)
               )}
             </div>
-          )}
+          </section>
 
-          {/* Admin: the design every customer past Design is quoted on */}
-          {isAdmin && <DesignLibrary onOpen={openJob} />}
-
-          {showClosed && closed.length > 0 && (
-            <div className={`${card} p-3.5`}>
-              <div className="flex items-center gap-2 mb-2">
-                <span className={sectionTitle}>Finished</span>
-                <span className="text-[12px] text-text-600 tabular-nums">{closed.length}</span>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
-                {closed.map((j) => (
-                  <JobRow key={j.id} job={j} viewer={viewer} onOpen={openJob} />
-                ))}
-              </div>
+          {(review.length > 0 || (showClosed && closed.length > 0)) && (
+            <div className="flex flex-col gap-3 min-w-0">
+              {review.length > 0 && (
+                <section className={columnShell} style={{ borderColor: 'var(--st-potential-fg)' }} aria-label="Sent for review">
+                  <div className="px-3 pt-3 pb-2 flex items-center gap-2">
+                    <CheckCircle2 size={15} style={{ color: 'var(--st-potential-fg)' }} />
+                    <span className={sectionTitle}>Sent for review</span>
+                    <span className={countBadge}>{review.length}</span>
+                  </div>
+                  <div className={columnBody}>
+                    {review.map((j) => (
+                      <JobRow key={j.id} job={j} viewer="designer" onOpen={openJob} />
+                    ))}
+                  </div>
+                </section>
+              )}
+              {showClosed && closed.length > 0 && (
+                <section className={columnShell} aria-label="Finished designs">
+                  <div className="px-3 pt-3 pb-2 flex items-center gap-2">
+                    <span className={sectionTitle}>Finished</span>
+                    <span className={countBadge}>{closed.length}</span>
+                  </div>
+                  <div className={columnBody}>
+                    {closed.map((j) => (
+                      <JobRow key={j.id} job={j} viewer="designer" onOpen={openJob} />
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
           )}
         </div>
