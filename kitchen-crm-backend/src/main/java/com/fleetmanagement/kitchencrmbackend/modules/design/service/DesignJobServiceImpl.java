@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 public class DesignJobServiceImpl implements DesignJobService {
 
     public static final String STAFF_TYPE_DESIGNER = "DESIGNER";
+    public static final String STAFF_TYPE_ADMIN_STAFF = "ADMIN_STAFF";
     private static final Set<String> PRIORITIES = Set.of("LOW", "MEDIUM", "HIGH", "URGENT");
     private static final Set<String> DESIGNER_STATUSES = Set.of("AVAILABLE", "BUSY", "ON_LEAVE");
 
@@ -95,7 +96,7 @@ public class DesignJobServiceImpl implements DesignJobService {
 
     @Override
     @Transactional(readOnly = true)
-    public DesignMeDto me(Long userId) {
+    public DesignMeDto me(Long userId, boolean superAdmin) {
         DesignMeDto dto = new DesignMeDto();
         dto.setUserId(userId);
         User user = userId == null ? null : userRepository.findById(userId).orElse(null);
@@ -104,14 +105,26 @@ public class DesignJobServiceImpl implements DesignJobService {
             dto.setDesignerStatus(user.getDesignerStatus());
         }
         dto.setDesigner(user != null && STAFF_TYPE_DESIGNER.equals(user.getStaffType()));
+        dto.setCanAssign(superAdmin || isCoordinator(user));
         return dto;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<DesignJobDto>> list(Long callerId, boolean admin, Long designerId, boolean includeClosed) {
+    public boolean isCoordinator(Long userId) {
+        return isCoordinator(userId == null ? null : userRepository.findById(userId).orElse(null));
+    }
+
+    private static boolean isCoordinator(User user) {
+        return user != null && !Boolean.FALSE.equals(user.getActive()) && STAFF_TYPE_ADMIN_STAFF.equals(user.getStaffType());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<List<DesignJobDto>> list(Long callerId, boolean admin, boolean coordinator, Long designerId,
+                                                boolean includeClosed) {
         List<DesignPhase> jobs;
-        if (!admin) {
+        if (!admin && !coordinator) {
             // A designer sees only their own jobs, whatever filter they send.
             jobs = callerId == null ? List.of() : jobRepository.findByDesigner(callerId);
         } else if (designerId != null) {
@@ -123,17 +136,28 @@ public class DesignJobServiceImpl implements DesignJobService {
                 .filter(d -> includeClosed || !CLOSED.contains(status(d)))
                 .sorted(QUEUE_ORDER)
                 .collect(Collectors.toList());
-        return ApiResponse.success(toDtos(visible));
+        List<DesignJobDto> dtos = toDtos(visible);
+        if (!admin && coordinator) {
+            // Admin staff look after assignments and paperwork; the conversation stays with admin + designer.
+            dtos.forEach(dto -> {
+                if (callerId == null || !callerId.equals(dto.getDesignerId())) {
+                    withoutConversation(dto);
+                }
+            });
+        }
+        return ApiResponse.success(dtos);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<DesignJobDto> get(Long jobId, Long callerId, boolean admin) {
+    public ApiResponse<DesignJobDto> get(Long jobId, Long callerId, boolean admin, boolean coordinator) {
         DesignPhase job = jobRepository.findById(jobId).orElse(null);
-        if (job == null || !canAccess(job, callerId, admin)) {
+        boolean own = job != null && isAssignedDesigner(job, callerId);
+        if (job == null || !(admin || coordinator || own)) {
             return ApiResponse.error("Design job not found");
         }
-        return ApiResponse.success(detail(job));
+        DesignJobDto dto = detail(job);
+        return ApiResponse.success(admin || own ? dto : withoutConversation(dto));
     }
 
     @Override
@@ -280,7 +304,7 @@ public class DesignJobServiceImpl implements DesignJobService {
         if (error != null) {
             return ApiResponse.error(error);
         }
-        return ApiResponse.success("Designer assigned", detail(latestJob(customer.getId())));
+        return ApiResponse.success("Designer assigned", withoutConversation(detail(latestJob(customer.getId()))));
     }
 
     @Override
@@ -589,7 +613,8 @@ public class DesignJobServiceImpl implements DesignJobService {
     }
 
     @Override
-    public ApiResponse<DesignJobDto> uploadPlanDocuments(Long jobId, MultipartFile[] files, String callerName) {
+    public ApiResponse<DesignJobDto> uploadPlanDocuments(Long jobId, MultipartFile[] files, String callerName,
+                                                         boolean admin) {
         DesignPhase job = jobRepository.findById(jobId).orElse(null);
         if (job == null) {
             return ApiResponse.error("Design job not found");
@@ -611,14 +636,17 @@ public class DesignJobServiceImpl implements DesignJobService {
             job.setDesignerSeenAt(null); // news for the designer
         }
         jobRepository.save(job);
+        DesignJobDto dto = detail(job);
         return ApiResponse.success(picked.size() == 1 ? "Plan document added" : picked.size() + " plan documents added",
-                detail(job));
+                admin ? dto : withoutConversation(dto));
     }
 
     @Override
-    public ApiResponse<DesignJobDto> deleteFile(Long jobId, Long fileId, Long callerId, boolean admin) {
+    public ApiResponse<DesignJobDto> deleteFile(Long jobId, Long fileId, Long callerId, boolean admin,
+                                                boolean coordinator) {
         DesignPhase job = jobRepository.findById(jobId).orElse(null);
-        if (job == null || !canAccess(job, callerId, admin)) {
+        boolean own = job != null && isAssignedDesigner(job, callerId);
+        if (job == null || !(admin || coordinator || own)) {
             return ApiResponse.error("Design job not found");
         }
         DesignPhaseFile file = fileRepository.findById(fileId).orElse(null);
@@ -626,11 +654,15 @@ public class DesignJobServiceImpl implements DesignJobService {
             return ApiResponse.error("File not found");
         }
         if (!isDesignFile(file)) {
-            if (!admin) {
-                return ApiResponse.error("Only the admin can remove plan documents");
+            if (!admin && !coordinator) {
+                return ApiResponse.error("Only the admin or admin staff can remove plan documents");
             }
         } else {
-            // A design file can be taken back only while its version is still being worked on.
+            // A design file can be taken back only while its version is still being worked on,
+            // and only by the admin or the designer who has it.
+            if (!admin && !own) {
+                return ApiResponse.error("Only the designer or the admin can remove design files");
+            }
             if (versionOf(file) != version(job) || !OPEN.contains(status(job))) {
                 return ApiResponse.error("Files of an approved version cannot be removed");
             }
@@ -642,7 +674,8 @@ public class DesignJobServiceImpl implements DesignJobService {
         if (!Boolean.TRUE.equals(deleted.getSuccess())) {
             return ApiResponse.error(deleted.getMessage());
         }
-        return ApiResponse.success("File removed", detail(job));
+        DesignJobDto dto = detail(job);
+        return ApiResponse.success("File removed", admin || own ? dto : withoutConversation(dto));
     }
 
     @Override

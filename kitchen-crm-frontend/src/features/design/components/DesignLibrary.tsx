@@ -22,6 +22,8 @@ interface Props {
   onOpen: (jobId: number) => void;
   /** Closed designs whose customer is not in the library (cancelled, or back in an earlier stage). */
   otherFinished: DesignJob[];
+  /** Requesting a redesign is the admin's call; Admin staff see the table without it. */
+  canRedesign: boolean;
 }
 
 type Filter = 'ALL' | 'MISSING' | 'OTHER';
@@ -57,7 +59,7 @@ const StagePill: React.FC<{ status?: string | null }> = ({ status }) => {
   );
 };
 
-export const DesignLibrary: React.FC<Props> = ({ onOpen, otherFinished }) => {
+export const DesignLibrary: React.FC<Props> = ({ onOpen, otherFinished, canRedesign }) => {
   const { data: library = [], isLoading } = useGetDesignLibraryQuery(undefined, {
     pollingInterval: 60000,
     refetchOnFocus: true,
@@ -243,7 +245,7 @@ export const DesignLibrary: React.FC<Props> = ({ onOpen, otherFinished }) => {
                             <Upload size={12} /> Upload design
                           </button>
                         )}
-                        {d && approved && (
+                        {d && approved && canRedesign && (
                           <button type="button" onClick={() => setRedesign(d)} className={ghostBtn}>
                             <RotateCcw size={12} /> Redesign
                           </button>

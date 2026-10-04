@@ -13,4 +13,9 @@ public class DesignMeDto {
     private String staffType;
     private String designerStatus;
     private Boolean designer;
+    /**
+     * May assign designers and hand over plan documents: admins, and staff whose type is Admin
+     * staff. Reviewing, redesigning and ordering the queue stay with admins.
+     */
+    private Boolean canAssign;
 }

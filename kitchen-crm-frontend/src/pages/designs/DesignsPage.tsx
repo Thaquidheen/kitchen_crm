@@ -7,6 +7,8 @@
  *    column scrolls on its own, so the page does not.
  *  - Customer designs: the design every customer at Quotation Stage or later is quoted on, as a
  *    table that scrolls in place.
+ * Admin staff see the same two views to assign designers and attach plan documents; reviewing,
+ * redesigning, ordering the queue and setting a designer's status stay with the admin.
  * Designer: only their own designs, in the order the admin set.
  */
 import React, { useEffect, useMemo, useState } from 'react';
@@ -162,7 +164,10 @@ const SortableJobRow: React.FC<RowProps> = (props) => {
   );
 };
 
-/** A designer's column: status (admin sets it), workload, and the queue to drag into order. */
+/**
+ * A designer's column: status (admin sets it), workload, and the queue to drag into order.
+ * `readOnly` (Admin staff) shows the same queue without the status menu or the drag handles.
+ */
 const DesignerColumn: React.FC<{
   designerId: number;
   name: string;
@@ -171,7 +176,8 @@ const DesignerColumn: React.FC<{
   overdue: number;
   jobs: DesignJob[];
   onOpen: (id: number) => void;
-}> = ({ designerId, name, status, activeCount, overdue, jobs, onOpen }) => {
+  readOnly?: boolean;
+}> = ({ designerId, name, status, activeCount, overdue, jobs, onOpen, readOnly = false }) => {
   const [order, setOrder] = useState<DesignJob[]>(jobs);
   const [reorder] = useReorderDesignJobsMutation();
   const [setStatus] = useSetDesignerStatusMutation();
@@ -212,29 +218,35 @@ const DesignerColumn: React.FC<{
           <span className="text-[13.5px] font-semibold text-text-900 truncate">{name}</span>
           <span className={countBadge}>{activeCount}</span>
           <span className="flex-1" />
-          <select
-            value={status ?? ''}
-            onChange={(e) => changeStatus(e.target.value)}
-            className="h-[28px] px-1.5 rounded-[8px] border border-background-600 bg-background-900 text-text-900 text-[12px] outline-none focus:border-primary-600"
-            aria-label={`Status of ${name}`}
-            title="Set this designer's status"
-          >
-            <option value="">Status…</option>
-            {(Object.keys(DESIGNER_STATUS) as DesignerStatus[]).map((s) => (
-              <option key={s} value={s}>
-                {DESIGNER_STATUS[s].label}
-              </option>
-            ))}
-          </select>
+          {readOnly ? (
+            <span className="text-[12px] text-text-600">{status ? DESIGNER_STATUS[status].label : 'Status not set'}</span>
+          ) : (
+            <select
+              value={status ?? ''}
+              onChange={(e) => changeStatus(e.target.value)}
+              className="h-[28px] px-1.5 rounded-[8px] border border-background-600 bg-background-900 text-text-900 text-[12px] outline-none focus:border-primary-600"
+              aria-label={`Status of ${name}`}
+              title="Set this designer's status"
+            >
+              <option value="">Status…</option>
+              {(Object.keys(DESIGNER_STATUS) as DesignerStatus[]).map((s) => (
+                <option key={s} value={s}>
+                  {DESIGNER_STATUS[s].label}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="mt-1 text-[11.5px] text-text-600">
           {overdue > 0 && <span style={{ color: 'var(--st-lost-fg)' }}>{overdue} overdue · </span>}
-          {order.length > 1 ? 'Drag to set which comes first' : 'Designs in the order to do them'}
+          {!readOnly && order.length > 1 ? 'Drag to set which comes first' : 'Designs in the order to do them'}
         </div>
       </div>
       <div className={columnBody}>
         {order.length === 0 ? (
           <p className="m-0 py-4 text-center text-[12px] text-text-500">No designs in the queue.</p>
+        ) : readOnly ? (
+          order.map((j, i) => <JobRow key={j.id} job={j} position={i + 1} viewer="admin" onOpen={onOpen} />)
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <SortableContext items={order.map((j) => j.id)} strategy={verticalListSortingStrategy}>
@@ -329,17 +341,20 @@ const AssignModal: React.FC<{ customer: UnassignedDesignCustomer | null; onClose
 const DesignsPage: React.FC = () => {
   const isAdmin = useIsSuperAdmin();
   const { data: me } = useGetDesignMeQuery();
-  const viewer: 'admin' | 'designer' = isAdmin ? 'admin' : 'designer';
+  // Admin staff coordinate designs next to the admin: they get the board, assign designers and
+  // attach plan documents.
+  const manages = isAdmin || !!me?.canAssign;
+  const viewer: 'admin' | 'coordinator' | 'designer' = isAdmin ? 'admin' : manages ? 'coordinator' : 'designer';
   const [searchParams, setSearchParams] = useSearchParams();
   const [showClosed, setShowClosed] = useState(false);
   const [assignFor, setAssignFor] = useState<UnassignedDesignCustomer | null>(null);
 
   const poll = { pollingInterval: 20000, refetchOnFocus: true, refetchOnMountOrArgChange: true } as const;
-  // The admin's second view needs the finished designs too, so they are always loaded for admins.
-  const { data: jobs = [], isLoading } = useGetDesignJobsQuery({ includeClosed: isAdmin || showClosed }, poll);
-  const { data: designers = [] } = useGetDesignersQuery(undefined, { ...poll, skip: !isAdmin });
-  const { data: unassigned = [] } = useGetUnassignedDesignsQuery(undefined, { ...poll, skip: !isAdmin });
-  const { data: library = [] } = useGetDesignLibraryQuery(undefined, { pollingInterval: 60000, skip: !isAdmin });
+  // The second view needs the finished designs too, so they are always loaded for whoever manages.
+  const { data: jobs = [], isLoading } = useGetDesignJobsQuery({ includeClosed: manages || showClosed }, poll);
+  const { data: designers = [] } = useGetDesignersQuery(undefined, { ...poll, skip: !manages });
+  const { data: unassigned = [] } = useGetUnassignedDesignsQuery(undefined, { ...poll, skip: !manages });
+  const { data: library = [] } = useGetDesignLibraryQuery(undefined, { pollingInterval: 60000, skip: !manages });
 
   const openJobId = Number(searchParams.get('job') ?? 0) || null;
   const setParam = (key: string, value: string | null) => {
@@ -383,9 +398,10 @@ const DesignsPage: React.FC = () => {
     return closed.filter((j) => !listed.has(j.customerId));
   }, [closed, library]);
   const missing = useMemo(() => library.filter((r) => !r.design).length, [library]);
-  const needsAdmin = review.length + unassigned.length;
+  // What waits for this person: an admin also reviews, Admin staff only assign.
+  const needsAdmin = (isAdmin ? review.length : 0) + unassigned.length;
 
-  if (!isAdmin && me && !me.designer) {
+  if (!manages && me && !me.designer) {
     return (
       <div className={`${card} px-6 py-14 text-center`}>
         <Palette size={28} className="mx-auto text-text-500" />
@@ -427,15 +443,17 @@ const DesignsPage: React.FC = () => {
     <div className="w-full">
       <div className="flex items-end gap-4 flex-wrap mb-[18px]">
         <div className="min-w-0">
-          <h1 className="m-0 text-[22px] font-[650] tracking-[-0.01em] text-text-900">{isAdmin ? 'Designs' : 'My designs'}</h1>
+          <h1 className="m-0 text-[22px] font-[650] tracking-[-0.01em] text-text-900">{manages ? 'Designs' : 'My designs'}</h1>
           <p className="m-0 mt-1 text-[13px] text-text-600">
             {isAdmin
               ? 'Who is designing what, in which order — and what is waiting for your review.'
-              : 'Your designs in the order the admin set. Start, upload the design, then mark it complete.'}
+              : manages
+                ? 'Who is designing what — and which customers still need a designer.'
+                : 'Your designs in the order the admin set. Start, upload the design, then mark it complete.'}
           </p>
         </div>
         <span className="flex-1" />
-        {isAdmin ? (
+        {manages ? (
           <div role="tablist" aria-label="Designs views" className="inline-flex p-[3px] gap-[3px] rounded-[11px] border border-background-600 bg-background-800">
             {tab(
               'work',
@@ -470,9 +488,9 @@ const DesignsPage: React.FC = () => {
 
       {isLoading ? (
         <div className={`${card} p-6 animate-pulse h-40`} />
-      ) : isAdmin ? (
+      ) : manages ? (
         view === 'designs' ? (
-          <DesignLibrary onOpen={openJob} otherFinished={otherFinished} />
+          <DesignLibrary onOpen={openJob} otherFinished={otherFinished} canRedesign={isAdmin} />
         ) : designers.length === 0 && unassigned.length === 0 && review.length === 0 ? (
           <div className={`${card} px-6 py-12 text-center`}>
             <Palette size={26} className="mx-auto text-text-500" />
@@ -484,14 +502,22 @@ const DesignsPage: React.FC = () => {
           // screen the columns sit in one row and each scrolls on its own.
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-none lg:grid-flow-col lg:auto-cols-[minmax(248px,440px)] gap-3 items-start lg:overflow-x-auto pb-1">
             {review.length > 0 && (
-              <section className={columnShell} style={{ borderColor: 'var(--st-potential-fg)' }} aria-label="Designs to review">
+              <section
+                className={columnShell}
+                style={isAdmin ? { borderColor: 'var(--st-potential-fg)' } : undefined}
+                aria-label={isAdmin ? 'Designs to review' : 'Designs in review'}
+              >
                 <div className="px-3 pt-3 pb-2">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 size={15} style={{ color: 'var(--st-potential-fg)' }} />
-                    <span className={sectionTitle}>To review</span>
+                    <span className={sectionTitle}>{isAdmin ? 'To review' : 'In review'}</span>
                     <span className={countBadge}>{review.length}</span>
                   </div>
-                  <div className="mt-1 text-[11.5px] text-text-600">Completed by the designer. Approve or ask for changes.</div>
+                  <div className="mt-1 text-[11.5px] text-text-600">
+                    {isAdmin
+                      ? 'Completed by the designer. Approve or ask for changes.'
+                      : 'Completed by the designer. Waiting for the admin.'}
+                  </div>
                 </div>
                 <div className={columnBody}>
                   {review.map((j) => (
@@ -544,6 +570,7 @@ const DesignsPage: React.FC = () => {
                 overdue={d.overdue}
                 jobs={byDesigner.get(d.id) ?? []}
                 onOpen={openJob}
+                readOnly={!isAdmin}
               />
             ))}
 

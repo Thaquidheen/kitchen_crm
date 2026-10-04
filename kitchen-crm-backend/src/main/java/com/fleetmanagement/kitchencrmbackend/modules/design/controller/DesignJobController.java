@@ -38,6 +38,16 @@ public class DesignJobController {
         return p != null ? p.getName() : null;
     }
 
+    /** Admins, and Admin staff who coordinate designs: they assign designers and hand over plan documents. */
+    private boolean coordinates(UserPrincipal user) {
+        return ViewerScope.isSuperAdmin(user) || service.isCoordinator(id(user));
+    }
+
+    private static <T> ResponseEntity<ApiResponse<T>> forbidden() {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error("Only admins and admin staff can do this"));
+    }
+
     private static <T> ResponseEntity<ApiResponse<T>> respond(ApiResponse<T> r) {
         if (Boolean.TRUE.equals(r.getSuccess())) {
             return ResponseEntity.ok(r);
@@ -52,7 +62,7 @@ public class DesignJobController {
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<DesignMeDto>> me(@AuthenticationPrincipal UserPrincipal user) {
-        return ResponseEntity.ok(ApiResponse.success(service.me(id(user))));
+        return ResponseEntity.ok(ApiResponse.success(service.me(id(user), ViewerScope.isSuperAdmin(user))));
     }
 
     // ---- designers panel (names + workload are needed by anyone moving a customer to Design)
@@ -93,12 +103,15 @@ public class DesignJobController {
     public ResponseEntity<ApiResponse<List<DesignJobDto>>> list(@AuthenticationPrincipal UserPrincipal user,
                                                                 @RequestParam(required = false) Long designerId,
                                                                 @RequestParam(defaultValue = "false") boolean includeClosed) {
-        return respond(service.list(id(user), ViewerScope.isSuperAdmin(user), designerId, includeClosed));
+        boolean admin = ViewerScope.isSuperAdmin(user);
+        return respond(service.list(id(user), admin, !admin && service.isCoordinator(id(user)), designerId, includeClosed));
     }
 
     @GetMapping("/unassigned")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> unassigned() {
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> unassigned(@AuthenticationPrincipal UserPrincipal user) {
+        if (!coordinates(user)) {
+            return forbidden();
+        }
         return respond(service.unassignedCustomers());
     }
 
@@ -109,8 +122,10 @@ public class DesignJobController {
 
     /** Customers at Quotation Stage or later with their design (or none). */
     @GetMapping("/library")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<ApiResponse<List<DesignLibraryRowDto>>> library() {
+    public ResponseEntity<ApiResponse<List<DesignLibraryRowDto>>> library(@AuthenticationPrincipal UserPrincipal user) {
+        if (!coordinates(user)) {
+            return forbidden();
+        }
         return respond(service.library());
     }
 
@@ -133,9 +148,11 @@ public class DesignJobController {
     // ---- admin management
 
     @PostMapping("/assign")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<DesignJobDto>> assign(@Valid @RequestBody DesignAssignRequest body,
                                                             @AuthenticationPrincipal UserPrincipal user) {
+        if (!coordinates(user)) {
+            return forbidden();
+        }
         return respond(service.assign(body, id(user)));
     }
 
@@ -170,11 +187,13 @@ public class DesignJobController {
     }
 
     @PostMapping(value = "/{id}/plan-documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<DesignJobDto>> uploadPlanDocuments(@PathVariable Long id,
                                                                          @RequestParam("files") MultipartFile[] files,
                                                                          @AuthenticationPrincipal UserPrincipal user) {
-        return respond(service.uploadPlanDocuments(id, files, name(user)));
+        if (!coordinates(user)) {
+            return forbidden();
+        }
+        return respond(service.uploadPlanDocuments(id, files, name(user), ViewerScope.isSuperAdmin(user)));
     }
 
     // ---- job (admin or its designer)
@@ -182,7 +201,8 @@ public class DesignJobController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<DesignJobDto>> get(@PathVariable Long id,
                                                          @AuthenticationPrincipal UserPrincipal user) {
-        return respond(service.get(id, id(user), ViewerScope.isSuperAdmin(user)));
+        boolean admin = ViewerScope.isSuperAdmin(user);
+        return respond(service.get(id, id(user), admin, !admin && service.isCoordinator(id(user))));
     }
 
     @PutMapping("/{id}/start")
@@ -223,6 +243,7 @@ public class DesignJobController {
     public ResponseEntity<ApiResponse<DesignJobDto>> deleteFile(@PathVariable Long id,
                                                                 @PathVariable Long fileId,
                                                                 @AuthenticationPrincipal UserPrincipal user) {
-        return respond(service.deleteFile(id, fileId, id(user), ViewerScope.isSuperAdmin(user)));
+        boolean admin = ViewerScope.isSuperAdmin(user);
+        return respond(service.deleteFile(id, fileId, id(user), admin, !admin && service.isCoordinator(id(user))));
     }
 }

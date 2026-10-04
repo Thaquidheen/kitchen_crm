@@ -21,11 +21,18 @@ import java.util.Map;
  */
 public interface DesignJobService {
 
-    DesignMeDto me(Long userId);
+    DesignMeDto me(Long userId, boolean superAdmin);
 
-    ApiResponse<List<DesignJobDto>> list(Long callerId, boolean admin, Long designerId, boolean includeClosed);
+    /**
+     * Staff whose type is Admin staff coordinate designs next to the admins: they see every
+     * design, assign designers and attach plan documents. Everything else stays with admins.
+     */
+    boolean isCoordinator(Long userId);
 
-    ApiResponse<DesignJobDto> get(Long jobId, Long callerId, boolean admin);
+    ApiResponse<List<DesignJobDto>> list(Long callerId, boolean admin, boolean coordinator, Long designerId,
+                                         boolean includeClosed);
+
+    ApiResponse<DesignJobDto> get(Long jobId, Long callerId, boolean admin, boolean coordinator);
 
     /** Summary of a customer's design job (no notes/files) — readable by any signed-in staff. */
     ApiResponse<DesignJobDto> getForCustomer(Long customerId);
@@ -71,9 +78,9 @@ public interface DesignJobService {
                                          String callerName, boolean admin);
 
     /** Plan documents the admin hands to the designer; kept apart from the design files. */
-    ApiResponse<DesignJobDto> uploadPlanDocuments(Long jobId, MultipartFile[] files, String callerName);
+    ApiResponse<DesignJobDto> uploadPlanDocuments(Long jobId, MultipartFile[] files, String callerName, boolean admin);
 
-    ApiResponse<DesignJobDto> deleteFile(Long jobId, Long fileId, Long callerId, boolean admin);
+    ApiResponse<DesignJobDto> deleteFile(Long jobId, Long fileId, Long callerId, boolean admin, boolean coordinator);
 
     /**
      * Saves an already existing design PDF as the customer's approved design (a new version when

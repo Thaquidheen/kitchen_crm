@@ -143,6 +143,8 @@ export interface DesignMe {
   staffType?: StaffType | null;
   designerStatus?: DesignerStatus | null;
   designer: boolean;
+  /** May assign designers and attach plan documents: admins, and staff whose type is Admin staff. */
+  canAssign?: boolean;
 }
 
 export interface UnassignedDesignCustomer {
