@@ -309,6 +309,7 @@ export const baseApi = createApi({
     'LaserAdapters',
     'DeviceLabLogs',
     'Designs',
+    'QuotationWork',
   ],
   endpoints: (builder) => ({
     // ==================== QUOTATION ENDPOINTS ====================

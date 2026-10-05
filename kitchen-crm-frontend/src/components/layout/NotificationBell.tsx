@@ -13,7 +13,7 @@
 
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlarmClock, Bell, Check, Eye, MessageCircle, Palette } from 'lucide-react';
+import { AlarmClock, Bell, Check, Eye, FileText, MessageCircle, Palette } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useGetReminderNotificationsQuery, useMarkReminderDoneMutation } from '../../app/baseApi';
 import {
@@ -34,8 +34,11 @@ import { latestReplyFromOtherSide, unreadRepliesFor } from '../../features/task-
 import { useGetDesignAttentionQuery, useGetDesignMeQuery, useGetMyDesignFeedQuery } from '../../features/design/designAPI';
 import { designNewsText } from '../../features/design/designUi';
 import type { DesignJob } from '../../features/design/types';
+import { useGetQuotationWorkFeedQuery, useGetQuotationWorkMeQuery } from '../../features/quotation-work/quotationWorkAPI';
+import { quotationNewsText } from '../../features/quotation-work/quotationWorkRules';
+import type { QuotationJob } from '../../features/quotation-work/types';
 
-type SourceKey = '' | 'TODOS' | 'ASSIGNED' | 'TEAM' | 'DESIGNS' | 'CUSTOMERS' | 'PRODUCTION' | 'APPLIANCE' | 'ARCHITECT';
+type SourceKey = '' | 'TODOS' | 'ASSIGNED' | 'TEAM' | 'DESIGNS' | 'QUOTES' | 'CUSTOMERS' | 'PRODUCTION' | 'APPLIANCE' | 'ARCHITECT';
 
 interface BellReminder {
   id: number;
@@ -61,6 +64,7 @@ const SOURCE_META: Record<string, { st: string; label: string }> = {
   ASSIGNED: { st: 'potential', label: 'Assigned to me' },
   TEAM: { st: 'confirmed', label: 'Team' },
   DESIGNS: { st: 'potential', label: 'Designs' },
+  QUOTES: { st: 'quote', label: 'Quotations' },
 };
 
 const sourceKeyOf = (r: BellReminder): 'CUSTOMERS' | 'PRODUCTION' | 'APPLIANCE' | 'ARCHITECT' => {
@@ -117,6 +121,13 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     pollingInterval: 30000,
     skip: !enabled || !isSuperAdmin,
   });
+  // Quotation work: whoever it is assigned to hears about new work and changed priority or order;
+  // the admin and Admin staff hear when a quotation is completed, and about late work.
+  const { data: quoteMe } = useGetQuotationWorkMeQuery(undefined, { skip: !enabled });
+  const { data: quoteFeed } = useGetQuotationWorkFeedQuery(undefined, {
+    pollingInterval: 30000,
+    skip: !enabled,
+  });
   const [markReminderDone] = useMarkReminderDoneMutation();
   const [markTodoComplete] = useMarkTodoCompleteMutation();
   const [markTaskComplete] = useMarkTaskCompleteMutation();
@@ -128,12 +139,15 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const attention: EmployeeTask[] = isSuperAdmin ? (attentionNotif?.tasks ?? []) : [];
   const designSide: 'admin' | 'designer' = isSuperAdmin ? 'admin' : 'designer';
   const designs: DesignJob[] = isSuperAdmin ? designAttention?.jobs ?? [] : isDesigner ? myDesignFeed?.jobs ?? [] : [];
+  const quotes: QuotationJob[] = quoteFeed?.jobs ?? [];
+  const managesQuotes = !!quoteMe?.canManage;
   const badgeCount =
     (notifData?.count ?? 0) +
     (todoNotif?.count ?? 0) +
     (dueTaskNotif?.count ?? 0) +
     (isSuperAdmin ? attentionNotif?.count ?? 0 : 0) +
-    designs.length;
+    designs.length +
+    quotes.length;
 
   const counts = useMemo(() => {
     const c = { CUSTOMERS: 0, PRODUCTION: 0, APPLIANCE: 0, ARCHITECT: 0 };
@@ -142,12 +156,19 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   }, [reminders]);
 
   const chips = [
-    { key: '', label: 'All', count: reminders.length + todos.length + dueTasks.length + attention.length + designs.length },
+    {
+      key: '',
+      label: 'All',
+      count: reminders.length + todos.length + dueTasks.length + attention.length + designs.length + quotes.length,
+    },
     { key: 'TODOS', label: 'To-dos', st: SOURCE_META.TODOS.st, count: todos.length },
     { key: 'ASSIGNED', label: 'Assigned to me', st: SOURCE_META.ASSIGNED.st, count: dueTasks.length },
     ...(isSuperAdmin ? [{ key: 'TEAM', label: 'Team', st: SOURCE_META.TEAM.st, count: attention.length }] : []),
     ...(isSuperAdmin || isDesigner
       ? [{ key: 'DESIGNS', label: 'Designs', st: SOURCE_META.DESIGNS.st, count: designs.length }]
+      : []),
+    ...(managesQuotes || quotes.length > 0
+      ? [{ key: 'QUOTES', label: 'Quotations', st: SOURCE_META.QUOTES.st, count: quotes.length }]
       : []),
     { key: 'CUSTOMERS', label: 'Customers', st: SOURCE_META.CUSTOMERS.st, count: counts.CUSTOMERS },
     { key: 'PRODUCTION', label: 'Production', st: SOURCE_META.PRODUCTION.st, count: counts.PRODUCTION },
@@ -155,13 +176,15 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     { key: 'ARCHITECT', label: 'Architects', st: SOURCE_META.ARCHITECT.st, count: counts.ARCHITECT },
   ];
 
-  const isTaskFilter = filter === 'TODOS' || filter === 'ASSIGNED' || filter === 'TEAM' || filter === 'DESIGNS';
+  const isTaskFilter =
+    filter === 'TODOS' || filter === 'ASSIGNED' || filter === 'TEAM' || filter === 'DESIGNS' || filter === 'QUOTES';
   const visibleReminders =
     filter === '' ? reminders : isTaskFilter ? [] : reminders.filter((r) => sourceKeyOf(r) === filter);
   const visibleTodos = filter === '' || filter === 'TODOS' ? todos : [];
   const visibleAssigned = filter === '' || filter === 'ASSIGNED' ? dueTasks : [];
   const visibleTeam = filter === '' || filter === 'TEAM' ? attention : [];
   const visibleDesigns = filter === '' || filter === 'DESIGNS' ? designs : [];
+  const visibleQuotes = filter === '' || filter === 'QUOTES' ? quotes : [];
 
   // Server-computed bucket: everything in this feed is today-or-earlier, so it is either
   // OVERDUE or TODAY. To-dos due before today count as overdue by their date string; assigned
@@ -182,13 +205,19 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const overdueTeam = restTeam.filter((t) => !t.completed);
 
   const totalVisible =
-    visibleReminders.length + visibleTodos.length + visibleAssigned.length + visibleTeam.length + visibleDesigns.length;
+    visibleReminders.length +
+    visibleTodos.length +
+    visibleAssigned.length +
+    visibleTeam.length +
+    visibleDesigns.length +
+    visibleQuotes.length;
 
   const viewAll = () => {
     setOpen(false);
     if (filter === 'TODOS' || filter === 'ASSIGNED') navigate(`${ROUTES.REMINDERS}?tab=todos`);
     else if (filter === 'TEAM') navigate(`${ROUTES.REMINDERS}?tab=team`);
     else if (filter === 'DESIGNS') navigate(ROUTES.DESIGNS);
+    else if (filter === 'QUOTES') navigate(`${ROUTES.QUOTATIONS}?view=board`);
     else if (filter === '') navigate(ROUTES.REMINDERS);
     else navigate(`${ROUTES.REMINDERS}?source=${filter}`);
   };
@@ -386,6 +415,31 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     </div>
   );
 
+  /** Quotation work that needs this person: new or changed work, late work, or a completed quotation. */
+  const QuoteRow = ({ job }: { job: QuotationJob }) => (
+    <div className="px-4 py-2.5 hover:bg-background-700 transition-colors">
+      <button
+        className="text-left w-full"
+        onClick={() => {
+          setOpen(false);
+          navigate(`${ROUTES.QUOTATIONS}?view=board&job=${job.id}`);
+        }}
+      >
+        <p className="text-[13px] text-text-900 font-medium flex items-center gap-1.5">
+          <FileText size={13} className="shrink-0" style={{ color: 'var(--st-quote-fg)' }} />
+          <span className="truncate">{job.customerName}</span>
+        </p>
+        <p className="text-[12.5px] text-text-900 mt-0.5 line-clamp-2 break-words">{quotationNewsText(job, managesQuotes)}</p>
+        <p className="text-[11.5px] text-text-600 mt-0.5">
+          {job.feedKind === 'COMPLETED' || (managesQuotes && job.assigneeId !== quoteMe?.userId)
+            ? `Quotation · ${job.assigneeName ?? 'staff'}`
+            : 'Your quotation'}{' '}
+          · tap to open
+        </p>
+      </button>
+    </div>
+  );
+
   const ReminderRow = ({ r }: { r: BellReminder }) => {
     const meta = metaOf(r);
     return (
@@ -413,6 +467,7 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     return slice;
   };
   const shownDesigns = take(visibleDesigns);
+  const shownQuotes = take(visibleQuotes);
   const shownRepliedTeam = take(repliedTeam);
   const shownRepliedAssigned = take(repliedAssigned);
   const shownOverdueAssigned = take(overdueAssigned);
@@ -425,6 +480,7 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const shownTodayReminders = take(todayReminders);
   const shownCount =
     shownDesigns.length +
+    shownQuotes.length +
     shownRepliedTeam.length +
     shownRepliedAssigned.length +
     shownOverdueAssigned.length +
@@ -489,6 +545,16 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
                       <div className="divide-y divide-background-600">
                         {shownDesigns.map((j) => (
                           <DesignRow key={`d${j.id}`} job={j} />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {shownQuotes.length > 0 && (
+                    <>
+                      <GroupHeader label="Quotations" tone="nego" />
+                      <div className="divide-y divide-background-600">
+                        {shownQuotes.map((j) => (
+                          <QuoteRow key={`q${j.id}`} job={j} />
                         ))}
                       </div>
                     </>
