@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useBlocker } from 'react-router-dom';
+import { useNavigate, useBlocker, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/app/store';
 import { Card } from '@/components/ui/Card';
@@ -1157,6 +1157,20 @@ export function QuotationBuilderPage() {
       setCustomerKitchenTypes([]);
     }
   };
+
+  // Opened from the quotation work board (/quotations/new?customerId=…): start with that customer
+  // chosen. Once only, and never over a customer that is already picked.
+  const [searchParams] = useSearchParams();
+  const presetCustomerId = Number(searchParams.get('customerId') ?? 0) || 0;
+  const presetApplied = useRef(false);
+  useEffect(() => {
+    if (isEditMode || presetApplied.current || !presetCustomerId || !customersData?.content) {return;}
+    presetApplied.current = true;
+    if (!formData.customerId && customersData.content.some((c) => c.id === presetCustomerId)) {
+      handleCustomerSelect(presetCustomerId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, presetCustomerId, customersData]);
 
   const handleNext = () => {
     if (currentStep === 'customer') {
