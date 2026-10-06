@@ -1,10 +1,10 @@
 /**
  * QuotationWorkBoard — who prepares which customer's quotation, and in which order.
  *
- * Admin and Admin staff: customers waiting for someone to be assigned, one column per person
- * with their list (drag to set which quotation is done first), and what was completed lately.
- * Everybody else: only their own list, in the order that was set.
- * There is no approval step: the person marks the work completed and the admin is notified.
+ * For the admin and Admin staff only — they hand quotations out and are the ones who prepare
+ * them: customers waiting for someone to be assigned, one column per person with their list
+ * (drag to set which quotation is done first), and what was completed lately.
+ * There is no approval step: the person marks the work completed and the others are notified.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -194,18 +194,17 @@ const PersonColumn: React.FC<{
   );
 };
 
-export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) => {
-  const manages = !!me?.canManage;
+export const QuotationWorkBoard: React.FC<{ me: QuotationWorkMe }> = ({ me }) => {
+  const manages = me.canManage;
   const [searchParams, setSearchParams] = useSearchParams();
   const [assignTarget, setAssignTarget] = useState<AssignQuotationTarget | null>(null);
 
   const poll = { pollingInterval: 20000, refetchOnFocus: true, refetchOnMountOrArgChange: true } as const;
-  const { data: jobs = [], isLoading } = useGetQuotationJobsQuery(undefined, poll);
+  const { data: jobs = [], isLoading } = useGetQuotationJobsQuery(undefined, { ...poll, skip: !manages });
   const { data: unassigned = [] } = useGetUnassignedQuotationCustomersQuery(undefined, { ...poll, skip: !manages });
   const [markSeen] = useMarkQuotationWorkSeenMutation();
 
   const queues = useMemo(() => queuesByAssignee(jobs), [jobs]);
-  const mine = useMemo(() => queues.find((q) => q.assigneeId === me?.userId)?.jobs ?? [], [queues, me?.userId]);
   const completed = useMemo(() => jobs.filter((j) => j.status === 'COMPLETED'), [jobs]);
 
   // Looking at the board is what clears the bell. What was news when it arrived keeps its "New"
@@ -263,90 +262,70 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
     </section>
   );
 
+  if (!manages) {
+    return null;
+  }
   if (isLoading) {
     return <div className={`${card} p-6 animate-pulse h-40`} />;
   }
 
   return (
     <>
-      {manages ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-none lg:grid-flow-col lg:auto-cols-[minmax(248px,440px)] gap-3 items-start lg:overflow-x-auto pb-1">
-          <section className={columnShell} aria-label="Customers to assign">
-            <div className="px-3 pt-3 pb-2">
-              <div className="flex items-center gap-2">
-                <UserPlus size={15} className="text-primary-600" />
-                <span className={sectionTitle}>To assign</span>
-                <span className={countBadge}>{unassigned.length}</span>
-              </div>
-              <div className="mt-1 text-[11.5px] text-text-600">In Quotation Stage with no quotation yet.</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-none lg:grid-flow-col lg:auto-cols-[minmax(248px,440px)] gap-3 items-start lg:overflow-x-auto pb-1">
+        <section className={columnShell} aria-label="Customers to assign">
+          <div className="px-3 pt-3 pb-2">
+            <div className="flex items-center gap-2">
+              <UserPlus size={15} className="text-primary-600" />
+              <span className={sectionTitle}>To assign</span>
+              <span className={countBadge}>{unassigned.length}</span>
             </div>
-            <div className={columnBody}>
-              {unassigned.length === 0 && (
-                <p className="m-0 py-3 text-center text-[12px] text-text-500">
-                  Nobody is waiting. Customers appear here when they reach Quotation Stage.
-                </p>
-              )}
-              {unassigned.map((c) => (
-                <div
-                  key={c.customerId}
-                  className="flex items-center gap-2 pl-2.5 pr-1.5 py-1.5 rounded-[11px] border border-background-600 bg-background-900"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[13px] font-semibold text-text-900 truncate">{c.customerName}</div>
-                    {c.customerPlace && <div className="text-[11.5px] text-text-500 truncate">{c.customerPlace}</div>}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAssignTarget({ mode: 'assign', customer: c })}
-                    className="btn-raised-accent shrink-0 h-7 px-2.5 rounded-[8px] text-[12px] font-semibold"
-                  >
-                    Assign
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => setAssignTarget({ mode: 'assign' })}
-                className="inline-flex items-center justify-center gap-1.5 h-8 rounded-[10px] border border-dashed border-background-600 text-[12.5px] font-medium text-text-700 hover:border-primary-600 hover:text-text-900 transition-colors"
+            <div className="mt-1 text-[11.5px] text-text-600">In Quotation Stage with no quotation yet.</div>
+          </div>
+          <div className={columnBody}>
+            {unassigned.length === 0 && (
+              <p className="m-0 py-3 text-center text-[12px] text-text-500">
+                Nobody is waiting. Customers appear here when they reach Quotation Stage.
+              </p>
+            )}
+            {unassigned.map((c) => (
+              <div
+                key={c.customerId}
+                className="flex items-center gap-2 pl-2.5 pr-1.5 py-1.5 rounded-[11px] border border-background-600 bg-background-900"
               >
-                <Plus size={14} /> Assign another customer
-              </button>
-            </div>
-          </section>
-
-          {queues.map((q) => (
-            <PersonColumn key={q.assigneeId} assigneeId={q.assigneeId} name={q.name} jobs={q.jobs} fresh={fresh} onOpen={open} />
-          ))}
-
-          {completedColumn}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
-          <section className={columnShell} aria-label="Quotations to do">
-            <div className="px-3 pt-3 pb-2">
-              <div className="flex items-center gap-2">
-                <FileText size={15} className="text-primary-600" />
-                <span className={sectionTitle}>To do — in order</span>
-                <span className={countBadge}>{mine.length}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-semibold text-text-900 truncate">{c.customerName}</div>
+                  {c.customerPlace && <div className="text-[11.5px] text-text-500 truncate">{c.customerPlace}</div>}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAssignTarget({ mode: 'assign', customer: c })}
+                  className="btn-raised-accent shrink-0 h-7 px-2.5 rounded-[8px] text-[12px] font-semibold"
+                >
+                  Assign
+                </button>
               </div>
-              <div className="mt-1 text-[11.5px] text-text-600">Start with #1. Open one to create the quotation and mark it completed.</div>
-            </div>
-            <div className={columnBody}>
-              {mine.length === 0 ? (
-                <p className="m-0 py-4 text-center text-[12.5px] text-text-500">No quotation is assigned to you right now.</p>
-              ) : (
-                mine.map((j, i) => <JobRowView key={j.id} job={j} position={i + 1} news={fresh.get(j.id)} onOpen={open} />)
-              )}
-            </div>
-          </section>
-          {completedColumn}
-        </div>
-      )}
+            ))}
+            <button
+              type="button"
+              onClick={() => setAssignTarget({ mode: 'assign' })}
+              className="inline-flex items-center justify-center gap-1.5 h-8 rounded-[10px] border border-dashed border-background-600 text-[12.5px] font-medium text-text-700 hover:border-primary-600 hover:text-text-900 transition-colors"
+            >
+              <Plus size={14} /> Assign another customer
+            </button>
+          </div>
+        </section>
+
+        {queues.map((q) => (
+          <PersonColumn key={q.assigneeId} assigneeId={q.assigneeId} name={q.name} jobs={q.jobs} fresh={fresh} onOpen={open} />
+        ))}
+
+        {completedColumn}
+      </div>
 
       <QuotationJobModal
         job={openJob}
         canManage={manages}
-        myId={me?.userId}
+        myId={me.userId}
         onClose={() => setJobParam(null)}
         onEdit={(job) => {
           setJobParam(null);

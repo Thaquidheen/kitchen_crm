@@ -42,9 +42,13 @@ public interface DesignJobService {
     /**
      * Called by the customer status change when moving to Design. Validates first and writes only
      * when valid; returns an error message for the caller to surface, or null on success.
+     *
+     * <p>Choosing the designer is for the admin and Admin staff ({@code canAssign}). For anyone
+     * else the designer arguments are ignored: the customer moves without one and waits under
+     * "To assign" on the Designs board.
      */
     String ensureAssignedForDesignStage(Customer customer, Long designerId, LocalDate dueDate, String priority,
-                                        String brief, Long byUserId);
+                                        String brief, Long byUserId, boolean canAssign);
 
     /**
      * Called by the customer status change when moving to Quotation Stage: null when the customer

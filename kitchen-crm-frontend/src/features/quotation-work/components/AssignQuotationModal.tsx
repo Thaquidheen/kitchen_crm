@@ -1,6 +1,7 @@
 /**
  * AssignQuotationModal — hand a customer's quotation to someone, or change work already handed
- * out (person, priority, due date, note). Used by the admin and Admin staff.
+ * out (person, priority, due date, note). Used by the admin and Admin staff, and those are also
+ * the only people a quotation can be given to.
  */
 import React, { useEffect, useState } from 'react';
 import { Check, Search, UserRound } from 'lucide-react';
@@ -150,6 +151,11 @@ export const AssignQuotationModal: React.FC<Props> = ({ target, onClose }) => {
                 <UserRound size={13} className="text-primary-600" />
                 Who prepares it <span className="text-error">*</span>
               </label>
+              {editing && !loadingPeople && !assignees.some((p) => p.id === editing.assigneeId) && (
+                <p className="m-0 mb-1.5 text-[11.5px] text-text-600">
+                  Now with {editing.assigneeName ?? 'someone else'}. Choose who takes it over.
+                </p>
+              )}
               {loadingPeople ? (
                 <div className="h-10 rounded-[10px] bg-background-700 animate-pulse" />
               ) : (
