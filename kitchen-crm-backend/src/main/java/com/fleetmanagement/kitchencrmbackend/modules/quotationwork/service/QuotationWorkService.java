@@ -34,6 +34,7 @@ public interface QuotationWorkService {
     /** Customers at Quotation Stage with no quotation yet and nobody preparing one. */
     ApiResponse<List<Map<String, Object>>> unassigned();
 
+    /** Who a quotation can be given to: the admin and Admin staff. */
     ApiResponse<List<QuotationAssigneeDto>> assignees();
 
     ApiResponse<QuotationJobDto> assign(QuotationJobAssignRequest request, Viewer viewer);

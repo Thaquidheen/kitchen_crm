@@ -223,8 +223,17 @@ public class DesignJobServiceImpl implements DesignJobService {
 
     @Override
     public String ensureAssignedForDesignStage(Customer customer, Long designerId, LocalDate dueDate, String priority,
-                                               String brief, Long byUserId) {
+                                               String brief, Long byUserId, boolean canAssign) {
         DesignPhase existing = latestJob(customer.getId());
+        if (!canAssign) {
+            // Not theirs to choose: whatever was sent is ignored, and the customer waits under
+            // "To assign". An approved design is not reopened this way — that customer would sit
+            // in Design with nobody told, so the redesign has to come from the admin.
+            if (existing != null && APPROVED_STATES.contains(status(existing))) {
+                return "This customer already has an approved design. Ask the admin to request a redesign";
+            }
+            return null;
+        }
         if (designerId == null) {
             // Still with a designer (e.g. moved out of Design and back): nothing to choose.
             if (existing != null && existing.getStaffAssigned() != null && OPEN.contains(status(existing))) {
@@ -300,7 +309,7 @@ public class DesignJobServiceImpl implements DesignJobService {
             return ApiResponse.error("Customer not found");
         }
         String error = ensureAssignedForDesignStage(customer, request.getDesignerId(), request.getDueDate(),
-                request.getPriority(), request.getBrief(), adminId);
+                request.getPriority(), request.getBrief(), adminId, true);
         if (error != null) {
             return ApiResponse.error(error);
         }

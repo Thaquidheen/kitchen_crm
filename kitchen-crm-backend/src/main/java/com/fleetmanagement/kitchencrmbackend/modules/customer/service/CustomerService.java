@@ -23,11 +23,14 @@ public interface CustomerService {
     ApiResponse<String> updateCustomerStatus(Long id, Customer.CustomerStatus newStatus, String changedBy, String reason);
 
     /**
-     * Status change that, when moving to DESIGN_STAGE, assigns the design to a Designer-type staff member
-     * (required unless the customer already has a live design job with a designer).
+     * Status change that, when an admin or Admin staff moves a customer to DESIGN_STAGE, assigns the
+     * design to a Designer-type staff member (required unless the customer already has a live design
+     * job with a designer). Other staff cannot choose a designer: the customer waits to be assigned.
+     *
+     * @param changedByAdmin the caller is a super admin (Admin staff are recognised from their user id)
      */
     ApiResponse<String> updateCustomerStatus(Long id, Customer.CustomerStatus newStatus, String changedBy, String reason,
                                              Long designerId, java.time.LocalDate designDueDate, String designPriority,
-                                             Long changedByUserId);
+                                             Long changedByUserId, boolean changedByAdmin);
     ApiResponse<Map<String, Long>> getCustomerStatistics();
 }

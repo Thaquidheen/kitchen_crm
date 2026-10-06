@@ -8,7 +8,9 @@
  * change from the customers list, where one note is written to every selected row.
  *
  * Two stages need more than a note:
- *  - Design Stage: the designer who gets the design (and, from an admin, plan documents).
+ *  - Design Stage: the designer who gets the design, and plan documents — chosen by the admin or
+ *    Admin staff only. Anyone else moves the customer without a designer; it then waits under
+ *    "To assign" in Designs.
  *  - Quotation Stage: the customer's design. When none is approved yet, the existing design PDF
  *    is uploaded here; while a designer still has it, the move waits for the admin's approval.
  */
@@ -39,8 +41,8 @@ export interface StatusChangeModalProps {
   onClose: () => void;
   /**
    * Receives the trimmed, non-empty note and whatever the target stage needs: the chosen
-   * designer (always set when moving to Design — the modal will not submit without one), plan
-   * documents, or the design PDF for Quotation Stage.
+   * designer (always set when the admin or Admin staff moves a customer to Design — the modal
+   * will not submit without one), plan documents, or the design PDF for Quotation Stage.
    */
   onConfirm: (note: string, extras: StatusChangeExtras) => void;
   /** Status being moved to. Null keeps the modal closed. */
@@ -97,8 +99,10 @@ export function StatusChangeModal({
   const [designPdf, setDesignPdf] = useState<File | null>(null);
   const isAdmin = useIsSuperAdmin();
   const { data: designMe } = useGetDesignMeQuery(undefined, { skip: !isOpen });
-  // Plan documents are handed over by admins and by Admin staff.
-  const canAttachPlans = isAdmin || !!designMe?.canAssign;
+  // Choosing the designer and handing over plan documents is for admins and Admin staff.
+  const canAssign = isAdmin || !!designMe?.canAssign;
+  // Until we know who this is, the Design Stage form cannot be shown or sent.
+  const rolePending = !isAdmin && designMe === undefined;
   const isBulk = count > 1;
   const toDesign = targetStatus === 'DESIGN_STAGE';
   const toQuotation = targetStatus === 'QUOTE_GIVEN';
@@ -107,10 +111,14 @@ export function StatusChangeModal({
 
   // The customer's design decides what Quotation Stage needs, and whether Design Stage is a redesign.
   const watchDesign = isOpen && !isBulk && !!customerId && (toDesign || toQuotation);
-  const { data: designJob, isFetching: loadingDesign } = useGetCustomerDesignJobQuery(customerId ?? 0, {
+  const { currentData: designJob, isFetching } = useGetCustomerDesignJobQuery(customerId ?? 0, {
     skip: !watchDesign,
     refetchOnMountOrArgChange: true,
   });
+  // Loading means no answer for THIS customer yet. A refresh in the background (the customer page
+  // reloads the design whenever the window gets focus back — which is exactly what happens when
+  // the file picker closes) must not swap the form out from under a file being chosen.
+  const loadingDesign = designJob === undefined && isFetching;
   const customerDesign = watchDesign ? designJob ?? null : null;
   const gate = quotationGate(customerDesign);
 
@@ -128,14 +136,20 @@ export function StatusChangeModal({
   }, [isOpen, currentDesignerId]);
 
   const trimmed = note.trim();
-  const needsDesigner = toDesign && !design.designerId;
+  const needsDesigner = toDesign && canAssign && !design.designerId;
   // A single move to Quotation Stage is settled here; a bulk one is checked per customer by the server.
   const quotationSingle = toQuotation && !isBulk && !!customerId;
   const designPending = quotationSingle && loadingDesign;
   const designBlocks = quotationSingle && !loadingDesign && gate === 'WITH_DESIGNER';
   const needsPdf = quotationSingle && !loadingDesign && gate === 'NEEDS_PDF' && !designPdf;
   const canSubmit =
-    trimmed.length > 0 && !isSubmitting && !needsDesigner && !designPending && !designBlocks && !needsPdf;
+    trimmed.length > 0 &&
+    !isSubmitting &&
+    !(toDesign && rolePending) &&
+    !needsDesigner &&
+    !designPending &&
+    !designBlocks &&
+    !needsPdf;
 
   const pickPdf = (f?: File | null) => {
     if (!f) {return;}
@@ -150,8 +164,8 @@ export function StatusChangeModal({
   const submit = () => {
     if (!canSubmit) {return;}
     onConfirm(trimmed, {
-      design: toDesign ? design : undefined,
-      planFiles: toDesign && !isBulk ? planFiles : undefined,
+      design: toDesign && canAssign ? design : undefined,
+      planFiles: toDesign && canAssign && !isBulk ? planFiles : undefined,
       designPdf: quotationSingle && gate === 'NEEDS_PDF' ? designPdf : undefined,
     });
   };
@@ -229,8 +243,17 @@ export function StatusChangeModal({
             : 'This note is saved to the customer’s timeline.'}
         </p>
 
-        {/* Moving to Design assigns the design to a designer (required). */}
-        {toDesign && (
+        {/* Moving to Design: the admin or Admin staff assigns the design to a designer (required). */}
+        {toDesign && !rolePending && !canAssign && (
+          <p className="mt-4 pt-4 border-t border-background-600 mb-0 flex items-start gap-2 text-[12.5px] text-text-700">
+            <Info size={14} className="text-primary-600 shrink-0 mt-px" />
+            <span>
+              The admin or Admin staff chooses the designer.{' '}
+              {isBulk ? 'These customers wait' : 'This customer waits'} under “To assign” in Designs until then.
+            </span>
+          </p>
+        )}
+        {toDesign && canAssign && (
           <div className="mt-4 pt-4 border-t border-background-600 space-y-3">
             {customerDesign && isApprovedDesign(customerDesign.status) && (
               <p className="m-0 flex items-start gap-2 px-3 py-2.5 rounded-[10px] bg-background-900 border border-background-600 text-[12.5px] text-text-800">
@@ -250,8 +273,8 @@ export function StatusChangeModal({
                   : 'The design goes to the end of this designer’s queue. The note becomes the design brief.'}
               </p>
             </div>
-            {canAttachPlans && !isBulk && <PlanDocumentsField files={planFiles} onChange={setPlanFiles} disabled={isSubmitting} />}
-            {canAttachPlans && isBulk && (
+            {!isBulk && <PlanDocumentsField files={planFiles} onChange={setPlanFiles} disabled={isSubmitting} />}
+            {isBulk && (
               <p className="m-0 text-[11.5px] text-text-600">
                 Plan documents are added per customer afterwards, from each design.
               </p>
@@ -262,6 +285,16 @@ export function StatusChangeModal({
         {/* Moving to Quotation Stage needs the customer's design. */}
         {toQuotation && (
           <div className="mt-4 pt-4 border-t border-background-600">
+            {/* Kept mounted whatever is shown below, so a chosen file is never lost to a re-render. */}
+            {quotationSingle && (
+              <input
+                ref={pdfInput}
+                type="file"
+                accept=".pdf,application/pdf"
+                className="hidden"
+                onChange={(e) => pickPdf(e.target.files?.[0])}
+              />
+            )}
             {isBulk || !customerId ? (
               <p className="m-0 flex items-start gap-2 text-[12.5px] text-text-700">
                 <Info size={14} className="text-primary-600 shrink-0 mt-px" />
@@ -305,13 +338,6 @@ export function StatusChangeModal({
                 <span className="block text-[12.5px] font-medium text-text-800 mb-1.5">
                   Design PDF <span className="text-error">*</span>
                 </span>
-                <input
-                  ref={pdfInput}
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  className="hidden"
-                  onChange={(e) => pickPdf(e.target.files?.[0])}
-                />
                 <button
                   type="button"
                   onClick={() => pdfInput.current?.click()}

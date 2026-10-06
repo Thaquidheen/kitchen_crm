@@ -121,12 +121,13 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     pollingInterval: 30000,
     skip: !enabled || !isSuperAdmin,
   });
-  // Quotation work: whoever it is assigned to hears about new work and changed priority or order;
-  // the admin and Admin staff hear when a quotation is completed, and about late work.
+  // Quotation work belongs to the admin and Admin staff: they hear about work given to them, a
+  // changed priority or order, quotations somebody completed, and late work.
   const { data: quoteMe } = useGetQuotationWorkMeQuery(undefined, { skip: !enabled });
+  const managesQuotes = !!quoteMe?.canManage;
   const { data: quoteFeed } = useGetQuotationWorkFeedQuery(undefined, {
     pollingInterval: 30000,
-    skip: !enabled,
+    skip: !enabled || !managesQuotes,
   });
   const [markReminderDone] = useMarkReminderDoneMutation();
   const [markTodoComplete] = useMarkTodoCompleteMutation();
@@ -139,8 +140,7 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const attention: EmployeeTask[] = isSuperAdmin ? (attentionNotif?.tasks ?? []) : [];
   const designSide: 'admin' | 'designer' = isSuperAdmin ? 'admin' : 'designer';
   const designs: DesignJob[] = isSuperAdmin ? designAttention?.jobs ?? [] : isDesigner ? myDesignFeed?.jobs ?? [] : [];
-  const quotes: QuotationJob[] = quoteFeed?.jobs ?? [];
-  const managesQuotes = !!quoteMe?.canManage;
+  const quotes: QuotationJob[] = managesQuotes ? quoteFeed?.jobs ?? [] : [];
   const badgeCount =
     (notifData?.count ?? 0) +
     (todoNotif?.count ?? 0) +
@@ -167,9 +167,7 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     ...(isSuperAdmin || isDesigner
       ? [{ key: 'DESIGNS', label: 'Designs', st: SOURCE_META.DESIGNS.st, count: designs.length }]
       : []),
-    ...(managesQuotes || quotes.length > 0
-      ? [{ key: 'QUOTES', label: 'Quotations', st: SOURCE_META.QUOTES.st, count: quotes.length }]
-      : []),
+    ...(managesQuotes ? [{ key: 'QUOTES', label: 'Quotations', st: SOURCE_META.QUOTES.st, count: quotes.length }] : []),
     { key: 'CUSTOMERS', label: 'Customers', st: SOURCE_META.CUSTOMERS.st, count: counts.CUSTOMERS },
     { key: 'PRODUCTION', label: 'Production', st: SOURCE_META.PRODUCTION.st, count: counts.PRODUCTION },
     { key: 'APPLIANCE', label: 'Appliance', st: SOURCE_META.APPLIANCE.st, count: counts.APPLIANCE },
