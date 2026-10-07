@@ -144,7 +144,10 @@ export interface DesignMe {
   designerStatus?: DesignerStatus | null;
   designer: boolean;
   /** May assign designers and attach plan documents: admins, and staff whose type is Admin staff. */
+  /** May assign a design to a designer and order the queues: admins only. */
   canAssign?: boolean;
+  /** Sees the Designs board and hands over plan documents: admins and Admin staff. */
+  canCoordinate?: boolean;
 }
 
 export interface UnassignedDesignCustomer {

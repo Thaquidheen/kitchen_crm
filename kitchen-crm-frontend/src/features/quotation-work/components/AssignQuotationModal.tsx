@@ -1,7 +1,7 @@
 /**
  * AssignQuotationModal — hand a customer's quotation to someone, or change work already handed
- * out (person, priority, due date, note). Used by the admin and Admin staff, and those are also
- * the only people a quotation can be given to.
+ * out (person, priority, due date, note). Used by the admin and Admin staff; the quotation can
+ * be given to any active person, a designer included.
  */
 import React, { useEffect, useState } from 'react';
 import { Check, Search, UserRound } from 'lucide-react';

@@ -38,7 +38,10 @@ public class DesignJobController {
         return p != null ? p.getName() : null;
     }
 
-    /** Admins, and Admin staff who coordinate designs: they assign designers and hand over plan documents. */
+    /**
+     * Admins, and Admin staff who coordinate designs: they see the board and hand over plan
+     * documents. Assigning a designer and ordering the queues is the admin's alone.
+     */
     private boolean coordinates(UserPrincipal user) {
         return ViewerScope.isSuperAdmin(user) || service.isCoordinator(id(user));
     }
@@ -148,11 +151,9 @@ public class DesignJobController {
     // ---- admin management
 
     @PostMapping("/assign")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<DesignJobDto>> assign(@Valid @RequestBody DesignAssignRequest body,
                                                             @AuthenticationPrincipal UserPrincipal user) {
-        if (!coordinates(user)) {
-            return forbidden();
-        }
         return respond(service.assign(body, id(user)));
     }
 

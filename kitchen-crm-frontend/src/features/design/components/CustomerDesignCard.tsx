@@ -54,7 +54,7 @@ export const CustomerDesignCard: React.FC<Props> = ({ customerId, customerName, 
   });
   const { data: designMe } = useGetDesignMeQuery();
   // Admins and Admin staff work in the Designs page; everyone else only sees the design here.
-  const opensDesigns = isAdmin || !!designMe?.canAssign;
+  const opensDesigns = isAdmin || !!designMe?.canCoordinate;
   const [uploadOpen, setUploadOpen] = useState(false);
   const [redesignOpen, setRedesignOpen] = useState(false);
   const [showEarlier, setShowEarlier] = useState(false);

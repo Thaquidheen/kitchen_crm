@@ -105,7 +105,8 @@ public class DesignJobServiceImpl implements DesignJobService {
             dto.setDesignerStatus(user.getDesignerStatus());
         }
         dto.setDesigner(user != null && STAFF_TYPE_DESIGNER.equals(user.getStaffType()));
-        dto.setCanAssign(superAdmin || isCoordinator(user));
+        dto.setCanAssign(superAdmin);
+        dto.setCanCoordinate(superAdmin || isCoordinator(user));
         return dto;
     }
 

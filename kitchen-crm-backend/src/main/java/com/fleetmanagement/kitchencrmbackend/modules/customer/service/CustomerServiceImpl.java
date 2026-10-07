@@ -203,12 +203,11 @@ public class CustomerServiceImpl implements CustomerService {
             return ApiResponse.error("Customer not found");
         }
 
-        // Moving to Design assigns the design to a designer when the admin or Admin staff does it.
-        // Validated before anything is written, so a missing/invalid designer leaves the status unchanged.
+        // Moving to Design assigns the design to a designer when the admin does it. Validated before
+        // anything is written, so a missing/invalid designer leaves the status unchanged.
         if (newStatus == Customer.CustomerStatus.DESIGN_STAGE) {
-            boolean canAssign = changedByAdmin || designJobService.isCoordinator(changedByUserId);
             String designError = designJobService.ensureAssignedForDesignStage(
-                    customer, designerId, designDueDate, designPriority, reason, changedByUserId, canAssign);
+                    customer, designerId, designDueDate, designPriority, reason, changedByUserId, changedByAdmin);
             if (designError != null) {
                 return ApiResponse.error(designError);
             }
