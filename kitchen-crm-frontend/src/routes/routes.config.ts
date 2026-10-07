@@ -67,6 +67,7 @@ export const ROUTES = {
 
   // Staff routes
   STAFF: '/staff',
+  PERMISSIONS: '/permissions',
 
   // Laser meter: settings for everyone; Device Lab + adapters tabs for admins
   LASER_METER: '/laser-meter',

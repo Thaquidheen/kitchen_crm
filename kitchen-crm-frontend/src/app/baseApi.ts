@@ -310,6 +310,7 @@ export const baseApi = createApi({
     'DeviceLabLogs',
     'Designs',
     'QuotationWork',
+    'Permissions',
   ],
   endpoints: (builder) => ({
     // ==================== QUOTATION ENDPOINTS ====================

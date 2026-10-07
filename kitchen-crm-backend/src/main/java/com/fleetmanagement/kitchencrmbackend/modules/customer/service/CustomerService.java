@@ -17,7 +17,12 @@ public interface CustomerService {
                                                    LocalDateTime createdFrom, LocalDateTime createdTo,
                                                    Pageable pageable);
     ApiResponse<CustomerDto> getCustomerById(Long id);
-    ApiResponse<CustomerDto> createCustomer(CustomerCreateDto customerCreateDto, String createdBy);
+    /**
+     * @param mayChooseStage the creator may put the new customer straight into a stage; without it
+     *                       the customer always starts as a Lead
+     */
+    ApiResponse<CustomerDto> createCustomer(CustomerCreateDto customerCreateDto, String createdBy,
+                                            boolean mayChooseStage);
     ApiResponse<CustomerDto> updateCustomer(Long id, CustomerDto customerDto, String updatedBy);
     ApiResponse<String> deleteCustomer(Long id);
     ApiResponse<String> updateCustomerStatus(Long id, Customer.CustomerStatus newStatus, String changedBy, String reason);

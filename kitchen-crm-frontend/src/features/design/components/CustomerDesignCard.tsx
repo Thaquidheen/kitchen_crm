@@ -19,6 +19,8 @@ interface Props {
   /** CustomerStatus value. */
   customerStatus: string;
   isAdmin: boolean;
+  /** The administrator may refuse uploading a design PDF for a staff type. */
+  canUploadDesign?: boolean;
 }
 
 const sectionLabel = 'text-[10.5px] font-semibold tracking-[0.09em] uppercase text-text-500';
@@ -47,7 +49,13 @@ const FileLink: React.FC<{ file: DesignFile }> = ({ file }) => (
 /** Stages where a customer is expected to have a design to be quoted on. */
 const PAST_DESIGN = new Set(['QUOTE_GIVEN', 'FOLLOW_UP', 'NEGOTIATIONS', 'CONFIRMED']);
 
-export const CustomerDesignCard: React.FC<Props> = ({ customerId, customerName, customerStatus, isAdmin }) => {
+export const CustomerDesignCard: React.FC<Props> = ({
+  customerId,
+  customerName,
+  customerStatus,
+  isAdmin,
+  canUploadDesign = true,
+}) => {
   const { data: design, isLoading } = useGetCustomerDesignJobQuery(customerId, {
     pollingInterval: 60000,
     refetchOnFocus: true,
@@ -66,7 +74,7 @@ export const CustomerDesignCard: React.FC<Props> = ({ customerId, customerName, 
   const planDocuments = design?.planDocuments ?? [];
   const earlier = (design?.versions ?? []).filter((v) => v.versionNo < version).sort((a, b) => b.versionNo - a.versionNo);
   // Staff may add an existing design unless a designer is working on it (that one is the admin's to settle).
-  const canUpload = !open || isAdmin;
+  const canUpload = canUploadDesign && (!open || isAdmin);
 
   return (
     <div className="bg-background-800 border border-background-600 rounded-[14px] p-4">
@@ -90,9 +98,11 @@ export const CustomerDesignCard: React.FC<Props> = ({ customerId, customerName, 
               ? 'No design is saved for this customer yet.'
               : 'No design yet. Moving the customer to Design Stage assigns a designer.'}
           </p>
-          <button type="button" onClick={() => setUploadOpen(true)} className={smallBtn}>
-            <Upload size={13} /> Upload existing design
-          </button>
+          {canUploadDesign && (
+            <button type="button" onClick={() => setUploadOpen(true)} className={smallBtn}>
+              <Upload size={13} /> Upload existing design
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">

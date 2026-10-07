@@ -8,6 +8,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
 import com.fleetmanagement.kitchencrmbackend.modules.audit.web.ActivityLogInterceptor;
 import com.fleetmanagement.kitchencrmbackend.modules.finance.web.FinanceAccessInterceptor;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.web.PermissionInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Page;
@@ -49,6 +50,20 @@ public class WebConfig {
                 // every customer's money wide open if that behaviour ever differed.
                 registry.addInterceptor(interceptor)
                         .addPathPatterns("/api/v1/customer-finance", "/api/v1/customer-finance/**");
+            }
+        };
+    }
+
+    /**
+     * Permissions the administrator sets per staff type (Settings > Permissions). Registered on the
+     * whole API; the interceptor's own rule list says which addresses need which permission.
+     */
+    @Bean
+    public WebMvcConfigurer permissionConfigurer(PermissionInterceptor interceptor) {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addInterceptors(InterceptorRegistry registry) {
+                registry.addInterceptor(interceptor).addPathPatterns("/api/**");
             }
         };
     }
