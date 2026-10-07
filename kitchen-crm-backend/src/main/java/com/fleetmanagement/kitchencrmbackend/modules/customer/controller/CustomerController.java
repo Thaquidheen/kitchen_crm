@@ -4,6 +4,8 @@ import com.fleetmanagement.kitchencrmbackend.modules.customer.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.service.CustomerService;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.Permission;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.service.PermissionService;
 import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +41,25 @@ public class CustomerController {
     @Autowired
     private CustomerService customerService;
 
+    @Autowired
+    private PermissionService permissionService;
+
+    /**
+     * What a person without "See customer details" gets: enough to pick the customer by name
+     * (quotations, designs), and none of the contact details, notes or network.
+     */
+    private static CustomerDto nameOnly(CustomerDto full) {
+        CustomerDto dto = new CustomerDto();
+        dto.setId(full.getId());
+        dto.setName(full.getName());
+        dto.setPlace(full.getPlace());
+        dto.setKitchenTypes(full.getKitchenTypes());
+        dto.setStatus(full.getStatus());
+        dto.setCreatedAt(full.getCreatedAt());
+        dto.setUpdatedAt(full.getUpdatedAt());
+        return dto;
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponse<Page<CustomerDto>>> getAllCustomers(
             @RequestParam(required = false) String search,
@@ -53,7 +74,8 @@ public class CustomerController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
 
         String safeSortBy = SORTABLE.contains(sortBy) ? sortBy : "createdAt";
         Sort sort = sortDir.equalsIgnoreCase("desc") ?
@@ -63,9 +85,20 @@ public class CustomerController {
         LocalDateTime createdFromDt = createdFrom != null ? createdFrom.atStartOfDay() : null;
         LocalDateTime createdToDt = createdTo != null ? createdTo.atTime(LocalTime.MAX) : null;
 
-        return ResponseEntity.ok(customerService.getAllCustomers(
-                search, name, email, status, leadSourceType, address, kitchenTypes,
-                createdFromDt, createdToDt, pageable));
+        boolean seesDetails = permissionService.can(currentUser, Permission.CUSTOMERS_VIEW);
+        // Without the details a search may only look at the name, or a phone number could be
+        // confirmed by trying it.
+        ApiResponse<Page<CustomerDto>> response = seesDetails
+                ? customerService.getAllCustomers(
+                        search, name, email, status, leadSourceType, address, kitchenTypes,
+                        createdFromDt, createdToDt, pageable)
+                : customerService.getAllCustomers(
+                        null, name != null ? name : search, null, status, null, null, null,
+                        createdFromDt, createdToDt, pageable);
+        if (!seesDetails && response.getData() != null) {
+            response.setData(response.getData().map(CustomerController::nameOnly));
+        }
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/statistics")
@@ -74,9 +107,13 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<CustomerDto>> getCustomerById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<CustomerDto>> getCustomerById(@PathVariable Long id,
+                                                                    @AuthenticationPrincipal UserPrincipal currentUser) {
         ApiResponse<CustomerDto> response = customerService.getCustomerById(id);
         if (response.getSuccess()) {
+            if (response.getData() != null && !permissionService.can(currentUser, Permission.CUSTOMERS_VIEW)) {
+                response.setData(nameOnly(response.getData()));
+            }
             return ResponseEntity.ok(response);
         } else {
             return ResponseEntity.notFound().build();
@@ -89,7 +126,8 @@ public class CustomerController {
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         ApiResponse<CustomerDto> response = customerService.createCustomer(
-                customerCreateDto, currentUser.getName());
+                customerCreateDto, currentUser.getName(),
+                permissionService.can(currentUser, Permission.CUSTOMERS_CHANGE_STAGE));
 
         if (response.getSuccess()) {
             return ResponseEntity.ok(response);

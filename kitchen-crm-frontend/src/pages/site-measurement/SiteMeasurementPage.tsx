@@ -33,6 +33,8 @@ import {
   type RoomLayout,
 } from '@/features/laser-meter';
 import { getCustomerDetailRoute } from '@/routes/routes.config';
+import { usePermissions } from '@/features/permissions/usePermissions';
+import { NoAccess } from '@/features/permissions/NoAccess';
 
 const SiteMeasurementPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -43,6 +45,7 @@ const SiteMeasurementPage = () => {
   const { data: customer } = useGetCustomerByIdQuery(customerId, { skip: !customerId });
   const { data: record, isLoading, isError } = useGetSiteMeasurementQuery(customerId, { skip: !customerId });
   const [saveMeasurement, { isLoading: saving }] = useSaveSiteMeasurementMutation();
+  const { can, ready: permissionsReady } = usePermissions();
 
   const [settings] = useLaserSettings();
   useApplyLaserSettings(settings);
@@ -137,6 +140,9 @@ const SiteMeasurementPage = () => {
 
   if (!customerId) {
     return <p className="text-text-600">Invalid customer.</p>;
+  }
+  if (permissionsReady && !can('customers.site_measurement')) {
+    return <NoAccess what="site measurement" />;
   }
   if (isLoading) {
     return (

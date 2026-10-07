@@ -48,6 +48,7 @@ import SettingsPage from '../pages/settings/SettingsPage';
 import VendorsPage from '../pages/vendors/VendorsPage';
 import ArchitectsPage from '../pages/architects/ArchitectsPage';
 import StaffPage from '../pages/staff/StaffPage';
+import PermissionsPage from '../pages/permissions/PermissionsPage';
 
 // Site measurement / laser meter
 import SiteMeasurementPage from '../pages/site-measurement/SiteMeasurementPage';
@@ -236,6 +237,10 @@ const routes = [
               {
                 path: ROUTES.STAFF,
                 element: <StaffPage />,
+              },
+              {
+                path: ROUTES.PERMISSIONS,
+                element: <PermissionsPage />,
               },
             ],
           },

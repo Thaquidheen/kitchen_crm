@@ -3,11 +3,15 @@ package com.fleetmanagement.kitchencrmbackend.modules.customer.controller;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.dto.CustomerReminderDto;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.service.CustomerReminderService;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.Permission;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.service.PermissionService;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.web.PermissionInterceptor;
 import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
 import com.fleetmanagement.kitchencrmbackend.security.ViewerScope;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -32,10 +36,20 @@ public class CustomerReminderController {
     @Autowired
     private CustomerReminderService reminderService;
 
+    @Autowired
+    private PermissionService permissionService;
+
     @PostMapping
     public ResponseEntity<ApiResponse<CustomerReminderDto>> createReminder(
             @Valid @RequestBody CustomerReminderDto dto,
             @AuthenticationPrincipal UserPrincipal currentUser) {
+        // A reminder set on a customer (not on an appliance customer or an architect).
+        boolean onCustomer = dto.getCustomerId() != null && dto.getApplianceCustomerId() == null
+                && dto.getArchitectId() == null;
+        if (onCustomer && !permissionService.can(currentUser, Permission.CUSTOMERS_REMINDERS)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error(PermissionInterceptor.message(Permission.CUSTOMERS_REMINDERS)));
+        }
         return ResponseEntity.ok(reminderService.createReminder(
                 dto,
                 currentUser != null ? currentUser.getName() : null,

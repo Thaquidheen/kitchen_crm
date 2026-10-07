@@ -244,6 +244,14 @@ public class QuotationController {
                     designPhaseFileRepository.findByCustomerId(customerId).stream()
                             .filter(file -> file.getFileCategory() ==
                                     com.fleetmanagement.kitchencrmbackend.modules.customer.entity.DesignPhaseFile.FileCategory.PLAN)
+                            // A plan document can also be a CAD drawing or an office file; those
+                            // cannot be shown in the builder or printed on the quotation.
+                            .filter(file -> {
+                                var kind = com.fleetmanagement.kitchencrmbackend.modules.customer.service.DesignFileTypes
+                                        .kind(file.getOriginalFileName());
+                                return kind == com.fleetmanagement.kitchencrmbackend.modules.customer.service.DesignFileTypes.Kind.PDF
+                                        || kind == com.fleetmanagement.kitchencrmbackend.modules.customer.service.DesignFileTypes.Kind.IMAGE;
+                            })
                             .toList();
 
             // Convert to DTOs

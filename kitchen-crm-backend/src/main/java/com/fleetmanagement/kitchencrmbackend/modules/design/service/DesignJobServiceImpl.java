@@ -14,6 +14,7 @@ import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.WorkflowHis
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.DesignPhaseFileRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.WorkflowHistoryRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.service.DesignFileTypes;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.service.DesignPhaseFileService;
 import com.fleetmanagement.kitchencrmbackend.modules.design.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.design.entity.DesignPhaseNote;
@@ -300,7 +301,7 @@ public class DesignJobServiceImpl implements DesignJobService {
             String who = job.getStaffAssigned() != null ? job.getStaffAssigned().getName() : "a designer";
             return "The design is still with " + who + ". The customer moves to Quotation Stage when the admin approves it.";
         }
-        return "Upload the design PDF to move this customer to Quotation Stage";
+        return "Upload the design to move this customer to Quotation Stage";
     }
 
     @Override
@@ -481,10 +482,13 @@ public class DesignJobServiceImpl implements DesignJobService {
             return ApiResponse.error("Only a design that is waiting, in progress or needs changes can be completed");
         }
         int version = version(job);
-        boolean hasPdf = fileRepository.findByDesignPhaseId(job.getId()).stream()
-                .anyMatch(f -> isDesignFile(f) && versionOf(f) == version && isPdf(f.getOriginalFileName()));
-        if (!hasPdf) {
-            return ApiResponse.error("Upload the design PDF before marking it complete");
+        // Extras (a brief, a zip) may sit next to it, but there has to be a design to look at.
+        boolean hasDesign = fileRepository.findByDesignPhaseId(job.getId()).stream()
+                .anyMatch(f -> isDesignFile(f) && versionOf(f) == version
+                        && DesignFileTypes.isDesign(f.getOriginalFileName()));
+        if (!hasDesign) {
+            return ApiResponse.error("Upload the design — " + DesignFileTypes.DESIGN_KINDS
+                    + " — before marking it complete");
         }
         LocalDateTime now = LocalDateTime.now();
         job.setDesignStatus(DesignStatus.PENDING_SUPERADMIN_APPROVAL);
@@ -689,18 +693,26 @@ public class DesignJobServiceImpl implements DesignJobService {
     }
 
     @Override
-    public ApiResponse<DesignJobDto> uploadCustomerDesign(Long customerId, MultipartFile file, String note,
+    public ApiResponse<DesignJobDto> uploadCustomerDesign(Long customerId, MultipartFile[] files, String note,
                                                           boolean moveToQuotation, Long callerId, String callerName,
                                                           boolean admin) {
         Customer customer = customerRepository.findById(customerId).orElse(null);
         if (customer == null) {
             return ApiResponse.error("Customer not found");
         }
-        if (file == null || file.isEmpty()) {
-            return ApiResponse.error("Choose the design PDF");
+        List<MultipartFile> picked = files == null ? List.of()
+                : Arrays.stream(files).filter(f -> f != null && !f.isEmpty()).toList();
+        if (picked.isEmpty()) {
+            return ApiResponse.error("Choose the design file");
         }
-        if (!isPdf(file.getOriginalFilename())) {
-            return ApiResponse.error("The design must be a PDF file");
+        // Every file is checked before the first is stored: a design is saved whole or not at all.
+        for (MultipartFile file : picked) {
+            String problem = !DesignFileTypes.isDesign(file.getOriginalFilename())
+                    ? "The design must be " + DesignFileTypes.DESIGN_KINDS
+                    : fileService.checkFile(file);
+            if (problem != null) {
+                return ApiResponse.error(picked.size() == 1 ? problem : file.getOriginalFilename() + ": " + problem);
+            }
         }
         boolean hasNote = note != null && !note.isBlank();
         if (moveToQuotation && !hasNote) {
@@ -740,10 +752,13 @@ public class DesignJobServiceImpl implements DesignJobService {
                 row.setOrigin(DesignPhaseVersion.ORIGIN_UPLOADED);
             }
         }
-        ApiResponse<DesignPhaseFileDto> stored = store(job, file, DesignPhaseFile.FileCategory.DESIGN, null, callerName);
-        if (!Boolean.TRUE.equals(stored.getSuccess())) {
-            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-            return ApiResponse.error(stored.getMessage());
+        for (MultipartFile file : picked) {
+            ApiResponse<DesignPhaseFileDto> stored = store(job, file, DesignPhaseFile.FileCategory.DESIGN, null, callerName);
+            if (!Boolean.TRUE.equals(stored.getSuccess())) {
+                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+                return ApiResponse.error(picked.size() == 1
+                        ? stored.getMessage() : file.getOriginalFilename() + ": " + stored.getMessage());
+            }
         }
         job.setDesignStatus(DesignStatus.APPROVED_BY_ADMIN);
         if (job.getCompletedAt() == null || !open) {
@@ -890,10 +905,6 @@ public class DesignJobServiceImpl implements DesignJobService {
     /** Everything that is not a plan document is the designer's (or the uploaded) design. */
     private static boolean isDesignFile(DesignPhaseFile f) {
         return f.getFileCategory() != DesignPhaseFile.FileCategory.PLAN;
-    }
-
-    private static boolean isPdf(String fileName) {
-        return fileName != null && fileName.trim().toLowerCase().endsWith(".pdf");
     }
 
     private static boolean isDesignerWork(String status) {
@@ -1275,11 +1286,11 @@ public class DesignJobServiceImpl implements DesignJobService {
         List<DesignPhaseFile> design = files.stream().filter(f -> isDesignFile(f) && versionOf(f) == version).toList();
         dto.setFileCount(design.size());
         dto.setPlanDocumentCount((int) files.stream().filter(f -> !isDesignFile(f)).count());
-        // The file a quotation is made from: the newest PDF of the current version.
+        // The file a quotation is made from: the newest of the kind that is easiest to open —
+        // a PDF before an image, an image before a CAD drawing.
         design.stream()
-                .filter(f -> isPdf(f.getOriginalFileName()))
-                .max(Comparator.comparing(DesignPhaseFile::getId))
-                .or(() -> design.stream().max(Comparator.comparing(DesignPhaseFile::getId)))
+                .min(Comparator.comparing((DesignPhaseFile f) -> DesignFileTypes.kind(f.getOriginalFileName()))
+                        .thenComparing(DesignPhaseFile::getId, Comparator.reverseOrder()))
                 .ifPresent(f -> dto.setCurrentDesignFile(fileDto(f)));
         return dto;
     }

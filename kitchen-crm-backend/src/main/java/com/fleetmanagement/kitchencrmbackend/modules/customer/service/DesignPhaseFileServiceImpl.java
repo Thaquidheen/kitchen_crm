@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -39,19 +40,6 @@ public class DesignPhaseFileServiceImpl implements DesignPhaseFileService {
     @Value("${app.max-file-size:52428800}") // 50MB default
     private long maxFileSize;
 
-    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList(
-            "jpg", "jpeg", "png", "pdf", "dwg", "dxf", "skp", "3ds", "obj",
-            "fbx", "stl", "step", "stp", "iges", "igs", "doc", "docx", "xls", "xlsx", "zip", "rar"
-    );
-
-    private static final List<String> ALLOWED_MIME_TYPES = Arrays.asList(
-            "image/jpeg", "image/jpg", "image/png", "application/pdf",
-            "application/zip", "application/x-zip-compressed",
-            "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/octet-stream" // For CAD files
-    );
-
     @Override
     public ApiResponse<DesignPhaseFileDto> uploadDesignFile(MultipartFile file, DesignFileUploadRequest request, String uploadedBy) {
         try {
@@ -69,7 +57,7 @@ public class DesignPhaseFileServiceImpl implements DesignPhaseFileService {
             }
 
             // Validate file
-            String validationError = validateFile(file);
+            String validationError = checkFile(file);
             if (validationError != null) {
                 return ApiResponse.error(validationError);
             }
@@ -219,14 +207,14 @@ public class DesignPhaseFileServiceImpl implements DesignPhaseFileService {
         }
     }
 
-    // Helper methods
-    private String validateFile(MultipartFile file) {
-        if (file.isEmpty()) {
-            return "File is empty";
+    @Override
+    public String checkFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return "The file is empty";
         }
 
         if (file.getSize() > maxFileSize) {
-            return "File size exceeds maximum allowed size of " + (maxFileSize / 1024 / 1024) + "MB";
+            return "The file is larger than " + (maxFileSize / 1024 / 1024) + " MB";
         }
 
         String originalFilename = file.getOriginalFilename();
@@ -234,21 +222,20 @@ public class DesignPhaseFileServiceImpl implements DesignPhaseFileService {
             return "Invalid filename";
         }
 
-        String extension = getFileExtension(originalFilename).toLowerCase();
-        if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            return "File type not allowed. Allowed types: " + String.join(", ", ALLOWED_EXTENSIONS);
+        if (!DesignFileTypes.isAccepted(originalFilename)) {
+            return "This kind of file is not accepted. Use a PDF, an image (JPG, PNG), a CAD drawing (DWG, DXF) "
+                    + "or an office document";
         }
 
-        String mimeType = file.getContentType();
-        if (mimeType != null && !ALLOWED_MIME_TYPES.contains(mimeType.toLowerCase())) {
-            // Allow octet-stream for CAD files
-            if (!mimeType.equals("application/octet-stream")) {
-                return "Invalid file format";
-            }
+        // See DesignFileTypes for why the file's own bytes are checked and the declared type is not.
+        try (InputStream in = file.getInputStream()) {
+            return DesignFileTypes.contentProblem(originalFilename, in.readNBytes(1024));
+        } catch (IOException e) {
+            return "The file could not be read";
         }
-
-        return null; // Valid file
     }
+
+    // Helper methods
 
     private void createUploadDirectoryIfNotExists() throws IOException {
         Path uploadPath = Paths.get(uploadDir);

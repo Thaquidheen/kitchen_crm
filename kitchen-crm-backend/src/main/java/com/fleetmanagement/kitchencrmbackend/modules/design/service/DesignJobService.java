@@ -87,10 +87,11 @@ public interface DesignJobService {
     ApiResponse<DesignJobDto> deleteFile(Long jobId, Long fileId, Long callerId, boolean admin, boolean coordinator);
 
     /**
-     * Saves an already existing design PDF as the customer's approved design (a new version when
-     * one is already approved) and, when asked, moves the customer to Quotation Stage with the note.
+     * Saves an already existing design — one or more PDFs, images or CAD drawings — as the
+     * customer's approved design (a new version when one is already approved) and, when asked,
+     * moves the customer to Quotation Stage with the note.
      */
-    ApiResponse<DesignJobDto> uploadCustomerDesign(Long customerId, MultipartFile file, String note,
+    ApiResponse<DesignJobDto> uploadCustomerDesign(Long customerId, MultipartFile[] files, String note,
                                                    boolean moveToQuotation, Long callerId, String callerName,
                                                    boolean admin);
 

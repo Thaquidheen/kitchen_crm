@@ -1,7 +1,7 @@
 /**
  * One place that applies a customer status change together with what the design workflow hangs on
- * it: a designer (and plan documents) when moving to Design Stage, and the design PDF when moving
- * a customer whose design was made elsewhere to Quotation Stage.
+ * it: a designer (and plan documents) when moving to Design Stage, and the design files when
+ * moving a customer whose design was made elsewhere to Quotation Stage.
  */
 import { useCallback } from 'react';
 import { useUpdateCustomerStatusMutation } from './customersAPI';
@@ -18,8 +18,8 @@ export interface StatusChangeExtras {
   design?: DesignAssignment;
   /** Moving to Design Stage: plan documents for the designer (admin only). */
   planFiles?: File[];
-  /** Moving to Quotation Stage without an approved design: the existing design PDF. */
-  designPdf?: File | null;
+  /** Moving to Quotation Stage without an approved design: the existing design (PDF, images, CAD). */
+  designFiles?: File[];
 }
 
 export interface StatusChangeResult {
@@ -45,10 +45,10 @@ export function useCustomerStatusChange() {
     }): Promise<StatusChangeResult> => {
       const { customerId, status, note, extras } = args;
 
-      // The upload saves the PDF as the customer's design and moves them in the same request,
+      // The upload saves the files as the customer's design and moves them in the same request,
       // so a customer never lands in Quotation Stage without it.
-      if (status === 'QUOTE_GIVEN' && extras?.designPdf) {
-        await uploadCustomerDesign({ customerId, file: extras.designPdf, note, moveToQuotation: true }).unwrap();
+      if (status === 'QUOTE_GIVEN' && extras?.designFiles && extras.designFiles.length > 0) {
+        await uploadCustomerDesign({ customerId, files: extras.designFiles, note, moveToQuotation: true }).unwrap();
         return {};
       }
 

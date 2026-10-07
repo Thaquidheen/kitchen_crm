@@ -1,14 +1,13 @@
 /**
  * CustomerDesignCard — the customer's design on their own page: current version, who made it (or
- * that it was uploaded), the PDF a quotation is made from, plan documents and earlier versions.
- * Staff can add an existing design PDF; an admin can send an approved design back for a redesign.
+ * that it was uploaded), the files a quotation is made from, plan documents and earlier versions.
+ * Staff can add an existing design; an admin can send an approved design back for a redesign.
  */
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, FileText, Palette, Paperclip, RotateCcw, Upload } from 'lucide-react';
-import { fileUrl } from '@/utils/fileUrl';
+import { ChevronDown, Palette, RotateCcw, Upload } from 'lucide-react';
 import { useGetCustomerDesignJobQuery, useGetDesignMeQuery } from '../designAPI';
-import { DesignStatusPill, ORIGIN_LABEL, isApprovedDesign, isOpenDesign, isPdfFile, versionLabel } from '../designUi';
+import { DesignStatusPill, FileKindIcon, ORIGIN_LABEL, fileLinkProps, isApprovedDesign, isOpenDesign, versionLabel } from '../designUi';
 import { RedesignModal } from './RedesignModal';
 import { UploadDesignModal } from './UploadDesignModal';
 import type { DesignFile } from '../types';
@@ -19,6 +18,8 @@ interface Props {
   /** CustomerStatus value. */
   customerStatus: string;
   isAdmin: boolean;
+  /** The administrator may refuse uploading a design for a staff type. */
+  canUploadDesign?: boolean;
 }
 
 const sectionLabel = 'text-[10.5px] font-semibold tracking-[0.09em] uppercase text-text-500';
@@ -30,16 +31,10 @@ const fmtDate = (iso?: string | null) =>
 
 const FileLink: React.FC<{ file: DesignFile }> = ({ file }) => (
   <a
-    href={fileUrl(file.fileUrl)}
-    target="_blank"
-    rel="noreferrer"
+    {...fileLinkProps(file)}
     className="flex items-center gap-2 px-2.5 py-1.5 rounded-[9px] border border-background-600 hover:bg-background-700 transition-colors"
   >
-    {isPdfFile(file.originalFileName) ? (
-      <FileText size={14} className="text-primary-600 shrink-0" />
-    ) : (
-      <Paperclip size={14} className="text-text-500 shrink-0" />
-    )}
+    <FileKindIcon name={file.originalFileName} />
     <span className="min-w-0 flex-1 truncate text-[12.5px] text-text-900">{file.originalFileName}</span>
   </a>
 );
@@ -47,7 +42,13 @@ const FileLink: React.FC<{ file: DesignFile }> = ({ file }) => (
 /** Stages where a customer is expected to have a design to be quoted on. */
 const PAST_DESIGN = new Set(['QUOTE_GIVEN', 'FOLLOW_UP', 'NEGOTIATIONS', 'CONFIRMED']);
 
-export const CustomerDesignCard: React.FC<Props> = ({ customerId, customerName, customerStatus, isAdmin }) => {
+export const CustomerDesignCard: React.FC<Props> = ({
+  customerId,
+  customerName,
+  customerStatus,
+  isAdmin,
+  canUploadDesign = true,
+}) => {
   const { data: design, isLoading } = useGetCustomerDesignJobQuery(customerId, {
     pollingInterval: 60000,
     refetchOnFocus: true,
@@ -66,7 +67,7 @@ export const CustomerDesignCard: React.FC<Props> = ({ customerId, customerName, 
   const planDocuments = design?.planDocuments ?? [];
   const earlier = (design?.versions ?? []).filter((v) => v.versionNo < version).sort((a, b) => b.versionNo - a.versionNo);
   // Staff may add an existing design unless a designer is working on it (that one is the admin's to settle).
-  const canUpload = !open || isAdmin;
+  const canUpload = canUploadDesign && (!open || isAdmin);
 
   return (
     <div className="bg-background-800 border border-background-600 rounded-[14px] p-4">
@@ -90,9 +91,11 @@ export const CustomerDesignCard: React.FC<Props> = ({ customerId, customerName, 
               ? 'No design is saved for this customer yet.'
               : 'No design yet. Moving the customer to Design Stage assigns a designer.'}
           </p>
-          <button type="button" onClick={() => setUploadOpen(true)} className={smallBtn}>
-            <Upload size={13} /> Upload existing design
-          </button>
+          {canUploadDesign && (
+            <button type="button" onClick={() => setUploadOpen(true)} className={smallBtn}>
+              <Upload size={13} /> Upload existing design
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
@@ -147,7 +150,7 @@ export const CustomerDesignCard: React.FC<Props> = ({ customerId, customerName, 
               )}
               {canUpload && (
                 <button type="button" onClick={() => setUploadOpen(true)} className={smallBtn}>
-                  <Upload size={13} /> {approved ? 'Upload newer PDF' : 'Upload design PDF'}
+                  <Upload size={13} /> {approved ? 'Upload newer design' : 'Upload design'}
                 </button>
               )}
             </div>

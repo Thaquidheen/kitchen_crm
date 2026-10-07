@@ -3,6 +3,9 @@ package com.fleetmanagement.kitchencrmbackend.modules.design.controller;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.design.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.design.service.DesignJobService;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.Permission;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.service.PermissionService;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.web.PermissionInterceptor;
 import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
 import com.fleetmanagement.kitchencrmbackend.security.ViewerScope;
 import jakarta.validation.Valid;
@@ -29,6 +32,9 @@ public class DesignJobController {
 
     @Autowired
     private DesignJobService service;
+
+    @Autowired
+    private PermissionService permissionService;
 
     private static Long id(UserPrincipal p) {
         return p != null ? p.getId() : null;
@@ -133,18 +139,24 @@ public class DesignJobController {
     }
 
     /**
-     * An already existing design PDF for a customer. Any staff member may upload it (that is how a
-     * customer whose design was made elsewhere reaches Quotation Stage); only an admin may use it
-     * to settle a design a designer is still working on.
+     * An already existing design for a customer: one or more PDFs, images or CAD drawings (the
+     * part is still called "file", repeated once per file). Any staff member may upload it (that
+     * is how a customer whose design was made elsewhere reaches Quotation Stage); only an admin
+     * may use it to settle a design a designer is still working on.
      */
     @PostMapping(value = "/customer/{customerId}/design", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<DesignJobDto>> uploadCustomerDesign(
             @PathVariable Long customerId,
-            @RequestParam("file") MultipartFile file,
+            @RequestParam("file") MultipartFile[] files,
             @RequestParam(value = "note", required = false) String note,
             @RequestParam(value = "moveToQuotation", defaultValue = "false") boolean moveToQuotation,
             @AuthenticationPrincipal UserPrincipal user) {
-        return respond(service.uploadCustomerDesign(customerId, file, note, moveToQuotation, id(user), name(user),
+        // Uploading is checked by the permission rules; moving the customer with it is a stage change.
+        if (moveToQuotation && !permissionService.can(user, Permission.CUSTOMERS_CHANGE_STAGE)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error(PermissionInterceptor.message(Permission.CUSTOMERS_CHANGE_STAGE)));
+        }
+        return respond(service.uploadCustomerDesign(customerId, files, note, moveToQuotation, id(user), name(user),
                 ViewerScope.isSuperAdmin(user)));
     }
 

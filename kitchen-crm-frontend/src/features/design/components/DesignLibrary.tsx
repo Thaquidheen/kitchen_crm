@@ -9,11 +9,11 @@
  */
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, RotateCcw, Search, Upload } from 'lucide-react';
+import { RotateCcw, Search, Upload } from 'lucide-react';
 import { STATUS_PILL } from '@/features/customers/components/CustomerList';
-import { fileUrl } from '@/utils/fileUrl';
 import { useGetDesignLibraryQuery } from '../designAPI';
-import { DesignStatusPill, ORIGIN_LABEL, isApprovedDesign, versionLabel } from '../designUi';
+import { fileKindLabel } from '../designFiles';
+import { DesignStatusPill, FileKindIcon, ORIGIN_LABEL, fileLinkProps, isApprovedDesign, versionLabel } from '../designUi';
 import { RedesignModal } from './RedesignModal';
 import { UploadDesignModal, type UploadDesignTarget } from './UploadDesignModal';
 import type { DesignJob } from '../types';
@@ -220,13 +220,12 @@ export const DesignLibrary: React.FC<Props> = ({ onOpen, otherFinished, canRedes
                       <div className="flex items-center justify-end gap-1.5">
                         {d?.currentDesignFile && (
                           <a
-                            href={fileUrl(d.currentDesignFile.fileUrl)}
-                            target="_blank"
-                            rel="noreferrer"
+                            {...fileLinkProps(d.currentDesignFile)}
                             title={d.currentDesignFile.originalFileName}
                             className={ghostBtn}
                           >
-                            <FileText size={13} className="text-primary-600" /> PDF
+                            <FileKindIcon name={d.currentDesignFile.originalFileName} size={13} />{' '}
+                            {fileKindLabel(d.currentDesignFile.originalFileName)}
                           </a>
                         )}
                         {!d && (

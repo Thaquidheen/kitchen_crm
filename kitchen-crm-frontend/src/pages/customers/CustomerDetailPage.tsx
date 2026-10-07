@@ -28,6 +28,8 @@ import {
 } from '../../features/customers/customersAPI';
 import { useCustomerStatusChange, type StatusChangeExtras } from '../../features/customers/useCustomerStatusChange';
 import { useIsSuperAdmin } from '../../features/auth/useIsSuperAdmin';
+import { usePermissions } from '../../features/permissions/usePermissions';
+import { NoAccess } from '../../features/permissions/NoAccess';
 import { CustomerFormModal } from '../../features/customers/components/CustomerFormModal';
 import { CustomerFollowUps } from '../../features/customers/components/CustomerFollowUps';
 import { CustomerReminders } from '../../features/customers/components/CustomerReminders';
@@ -86,6 +88,7 @@ const CustomerDetailPage: React.FC = () => {
 
   const changeStatus = useCustomerStatusChange();
   const isAdmin = useIsSuperAdmin();
+  const { can, ready: permissionsReady } = usePermissions();
   const { data: designJob } = useGetCustomerDesignJobQuery(customerId!, { skip: !customerId });
   const [deleteCustomer, { isLoading: isDeleting }] = useDeleteCustomerMutation();
 
@@ -121,7 +124,19 @@ const CustomerDetailPage: React.FC = () => {
     );
   }
 
+  if (permissionsReady && !can('customers.view')) {
+    return <NoAccess what="customer details" />;
+  }
+
   const pill = STATUS_PILL[customer.status] ?? { st: 'lead', label: customer.status };
+  // Tabs the administrator has not allowed for this staff type are simply not there.
+  const tabs = TABS.filter(
+    (tab) =>
+      (tab !== 'Reminders' || can('customers.reminders')) &&
+      (tab !== 'Quotations' || can('customers.quotations')) &&
+      (tab !== 'Production' || can('customers.production')),
+  );
+  const shownTab = tabs.includes(activeTab) ? activeTab : 'Overview';
 
   const handleStatusChange = async (note: string, extras: StatusChangeExtras) => {
     if (!pendingStatus) return;
@@ -217,44 +232,54 @@ const CustomerDetailPage: React.FC = () => {
               Email
             </a>
           )}
-          <button onClick={() => navigate(getSiteMeasurementRoute(customer.id))} className={ghostBtn}>
-            <Ruler size={13} className="text-text-700" />
-            Measure site
-          </button>
-          <button onClick={() => setEditOpen(true)} className={ghostBtn}>
-            <Pencil size={13} className="text-text-700" />
-            Edit
-          </button>
-          <button
-            onClick={() => setDeleteConfirm(true)}
-            title="Delete customer"
-            className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center transition-colors"
-            style={{ background: 'var(--st-lost-bg)', color: 'var(--st-lost-fg)' }}
-          >
-            <Trash2 size={14} />
-          </button>
-          <div className="w-px h-6 bg-background-500 hidden sm:block" />
-          <select
-            value={customer.status}
-            onChange={(e) => {
-              const next = e.target.value as CustomerStatus;
-              if (next !== customer.status) setPendingStatus(next);
-            }}
-            className="h-[34px] px-2.5 rounded-[10px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium outline-none cursor-pointer focus:border-primary-600"
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
+          {can('customers.site_measurement') && (
+            <button onClick={() => navigate(getSiteMeasurementRoute(customer.id))} className={ghostBtn}>
+              <Ruler size={13} className="text-text-700" />
+              Measure site
+            </button>
+          )}
+          {can('customers.edit') && (
+            <button onClick={() => setEditOpen(true)} className={ghostBtn}>
+              <Pencil size={13} className="text-text-700" />
+              Edit
+            </button>
+          )}
+          {can('customers.delete') && (
+            <button
+              onClick={() => setDeleteConfirm(true)}
+              title="Delete customer"
+              className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center transition-colors"
+              style={{ background: 'var(--st-lost-bg)', color: 'var(--st-lost-fg)' }}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+          {can('customers.change_stage') && (
+            <>
+              <div className="w-px h-6 bg-background-500 hidden sm:block" />
+              <select
+                value={customer.status}
+                onChange={(e) => {
+                  const next = e.target.value as CustomerStatus;
+                  if (next !== customer.status) setPendingStatus(next);
+                }}
+                className="h-[34px] px-2.5 rounded-[10px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium outline-none cursor-pointer focus:border-primary-600"
+              >
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
         </div>
       </div>
 
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-background-600 mb-4 overflow-x-auto">
-        {TABS.map((tab) => {
-          const active = activeTab === tab;
+        {tabs.map((tab) => {
+          const active = shownTab === tab;
           return (
             <button
               key={tab}
@@ -271,7 +296,7 @@ const CustomerDetailPage: React.FC = () => {
         })}
       </div>
 
-      {activeTab === 'Overview' ? (
+      {shownTab === 'Overview' ? (
         <div className="grid grid-cols-1 lg:grid-cols-[330px_1fr] gap-4 items-start">
           {/* Left column */}
           <div className="space-y-4 min-w-0">
@@ -299,6 +324,7 @@ const CustomerDetailPage: React.FC = () => {
               customerName={customer.name}
               customerStatus={customer.status}
               isAdmin={isAdmin}
+              canUploadDesign={can('customers.upload_design')}
             />
           </div>
 
@@ -306,28 +332,30 @@ const CustomerDetailPage: React.FC = () => {
           <div className="space-y-4 min-w-0">
             {/* Quotations — each version with its own value. Versions are alternatives, so they
                 are never summed into one "total value". */}
-            <CustomerQuotationsSummary customerId={customer.id} onViewAll={() => setActiveTab('Quotations')} />
+            {can('customers.quotations') && (
+              <CustomerQuotationsSummary customerId={customer.id} onViewAll={() => setActiveTab('Quotations')} />
+            )}
 
             {/* Follow-ups (reminders have their own tab) */}
-            <CustomerFollowUps customerId={customer.id} />
+            {can('customers.followups') && <CustomerFollowUps customerId={customer.id} />}
 
             {/* Activity & notes — scrolls internally so Overview stays a fixed height */}
-            <CustomerActivityPanel customerId={customer.id} />
+            <CustomerActivityPanel customerId={customer.id} canAddNote={can('customers.notes')} />
           </div>
         </div>
-      ) : activeTab === 'Reminders' ? (
+      ) : shownTab === 'Reminders' ? (
         <div className="space-y-4">
           <CustomerReminders customerId={customer.id} />
         </div>
-      ) : activeTab === 'Quotations' ? (
+      ) : shownTab === 'Quotations' ? (
         <CustomerQuotationsTab customerId={customer.id} />
-      ) : activeTab === 'Production' ? (
+      ) : shownTab === 'Production' ? (
         <CustomerProductionTab customerId={customer.id} />
       ) : (
         <div className="bg-background-800 border border-background-600 rounded-[14px] px-6 py-16 text-center">
-          <div className="text-[14.5px] font-semibold text-text-900">{activeTab}</div>
+          <div className="text-[14.5px] font-semibold text-text-900">{shownTab}</div>
           <div className="text-[12.5px] text-text-700 mt-1">
-            This tab is coming soon — the {activeTab.toLowerCase()} view will appear here.
+            This tab is coming soon — the {shownTab.toLowerCase()} view will appear here.
           </div>
         </div>
       )}

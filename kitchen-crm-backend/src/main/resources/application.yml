@@ -46,7 +46,9 @@ spring:
   servlet:
     multipart:
       max-file-size: 50MB
-      max-request-size: 50MB
+      # One upload may carry several files (a design as PDF + images + a CAD drawing): up to
+      # 200 MB of files, plus room for the form's own wrapping.
+      max-request-size: 210MB
       enabled: true
 
 app:

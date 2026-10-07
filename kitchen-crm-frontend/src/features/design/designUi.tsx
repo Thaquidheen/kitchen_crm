@@ -1,5 +1,8 @@
 /** Labels, colours and small display helpers for design jobs (shared by every design screen). */
 import React from 'react';
+import { DraftingCompass, FileText, Image as ImageIcon, Paperclip } from 'lucide-react';
+import { fileUrl } from '@/utils/fileUrl';
+import { fileKind, opensInBrowser } from './designFiles';
 import type { DesignJob, DesignOrigin, DesignPriority, DesignStatus, DesignerStatus, StaffType } from './types';
 
 export const STAFF_TYPE_LABEL: Record<StaffType, string> = {
@@ -55,18 +58,34 @@ export const ORIGIN_LABEL: Record<DesignOrigin, string> = {
 /** "V2". Designs made before versions existed are version 1. */
 export const versionLabel = (v?: number | null) => `V${v && v > 0 ? v : 1}`;
 
-export const isPdfFile = (name?: string | null) => !!name && name.trim().toLowerCase().endsWith('.pdf');
+/** The icon for a design or plan file, by what kind of file its name says it is. */
+export const FileKindIcon: React.FC<{ name?: string | null; size?: number }> = ({ name, size = 14 }) => {
+  const kind = fileKind(name);
+  if (kind === 'pdf') {return <FileText size={size} className="text-primary-600 shrink-0" />;}
+  if (kind === 'image') {return <ImageIcon size={size} className="text-primary-600 shrink-0" />;}
+  if (kind === 'cad') {return <DraftingCompass size={size} className="text-primary-600 shrink-0" />;}
+  return <Paperclip size={size} className="text-text-500 shrink-0" />;
+};
+
+/**
+ * How to link a stored file: a PDF or an image opens in a new tab; anything else (a CAD drawing,
+ * a zip) is saved to the computer under the name it was uploaded with.
+ */
+export const fileLinkProps = (file: { fileUrl: string; originalFileName: string }) =>
+  opensInBrowser(file.originalFileName)
+    ? { href: fileUrl(file.fileUrl), target: '_blank', rel: 'noreferrer' }
+    : { href: fileUrl(file.fileUrl), download: file.originalFileName };
 
 /**
  * What moving a customer to Quotation Stage needs, given their design (null = none saved).
- * Mirrors the server rule so the status window can ask for the PDF before the request is made.
+ * Mirrors the server rule so the status window can ask for the design before the request is made.
  */
-export type QuotationGate = 'READY' | 'NEEDS_PDF' | 'WITH_DESIGNER';
+export type QuotationGate = 'READY' | 'NEEDS_DESIGN' | 'WITH_DESIGNER';
 export const quotationGate = (job: Pick<DesignJob, 'status'> | null | undefined): QuotationGate => {
-  if (!job) {return 'NEEDS_PDF';}
+  if (!job) {return 'NEEDS_DESIGN';}
   if (isApprovedDesign(job.status)) {return 'READY';}
   if (isOpenDesign(job.status)) {return 'WITH_DESIGNER';}
-  return 'NEEDS_PDF';
+  return 'NEEDS_DESIGN';
 };
 
 /** A redesign pulls the customer back into Design — except from these stages, where only the design reopens. */

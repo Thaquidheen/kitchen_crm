@@ -121,11 +121,12 @@ export const designAPI = baseApi.injectEndpoints({
     }),
     uploadCustomerDesign: builder.mutation<
       DesignJob,
-      { customerId: number; file: File; note?: string; moveToQuotation?: boolean }
+      { customerId: number; files: File[]; note?: string; moveToQuotation?: boolean }
     >({
-      query: ({ customerId, file, note, moveToQuotation }) => {
+      query: ({ customerId, files, note, moveToQuotation }) => {
         const form = new FormData();
-        form.append('file', file);
+        // One "file" part per file: a design can be a PDF, images and a CAD drawing together.
+        files.forEach((f) => form.append('file', f));
         if (note) {form.append('note', note);}
         if (moveToQuotation) {form.append('moveToQuotation', 'true');}
         return {
