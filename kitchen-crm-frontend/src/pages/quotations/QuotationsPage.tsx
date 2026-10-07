@@ -1,7 +1,9 @@
 /**
  * QuotationsPage
- * Two views behind one header for the admin and Admin staff (everybody else gets the list only):
- *  - Work board: who prepares which customer's quotation and in which order.
+ * Two views behind one header:
+ *  - Work board: who prepares which customer's quotation and in which order. The admin and Admin
+ *    staff assign and order it; anyone who is given a quotation sees their own list there. Staff
+ *    with nothing on it get the list only, without the tabs.
  *  - All quotations: title + count pill, clickable status chips with distribution bar (real
  *    counts from /quotations/statistics), quiet inline value stat, filters and list.
  */
@@ -146,26 +148,24 @@ export function QuotationsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: me, isError: meFailed } = useGetQuotationWorkMeQuery();
-  // The board belongs to the admin and Admin staff: they assign quotations and are the ones who
-  // prepare them. Everybody else only ever sees the list.
-  const manages = !!me?.canManage;
   const board = useQuotationBoardCount(me);
-  // Without a chosen view the page opens on the board when there is something on it (work to do,
-  // customers to assign, news) and on the list otherwise, as before. That is decided once per
-  // visit, so a refresh in the background never switches the view under you. A notification link
-  // (?job=) always lands on the board.
+  const hasBoard = !!me?.canManage || board.any;
+  // Without a chosen view the page opens on the board when there is something on it for this
+  // person (work to do, customers to assign, news) and on the list otherwise, as before. That is
+  // decided once per visit, so a refresh in the background never switches the view under you.
+  // A notification link (?job=) always lands on the board.
   const asked = searchParams.get('view');
   const [opening, setOpening] = useState<PageView | null>(null);
   useEffect(() => {
     if (opening !== null) {return;}
-    if (meFailed || (me && !me.canManage)) {
-      // No board for this person, or it cannot be reached: the list works on its own.
+    if (meFailed) {
+      // The board cannot be reached: the list still works on its own.
       setOpening('list');
     } else if (board.loaded) {
       setOpening(board.waiting + board.open > 0 ? 'board' : 'list');
     }
-  }, [opening, meFailed, me, board.loaded, board.waiting, board.open]);
-  const view: PageView = !manages
+  }, [opening, meFailed, board.loaded, board.waiting, board.open]);
+  const view: PageView = !hasBoard
     ? 'list'
     : asked === 'board' || asked === 'list'
       ? asked
@@ -181,9 +181,8 @@ export function QuotationsPage() {
   const { data: statsRaw } = useGetQuotationStatisticsQuery();
   const stats = (statsRaw as any)?.data ?? {};
   const total: number = stats.total ?? 0;
-  // We do not know yet who this is, or nothing is chosen and the board has not answered: wait
-  // instead of flashing the wrong view.
-  const deciding = opening === null && (!manages || (!asked && !searchParams.get('job')));
+  // The board has not answered yet: wait instead of flashing the wrong view.
+  const deciding = opening === null && asked !== 'list';
 
   return (
     <div className="w-full">
@@ -199,11 +198,13 @@ export function QuotationsPage() {
           <p className="mt-[5px] mb-0 text-[13px] text-text-700">
             {view === 'list'
               ? 'Create, send and track quotations through approval.'
-              : 'Who prepares which quotation, and in which order.'}
+              : me?.canManage
+                ? 'Who prepares which quotation, and in which order.'
+                : 'Your quotations in the order the admin set. Mark each one completed when it is done.'}
           </p>
         </div>
         <div className="flex-1" />
-        {manages && (
+        {hasBoard && (
           <div role="tablist" aria-label="Quotations views" className="inline-flex p-[3px] gap-[3px] rounded-[11px] border border-background-600 bg-background-800">
             {(['board', 'list'] as PageView[]).map((key) => {
               const active = view === key;
@@ -253,7 +254,7 @@ export function QuotationsPage() {
 
       {deciding ? (
         <div className="bg-background-800 border border-background-600 rounded-[14px] p-6 animate-pulse h-40" />
-      ) : view === 'board' && me ? (
+      ) : view === 'board' ? (
         <QuotationWorkBoard me={me} />
       ) : (
         <QuotationListView stats={stats} />

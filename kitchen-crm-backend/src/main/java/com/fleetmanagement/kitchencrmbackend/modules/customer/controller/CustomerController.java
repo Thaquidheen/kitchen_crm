@@ -130,8 +130,8 @@ public class CustomerController {
             @RequestParam(required = false) String designPriority,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
-        // Moving to Design: the admin and Admin staff choose the designer (see CustomerService);
-        // every other status, and every other caller, ignores the extras.
+        // Moving to Design: the admin chooses the designer (see CustomerService); every other status,
+        // and every other caller, ignores the extras.
         return ResponseEntity.ok(customerService.updateCustomerStatus(
                 id, status, currentUser.getName(), reason, designerId, designDueDate, designPriority,
                 currentUser.getId(),

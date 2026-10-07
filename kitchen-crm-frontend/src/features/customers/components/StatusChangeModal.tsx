@@ -8,9 +8,9 @@
  * change from the customers list, where one note is written to every selected row.
  *
  * Two stages need more than a note:
- *  - Design Stage: the designer who gets the design, and plan documents — chosen by the admin or
- *    Admin staff only. Anyone else moves the customer without a designer; it then waits under
- *    "To assign" in Designs.
+ *  - Design Stage: the designer who gets the design, and plan documents — chosen by the admin
+ *    only. Anyone else moves the customer without a designer; it then waits under "To assign" in
+ *    Designs.
  *  - Quotation Stage: the customer's design. When none is approved yet, the existing design PDF
  *    is uploaded here; while a designer still has it, the move waits for the admin's approval.
  */
@@ -25,7 +25,7 @@ import type { StatusChangeExtras } from '../useCustomerStatusChange';
 import { useIsSuperAdmin } from '../../auth/useIsSuperAdmin';
 import { DesignerPicker, type DesignAssignment } from '../../design/components/DesignerPicker';
 import { PlanDocumentsField } from '../../design/components/PlanDocumentsField';
-import { useGetCustomerDesignJobQuery, useGetDesignMeQuery } from '../../design/designAPI';
+import { useGetCustomerDesignJobQuery } from '../../design/designAPI';
 import {
   DESIGN_STATUS,
   defaultDueDate,
@@ -41,8 +41,8 @@ export interface StatusChangeModalProps {
   onClose: () => void;
   /**
    * Receives the trimmed, non-empty note and whatever the target stage needs: the chosen
-   * designer (always set when the admin or Admin staff moves a customer to Design — the modal
-   * will not submit without one), plan documents, or the design PDF for Quotation Stage.
+   * designer (always set when the admin moves a customer to Design — the modal will not submit
+   * without one), plan documents, or the design PDF for Quotation Stage.
    */
   onConfirm: (note: string, extras: StatusChangeExtras) => void;
   /** Status being moved to. Null keeps the modal closed. */
@@ -97,12 +97,8 @@ export function StatusChangeModal({
   });
   const [planFiles, setPlanFiles] = useState<File[]>([]);
   const [designPdf, setDesignPdf] = useState<File | null>(null);
-  const isAdmin = useIsSuperAdmin();
-  const { data: designMe } = useGetDesignMeQuery(undefined, { skip: !isOpen });
-  // Choosing the designer and handing over plan documents is for admins and Admin staff.
-  const canAssign = isAdmin || !!designMe?.canAssign;
-  // Until we know who this is, the Design Stage form cannot be shown or sent.
-  const rolePending = !isAdmin && designMe === undefined;
+  // Choosing the designer (and handing over plan documents with it) is the admin's alone.
+  const canAssign = useIsSuperAdmin();
   const isBulk = count > 1;
   const toDesign = targetStatus === 'DESIGN_STAGE';
   const toQuotation = targetStatus === 'QUOTE_GIVEN';
@@ -145,7 +141,6 @@ export function StatusChangeModal({
   const canSubmit =
     trimmed.length > 0 &&
     !isSubmitting &&
-    !(toDesign && rolePending) &&
     !needsDesigner &&
     !designPending &&
     !designBlocks &&
@@ -243,12 +238,12 @@ export function StatusChangeModal({
             : 'This note is saved to the customer’s timeline.'}
         </p>
 
-        {/* Moving to Design: the admin or Admin staff assigns the design to a designer (required). */}
-        {toDesign && !rolePending && !canAssign && (
+        {/* Moving to Design: the admin assigns the design to a designer (required). */}
+        {toDesign && !canAssign && (
           <p className="mt-4 pt-4 border-t border-background-600 mb-0 flex items-start gap-2 text-[12.5px] text-text-700">
             <Info size={14} className="text-primary-600 shrink-0 mt-px" />
             <span>
-              The admin or Admin staff chooses the designer.{' '}
+              The admin chooses the designer.{' '}
               {isBulk ? 'These customers wait' : 'This customer waits'} under “To assign” in Designs until then.
             </span>
           </p>

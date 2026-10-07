@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 public class QuotationWorkServiceImpl implements QuotationWorkService {
 
     private static final String STAFF_TYPE_ADMIN_STAFF = "ADMIN_STAFF";
-    private static final String WHO_PREPARES = "Quotations are given to the admin or Admin staff only";
     private static final Set<String> OPEN = Set.of(QuotationJob.WAITING, QuotationJob.IN_PROGRESS);
     private static final Set<String> PRIORITIES = Set.of("LOW", "MEDIUM", "HIGH", "URGENT");
     private static final Map<String, String> PRIORITY_LABEL =
@@ -122,7 +121,7 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
                 .collect(Collectors.groupingBy(QuotationJob::getAssigneeUserId));
         List<QuotationAssigneeDto> out = new ArrayList<>();
         for (User u : userRepository.findAll()) {
-            if (!canPrepare(u)) {
+            if (!isActive(u)) {
                 continue;
             }
             List<QuotationJob> mine = openByUser.getOrDefault(u.getId(), List.of());
@@ -147,8 +146,8 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
             return ApiResponse.error("Customer not found");
         }
         User assignee = userRepository.findById(request.getAssigneeId()).orElse(null);
-        if (assignee == null || !canPrepare(assignee)) {
-            return ApiResponse.error(WHO_PREPARES);
+        if (assignee == null || !isActive(assignee)) {
+            return ApiResponse.error("Choose an active staff member");
         }
         String priority = normalizePriority(request.getPriority());
         if (hasText(request.getPriority()) && priority == null) {
@@ -193,8 +192,8 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
         boolean reassigned = request.getAssigneeId() != null && !request.getAssigneeId().equals(job.getAssigneeUserId());
         if (reassigned) {
             User assignee = userRepository.findById(request.getAssigneeId()).orElse(null);
-            if (assignee == null || !canPrepare(assignee)) {
-                return ApiResponse.error(WHO_PREPARES);
+            if (assignee == null || !isActive(assignee)) {
+                return ApiResponse.error("Choose an active staff member");
             }
             // Counted before the job joins that queue, or it would be measured against itself.
             int position = endOfQueue(assignee.getId());
@@ -441,11 +440,6 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
 
     private static boolean isActive(User u) {
         return !Boolean.FALSE.equals(u.getActive());
-    }
-
-    /** Quotations are prepared by the admin and by Admin staff — nobody else is given one. */
-    private static boolean canPrepare(User u) {
-        return isActive(u) && (isSuperAdmin(u) || STAFF_TYPE_ADMIN_STAFF.equals(u.getStaffType()));
     }
 
     private static boolean isSuperAdmin(User u) {

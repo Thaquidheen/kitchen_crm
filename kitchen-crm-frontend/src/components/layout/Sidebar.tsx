@@ -104,8 +104,8 @@ export const Sidebar = ({ isCollapsed, onToggle, isMobileOpen = false, onMobileC
   const isSuperAdmin = currentUser?.role === 'ROLE_SUPER_ADMIN';
   const { data: designMe } = useGetDesignMeQuery(undefined, { skip: !currentUser });
   const isDesigner = !!designMe?.designer;
-  // Admin staff assign designers and attach plan documents, so they work in Designs as well.
-  const coordinatesDesigns = !!designMe?.canAssign;
+  // Admin staff follow the designs and attach plan documents, so they work in Designs as well.
+  const coordinatesDesigns = !!designMe?.canCoordinate;
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + '/');

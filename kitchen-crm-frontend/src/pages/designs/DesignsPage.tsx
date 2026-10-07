@@ -7,8 +7,9 @@
  *    column scrolls on its own, so the page does not.
  *  - Customer designs: the design every customer at Quotation Stage or later is quoted on, as a
  *    table that scrolls in place.
- * Admin staff see the same two views to assign designers and attach plan documents; reviewing,
- * redesigning, ordering the queue and setting a designer's status stay with the admin.
+ * Admin staff see the same two views to follow the work and attach plan documents; assigning a
+ * designer, reviewing, redesigning, ordering the queue and setting a designer's status stay with
+ * the admin.
  * Designer: only their own designs, in the order the admin set.
  */
 import React, { useEffect, useMemo, useState } from 'react';
@@ -341,9 +342,9 @@ const AssignModal: React.FC<{ customer: UnassignedDesignCustomer | null; onClose
 const DesignsPage: React.FC = () => {
   const isAdmin = useIsSuperAdmin();
   const { data: me } = useGetDesignMeQuery();
-  // Admin staff coordinate designs next to the admin: they get the board, assign designers and
-  // attach plan documents.
-  const manages = isAdmin || !!me?.canAssign;
+  // Admin staff follow designs next to the admin: they get the board and attach plan documents.
+  // Assigning a designer is the admin's alone.
+  const manages = isAdmin || !!me?.canCoordinate;
   const viewer: 'admin' | 'coordinator' | 'designer' = isAdmin ? 'admin' : manages ? 'coordinator' : 'designer';
   const [searchParams, setSearchParams] = useSearchParams();
   const [showClosed, setShowClosed] = useState(false);
@@ -448,7 +449,7 @@ const DesignsPage: React.FC = () => {
             {isAdmin
               ? 'Who is designing what, in which order — and what is waiting for your review.'
               : manages
-                ? 'Who is designing what — and which customers still need a designer.'
+                ? 'Who is designing what — and which customers are waiting for a designer.'
                 : 'Your designs in the order the admin set. Start, upload the design, then mark it complete.'}
           </p>
         </div>
@@ -535,7 +536,9 @@ const DesignsPage: React.FC = () => {
                     <span className={sectionTitle}>To assign</span>
                     <span className={countBadge}>{unassigned.length}</span>
                   </div>
-                  <div className="mt-1 text-[11.5px] text-text-600">In Design Stage without a designer.</div>
+                  <div className="mt-1 text-[11.5px] text-text-600">
+                    {isAdmin ? 'In Design Stage without a designer.' : 'In Design Stage, waiting for the admin to assign a designer.'}
+                  </div>
                 </div>
                 <div className={columnBody}>
                   {unassigned.map((c) => (
@@ -547,13 +550,15 @@ const DesignsPage: React.FC = () => {
                         <div className="text-[13px] font-semibold text-text-900 truncate">{c.customerName}</div>
                         {c.customerPlace && <div className="text-[11.5px] text-text-500 truncate">{c.customerPlace}</div>}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setAssignFor(c)}
-                        className="btn-raised-accent shrink-0 h-7 px-2.5 rounded-[8px] text-[12px] font-semibold"
-                      >
-                        Assign
-                      </button>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => setAssignFor(c)}
+                          className="btn-raised-accent shrink-0 h-7 px-2.5 rounded-[8px] text-[12px] font-semibold"
+                        >
+                          Assign
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
