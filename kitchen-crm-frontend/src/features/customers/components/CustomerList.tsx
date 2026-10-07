@@ -21,6 +21,7 @@ import {
   useDeleteCustomerMutation,
 } from '../customersAPI';
 import type { Customer, CustomerListParams, CustomerStatus } from '../types';
+import { usePermissions } from '@/features/permissions/usePermissions';
 
 export interface CustomerListProps {
   filters: CustomerListParams;
@@ -79,6 +80,8 @@ export function CustomerList({
   onBulkStatusChange,
 }: CustomerListProps) {
   const navigate = useNavigate();
+  const { can } = usePermissions();
+  const canSelect = can('customers.bulk');
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [editCustomerId, setEditCustomerId] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -248,12 +251,14 @@ export function CustomerList({
             {selectedCustomers.length} selected
           </span>
           <div className="flex-1" />
-          <button
-            onClick={exportSelected}
-            className="px-[11px] py-1.5 rounded-[9px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors whitespace-nowrap"
-          >
-            Export selected
-          </button>
+          {can('customers.export') && (
+            <button
+              onClick={exportSelected}
+              className="px-[11px] py-1.5 rounded-[9px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors whitespace-nowrap"
+            >
+              Export selected
+            </button>
+          )}
           {onBulkStatusChange && (
             <select
               defaultValue=""
@@ -311,13 +316,15 @@ export function CustomerList({
           <thead>
             <tr className="border-t border-background-600 bg-background-700">
               <th className="w-11 pl-3.5 py-[9px]">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleSelectAll}
-                  className="w-[15px] h-[15px] cursor-pointer align-middle"
-                  style={{ accentColor: 'var(--color-primary-600)' }}
-                />
+                {canSelect && (
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    className="w-[15px] h-[15px] cursor-pointer align-middle"
+                    style={{ accentColor: 'var(--color-primary-600)' }}
+                  />
+                )}
               </th>
               <th className={thClass}>
                 <button
@@ -404,13 +411,15 @@ export function CustomerList({
                     }
                   >
                     <td className="pl-3.5 py-[13px]">
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={() => toggleSelect(customer.id)}
-                        className="w-[15px] h-[15px] cursor-pointer align-middle"
-                        style={{ accentColor: 'var(--color-primary-600)' }}
-                      />
+                      {canSelect && (
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => toggleSelect(customer.id)}
+                          className="w-[15px] h-[15px] cursor-pointer align-middle"
+                          style={{ accentColor: 'var(--color-primary-600)' }}
+                        />
+                      )}
                     </td>
                     <td className="px-3 py-[13px]">
                       <button
@@ -464,24 +473,28 @@ export function CustomerList({
                         >
                           <Eye className="h-[15px] w-[15px]" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditCustomerId(customer.id)}
-                          title="Edit"
-                          className="p-1.5"
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteId(customer.id)}
-                          title="Delete"
-                          className="p-1.5 text-error hover:text-error"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {can('customers.edit') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditCustomerId(customer.id)}
+                            title="Edit"
+                            className="p-1.5"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {can('customers.delete') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteId(customer.id)}
+                            title="Delete"
+                            className="p-1.5 text-error hover:text-error"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>

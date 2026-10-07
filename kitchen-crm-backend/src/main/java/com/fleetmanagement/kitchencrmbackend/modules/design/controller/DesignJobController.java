@@ -3,6 +3,9 @@ package com.fleetmanagement.kitchencrmbackend.modules.design.controller;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.design.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.design.service.DesignJobService;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.Permission;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.service.PermissionService;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.web.PermissionInterceptor;
 import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
 import com.fleetmanagement.kitchencrmbackend.security.ViewerScope;
 import jakarta.validation.Valid;
@@ -29,6 +32,9 @@ public class DesignJobController {
 
     @Autowired
     private DesignJobService service;
+
+    @Autowired
+    private PermissionService permissionService;
 
     private static Long id(UserPrincipal p) {
         return p != null ? p.getId() : null;
@@ -144,6 +150,11 @@ public class DesignJobController {
             @RequestParam(value = "note", required = false) String note,
             @RequestParam(value = "moveToQuotation", defaultValue = "false") boolean moveToQuotation,
             @AuthenticationPrincipal UserPrincipal user) {
+        // Uploading is checked by the permission rules; moving the customer with it is a stage change.
+        if (moveToQuotation && !permissionService.can(user, Permission.CUSTOMERS_CHANGE_STAGE)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error(PermissionInterceptor.message(Permission.CUSTOMERS_CHANGE_STAGE)));
+        }
         return respond(service.uploadCustomerDesign(customerId, file, note, moveToQuotation, id(user), name(user),
                 ViewerScope.isSuperAdmin(user)));
     }

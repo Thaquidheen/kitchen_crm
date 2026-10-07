@@ -17,6 +17,8 @@ import type { WorkflowHistoryDto } from '../types';
 
 export interface CustomerActivityPanelProps {
   customerId: number;
+  /** The note box is shown only to people allowed to add notes. */
+  canAddNote?: boolean;
   /** Height of the scrolling region. */
   maxHeight?: number;
 }
@@ -85,6 +87,7 @@ const BACKEND_DEFAULTS = new Set(['Status updated', 'Customer created', 'Custome
 
 export const CustomerActivityPanel: React.FC<CustomerActivityPanelProps> = ({
   customerId,
+  canAddNote = true,
   maxHeight = 420,
 }) => {
   const { data: history, isLoading, error } = useGetWorkflowHistoryByCustomerQuery(customerId);
@@ -152,7 +155,7 @@ export const CustomerActivityPanel: React.FC<CustomerActivityPanelProps> = ({
         </div>
       </div>
 
-      <div className="mb-3.5">{composer}</div>
+      {canAddNote && <div className="mb-3.5">{composer}</div>}
 
       {isLoading ? (
         <div className="space-y-4">

@@ -64,13 +64,23 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public ApiResponse<CustomerDto> createCustomer(CustomerCreateDto customerCreateDto, String createdBy) {
+    public ApiResponse<CustomerDto> createCustomer(CustomerCreateDto customerCreateDto, String createdBy,
+                                                   boolean mayChooseStage) {
         if (customerCreateDto.getEmail() != null &&
                 customerRepository.existsByEmail(customerCreateDto.getEmail())) {
             return ApiResponse.error("Email already exists");
         }
+        // Quotation Stage needs the customer's design, and a customer that does not exist yet has
+        // none: it is reached from the customer's page, where the design PDF is uploaded.
+        if (mayChooseStage && customerCreateDto.getStatus() == Customer.CustomerStatus.QUOTE_GIVEN) {
+            return ApiResponse.error("Add the customer first, then move them to Quotation Stage with the design PDF");
+        }
 
         Customer customer = convertToEntity(customerCreateDto);
+        if (!mayChooseStage) {
+            // Choosing a stage is not theirs to do: whatever was sent, the customer starts as a Lead.
+            customer.setStatus(Customer.CustomerStatus.LEAD);
+        }
 
         customer.setLeadSourceType(customerCreateDto.getLeadSourceType() != null
                 ? customerCreateDto.getLeadSourceType()

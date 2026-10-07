@@ -33,6 +33,7 @@ import {
 } from '../../customers/leadSource';
 import { ProjectNetworkRow } from './ProjectNetworkRow';
 import type { ProjectNetworkRowDraft } from './ProjectNetworkRow';
+import { usePermissions } from '@/features/permissions/usePermissions';
 
 const customerSchema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -93,6 +94,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   onCancel,
 }) => {
   const isEdit = typeof customerId === 'number';
+  const { can } = usePermissions();
 
   const { data: existingCustomer, isFetching: isLoadingCustomer } = useGetCustomerByIdQuery(
     customerId as number,
@@ -347,16 +349,20 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                   ))}
                 </select>
               </div>
-              <div>
-                <label className={labelCls}>Status</label>
-                <select className={inputCls} {...register('status')} disabled={disabled}>
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Only when adding: an existing customer changes stage from their own page, where
+                  the note, the designer and the design PDF are asked for. */}
+              {!isEdit && can('customers.change_stage') && (
+                <div>
+                  <label className={labelCls}>Status</label>
+                  <select className={inputCls} {...register('status')} disabled={disabled}>
+                    {STATUS_OPTIONS.filter((s) => s.value !== 'QUOTE_GIVEN').map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div>
@@ -407,7 +413,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
               </p>
             </div>
 
-            {!isEdit && (
+            {!isEdit && can('customers.reminders') && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className={labelCls}>Next follow-up</label>

@@ -19,6 +19,7 @@ import {
   Store,
   Building2,
   IdCard,
+  ShieldCheck,
   Refrigerator,
   BellRing,
   Ruler,
@@ -29,6 +30,8 @@ import logo from '../../assets/logo.png';
 import { ROUTES } from '../../routes/routes.config';
 import { useGetDesignMeQuery } from '../../features/design/designAPI';
 import { DesignersPanel } from '../../features/design/components/DesignersPanel';
+import { usePermissions } from '../../features/permissions/usePermissions';
+import type { PermissionKey } from '../../features/permissions/types';
 
 export interface MenuItem {
   label: string;
@@ -38,6 +41,8 @@ export interface MenuItem {
   adminOnly?: boolean;
   /** Shown to super admins and to staff whose type is Designer. */
   designersAndAdmins?: boolean;
+  /** Hidden from staff whose type has not been allowed this (Permissions page). */
+  permission?: PermissionKey;
 }
 
 export interface NavGroup {
@@ -62,7 +67,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Sales',
     items: [
-      { label: 'Customers', path: ROUTES.CUSTOMERS, icon: <Users size={18} /> },
+      { label: 'Customers', path: ROUTES.CUSTOMERS, icon: <Users size={18} />, permission: 'customers.view' },
       { label: 'Quotations', path: ROUTES.QUOTATIONS, icon: <FileText size={18} /> },
       { label: 'Appliance & Quartz', path: ROUTES.APPLIANCE_QUARTZ, icon: <Refrigerator size={18} /> },
       { label: 'Reminders', path: ROUTES.REMINDERS, icon: <BellRing size={18} /> },
@@ -94,7 +99,10 @@ const navGroups: NavGroup[] = [
   },
   {
     label: 'System',
-    items: [{ label: 'Settings', path: ROUTES.SETTINGS, icon: <Settings size={18} />, adminOnly: true }],
+    items: [
+      { label: 'Permissions', path: ROUTES.PERMISSIONS, icon: <ShieldCheck size={18} />, adminOnly: true },
+      { label: 'Settings', path: ROUTES.SETTINGS, icon: <Settings size={18} />, adminOnly: true },
+    ],
   },
 ];
 
@@ -106,6 +114,7 @@ export const Sidebar = ({ isCollapsed, onToggle, isMobileOpen = false, onMobileC
   const isDesigner = !!designMe?.designer;
   // Admin staff follow the designs and attach plan documents, so they work in Designs as well.
   const coordinatesDesigns = !!designMe?.canCoordinate;
+  const { can, ready: permissionsReady } = usePermissions();
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + '/');
@@ -186,7 +195,10 @@ export const Sidebar = ({ isCollapsed, onToggle, isMobileOpen = false, onMobileC
           {navGroups.map((group) => {
             const items = group.items.filter(
               (item) =>
-                (!item.adminOnly || isSuperAdmin) && (!item.designersAndAdmins || isSuperAdmin || isDesigner || coordinatesDesigns)
+                (!item.adminOnly || isSuperAdmin) &&
+                (!item.designersAndAdmins || isSuperAdmin || isDesigner || coordinatesDesigns) &&
+                // Kept while the answers load, so the menu does not jump for people who may see it.
+                (!item.permission || !permissionsReady || can(item.permission))
             );
             if (items.length === 0) return null;
             return (
