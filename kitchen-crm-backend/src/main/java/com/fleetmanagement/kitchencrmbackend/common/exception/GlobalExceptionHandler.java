@@ -12,6 +12,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -73,6 +74,19 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(
                         "You do not have permission to do this. This action is restricted to "
                                 + "administrators — sign in with an administrator account and try again."));
+    }
+
+    /**
+     * An upload over the size limit. It has to be answered here: FileUploadExceptionHandler has
+     * a handler for it too, but this class is asked first and its RuntimeException handler below
+     * matched — so the user got the generic 500 and was not told what to do about it.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<String>> handleUploadTooLarge(MaxUploadSizeExceededException ex) {
+        logger.warn("Upload too large: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(ApiResponse.error("These files are too large. One file can be up to 50 MB, "
+                        + "and the files of one upload up to 200 MB together."));
     }
 
     @ExceptionHandler(RuntimeException.class)
