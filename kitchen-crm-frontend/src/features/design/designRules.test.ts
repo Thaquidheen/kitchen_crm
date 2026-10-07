@@ -3,11 +3,11 @@ import {
   designNewsText,
   isApprovedDesign,
   isOpenDesign,
-  isPdfFile,
   quotationGate,
   redesignKeepsStage,
   versionLabel,
 } from './designUi';
+import { isDesignFileName } from './designFiles';
 import type { DesignJob, DesignStatus } from './types';
 
 const job = (over: Partial<DesignJob> = {}): DesignJob => ({
@@ -38,13 +38,14 @@ describe('design versions', () => {
     expect(versionLabel(0)).toBe('V1');
   });
 
-  it('accepts only PDFs as the design', () => {
-    expect(isPdfFile('Kitchen layout.pdf')).toBe(true);
-    expect(isPdfFile('LAYOUT.PDF ')).toBe(true);
-    expect(isPdfFile('layout.png')).toBe(false);
-    expect(isPdfFile('layout.pdf.zip')).toBe(false);
-    expect(isPdfFile('')).toBe(false);
-    expect(isPdfFile(null)).toBe(false);
+  it('accepts PDFs, images and CAD drawings as the design', () => {
+    expect(isDesignFileName('Kitchen layout.pdf')).toBe(true);
+    expect(isDesignFileName('LAYOUT.PDF ')).toBe(true);
+    expect(isDesignFileName('layout.png')).toBe(true);
+    expect(isDesignFileName('layout.dwg')).toBe(true);
+    expect(isDesignFileName('layout.pdf.zip')).toBe(false);
+    expect(isDesignFileName('')).toBe(false);
+    expect(isDesignFileName(null)).toBe(false);
   });
 });
 
@@ -68,8 +69,8 @@ describe('design states', () => {
 
 describe('moving a customer to Quotation Stage', () => {
   it('needs the PDF when no design is saved', () => {
-    expect(quotationGate(null)).toBe('NEEDS_PDF');
-    expect(quotationGate(undefined)).toBe('NEEDS_PDF');
+    expect(quotationGate(null)).toBe('NEEDS_DESIGN');
+    expect(quotationGate(undefined)).toBe('NEEDS_DESIGN');
   });
 
   it('is ready once the design is approved, whether designed here or uploaded', () => {
@@ -86,7 +87,7 @@ describe('moving a customer to Quotation Stage', () => {
   });
 
   it('needs the PDF again after a cancelled design', () => {
-    expect(quotationGate(job({ status: 'CANCELLED' }))).toBe('NEEDS_PDF');
+    expect(quotationGate(job({ status: 'CANCELLED' }))).toBe('NEEDS_DESIGN');
   });
 });
 

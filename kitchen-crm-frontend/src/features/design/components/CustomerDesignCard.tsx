@@ -1,14 +1,13 @@
 /**
  * CustomerDesignCard — the customer's design on their own page: current version, who made it (or
- * that it was uploaded), the PDF a quotation is made from, plan documents and earlier versions.
- * Staff can add an existing design PDF; an admin can send an approved design back for a redesign.
+ * that it was uploaded), the files a quotation is made from, plan documents and earlier versions.
+ * Staff can add an existing design; an admin can send an approved design back for a redesign.
  */
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, FileText, Palette, Paperclip, RotateCcw, Upload } from 'lucide-react';
-import { fileUrl } from '@/utils/fileUrl';
+import { ChevronDown, Palette, RotateCcw, Upload } from 'lucide-react';
 import { useGetCustomerDesignJobQuery, useGetDesignMeQuery } from '../designAPI';
-import { DesignStatusPill, ORIGIN_LABEL, isApprovedDesign, isOpenDesign, isPdfFile, versionLabel } from '../designUi';
+import { DesignStatusPill, FileKindIcon, ORIGIN_LABEL, fileLinkProps, isApprovedDesign, isOpenDesign, versionLabel } from '../designUi';
 import { RedesignModal } from './RedesignModal';
 import { UploadDesignModal } from './UploadDesignModal';
 import type { DesignFile } from '../types';
@@ -19,7 +18,7 @@ interface Props {
   /** CustomerStatus value. */
   customerStatus: string;
   isAdmin: boolean;
-  /** The administrator may refuse uploading a design PDF for a staff type. */
+  /** The administrator may refuse uploading a design for a staff type. */
   canUploadDesign?: boolean;
 }
 
@@ -32,16 +31,10 @@ const fmtDate = (iso?: string | null) =>
 
 const FileLink: React.FC<{ file: DesignFile }> = ({ file }) => (
   <a
-    href={fileUrl(file.fileUrl)}
-    target="_blank"
-    rel="noreferrer"
+    {...fileLinkProps(file)}
     className="flex items-center gap-2 px-2.5 py-1.5 rounded-[9px] border border-background-600 hover:bg-background-700 transition-colors"
   >
-    {isPdfFile(file.originalFileName) ? (
-      <FileText size={14} className="text-primary-600 shrink-0" />
-    ) : (
-      <Paperclip size={14} className="text-text-500 shrink-0" />
-    )}
+    <FileKindIcon name={file.originalFileName} />
     <span className="min-w-0 flex-1 truncate text-[12.5px] text-text-900">{file.originalFileName}</span>
   </a>
 );
@@ -157,7 +150,7 @@ export const CustomerDesignCard: React.FC<Props> = ({
               )}
               {canUpload && (
                 <button type="button" onClick={() => setUploadOpen(true)} className={smallBtn}>
-                  <Upload size={13} /> {approved ? 'Upload newer PDF' : 'Upload design PDF'}
+                  <Upload size={13} /> {approved ? 'Upload newer design' : 'Upload design'}
                 </button>
               )}
             </div>

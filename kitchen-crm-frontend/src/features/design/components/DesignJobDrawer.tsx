@@ -1,18 +1,17 @@
 /**
  * DesignJobDrawer — one customer's design: brief, plan documents from the admin, the design files
  * of the current version, earlier versions, the notes thread and the actions for whoever is looking.
- * Designer: Start → upload the design PDF → Mark complete (admin is notified).
+ * Designer: Start → upload the design (PDF, images, CAD drawings) → Mark complete (admin is notified).
  * Admin: edit designer / due date / priority / brief, attach plan documents, Approve or Request
  * changes — and, once a version is approved, Request redesign to open the next one.
  * Admin staff (coordinator): see the design and its files, and add or remove plan documents.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, FileText, Paperclip, Pencil, Play, RotateCcw, Upload, X } from 'lucide-react';
+import { CheckCircle2, Paperclip, Pencil, Play, RotateCcw, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Modal, ModalBody } from '@/components/ui/Modal';
 import { STATUS_PILL } from '@/features/customers/components/CustomerList';
-import { fileUrl } from '@/utils/fileUrl';
 import { fmtReminderDateTime } from '@/utils/reminderFormat';
 import {
   useCompleteDesignMutation,
@@ -26,17 +25,19 @@ import {
   useUploadDesignFileMutation,
   useUploadPlanDocumentsMutation,
 } from '../designAPI';
+import { DESIGN_ACCEPT, PLAN_ACCEPT, isDesignFileName } from '../designFiles';
 import {
   DESIGN_STATUS,
   DesignStatusPill,
+  FileKindIcon,
   ORIGIN_LABEL,
   PRIORITY_LABEL,
   PriorityPill,
   dueText,
+  fileLinkProps,
   isApprovedDesign,
   isDesignerWork,
   isOpenDesign,
-  isPdfFile,
   versionLabel,
 } from '../designUi';
 import { DesignNotesThread } from './DesignNotesThread';
@@ -67,12 +68,8 @@ const FileRow: React.FC<{ file: DesignFile; tag?: string; onRemove?: () => void;
   removing,
 }) => (
   <div className="flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-[10px] border border-background-600 hover:bg-background-700 transition-colors">
-    <a href={fileUrl(file.fileUrl)} target="_blank" rel="noreferrer" className="flex items-center gap-2.5 min-w-0 flex-1 py-0.5">
-      {isPdfFile(file.originalFileName) ? (
-        <FileText size={15} className="text-primary-600 shrink-0" />
-      ) : (
-        <Paperclip size={15} className="text-text-500 shrink-0" />
-      )}
+    <a {...fileLinkProps(file)} className="flex items-center gap-2.5 min-w-0 flex-1 py-0.5">
+      <FileKindIcon name={file.originalFileName} size={15} />
       <span className="min-w-0 flex-1 truncate text-[13px] text-text-900">{file.originalFileName}</span>
       <span className="text-[11.5px] text-text-500 whitespace-nowrap">
         {tag ? `${tag} · ` : ''}
@@ -221,13 +218,21 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
     }
   };
 
-  const onPickFile = async (file?: File | null) => {
-    if (!job || !file) {return;}
+  // A design is often several files (a PDF, renders, the drawing): each goes up on its own, so
+  // one that is refused does not hold back the ones before it.
+  const onPickFiles = async (picked: FileList | null) => {
+    if (!job || !picked || picked.length === 0) {return;}
+    const chosen = Array.from(picked);
+    let done = 0;
     try {
-      await uploadFile({ id: job.id, file }).unwrap();
-      toast.success('File uploaded');
+      for (const file of chosen) {
+        await uploadFile({ id: job.id, file }).unwrap();
+        done += 1;
+      }
+      toast.success(done === 1 ? 'File uploaded' : `${done} files uploaded`);
     } catch (e) {
-      toast.error(errMsg(e, 'Failed to upload file'));
+      const failed = chosen[done]?.name;
+      toast.error(`${failed ? `${failed}: ` : ''}${errMsg(e, 'Failed to upload file')}${done > 0 ? ` (${done} uploaded before it)` : ''}`);
     } finally {
       if (fileInput.current) {fileInput.current.value = '';}
     }
@@ -263,7 +268,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
   const managesPlans = viewer === 'admin' || viewer === 'coordinator';
   const files = job?.files ?? [];
   const planDocuments = job?.planDocuments ?? [];
-  const hasPdf = files.some((f) => isPdfFile(f.originalFileName));
+  const hasDesign = files.some((f) => isDesignFileName(f.originalFileName));
   const version = job?.version ?? 1;
   const earlier = (job?.versions ?? []).filter((v) => v.versionNo < version).sort((a, b) => b.versionNo - a.versionNo);
   const stage = job?.customerStatus ? STATUS_PILL[job.customerStatus]?.label ?? job.customerStatus : null;
@@ -411,7 +416,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                           type="file"
                           multiple
                           className="hidden"
-                          accept=".pdf,.jpg,.jpeg,.png,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.zip"
+                          accept={PLAN_ACCEPT}
                           onChange={(e) => onPickPlans(e.target.files)}
                         />
                         <button type="button" onClick={() => planInput.current?.click()} disabled={addingPlans} className={smallBtn}>
@@ -452,9 +457,10 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                       <input
                         ref={fileInput}
                         type="file"
+                        multiple
                         className="hidden"
-                        accept=".pdf,.jpg,.jpeg,.png,.dwg,.dxf,.skp,.zip,.rar,.doc,.docx,.xls,.xlsx"
-                        onChange={(e) => onPickFile(e.target.files?.[0])}
+                        accept={`${DESIGN_ACCEPT},.skp,.zip,.rar,.doc,.docx,.xls,.xlsx`}
+                        onChange={(e) => onPickFiles(e.target.files)}
                       />
                       <button type="button" onClick={() => fileInput.current?.click()} disabled={uploading} className={smallBtn}>
                         <Upload size={13} /> {uploading ? 'Uploading…' : 'Upload design'}
@@ -465,7 +471,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                 {files.length === 0 ? (
                   <p className="m-0 text-[12.5px] text-text-500">
                     {viewer === 'designer'
-                      ? 'Upload the design PDF here. Images or CAD files can be added as extras.'
+                      ? 'Upload the design here: PDF, images or CAD drawings (DWG, DXF). Several files can be chosen.'
                       : 'No design uploaded yet.'}
                   </p>
                 ) : (
@@ -508,12 +514,12 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                     <button
                       type="button"
                       onClick={doComplete}
-                      disabled={completing || !hasPdf}
+                      disabled={completing || !hasDesign}
                       className="btn-raised-accent inline-flex items-center gap-1.5 px-4 py-2 rounded-[10px] text-[13px] font-semibold disabled:opacity-50"
                     >
                       <CheckCircle2 size={14} /> {completing ? 'Sending…' : 'Mark complete'}
                     </button>
-                    {!hasPdf && <span className="text-[12px] text-text-500">Upload the design PDF first.</span>}
+                    {!hasDesign && <span className="text-[12px] text-text-500">Upload the design first.</span>}
                   </div>
                 </div>
               )}
@@ -566,7 +572,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                     Send it back as {versionLabel(version + 1)}.
                   </span>
                   <button type="button" onClick={() => setUploadFinalOpen(true)} className={smallBtn}>
-                    <Upload size={13} /> Upload newer PDF
+                    <Upload size={13} /> Upload newer design
                   </button>
                   <button
                     type="button"
@@ -583,7 +589,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                   onClick={() => setUploadFinalOpen(true)}
                   className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-primary-600 hover:underline"
                 >
-                  <Upload size={13} /> Already have the final PDF? Upload it and approve
+                  <Upload size={13} /> Already have the final design? Upload it and approve
                 </button>
               )}
 

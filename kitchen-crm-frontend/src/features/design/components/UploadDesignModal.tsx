@@ -1,14 +1,16 @@
 /**
- * UploadDesignModal — save an already existing design PDF as a customer's design. Used for
- * customers whose design was made outside the system, for a newer PDF replacing an approved one
- * (it becomes the next version), and by an admin to settle a design a designer still has open.
+ * UploadDesignModal — save an already existing design (PDFs, images, CAD drawings) as a
+ * customer's design. Used for customers whose design was made outside the system, for a newer
+ * design replacing an approved one (it becomes the next version), and by an admin to settle a
+ * design a designer still has open.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { FileText, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { useUploadCustomerDesignMutation } from '../designAPI';
-import { isApprovedDesign, isOpenDesign, isPdfFile, versionLabel } from '../designUi';
+import { DESIGN_ACCEPT, DESIGN_KINDS_TEXT, addPickedFiles, isDesignFileName, uploadSizeProblem } from '../designFiles';
+import { isApprovedDesign, isOpenDesign, versionLabel } from '../designUi';
+import { DesignFilesBox } from './DesignFilesBox';
 import type { DesignJob } from '../types';
 
 export interface UploadDesignTarget {
@@ -28,14 +30,14 @@ interface Props {
 const errMsg = (e: any, fallback: string) => e?.message || e?.data?.message || fallback;
 
 export const UploadDesignModal: React.FC<Props> = ({ target, onClose }) => {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [note, setNote] = useState('');
   const input = useRef<HTMLInputElement>(null);
   const [uploadDesign, { isLoading }] = useUploadCustomerDesignMutation();
 
   useEffect(() => {
     if (target) {
-      setFile(null);
+      setFiles([]);
       setNote('');
     }
   }, [target]);
@@ -43,23 +45,24 @@ export const UploadDesignModal: React.FC<Props> = ({ target, onClose }) => {
   const design = target?.design ?? null;
   const approved = !!design && isApprovedDesign(design.status);
   const open = !!design && isOpenDesign(design.status);
-  // An approved design is never overwritten: a newer PDF is its next version.
+  // An approved design is never overwritten: a newer design is its next version.
   const savedAs = versionLabel(approved ? (design?.version ?? 1) + 1 : design?.version ?? 1);
 
-  const pick = (f?: File | null) => {
-    if (!f) {return;}
-    if (!isPdfFile(f.name)) {
-      toast.error('The design must be a PDF file');
-      if (input.current) {input.current.value = '';}
-      return;
+  const pick = (picked: FileList | null) => {
+    if (!picked || picked.length === 0) {return;}
+    const next = addPickedFiles(files, Array.from(picked), isDesignFileName);
+    if (next.refused.length > 0) {
+      toast.error(`Not added: ${next.refused.join(', ')}. A design is ${DESIGN_KINDS_TEXT}.`);
     }
-    setFile(f);
+    setFiles(next.files);
+    if (input.current) {input.current.value = '';}
   };
+  const canSave = files.length > 0 && !uploadSizeProblem(files);
 
   const submit = async () => {
-    if (!target || !file) {return;}
+    if (!target || !canSave) {return;}
     try {
-      const saved = await uploadDesign({ customerId: target.customerId, file, note: note.trim() || undefined }).unwrap();
+      const saved = await uploadDesign({ customerId: target.customerId, files, note: note.trim() || undefined }).unwrap();
       // An approved design ends the Design stage for a customer who was in it.
       toast.success(
         target.customerStatus === 'DESIGN_STAGE' && saved.customerStatus === 'QUOTE_GIVEN'
@@ -87,7 +90,7 @@ export const UploadDesignModal: React.FC<Props> = ({ target, onClose }) => {
               {open && (
                 <>
                   This settles <span className="font-semibold text-text-900">{savedAs}</span>
-                  {design?.designerName ? `, which is with ${design.designerName},` : ''} as approved with this PDF.
+                  {design?.designerName ? `, which is with ${design.designerName},` : ''} as approved with these files.
                 </>
               )}
               {!approved && !open && (
@@ -99,25 +102,13 @@ export const UploadDesignModal: React.FC<Props> = ({ target, onClose }) => {
             </p>
 
             <div>
-              <span className="block text-[12.5px] font-medium text-text-800 mb-1.5">
-                Design PDF <span className="text-error">*</span>
-              </span>
-              <input ref={input} type="file" accept=".pdf,application/pdf" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
-              <button
-                type="button"
-                onClick={() => input.current?.click()}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] border border-dashed border-background-600 bg-background-900 text-left hover:bg-background-700 transition-colors"
-              >
-                {file ? (
-                  <FileText size={16} className="text-primary-600 shrink-0" />
-                ) : (
-                  <Upload size={16} className="text-text-500 shrink-0" />
-                )}
-                <span className={`min-w-0 flex-1 truncate text-[13px] ${file ? 'text-text-900' : 'text-text-600'}`}>
-                  {file ? file.name : 'Choose the PDF…'}
-                </span>
-                {file && <span className="text-[12px] font-medium text-primary-600">Change</span>}
-              </button>
+              <input ref={input} type="file" multiple accept={DESIGN_ACCEPT} className="hidden" onChange={(e) => pick(e.target.files)} />
+              <DesignFilesBox
+                files={files}
+                onChoose={() => input.current?.click()}
+                onRemove={(i) => setFiles(files.filter((_, j) => j !== i))}
+                disabled={isLoading}
+              />
             </div>
 
             <div>
@@ -144,7 +135,7 @@ export const UploadDesignModal: React.FC<Props> = ({ target, onClose }) => {
         <button
           type="button"
           onClick={submit}
-          disabled={!file || isLoading}
+          disabled={!canSave || isLoading}
           className="btn-raised-accent px-4 py-2 rounded-[10px] text-[13px] font-semibold disabled:opacity-50"
         >
           {isLoading ? 'Saving…' : `Save as ${savedAs}`}

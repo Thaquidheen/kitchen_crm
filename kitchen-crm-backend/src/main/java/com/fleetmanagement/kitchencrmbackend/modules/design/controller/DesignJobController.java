@@ -139,14 +139,15 @@ public class DesignJobController {
     }
 
     /**
-     * An already existing design PDF for a customer. Any staff member may upload it (that is how a
-     * customer whose design was made elsewhere reaches Quotation Stage); only an admin may use it
-     * to settle a design a designer is still working on.
+     * An already existing design for a customer: one or more PDFs, images or CAD drawings (the
+     * part is still called "file", repeated once per file). Any staff member may upload it (that
+     * is how a customer whose design was made elsewhere reaches Quotation Stage); only an admin
+     * may use it to settle a design a designer is still working on.
      */
     @PostMapping(value = "/customer/{customerId}/design", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<DesignJobDto>> uploadCustomerDesign(
             @PathVariable Long customerId,
-            @RequestParam("file") MultipartFile file,
+            @RequestParam("file") MultipartFile[] files,
             @RequestParam(value = "note", required = false) String note,
             @RequestParam(value = "moveToQuotation", defaultValue = "false") boolean moveToQuotation,
             @AuthenticationPrincipal UserPrincipal user) {
@@ -155,7 +156,7 @@ public class DesignJobController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error(PermissionInterceptor.message(Permission.CUSTOMERS_CHANGE_STAGE)));
         }
-        return respond(service.uploadCustomerDesign(customerId, file, note, moveToQuotation, id(user), name(user),
+        return respond(service.uploadCustomerDesign(customerId, files, note, moveToQuotation, id(user), name(user),
                 ViewerScope.isSuperAdmin(user)));
     }
 

@@ -73,7 +73,7 @@ public class CustomerServiceImpl implements CustomerService {
         // Quotation Stage needs the customer's design, and a customer that does not exist yet has
         // none: it is reached from the customer's page, where the design PDF is uploaded.
         if (mayChooseStage && customerCreateDto.getStatus() == Customer.CustomerStatus.QUOTE_GIVEN) {
-            return ApiResponse.error("Add the customer first, then move them to Quotation Stage with the design PDF");
+            return ApiResponse.error("Add the customer first, then move them to Quotation Stage with the design");
         }
 
         Customer customer = convertToEntity(customerCreateDto);

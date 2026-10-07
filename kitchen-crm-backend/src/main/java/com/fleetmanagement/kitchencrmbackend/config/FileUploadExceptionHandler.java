@@ -13,7 +13,8 @@ public class FileUploadExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiResponse<String>> handleMaxSizeException(MaxUploadSizeExceededException exc) {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-                .body(ApiResponse.error("File size exceeds maximum allowed size of 50MB"));
+                .body(ApiResponse.error("These files are too large. One file can be up to 50 MB, "
+                        + "and the files of one upload up to 200 MB together."));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

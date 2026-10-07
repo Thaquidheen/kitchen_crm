@@ -40,8 +40,9 @@ public class FileUploadConfig implements WebMvcConfigurer {
         // Set maximum file size (50MB)
         factory.setMaxFileSize(DataSize.ofMegabytes(50));
 
-        // Set maximum request size (50MB)
-        factory.setMaxRequestSize(DataSize.ofMegabytes(50));
+        // One upload may carry several files (a design as PDF + images + a CAD drawing): up to
+        // 200 MB of files, plus room for the form's own wrapping. nginx allows 220M.
+        factory.setMaxRequestSize(DataSize.ofMegabytes(210));
 
         return factory.createMultipartConfig();
     }
