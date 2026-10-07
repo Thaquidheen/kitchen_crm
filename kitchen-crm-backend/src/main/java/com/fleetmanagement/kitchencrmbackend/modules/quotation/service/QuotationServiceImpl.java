@@ -148,8 +148,9 @@ public class QuotationServiceImpl implements QuotationService {
             // folder as the next version; a brand-new quotation gets its own new folder as V1.
             QuotationFolder folder = null;
             int versionNumber = 1;
+            Quotation source = null;
             if (dto.getSourceQuotationId() != null) {
-                Quotation source = quotationRepository.findById(dto.getSourceQuotationId()).orElse(null);
+                source = quotationRepository.findById(dto.getSourceQuotationId()).orElse(null);
                 if (source != null) {
                     folder = source.getFolder();
                     if (folder == null) {
@@ -189,10 +190,11 @@ public class QuotationServiceImpl implements QuotationService {
             quotation.setInstallationPrice(dto.getInstallationPrice() != null ? dto.getInstallationPrice() : BigDecimal.ZERO);
             
             // Use category-specific margins from DTO if provided (super admin can override), otherwise use global defaults
-            quotation.setAccessoriesMarginPercentage(dto.getAccessoriesMarginPercentage() != null ? dto.getAccessoriesMarginPercentage() : systemSettingService.getMarginPercentage("accessories"));
-            quotation.setCabinetsMarginPercentage(dto.getCabinetsMarginPercentage() != null ? dto.getCabinetsMarginPercentage() : systemSettingService.getMarginPercentage("cabinets"));
-            quotation.setDoorsMarginPercentage(dto.getDoorsMarginPercentage() != null ? dto.getDoorsMarginPercentage() : systemSettingService.getMarginPercentage("doors"));
-            quotation.setLightingMarginPercentage(dto.getLightingMarginPercentage() != null ? dto.getLightingMarginPercentage() : systemSettingService.getMarginPercentage("lighting"));
+            boolean callerSeesPricing = "ROLE_SUPER_ADMIN".equals(userRole);
+            quotation.setAccessoriesMarginPercentage(startingMargin(dto.getAccessoriesMarginPercentage(), source != null ? source.getAccessoriesMarginPercentage() : null, "accessories", callerSeesPricing));
+            quotation.setCabinetsMarginPercentage(startingMargin(dto.getCabinetsMarginPercentage(), source != null ? source.getCabinetsMarginPercentage() : null, "cabinets", callerSeesPricing));
+            quotation.setDoorsMarginPercentage(startingMargin(dto.getDoorsMarginPercentage(), source != null ? source.getDoorsMarginPercentage() : null, "doors", callerSeesPricing));
+            quotation.setLightingMarginPercentage(startingMargin(dto.getLightingMarginPercentage(), source != null ? source.getLightingMarginPercentage() : null, "lighting", callerSeesPricing));
             
             // Use tax percentages from DTO if provided, otherwise use defaults
             quotation.setAccessoriesTaxPercentage(dto.getAccessoriesTaxPercentage() != null ? dto.getAccessoriesTaxPercentage() : BigDecimal.valueOf(18.0));
@@ -201,7 +203,9 @@ public class QuotationServiceImpl implements QuotationService {
             quotation.setLightingTaxPercentage(dto.getLightingTaxPercentage() != null ? dto.getLightingTaxPercentage() : BigDecimal.valueOf(18.0));
 
             // Miscellaneous (Other Expenses) margin & tax
-            quotation.setMiscellaneousMarginPercentage(dto.getMiscellaneousMarginPercentage() != null ? dto.getMiscellaneousMarginPercentage() : BigDecimal.ZERO);
+            quotation.setMiscellaneousMarginPercentage(callerSeesPricing
+                    ? (dto.getMiscellaneousMarginPercentage() != null ? dto.getMiscellaneousMarginPercentage() : BigDecimal.ZERO)
+                    : startingMargin(null, source != null ? source.getMiscellaneousMarginPercentage() : null, "miscellaneous", false));
             quotation.setMiscellaneousTaxPercentage(dto.getMiscellaneousTaxPercentage() != null ? dto.getMiscellaneousTaxPercentage() : BigDecimal.valueOf(18.0));
 
             // Per-category MRP (list price) margin & tax — default to the matching offer value when not provided
@@ -225,15 +229,20 @@ public class QuotationServiceImpl implements QuotationService {
             // Save quotation first to get ID
             Quotation savedQuotation = quotationRepository.save(quotation);
 
+            // "Save as New" copies a quotation: the lights it already has keep their rates.
+            StoredLightingRates storedLightingRates = source != null
+                    ? StoredLightingRates.of(lightingRepository.findStoredRatesByQuotationId(source.getId()))
+                    : StoredLightingRates.NONE;
+
             // Save kitchens first (if any)
             boolean hasKitchens = dto.getKitchens() != null && !dto.getKitchens().isEmpty();
             if (hasKitchens) {
-                saveKitchens(savedQuotation, dto.getKitchens(), userRole);
+                saveKitchens(savedQuotation, dto.getKitchens(), userRole, storedLightingRates);
             } else {
                 // Legacy (no kitchens): products live at the quotation level. When kitchens
                 // exist, every product is inside a kitchen — saving the top-level lists too
                 // would store a second, kitchen-less copy of each item (row bloat on every save).
-                saveLineItems(savedQuotation, dto, userRole);
+                saveLineItems(savedQuotation, dto, userRole, storedLightingRates);
             }
 
             // FIXED: Use PricingService instead of local method
@@ -283,16 +292,19 @@ public class QuotationServiceImpl implements QuotationService {
         existingQuotation.setTermsConditions(quotationDto.getTermsConditions());
         existingQuotation.setWarrantyAndService(quotationDto.getWarrantyAndService());
 
-        // Update category-specific margin and tax percentages (super admin can modify these)
-        existingQuotation.setAccessoriesMarginPercentage(quotationDto.getAccessoriesMarginPercentage());
-        existingQuotation.setCabinetsMarginPercentage(quotationDto.getCabinetsMarginPercentage());
-        existingQuotation.setDoorsMarginPercentage(quotationDto.getDoorsMarginPercentage());
-        existingQuotation.setLightingMarginPercentage(quotationDto.getLightingMarginPercentage());
+        // Update category-specific margin and tax percentages. Offer margins are the
+        // administrator's (see startingMargin): a save by anyone else leaves them as they are.
+        if (callerSeesPricing) {
+            existingQuotation.setAccessoriesMarginPercentage(quotationDto.getAccessoriesMarginPercentage());
+            existingQuotation.setCabinetsMarginPercentage(quotationDto.getCabinetsMarginPercentage());
+            existingQuotation.setDoorsMarginPercentage(quotationDto.getDoorsMarginPercentage());
+            existingQuotation.setLightingMarginPercentage(quotationDto.getLightingMarginPercentage());
+            existingQuotation.setMiscellaneousMarginPercentage(quotationDto.getMiscellaneousMarginPercentage());
+        }
         existingQuotation.setAccessoriesTaxPercentage(quotationDto.getAccessoriesTaxPercentage());
         existingQuotation.setCabinetsTaxPercentage(quotationDto.getCabinetsTaxPercentage());
         existingQuotation.setDoorsTaxPercentage(quotationDto.getDoorsTaxPercentage());
         existingQuotation.setLightingTaxPercentage(quotationDto.getLightingTaxPercentage());
-        existingQuotation.setMiscellaneousMarginPercentage(quotationDto.getMiscellaneousMarginPercentage());
         existingQuotation.setMiscellaneousTaxPercentage(quotationDto.getMiscellaneousTaxPercentage());
 
         // Per-category MRP (list price) margin & tax — fall back to the matching offer value when not supplied
@@ -312,6 +324,11 @@ public class QuotationServiceImpl implements QuotationService {
         existingQuotation.setPaymentAcceptancePct(quotationDto.getPaymentAcceptancePct());
         existingQuotation.setPaymentDeliveryPct(quotationDto.getPaymentDeliveryPct());
         existingQuotation.setPaymentInstallationPct(quotationDto.getPaymentInstallationPct());
+
+        // What the lights cost now, read before the lines are deleted: a staff save has to put
+        // those rates back, because the screen was never sent them (see StoredLightingRates).
+        StoredLightingRates storedLightingRates =
+                StoredLightingRates.of(lightingRepository.findStoredRatesByQuotationId(id));
 
         // Delete existing kitchens and line items
         kitchenRepository.deleteByQuotationId(id);
@@ -363,7 +380,7 @@ public class QuotationServiceImpl implements QuotationService {
                 kdto.setOtherExpenses(k.getOtherExpenses());
                 return kdto;
             }).toList();
-            saveKitchens(existingQuotation, kitchenCreateDtos, userRole);
+            saveKitchens(existingQuotation, kitchenCreateDtos, userRole, storedLightingRates);
         }
 
         // Legacy (no kitchens) only: products live at the quotation level. When kitchens exist,
@@ -379,7 +396,7 @@ public class QuotationServiceImpl implements QuotationService {
             createDto.setLighting(quotationDto.getLighting());
             createDto.setOtherExpenses(quotationDto.getOtherExpenses());
 
-            saveLineItems(existingQuotation, createDto, userRole);
+            saveLineItems(existingQuotation, createDto, userRole, storedLightingRates);
         }
 
         // FIXED: Use PricingService instead of local method
@@ -602,7 +619,8 @@ public class QuotationServiceImpl implements QuotationService {
         }
     }
 
-    private void saveLineItems(Quotation quotation, QuotationCreateDto dto, String userRole) {
+    private void saveLineItems(Quotation quotation, QuotationCreateDto dto, String userRole,
+                               StoredLightingRates storedLightingRates) {
         // Save accessories with proper item details
         if (dto.getAccessories() != null) {
             for (QuotationAccessoryDto accessoryDto : dto.getAccessories()) {
@@ -728,7 +746,7 @@ public class QuotationServiceImpl implements QuotationService {
                 lighting.setItemType(QuotationLighting.LightingItemType.valueOf(lightingDto.getItemType()));
                 lighting.setItemId(lightingDto.getItemId());
                 lighting.setQuantity(lightingDto.getQuantity());
-                lighting.setUnitPrice(resolveLightingUnitPrice(lightingDto, userRole));
+                lighting.setUnitPrice(resolveLightingUnitPrice(lightingDto, userRole, storedLightingRates, null));
 
                 // CRITICAL FIX: Set the unit field based on item type
                 lighting.setUnit(determineUnit(lightingDto.getItemType()));
@@ -879,7 +897,8 @@ public class QuotationServiceImpl implements QuotationService {
         }
     }
 
-    private void saveKitchens(Quotation quotation, List<QuotationKitchenCreateDto> kitchenDtos, String userRole) {
+    private void saveKitchens(Quotation quotation, List<QuotationKitchenCreateDto> kitchenDtos, String userRole,
+                              StoredLightingRates storedLightingRates) {
         for (QuotationKitchenCreateDto kitchenDto : kitchenDtos) {
             QuotationKitchen kitchen = new QuotationKitchen();
             kitchen.setQuotation(quotation);
@@ -935,11 +954,12 @@ public class QuotationServiceImpl implements QuotationService {
             }
 
             // Save products for this kitchen
-            saveKitchenProducts(savedKitchen, quotation, kitchenDto, userRole);
+            saveKitchenProducts(savedKitchen, quotation, kitchenDto, userRole, storedLightingRates);
         }
     }
     
-    private void saveKitchenProducts(QuotationKitchen kitchen, Quotation quotation, QuotationKitchenCreateDto kitchenDto, String userRole) {
+    private void saveKitchenProducts(QuotationKitchen kitchen, Quotation quotation, QuotationKitchenCreateDto kitchenDto, String userRole,
+                                     StoredLightingRates storedLightingRates) {
         // Save accessories for this kitchen
         if (kitchenDto.getAccessories() != null) {
             for (QuotationAccessoryDto accessoryDto : kitchenDto.getAccessories()) {
@@ -1054,7 +1074,7 @@ public class QuotationServiceImpl implements QuotationService {
                 lighting.setItemType(QuotationLighting.LightingItemType.valueOf(lightingDto.getItemType()));
                 lighting.setItemId(lightingDto.getItemId());
                 lighting.setQuantity(lightingDto.getQuantity());
-                lighting.setUnitPrice(resolveLightingUnitPrice(lightingDto, userRole));
+                lighting.setUnitPrice(resolveLightingUnitPrice(lightingDto, userRole, storedLightingRates, kitchen));
 
                 // Set the unit field based on item type
                 lighting.setUnit(determineUnit(lightingDto.getItemType()));
@@ -1488,27 +1508,80 @@ public class QuotationServiceImpl implements QuotationService {
                 .orElse(BigDecimal.ZERO);
     }
 
-    /** See {@link #resolveAccessoryUnitPrice} — same non-positive-means-unsupplied rule. */
-    private BigDecimal resolveLightingUnitPrice(QuotationLightingDto dto, String userRole) {
+    /**
+     * Unit price for a saved lighting line. See {@link #resolveAccessoryUnitPrice} — same
+     * non-positive-means-unsupplied rule, and the administrator's figure always stands.
+     *
+     * <p>For everyone else the price sent is ignored, with one exception below, and the line is
+     * priced in this order:
+     * <ol>
+     *   <li>A light the quotation already has keeps the rate stored for it. Every save rebuilds
+     *       the lines, and before this a staff save re-priced each of them from the catalogue —
+     *       which gave 0 for a custom light, and 0 for any light whose catalogue item was gone.</li>
+     *   <li>A custom light that is new takes the price typed by the person adding it. It has no
+     *       catalogue entry, so nothing is hidden from them and nothing stored is overwritten.</li>
+     *   <li>A catalogue light that is new is priced from the catalogue, the same way the
+     *       administrator's screen prices it: company price, else MRP, else the base price.</li>
+     * </ol>
+     *
+     * @param kitchen the kitchen the line is saved into; null for a line outside any kitchen
+     */
+    private BigDecimal resolveLightingUnitPrice(QuotationLightingDto dto, String userRole,
+                                                StoredLightingRates storedLightingRates, QuotationKitchen kitchen) {
         boolean callerSeesPricing = "ROLE_SUPER_ADMIN".equals(userRole);
-        if (callerSeesPricing && dto.getUnitPrice() != null && dto.getUnitPrice().signum() > 0) {
+        boolean priceSent = dto.getUnitPrice() != null && dto.getUnitPrice().signum() > 0;
+        if (callerSeesPricing && priceSent) {
             return dto.getUnitPrice();
         }
         if (dto.getItemType() == null || dto.getItemId() == null) {
             return callerSeesPricing && dto.getUnitPrice() != null ? dto.getUnitPrice() : BigDecimal.ZERO;
         }
+        if (!callerSeesPricing) {
+            BigDecimal stored = storedLightingRates.find(kitchen, dto.getItemType(), dto.getItemId());
+            if (stored != null) {
+                return stored;
+            }
+        }
         BigDecimal price = switch (dto.getItemType()) {
             case "LIGHT_PROFILE" -> lightProfileRepository.findById(dto.getItemId())
-                    .map(LightProfile::getCompanyPrice).orElse(null);
+                    .map(p -> firstPositive(p.getCompanyPrice(), p.getMrp(), p.getPricePerMeter())).orElse(null);
             case "DRIVER" -> driverRepository.findById(dto.getItemId())
-                    .map(Driver::getCompanyPrice).orElse(null);
+                    .map(d -> firstPositive(d.getCompanyPrice(), d.getMrp(), d.getPrice())).orElse(null);
             case "CONNECTOR" -> connectorRepository.findById(dto.getItemId())
-                    .map(Connector::getCompanyPrice).orElse(null);
+                    .map(c -> firstPositive(c.getCompanyPrice(), c.getMrp(), c.getPricePerPiece())).orElse(null);
             case "SENSOR" -> sensorRepository.findById(dto.getItemId())
-                    .map(Sensor::getCompanyPrice).orElse(null);
-            default -> null; // CUSTOM items carry their own price and never reach here with null
+                    .map(s -> firstPositive(s.getCompanyPrice(), s.getMrp(), s.getPricePerPiece())).orElse(null);
+            case "CUSTOM" -> priceSent ? dto.getUnitPrice() : null;
+            default -> null;
         };
         return price != null ? price : BigDecimal.ZERO;
+    }
+
+    private static BigDecimal firstPositive(BigDecimal... candidates) {
+        for (BigDecimal candidate : candidates) {
+            if (candidate != null && candidate.signum() > 0) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The offer margin a new quotation starts with. Margins are the administrator's: their screen
+     * sends the figure they chose. Everyone else is not shown the margin settings, so what their
+     * screen sends is its own built-in number rather than a decision — it is ignored, and the
+     * quotation takes the margin of the one being copied ("Save as New"), or else the
+     * administrator's setting. Before this a quotation started by staff carried different
+     * margins, and so different rates, than the same quotation started by the administrator.
+     */
+    private BigDecimal startingMargin(BigDecimal sent, BigDecimal copiedFrom, String category, boolean callerSeesPricing) {
+        if (callerSeesPricing && sent != null) {
+            return sent;
+        }
+        if (!callerSeesPricing && copiedFrom != null) {
+            return copiedFrom;
+        }
+        return systemSettingService.getMarginPercentage(category);
     }
 
     /**

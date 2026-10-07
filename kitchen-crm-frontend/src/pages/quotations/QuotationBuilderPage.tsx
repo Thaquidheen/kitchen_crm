@@ -77,6 +77,24 @@ function mapLoadedAccessory(a: any) {
   };
 }
 
+// Map a saved lighting row into the builder's shape. Same rule as mapLoadedAccessory: staff are
+// not sent unitPrice, and that absence must stay undefined rather than become a made-up 0.
+function mapLoadedLighting(l: any) {
+  const unit = l.unitPrice == null ? undefined : Number(l.unitPrice);
+  // itemName comes from the backend (e.g. "Driver - 20W", or the name typed for a custom light)
+  const displayName = l.itemName || l.description || 'Lighting Item';
+  return {
+    id: l.itemId || l.id,
+    quantity: l.quantity,
+    unitPrice: unit,
+    // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
+    totalPrice: unit == null ? undefined : unit * (l.quantity || 1),
+    name: displayName,
+    description: displayName,
+    itemType: l.itemType || 'LIGHT_PROFILE',
+  };
+}
+
 // Heal quotations that already contain split rows for the same accessory (same accessory,
 // same elevation, same unit price) by merging them into one row with the summed quantity.
 function mergeDuplicateAccessories(list: any[]): any[] {
@@ -450,20 +468,7 @@ export function QuotationBuilderPage() {
           const paired = pairCabinetsAndDoors(k.cabinets || [], k.doors || []);
           return { cabinets: paired.cabinets, doors: paired.doors };
         })(),
-        lighting: (k.lighting || []).map((l: any) => {
-          const itemType = l.itemType || 'LIGHT_PROFILE';
-          let displayName = l.itemName || l.description || 'Lighting Item';
-          return {
-            id: l.itemId || l.id,
-            quantity: l.quantity,
-            unitPrice: Number(l.unitPrice || 0),
-            // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
-            totalPrice: Number(l.unitPrice || 0) * (l.quantity || 1),
-            name: displayName,
-            description: displayName,
-            itemType: itemType,
-          };
-        }),
+        lighting: (k.lighting || []).map(mapLoadedLighting),
         otherExpenses: buildOtherExpenses(
           0,
           Number(k.installationPrice || 0),
@@ -471,24 +476,7 @@ export function QuotationBuilderPage() {
           true
         ),
       })),
-      lighting: (existingQuotation.lighting || []).map((l: any) => {
-        // Try to reconstruct the itemType from the description or fallback to itemType
-        const itemType = l.itemType || 'LIGHT_PROFILE';
-        // Use itemName from backend (e.g., "Driver - 20W", "Light Profile - Type A")
-        // Fall back to description if itemName is not available
-        let displayName = l.itemName || l.description || 'Lighting Item';
-
-        return {
-          id: l.itemId || l.id,
-          quantity: l.quantity,
-          unitPrice: Number(l.unitPrice || 0),
-          // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
-          totalPrice: Number(l.unitPrice || 0) * (l.quantity || 1),
-          name: displayName,
-          description: displayName,
-          itemType: itemType,
-        };
-      }),
+      lighting: (existingQuotation.lighting || []).map(mapLoadedLighting),
       otherExpenses: buildOtherExpenses(
         commonTransportSeed,
         Number(existingQuotation.installationPrice || 0),
