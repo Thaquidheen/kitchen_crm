@@ -97,6 +97,9 @@ public class PermissionInterceptor implements HandlerInterceptor {
     /** The permission this call needs, or null when no rule covers it. */
     static Permission needed(String method, String path) {
         String m = method == null ? "" : method.toUpperCase();
+        if ("HEAD".equals(m)) {
+            m = "GET"; // Spring answers HEAD with the GET handler: the same rule decides
+        }
         for (Rule rule : RULES) {
             if (rule.methods().contains(m) && MATCHER.match(rule.pattern(), path)) {
                 return rule.permission();

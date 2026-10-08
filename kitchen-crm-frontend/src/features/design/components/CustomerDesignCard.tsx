@@ -86,7 +86,10 @@ export const CustomerDesignCard: React.FC<Props> = ({
 
   // Plan documents can be handed over from here while the customer is in Design Stage — also
   // before a designer is chosen, when there is no design to open in Designs yet.
-  const canAddPlans = opensDesigns && customerStatus === 'DESIGN_STAGE' && (!design || open);
+  // A cancelled design counts as none: the customer waits to be assigned again and the next
+  // assignment picks that design up, with what is attached to it.
+  const canAddPlans =
+    opensDesigns && customerStatus === 'DESIGN_STAGE' && (!design || open || design.status === 'CANCELLED');
   const onPickPlans = async (picked: FileList | null) => {
     if (!picked || picked.length === 0) {return;}
     const next = addPickedFiles([], Array.from(picked), isPlanFileName);
@@ -135,7 +138,9 @@ export const CustomerDesignCard: React.FC<Props> = ({
           <p className="m-0 text-[12.5px] text-text-600">
             {PAST_DESIGN.has(customerStatus)
               ? 'No design is saved for this customer yet.'
-              : 'No design yet. Moving the customer to Design Stage assigns a designer.'}
+              : customerStatus === 'DESIGN_STAGE'
+                ? 'No designer has been chosen yet. The admin assigns one in Designs.'
+                : 'No design yet. Moving the customer to Design Stage assigns a designer.'}
           </p>
           {(canUploadDesign || canAddPlans) && (
             <div className="flex items-center gap-1.5 flex-wrap">

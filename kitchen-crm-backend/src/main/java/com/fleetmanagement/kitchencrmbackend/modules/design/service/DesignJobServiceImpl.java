@@ -50,6 +50,9 @@ public class DesignJobServiceImpl implements DesignJobService {
     /**
      * Admin staff may bring in the finished design while the designer is on a first pass. Not once
      * it is handed in, and not after the admin has asked for changes: then the admin wants to see it.
+     * The status alone does not say that — a sent-back design is IN_PROGRESS again as soon as the
+     * designer starts the changes — so the check also asks whether the version was ever handed in
+     * (completedAt is set then, and stays until the next version is opened).
      */
     private static final Set<DesignStatus> STAFF_SETTLES = EnumSet.of(DesignStatus.PLANNING, DesignStatus.IN_PROGRESS);
     /** The current version is not approved yet: with the designer, or with the admin for review. */
@@ -770,10 +773,10 @@ public class DesignJobServiceImpl implements DesignJobService {
                 return ApiResponse.error("The design is still with " + existing.getStaffAssigned().getName()
                         + ". The admin approves it from Designs.");
             }
-            if (!STAFF_SETTLES.contains(status(existing))) {
-                return ApiResponse.error(status(existing) == DesignStatus.REVISION_REQUIRED
-                        ? "The admin has asked for changes to this design and approves the new one"
-                        : "This design is waiting for the admin's approval");
+            if (!STAFF_SETTLES.contains(status(existing)) || existing.getCompletedAt() != null) {
+                return ApiResponse.error(status(existing) == DesignStatus.PENDING_SUPERADMIN_APPROVAL
+                        ? "This design is waiting for the admin's approval"
+                        : "The admin has asked for changes to this design and approves the new one");
             }
         }
         // Valid — now write.

@@ -106,10 +106,18 @@ describe('bringing in the finished design while a designer has it', () => {
   });
 
   it('is the administrator alone after the administrator asked for changes', () => {
-    const sentBack = job({ status: 'REVISION_REQUIRED' });
+    const sentBack = job({ status: 'REVISION_REQUIRED', completedAt: '2026-10-08T10:00:00' });
     expect(canSettleOpenDesign(sentBack, admin)).toBe(true);
     expect(canSettleOpenDesign(sentBack, adminStaff)).toBe(false);
     expect(canSettleOpenDesign(sentBack, others)).toBe(false);
+  });
+
+  it('stays the administrator alone when the designer has started those changes', () => {
+    // In progress again, but this version was handed in once: not a first pass.
+    const reworking = job({ status: 'IN_PROGRESS', completedAt: '2026-10-08T10:00:00' });
+    expect(canSettleOpenDesign(reworking, admin)).toBe(true);
+    expect(canSettleOpenDesign(reworking, adminStaff)).toBe(false);
+    expect(canSettleOpenDesign(job({ status: 'IN_PROGRESS', completedAt: null }), adminStaff)).toBe(true);
   });
 
   it('is the administrator alone once the designer has handed it in for approval', () => {

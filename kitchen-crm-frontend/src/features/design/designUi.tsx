@@ -53,12 +53,14 @@ export const isOpenDesign = (s: DesignStatus) => isDesignerWork(s) || s === 'PEN
  * anyone when nobody has been given the design yet.
  */
 export const canSettleOpenDesign = (
-  job: Pick<DesignJob, 'status' | 'designerId'> | null | undefined,
+  job: Pick<DesignJob, 'status' | 'designerId' | 'completedAt'> | null | undefined,
   who: { admin: boolean; coordinator: boolean },
 ): boolean => {
   if (!job || !isOpenDesign(job.status)) {return false;}
   if (who.admin || !job.designerId) {return true;}
-  return who.coordinator && (job.status === 'PLANNING' || job.status === 'IN_PROGRESS');
+  // A first pass: `completedAt` is set once the version has been handed in and stays set when the
+  // administrator sends it back, also after the designer starts the changes.
+  return who.coordinator && (job.status === 'PLANNING' || job.status === 'IN_PROGRESS') && !job.completedAt;
 };
 
 /** The current version is approved: a quotation can be made from this design. */
