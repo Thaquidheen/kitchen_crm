@@ -62,10 +62,15 @@ export interface QuotationAssignee {
   overdue: number;
 }
 
+/** A customer in Quotation Stage that nobody is preparing a quotation for right now. */
 export interface UnassignedQuotationCustomer {
   customerId: number;
   customerName: string;
   customerPlace?: string | null;
+  /** Quotations the customer already has; cancelled ones are not counted. */
+  quotationCount?: number | null;
+  /** Where the newest of them stands. */
+  latestQuotationStatus?: string | null;
 }
 
 export interface QuotationWorkFeed {

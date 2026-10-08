@@ -29,7 +29,7 @@ export const quotationWorkAPI = baseApi.injectEndpoints({
     getUnassignedQuotationCustomers: builder.query<UnassignedQuotationCustomer[], void>({
       query: () => '/quotation-jobs/unassigned',
       transformResponse: (r: ApiResponse<UnassignedQuotationCustomer[]>) => r.data ?? [],
-      // A customer drops out of this list as soon as a quotation exists for them.
+      // Everyone in Quotation Stage that nobody is preparing: a new quotation or a stage change moves them.
       providesTags: ['QuotationWork', 'Quotations', 'Customers'],
     }),
     getQuotationAssignees: builder.query<QuotationAssignee[], void>({

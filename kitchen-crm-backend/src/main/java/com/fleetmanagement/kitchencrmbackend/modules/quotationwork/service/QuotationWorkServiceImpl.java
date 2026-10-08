@@ -102,12 +102,27 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<List<Map<String, Object>>> unassigned() {
+        List<Customer> customers = jobRepository.findCustomersNotBeingQuoted(CustomerStatus.QUOTE_GIVEN);
+        // What each of them already has, newest first. A cancelled quotation is not one they have.
+        Map<Long, List<String>> has = new HashMap<>();
+        if (!customers.isEmpty()) {
+            Set<Long> ids = customers.stream().map(Customer::getId).collect(Collectors.toSet());
+            for (Object[] row : jobRepository.findQuotationsOfCustomers(ids)) {
+                if (row[5] != QuotationStatus.CANCELLED) {
+                    has.computeIfAbsent((Long) row[0], k -> new ArrayList<>()).add(row[5] == null ? null : row[5].toString());
+                }
+            }
+        }
         List<Map<String, Object>> rows = new ArrayList<>();
-        for (Customer c : jobRepository.findCustomersWithoutQuotationWork(CustomerStatus.QUOTE_GIVEN)) {
+        for (Customer c : customers) {
+            List<String> statuses = has.getOrDefault(c.getId(), List.of());
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("customerId", c.getId());
             row.put("customerName", c.getName());
             row.put("customerPlace", c.getPlace());
+            // No amounts here either: how many, and where the newest one stands.
+            row.put("quotationCount", statuses.size());
+            row.put("latestQuotationStatus", statuses.isEmpty() ? null : statuses.get(0));
             rows.add(row);
         }
         return ApiResponse.success(rows);
