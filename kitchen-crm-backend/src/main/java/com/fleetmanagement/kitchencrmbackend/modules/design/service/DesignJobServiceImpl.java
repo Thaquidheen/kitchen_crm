@@ -47,6 +47,11 @@ public class DesignJobServiceImpl implements DesignJobService {
     /** The designer has work to do on these. */
     private static final Set<DesignStatus> DESIGNER_WORK = EnumSet.of(
             DesignStatus.PLANNING, DesignStatus.IN_PROGRESS, DesignStatus.REVISION_REQUIRED);
+    /**
+     * Admin staff may bring in the finished design while the designer is on a first pass. Not once
+     * it is handed in, and not after the admin has asked for changes: then the admin wants to see it.
+     */
+    private static final Set<DesignStatus> STAFF_SETTLES = EnumSet.of(DesignStatus.PLANNING, DesignStatus.IN_PROGRESS);
     /** The current version is not approved yet: with the designer, or with the admin for review. */
     private static final Set<DesignStatus> OPEN = EnumSet.of(
             DesignStatus.PLANNING, DesignStatus.IN_PROGRESS, DesignStatus.REVISION_REQUIRED,
@@ -760,13 +765,15 @@ public class DesignJobServiceImpl implements DesignJobService {
         boolean withSomeone = open && existing.getStaffAssigned() != null;
         if (withSomeone && !admin) {
             // While the designer has it, admin staff may bring in the finished design. Once it is
-            // handed in for approval the decision is the admin's.
+            // handed in, or the admin has asked for changes, the decision is the admin's.
             if (!coordinator) {
                 return ApiResponse.error("The design is still with " + existing.getStaffAssigned().getName()
                         + ". The admin approves it from Designs.");
             }
-            if (!DESIGNER_WORK.contains(status(existing))) {
-                return ApiResponse.error("This design is waiting for the admin's approval");
+            if (!STAFF_SETTLES.contains(status(existing))) {
+                return ApiResponse.error(status(existing) == DesignStatus.REVISION_REQUIRED
+                        ? "The admin has asked for changes to this design and approves the new one"
+                        : "This design is waiting for the admin's approval");
             }
         }
         // Valid — now write.
@@ -831,7 +838,9 @@ public class DesignJobServiceImpl implements DesignJobService {
         } else if (moveToQuotationIfInDesign(customer, callerName, "Design V" + version(job) + " uploaded")) {
             message = "Design saved — customer moved to Quotation Stage";
         }
-        return ApiResponse.success(message, detail(job));
+        // The conversation stays with the admin and the designer, here as everywhere else.
+        DesignJobDto dto = detail(job);
+        return ApiResponse.success(message, admin || isAssignedDesigner(job, callerId) ? dto : withoutConversation(dto));
     }
 
     // ------------------------------------------------------------------ designers panel

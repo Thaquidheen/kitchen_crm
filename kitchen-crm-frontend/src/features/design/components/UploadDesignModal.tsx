@@ -35,12 +35,16 @@ export const UploadDesignModal: React.FC<Props> = ({ target, onClose }) => {
   const input = useRef<HTMLInputElement>(null);
   const [uploadDesign, { isLoading }] = useUploadCustomerDesignMutation();
 
+  // Start empty each time the window opens (or the customer changes). Not on `target` itself: two
+  // of the callers build it anew on every render, and the page behind refreshes in the background
+  // and whenever the window gets focus back — which is exactly when a file picker closes.
+  const openFor = target?.customerId ?? null;
   useEffect(() => {
-    if (target) {
+    if (openFor !== null) {
       setFiles([]);
       setNote('');
     }
-  }, [target]);
+  }, [openFor]);
 
   const design = target?.design ?? null;
   const approved = !!design && isApprovedDesign(design.status);

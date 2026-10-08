@@ -64,7 +64,7 @@ export function useCustomerStatusChange() {
           await uploadPlanDocuments({ customerId, files: planFiles }).unwrap();
         } catch (e) {
           return {
-            warning: `Status updated, but the plan documents were not added: ${errMsg(e, 'upload failed')}. Add them from the design.`,
+            warning: `Status updated, but the plan documents were not added: ${errMsg(e, 'upload failed')}. Add them from the Design box on the customer's page.`,
           };
         }
       }

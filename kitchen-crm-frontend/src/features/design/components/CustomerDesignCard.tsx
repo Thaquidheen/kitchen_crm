@@ -4,10 +4,12 @@
  * Staff can add an existing design (while a designer has it: the admin and Admin staff); an admin
  * can send an approved design back for a redesign.
  */
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, Palette, RotateCcw, Upload } from 'lucide-react';
-import { useGetCustomerDesignJobQuery, useGetDesignMeQuery } from '../designAPI';
+import { ChevronDown, Palette, Paperclip, RotateCcw, Upload } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useGetCustomerDesignJobQuery, useGetDesignMeQuery, useUploadCustomerPlanDocumentsMutation } from '../designAPI';
+import { PLAN_ACCEPT, addPickedFiles, isPlanFileName, uploadSizeProblem } from '../designFiles';
 import {
   DesignStatusPill,
   FileKindIcon,
@@ -69,6 +71,8 @@ export const CustomerDesignCard: React.FC<Props> = ({
   const [uploadOpen, setUploadOpen] = useState(false);
   const [redesignOpen, setRedesignOpen] = useState(false);
   const [showEarlier, setShowEarlier] = useState(false);
+  const planInput = useRef<HTMLInputElement>(null);
+  const [uploadPlans, { isLoading: addingPlans }] = useUploadCustomerPlanDocumentsMutation();
 
   const approved = !!design && isApprovedDesign(design.status);
   const open = !!design && isOpenDesign(design.status);
@@ -80,8 +84,39 @@ export const CustomerDesignCard: React.FC<Props> = ({
   const canUpload =
     canUploadDesign && (!open || canSettleOpenDesign(design, { admin: isAdmin, coordinator: !!designMe?.canCoordinate }));
 
+  // Plan documents can be handed over from here while the customer is in Design Stage — also
+  // before a designer is chosen, when there is no design to open in Designs yet.
+  const canAddPlans = opensDesigns && customerStatus === 'DESIGN_STAGE' && (!design || open);
+  const onPickPlans = async (picked: FileList | null) => {
+    if (!picked || picked.length === 0) {return;}
+    const next = addPickedFiles([], Array.from(picked), isPlanFileName);
+    if (planInput.current) {planInput.current.value = '';}
+    if (next.refused.length > 0) {
+      toast.error(`Not added: ${next.refused.join(', ')}. Use a PDF, an image, a CAD drawing (DWG, DXF) or an office file.`);
+    }
+    if (next.files.length === 0) {return;}
+    const tooLarge = uploadSizeProblem(next.files);
+    if (tooLarge) {
+      toast.error(tooLarge);
+      return;
+    }
+    try {
+      await uploadPlans({ customerId, files: next.files }).unwrap();
+      toast.success(next.files.length === 1 ? 'Plan document added' : `${next.files.length} plan documents added`);
+    } catch (e: any) {
+      toast.error(e?.message || e?.data?.message || 'Failed to add the plan documents');
+    }
+  };
+  const addPlansButton = canAddPlans && (
+    <button type="button" onClick={() => planInput.current?.click()} disabled={addingPlans} className={smallBtn}>
+      <Paperclip size={13} /> {addingPlans ? 'Adding…' : 'Add plan documents'}
+    </button>
+  );
+
   return (
     <div className="bg-background-800 border border-background-600 rounded-[14px] p-4">
+      {/* Outside the branches below, so it stays mounted while a file is being picked. */}
+      <input ref={planInput} type="file" multiple accept={PLAN_ACCEPT} className="hidden" onChange={(e) => onPickPlans(e.target.files)} />
       <div className="flex items-center gap-2 mb-3">
         <Palette size={13} className="text-text-500" />
         <span className={sectionLabel}>Design</span>
@@ -102,10 +137,15 @@ export const CustomerDesignCard: React.FC<Props> = ({
               ? 'No design is saved for this customer yet.'
               : 'No design yet. Moving the customer to Design Stage assigns a designer.'}
           </p>
-          {canUploadDesign && (
-            <button type="button" onClick={() => setUploadOpen(true)} className={smallBtn}>
-              <Upload size={13} /> Upload existing design
-            </button>
+          {(canUploadDesign || canAddPlans) && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {canUploadDesign && (
+                <button type="button" onClick={() => setUploadOpen(true)} className={smallBtn}>
+                  <Upload size={13} /> Upload existing design
+                </button>
+              )}
+              {addPlansButton}
+            </div>
           )}
         </div>
       ) : (
@@ -152,8 +192,9 @@ export const CustomerDesignCard: React.FC<Props> = ({
             </div>
           )}
 
-          {(canUpload || (isAdmin && approved)) && (
+          {(canUpload || canAddPlans || (isAdmin && approved)) && (
             <div className="flex items-center gap-1.5 flex-wrap">
+              {addPlansButton}
               {isAdmin && approved && (
                 <button type="button" onClick={() => setRedesignOpen(true)} className={smallBtn}>
                   <RotateCcw size={13} /> Request redesign

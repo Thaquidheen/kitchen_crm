@@ -98,11 +98,18 @@ describe('bringing in the finished design while a designer has it', () => {
   const others = { admin: false, coordinator: false };
 
   it('is for the administrator and Admin staff while the designer works on it', () => {
-    for (const status of ['PLANNING', 'IN_PROGRESS', 'REVISION_REQUIRED'] as DesignStatus[]) {
+    for (const status of ['PLANNING', 'IN_PROGRESS'] as DesignStatus[]) {
       expect(canSettleOpenDesign(job({ status }), admin)).toBe(true);
       expect(canSettleOpenDesign(job({ status }), adminStaff)).toBe(true);
       expect(canSettleOpenDesign(job({ status }), others)).toBe(false);
     }
+  });
+
+  it('is the administrator alone after the administrator asked for changes', () => {
+    const sentBack = job({ status: 'REVISION_REQUIRED' });
+    expect(canSettleOpenDesign(sentBack, admin)).toBe(true);
+    expect(canSettleOpenDesign(sentBack, adminStaff)).toBe(false);
+    expect(canSettleOpenDesign(sentBack, others)).toBe(false);
   });
 
   it('is the administrator alone once the designer has handed it in for approval', () => {

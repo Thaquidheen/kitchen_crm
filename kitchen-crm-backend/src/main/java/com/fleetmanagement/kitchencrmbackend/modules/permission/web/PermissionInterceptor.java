@@ -13,7 +13,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.web.util.UriUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
 
@@ -109,9 +111,11 @@ public class PermissionInterceptor implements HandlerInterceptor {
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             return true;
         }
-        // The path Spring itself matched the controller with, so both always agree on it.
+        // Spring finds the controller by the DECODED path segments, but this attribute holds the
+        // path as it was sent. Decoded first, or ".../%64esign" would reach the controller of
+        // ".../design" and match no rule here.
         Object matched = request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
-        String path = matched != null ? matched.toString() : request.getRequestURI();
+        String path = decoded(matched != null ? matched.toString() : request.getRequestURI());
         Permission needed = needed(request.getMethod(), path);
         if (needed == null) {
             return true;
@@ -126,6 +130,14 @@ public class PermissionInterceptor implements HandlerInterceptor {
         }
         refuse(response, needed);
         return false;
+    }
+
+    private static String decoded(String path) {
+        try {
+            return UriUtils.decode(path, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return path; // not valid percent-encoding: no controller matches it either
+        }
     }
 
     /** The same shape as every other refusal, with words the person can act on. */

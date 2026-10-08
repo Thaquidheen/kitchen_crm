@@ -48,8 +48,9 @@ export const isOpenDesign = (s: DesignStatus) => isDesignerWork(s) || s === 'PEN
 
 /**
  * Whether this person may bring in the finished design while the design is still open (the same
- * rule the server applies): the administrator always; Admin staff until the designer has handed
- * it in for approval; and anyone when nobody has been given the design yet.
+ * rule the server applies): the administrator always; Admin staff while the designer is on a
+ * first pass — not once it is handed in, and not after the administrator asked for changes; and
+ * anyone when nobody has been given the design yet.
  */
 export const canSettleOpenDesign = (
   job: Pick<DesignJob, 'status' | 'designerId'> | null | undefined,
@@ -57,7 +58,7 @@ export const canSettleOpenDesign = (
 ): boolean => {
   if (!job || !isOpenDesign(job.status)) {return false;}
   if (who.admin || !job.designerId) {return true;}
-  return who.coordinator && isDesignerWork(job.status);
+  return who.coordinator && (job.status === 'PLANNING' || job.status === 'IN_PROGRESS');
 };
 
 /** The current version is approved: a quotation can be made from this design. */
