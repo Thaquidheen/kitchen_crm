@@ -6,7 +6,6 @@
 
 import { Fragment, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/shared/Pagination';
@@ -24,7 +23,7 @@ import {
   useDeleteQuotationFolderMutation,
   useUpdateQuotationStatusMutation,
 } from '@/app/baseApi';
-import type { RootState } from '@/app/store';
+import { useQuotationAccess } from '../useQuotationAccess';
 
 export interface QuotationListProps {
   filters: QuotationFilters;
@@ -54,8 +53,8 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
   const [deleteFolderTarget, setDeleteFolderTarget] = useState<QuotationFolderSummary | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const currentUser = useSelector((state: RootState) => state.auth.user);
-  const isSuperAdmin = currentUser?.role === 'ROLE_SUPER_ADMIN';
+  // What the administrator allowed this person's staff type (Permissions page).
+  const access = useQuotationAccess();
 
   // Flat list (classic view)
   const { data, isLoading, error } = useGetQuotationsQuery(filters, { skip: viewMode !== 'all' });
@@ -185,7 +184,7 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
   // Interactive status cell: a clickable pill for a super-admin (opens the status menu), or the
   // plain read-only pill for everyone else / when there is no target quotation id.
   const statusCell = (id?: number, status?: string) => {
-    if (!isSuperAdmin || !id) return statusPill(status);
+    if (!access.changeStatus || !id) return statusPill(status);
     const m = (status && QSTATUS[status]) || { st: '', label: status ?? '—' };
     const fg = m.st ? `var(--st-${m.st}-fg)` : 'var(--color-text-700)';
     const bg = m.st ? `var(--st-${m.st}-bg)` : 'var(--color-background-700)';
@@ -229,17 +228,19 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
       <Button variant="ghost" size="sm" onClick={() => navigate(`/quotations/${q.id}`)} title="View" className="p-1 sm:p-2">
         <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
       </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => navigate(`/quotations/${q.id}/edit`)}
-        title="Edit"
-        disabled={!(q.status === 'DRAFT' || (q.status as string) === 'PENDING')}
-        className="p-1 sm:p-2"
-      >
-        <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
-      </Button>
-      {isSuperAdmin && (
+      {access.edit && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(`/quotations/${q.id}/edit`)}
+          title="Edit"
+          disabled={!(q.status === 'DRAFT' || (q.status as string) === 'PENDING')}
+          className="p-1 sm:p-2"
+        >
+          <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+        </Button>
+      )}
+      {access.remove && (
         <Button
           variant="ghost"
           size="sm"
@@ -372,16 +373,18 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
                           </td>
                           <td className="px-2 sm:px-4 py-3 sm:py-4" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1 sm:gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setRenameTarget({ id: f.id, name: f.name })}
-                                title="Rename folder"
-                                className="p-1 sm:p-2"
-                              >
-                                <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
-                              {isSuperAdmin && (
+                              {access.edit && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setRenameTarget({ id: f.id, name: f.name })}
+                                  title="Rename folder"
+                                  className="p-1 sm:p-2"
+                                >
+                                  <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+                                </Button>
+                              )}
+                              {access.remove && (
                                 <Button
                                   variant="ghost"
                                   size="sm"

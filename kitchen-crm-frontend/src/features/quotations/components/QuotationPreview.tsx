@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { User, Package, DollarSign, Calculator, Home, Image as ImageIcon } from 'lucide-react';
 import type { QuotationKitchenFormData, QuotationOtherExpense } from '@/features/quotations/types';
 import { getImageUrl } from '@/utils/imageUtils';
-import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
+import { useQuotationAccess } from '../useQuotationAccess';
 
 export interface QuotationPreviewProps {
   customer?: {
@@ -93,7 +93,7 @@ export function QuotationPreview({
   serverTaxAmount,
   kitchens,
 }: QuotationPreviewProps) {
-  const isSuperAdmin = useIsSuperAdmin();
+  const access = useQuotationAccess();
   // Check if this is a multi-kitchen quotation
   const isMultiKitchen = kitchens && kitchens.length > 0;
   const calculations = useMemo(() => {
@@ -314,7 +314,7 @@ export function QuotationPreview({
 
   // Staff cannot derive any of this (the prices it is built from are withheld), so show the
   // server's stored figures to them instead of a computed zero.
-  const canComputeLocally = isSuperAdmin;
+  const canComputeLocally = access.computesTotals;
   const displayGrandTotal =
     !canComputeLocally && serverGrandTotal != null ? Number(serverGrandTotal) : grandTotal;
   const displayTaxAmount = (computed: number) =>
@@ -502,7 +502,7 @@ export function QuotationPreview({
               <div className="border-t border-background-600 pt-3 sm:pt-4">
                 <div className="space-y-2 text-xs sm:text-sm">
                   {/* Pre-margin base and the margin itself are internal — super admin only. */}
-                  {isSuperAdmin && (
+                  {canComputeLocally && (
                     <>
                       <div className="flex justify-between">
                         <span className="text-text-700">Subtotal (before margin &amp; tax)</span>
@@ -741,7 +741,7 @@ export function QuotationPreview({
             </div>
           </div>
 
-          {isSuperAdmin && (
+          {canComputeLocally && (
             <div className="p-3 rounded-xl border border-background-600 bg-background-700/40">
               <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Total Margin</div>
               <div className="text-lg font-bold text-text-900 tabular-nums mt-0.5">

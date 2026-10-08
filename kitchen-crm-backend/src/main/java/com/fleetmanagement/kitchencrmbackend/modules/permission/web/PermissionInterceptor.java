@@ -63,6 +63,19 @@ public class PermissionInterceptor implements HandlerInterceptor {
             new Rule(ANY, "/api/v1/site-measurements/**", Permission.CUSTOMERS_SITE_MEASUREMENT),
             // ---- a customer's quotations on the customer page
             new Rule(READ, "/api/v1/quotations/customer/*", Permission.CUSTOMERS_QUOTATIONS),
+
+            // Quotations. The stamped "approved" PDF stays with the administrator (its own rule on
+            // the controller); pricing — who sees rates and margins — is decided inside the answer.
+            new Rule(Set.of("DELETE"), "/api/v1/quotations/folders/*", Permission.QUOTATIONS_DELETE),
+            new Rule(Set.of("DELETE"), "/api/v1/quotations/*", Permission.QUOTATIONS_DELETE),
+            new Rule(Set.of("PATCH"), "/api/v1/quotations/*/status", Permission.QUOTATIONS_CHANGE_STATUS),
+            new Rule(READ, "/api/v1/quotations/*/pdf", Permission.QUOTATIONS_PDF),
+            new Rule(Set.of("POST"), "/api/v1/quotations", Permission.QUOTATIONS_CREATE),
+            new Rule(Set.of("POST"), "/api/v1/quotations/*/duplicate", Permission.QUOTATIONS_CREATE),
+            new Rule(Set.of("PUT"), "/api/v1/quotations/folders/*", Permission.QUOTATIONS_EDIT),
+            new Rule(Set.of("PUT"), "/api/v1/quotations/*", Permission.QUOTATIONS_EDIT),
+            new Rule(READ, "/api/v1/quotations", Permission.QUOTATIONS_VIEW),
+            new Rule(READ, "/api/v1/quotations/**", Permission.QUOTATIONS_VIEW),
             // ---- a customer's production (the overview lists of the Production page stay open)
             new Rule(ANY, "/api/v1/production-installation/customer/**", Permission.CUSTOMERS_PRODUCTION),
             new Rule(Set.of("POST"), "/api/v1/production-installation", Permission.CUSTOMERS_PRODUCTION),

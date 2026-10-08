@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Calculator, TrendingUp, Percent, Receipt } from 'lucide-react';
 import clsx from 'clsx';
 import type { QuotationOtherExpense } from '../types';
+import { useQuotationAccess } from '../useQuotationAccess';
 
 interface CategorySectionProps {
   label: string;
@@ -21,6 +22,8 @@ interface CategorySectionProps {
   /** finalTotal null = not knowable for this viewer yet (staff, before the first save). */
   total: { marginAmount: number; finalTotal: number | null };
   showMargins: boolean;
+  /** The amount before margin — for those allowed to see rates. */
+  showSubtotal: boolean;
 }
 
 import { useState, useEffect } from 'react';
@@ -37,6 +40,7 @@ function CategorySection({
   onTaxChange,
   total,
   showMargins,
+  showSubtotal,
 }: CategorySectionProps) {
   const [marginStr, setMarginStr] = useState(marginPercent ? String(marginPercent) : '');
   const [taxStr, setTaxStr] = useState(taxPercent ? String(taxPercent) : '');
@@ -81,9 +85,9 @@ function CategorySection({
       </div>
 
       <div className="space-y-2 sm:space-y-3">
-        {/* Subtotal — pre-margin cost, so admin only. Shown next to Category Total it would
-            give the markup away by subtraction even with the margin field hidden. */}
-        {showMargins && (
+        {/* Subtotal — the amount before margin. Next to the Category Total it gives the markup
+            away by subtraction, so it is for those allowed to see rates. */}
+        {showSubtotal && (
           <div className="flex justify-between text-xs">
             <span className="text-text-600">Subtotal</span>
             <span className="font-medium text-text-900 tabular-nums">₹{subtotal.toLocaleString('en-IN')}</span>
@@ -104,13 +108,16 @@ function CategorySection({
                 onChange={(e) => handleMarginInput(e.target.value)}
                 placeholder="0"
                 className="text-xs sm:text-sm"
-                title="Adjust margin per quotation for discounts/alterations (Super Admin only)"
+                readOnly={!onMarginChange}
+                title={onMarginChange ? 'Adjust margin per quotation for discounts/alterations' : 'You can see the margin but not change it'}
               />
               <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-text-600" />
             </div>
-            <p className="text-[11px] text-text-500 mt-1">
-              ₹{total.marginAmount.toLocaleString('en-IN')} margin added
-            </p>
+            {showSubtotal && (
+              <p className="text-[11px] text-text-500 mt-1">
+                ₹{total.marginAmount.toLocaleString('en-IN')} margin added
+              </p>
+            )}
           </div>
         )}
 
@@ -238,13 +245,15 @@ export function CategoryPricingPanel({
   onMiscellaneousMarginChange,
   onMiscellaneousTaxChange,
   serverCategoryTotals,
-  // Fail closed. This defaulted to ROLE_SUPER_ADMIN, so any call site that forgot the optional
-  // prop would have shown staff the margins.
-  userRole = 'ROLE_STAFF',
   kitchenName,
 }: CategoryPricingPanelProps) {
 
-  const showMargins = userRole === 'ROLE_SUPER_ADMIN';
+  // Who sees what is the administrator's choice on the Permissions page, not the role. The hook
+  // answers "no" until the permissions are known, so nothing is shown that may not be.
+  const access = useQuotationAccess();
+  const showMargins = access.seesMargins;
+  const showSubtotal = access.seesRates;
+  const computesTotals = access.computesTotals;
 
   const otherExpensesTotal = useMemo(() => {
     const base = otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
@@ -290,7 +299,7 @@ export function CategoryPricingPanel({
       server: number | null | undefined,
       itemCount: number,
     ) => {
-      if (showMargins) return computed;
+      if (computesTotals) return computed;
       if (server != null) return { ...computed, finalTotal: Number(server) };
       return { ...computed, finalTotal: itemCount === 0 ? 0 : null };
     };
@@ -310,7 +319,7 @@ export function CategoryPricingPanel({
         serverCategoryTotals?.lighting, lighting.length),
     };
   }, [categorySubtotals, accessoriesMargin, accessoriesTax, cabinetsMargin, cabinetsTax, doorsMargin,
-      doorsTax, lightingMargin, lightingTax, showMargins, serverCategoryTotals,
+      doorsTax, lightingMargin, lightingTax, computesTotals, serverCategoryTotals,
       accessories.length, cabinets.length, doors.length, lighting.length]);
 
   // One unknown category makes the grand total unknown too — better an em dash than a number
@@ -351,6 +360,7 @@ export function CategoryPricingPanel({
               onTaxChange={onAccessoriesTaxChange}
               total={categoryTotals.accessories}
               showMargins={showMargins}
+              showSubtotal={showSubtotal}
             />
 
             <CategorySection
@@ -364,6 +374,7 @@ export function CategoryPricingPanel({
               onTaxChange={onCabinetsTaxChange}
               total={categoryTotals.cabinets}
               showMargins={showMargins}
+              showSubtotal={showSubtotal}
             />
 
             <CategorySection
@@ -377,6 +388,7 @@ export function CategoryPricingPanel({
               onTaxChange={onDoorsTaxChange}
               total={categoryTotals.doors}
               showMargins={showMargins}
+              showSubtotal={showSubtotal}
             />
 
             <CategorySection
@@ -390,6 +402,7 @@ export function CategoryPricingPanel({
               onTaxChange={onLightingTaxChange}
               total={categoryTotals.lighting}
               showMargins={showMargins}
+              showSubtotal={showSubtotal}
             />
           </div>
         </div>
@@ -412,6 +425,7 @@ export function CategoryPricingPanel({
                 finalTotal: otherExpensesTotal,
               }}
               showMargins={showMargins}
+              showSubtotal={showSubtotal}
             />
           </div>
         )}

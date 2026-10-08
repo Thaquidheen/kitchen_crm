@@ -166,11 +166,11 @@ export function KitchenProductTabs({
                 onCabinetsTaxChange={onCabinetsTaxChange}
                 onDoorsTaxChange={onDoorsTaxChange}
                 onLightingTaxChange={onLightingTaxChange}
-                onAccessoriesMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? onAccessoriesMarginChange : undefined}
-                onCabinetsMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? onCabinetsMarginChange : undefined}
-                onDoorsMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? onDoorsMarginChange : undefined}
-                onLightingMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? onLightingMarginChange : undefined}
-                onMiscellaneousMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? onMiscellaneousMarginChange : undefined}
+                onAccessoriesMarginChange={onAccessoriesMarginChange}
+                onCabinetsMarginChange={onCabinetsMarginChange}
+                onDoorsMarginChange={onDoorsMarginChange}
+                onLightingMarginChange={onLightingMarginChange}
+                onMiscellaneousMarginChange={onMiscellaneousMarginChange}
                 onMiscellaneousTaxChange={onMiscellaneousTaxChange}
                 userRole={userRole}
                 serverCategoryTotals={{

@@ -68,7 +68,7 @@ const navGroups: NavGroup[] = [
     label: 'Sales',
     items: [
       { label: 'Customers', path: ROUTES.CUSTOMERS, icon: <Users size={18} />, permission: 'customers.view' },
-      { label: 'Quotations', path: ROUTES.QUOTATIONS, icon: <FileText size={18} /> },
+      { label: 'Quotations', path: ROUTES.QUOTATIONS, icon: <FileText size={18} />, permission: 'quotations.view' },
       { label: 'Appliance & Quartz', path: ROUTES.APPLIANCE_QUARTZ, icon: <Refrigerator size={18} /> },
       { label: 'Reminders', path: ROUTES.REMINDERS, icon: <BellRing size={18} /> },
     ],

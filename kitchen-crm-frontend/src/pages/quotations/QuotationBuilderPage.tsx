@@ -49,6 +49,7 @@ import toast from 'react-hot-toast';
 import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
 import { useCreateQuotationMutation, useUpdateQuotationMutation, useGetQuotationByIdQuery } from '@/app/baseApi';
 import { useGetMarginsQuery } from '@/services/settingsAPI';
+import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
 import { useGetCabinetsQuery, useGetDoorsQuery } from '@/features/products/productsAPI';
 import { useParams } from 'react-router-dom';
 
@@ -132,7 +133,9 @@ export function QuotationBuilderPage() {
   const userRole = currentUser?.role || 'ROLE_STAFF';
 
   // Fetch global margin settings
-  const { data: marginsResponse, isLoading: isMarginsLoading } = useGetMarginsQuery();
+  const access = useQuotationAccess();
+  // The margin settings are readable only by those who may see margins.
+  const { data: marginsResponse, isLoading: isMarginsLoading } = useGetMarginsQuery(undefined, { skip: !access.seesMargins });
 
   // Fetch cabinet and door types for edit modal (with large page size to get all)
   const { data: cabinetTypes = [] } = useGetCabinetsQuery({ page: 0, size: 100 });
@@ -1362,7 +1365,7 @@ export function QuotationBuilderPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            {isEditMode && (
+            {isEditMode && access.create && (
               <Button variant="secondary" size="sm" onClick={handleSaveAsNew} disabled={isCreating || isUpdating} className="w-full sm:w-auto">
                 <FilePlus className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Save as New</span>
@@ -1625,11 +1628,11 @@ export function QuotationBuilderPage() {
                       onCabinetsTaxChange={(val) => setFormData({ ...formData, cabinetsTaxPercentage: val })}
                       onDoorsTaxChange={(val) => setFormData({ ...formData, doorsTaxPercentage: val })}
                       onLightingTaxChange={(val) => setFormData({ ...formData, lightingTaxPercentage: val })}
-                      onAccessoriesMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, accessoriesMarginPercentage: val }) : undefined}
-                      onCabinetsMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, cabinetsMarginPercentage: val }) : undefined}
-                      onDoorsMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, doorsMarginPercentage: val }) : undefined}
-                      onLightingMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, lightingMarginPercentage: val }) : undefined}
-                      onMiscellaneousMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, miscellaneousMarginPercentage: val }) : undefined}
+                      onAccessoriesMarginChange={access.editsMargins ? (val) => setFormData({ ...formData, accessoriesMarginPercentage: val }) : undefined}
+                      onCabinetsMarginChange={access.editsMargins ? (val) => setFormData({ ...formData, cabinetsMarginPercentage: val }) : undefined}
+                      onDoorsMarginChange={access.editsMargins ? (val) => setFormData({ ...formData, doorsMarginPercentage: val }) : undefined}
+                      onLightingMarginChange={access.editsMargins ? (val) => setFormData({ ...formData, lightingMarginPercentage: val }) : undefined}
+                      onMiscellaneousMarginChange={access.editsMargins ? (val) => setFormData({ ...formData, miscellaneousMarginPercentage: val }) : undefined}
                       onMiscellaneousTaxChange={(val) => setFormData({ ...formData, miscellaneousTaxPercentage: val })}
                     />
                   </>
@@ -1646,7 +1649,7 @@ export function QuotationBuilderPage() {
                       onProductsChange={(products) => setFormData({ ...formData, ...products })}
                       miscellaneousMarginPercentage={formData.miscellaneousMarginPercentage ?? 0}
                       miscellaneousTaxPercentage={formData.miscellaneousTaxPercentage ?? 18}
-                      onMiscellaneousMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (v) => setFormData({ ...formData, miscellaneousMarginPercentage: v }) : undefined}
+                      onMiscellaneousMarginChange={access.editsMargins ? (v) => setFormData({ ...formData, miscellaneousMarginPercentage: v }) : undefined}
                       onMiscellaneousTaxChange={(v) => setFormData({ ...formData, miscellaneousTaxPercentage: v })}
                     />
 
@@ -1678,11 +1681,11 @@ export function QuotationBuilderPage() {
                         onCabinetsTaxChange={(val) => setFormData({ ...formData, cabinetsTaxPercentage: val })}
                         onDoorsTaxChange={(val) => setFormData({ ...formData, doorsTaxPercentage: val })}
                         onLightingTaxChange={(val) => setFormData({ ...formData, lightingTaxPercentage: val })}
-                        onAccessoriesMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, accessoriesMarginPercentage: val }) : undefined}
-                        onCabinetsMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, cabinetsMarginPercentage: val }) : undefined}
-                        onDoorsMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, doorsMarginPercentage: val }) : undefined}
-                        onLightingMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, lightingMarginPercentage: val }) : undefined}
-                        onMiscellaneousMarginChange={userRole === 'ROLE_SUPER_ADMIN' ? (val) => setFormData({ ...formData, miscellaneousMarginPercentage: val }) : undefined}
+                        onAccessoriesMarginChange={access.editsMargins ? (val) => setFormData({ ...formData, accessoriesMarginPercentage: val }) : undefined}
+                        onCabinetsMarginChange={access.editsMargins ? (val) => setFormData({ ...formData, cabinetsMarginPercentage: val }) : undefined}
+                        onDoorsMarginChange={access.editsMargins ? (val) => setFormData({ ...formData, doorsMarginPercentage: val }) : undefined}
+                        onLightingMarginChange={access.editsMargins ? (val) => setFormData({ ...formData, lightingMarginPercentage: val }) : undefined}
+                        onMiscellaneousMarginChange={access.editsMargins ? (val) => setFormData({ ...formData, miscellaneousMarginPercentage: val }) : undefined}
                         onMiscellaneousTaxChange={(val) => setFormData({ ...formData, miscellaneousTaxPercentage: val })}
                         userRole={userRole}
                       />
@@ -1846,7 +1849,7 @@ export function QuotationBuilderPage() {
 
                 {/* MRP (List Price) — per-category pricing, mirrors the offer "Pricing by Category".
                     A single quotation-level set of MRP margins/taxes (super-admin only). */}
-                {userRole === 'ROLE_SUPER_ADMIN' && (() => {
+                {access.seesMargins && (() => {
                   const ks = formData.kitchens || [];
                   const hasK = ks.length > 0;
                   const isMulti = ks.length >= 2;
@@ -1879,10 +1882,10 @@ export function QuotationBuilderPage() {
                         cabinetsTax={formData.cabinetsMrpTaxPercentage ?? 18}
                         doorsTax={formData.doorsMrpTaxPercentage ?? 18}
                         lightingTax={formData.lightingMrpTaxPercentage ?? 18}
-                        onAccessoriesMarginChange={(v) => setFormData({ ...formData, accessoriesMrpMarginPercentage: v })}
-                        onCabinetsMarginChange={(v) => setFormData({ ...formData, cabinetsMrpMarginPercentage: v })}
-                        onDoorsMarginChange={(v) => setFormData({ ...formData, doorsMrpMarginPercentage: v })}
-                        onLightingMarginChange={(v) => setFormData({ ...formData, lightingMrpMarginPercentage: v })}
+                        onAccessoriesMarginChange={access.editsMargins ? (v) => setFormData({ ...formData, accessoriesMrpMarginPercentage: v }) : undefined}
+                        onCabinetsMarginChange={access.editsMargins ? (v) => setFormData({ ...formData, cabinetsMrpMarginPercentage: v }) : undefined}
+                        onDoorsMarginChange={access.editsMargins ? (v) => setFormData({ ...formData, doorsMrpMarginPercentage: v }) : undefined}
+                        onLightingMarginChange={access.editsMargins ? (v) => setFormData({ ...formData, lightingMrpMarginPercentage: v }) : undefined}
                         onAccessoriesTaxChange={(v) => setFormData({ ...formData, accessoriesMrpTaxPercentage: v })}
                         onCabinetsTaxChange={(v) => setFormData({ ...formData, cabinetsMrpTaxPercentage: v })}
                         onDoorsTaxChange={(v) => setFormData({ ...formData, doorsMrpTaxPercentage: v })}
@@ -1890,7 +1893,7 @@ export function QuotationBuilderPage() {
                         otherExpenses={oe}
                         miscellaneousMarginPercentage={formData.miscellaneousMrpMarginPercentage ?? 0}
                         miscellaneousTaxPercentage={formData.miscellaneousMrpTaxPercentage ?? 18}
-                        onMiscellaneousMarginChange={(v) => setFormData({ ...formData, miscellaneousMrpMarginPercentage: v })}
+                        onMiscellaneousMarginChange={access.editsMargins ? (v) => setFormData({ ...formData, miscellaneousMrpMarginPercentage: v }) : undefined}
                         onMiscellaneousTaxChange={(v) => setFormData({ ...formData, miscellaneousMrpTaxPercentage: v })}
                         userRole={userRole}
                       />
@@ -1938,7 +1941,7 @@ export function QuotationBuilderPage() {
                     Back
                   </Button>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    {isEditMode && (
+                    {isEditMode && access.create && (
                       <Button
                         variant="secondary"
                         onClick={handleSaveAsNew}

@@ -17,7 +17,7 @@ import SignatureManagement from '@/components/quotations/SignatureManagement';
 import { quotationLabel } from '@/features/quotations/components/QuotationList';
 import { ArrowLeft, Copy, Download, Edit, FileText, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
+import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
 
 const TABS = ['Overview', 'Line Items', 'Revisions', 'Activity'];
 
@@ -62,7 +62,7 @@ const thClass = 'px-3 py-[8px] text-left text-[11px] font-[650] tracking-[0.05em
 // One item table per non-empty category inside a kitchen (or the legacy lists)
 function ItemsTable({ title, rows }: { title: string; rows: Array<{ name: string; qty?: number | string; unit?: number; total?: number }> }) {
   // Rate is the pre-margin unit price, so the column only renders for a super admin.
-  const isSuperAdmin = useIsSuperAdmin();
+  const access = useQuotationAccess();
   if (!rows.length) return null;
   const subtotal = rows.reduce((s, r) => s + (Number(r.total) || 0), 0);
   return (
@@ -74,7 +74,7 @@ function ItemsTable({ title, rows }: { title: string; rows: Array<{ name: string
             <tr className="bg-background-700">
               <th className={thClass}>Item / Description</th>
               <th className="px-3 py-[8px] text-center text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 w-16">Qty</th>
-              {isSuperAdmin && <th className="px-3 py-[8px] text-right text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 w-28">Rate</th>}
+              {access.seesRates && <th className="px-3 py-[8px] text-right text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 w-28">Rate</th>}
               <th className="px-3 py-[8px] text-right text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 w-32">Amount</th>
             </tr>
           </thead>
@@ -83,7 +83,7 @@ function ItemsTable({ title, rows }: { title: string; rows: Array<{ name: string
               <tr key={i} className="border-t border-background-600">
                 <td className="px-3 py-2 text-[13px] text-text-900">{r.name}</td>
                 <td className="px-3 py-2 text-[13px] text-text-700 text-center tabular-nums">{r.qty ?? '—'}</td>
-                {isSuperAdmin && <td className="px-3 py-2 text-[13px] text-text-700 text-right tabular-nums whitespace-nowrap">{fmtMoney(r.unit)}</td>}
+                {access.seesRates && <td className="px-3 py-2 text-[13px] text-text-700 text-right tabular-nums whitespace-nowrap">{fmtMoney(r.unit)}</td>}
                 <td className="px-3 py-2 text-[13px] font-semibold text-text-900 text-right tabular-nums whitespace-nowrap">{fmtMoney(r.total)}</td>
               </tr>
             ))}
@@ -101,7 +101,7 @@ function ItemsTable({ title, rows }: { title: string; rows: Array<{ name: string
 }
 
 export function QuotationDetailPage() {
-  const isSuperAdmin = useIsSuperAdmin();
+  const access = useQuotationAccess();
   const { id } = useParams();
   const navigate = useNavigate();
   const quotationId = Number(id);
@@ -246,20 +246,20 @@ export function QuotationDetailPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={handleEdit}
-            disabled={!canEdit}
+            disabled={!canEdit || !access.edit}
             title={!canEdit ? 'Cannot edit approved/rejected quotations' : 'Edit quotation'}
             className={ghostBtn}
           >
             <Edit size={13} className="text-text-700" />
             Edit
           </button>
-          <button onClick={handleDuplicate} disabled={isDuplicating} className={ghostBtn}>
+          <button onClick={handleDuplicate} disabled={isDuplicating || !access.create} className={ghostBtn}>
             <Copy size={13} className="text-text-700" />
             {isDuplicating ? 'Duplicating…' : 'Duplicate'}
           </button>
           <button
             onClick={handleDownloadPDF}
-            disabled={isDownloading}
+            disabled={isDownloading || !access.pdf}
             className="btn-raised-accent inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-[10px] text-[12.5px] font-semibold whitespace-nowrap disabled:opacity-60"
           >
             <Download size={13} />
@@ -479,7 +479,7 @@ export function QuotationDetailPage() {
                     <span className="text-[12.5px] text-text-600 tabular-nums hidden sm:inline">{fmtDate(v.createdAt)}</span>
                     {current && <span className="text-[11px] font-semibold text-primary-600">current</span>}
                     <span className="flex-1" />
-                    {isSuperAdmin && v.change != null && v.change !== 0 && (
+                    {access.seesRates && v.change != null && v.change !== 0 && (
                       <span
                         className="text-[12.5px] font-semibold tabular-nums"
                         style={{ color: v.change > 0 ? 'var(--st-confirmed-fg)' : 'var(--st-lost-fg)' }}

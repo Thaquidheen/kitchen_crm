@@ -39,6 +39,22 @@ public class QuotationController {
     private JasperPdfGenerationService pdfGenerationService;
 
     @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.permission.service.PermissionService permissionService;
+
+    /**
+     * What this person may see and set of a quotation's prices: everything for the administrator,
+     * otherwise what the Permissions page allows their staff type. The PDF endpoints do not use
+     * this — a PDF is the customer's copy and is the same for everyone.
+     */
+    private String pricingView(UserPrincipal user) {
+        String role = user.getAuthorities().iterator().next().getAuthority();
+        return com.fleetmanagement.kitchencrmbackend.modules.quotation.service.PricingView.of(role,
+                permissionService.can(user, com.fleetmanagement.kitchencrmbackend.modules.permission.Permission.QUOTATIONS_SEE_RATES),
+                permissionService.can(user, com.fleetmanagement.kitchencrmbackend.modules.permission.Permission.QUOTATIONS_SEE_MARGINS),
+                permissionService.can(user, com.fleetmanagement.kitchencrmbackend.modules.permission.Permission.QUOTATIONS_EDIT_MARGINS));
+    }
+
+    @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerPlanImageRepository customerPlanImageRepository;
 
     @Autowired
@@ -104,7 +120,7 @@ public class QuotationController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
-        String userRole = currentUser.getAuthorities().iterator().next().getAuthority();
+        String userRole = pricingView(currentUser);
         ApiResponse<QuotationDto> response = quotationService.getQuotationById(id, userRole);
 
         if (response.getSuccess()) {
@@ -119,7 +135,7 @@ public class QuotationController {
             @Valid @RequestBody QuotationCreateDto quotationCreateDto,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
-        String userRole = currentUser.getAuthorities().iterator().next().getAuthority();
+        String userRole = pricingView(currentUser);
         ApiResponse<QuotationDto> response = quotationService.createQuotation(
                 quotationCreateDto, currentUser.getName(), userRole);
 
@@ -136,7 +152,7 @@ public class QuotationController {
             @Valid @RequestBody QuotationDto quotationDto,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
-        String userRole = currentUser.getAuthorities().iterator().next().getAuthority();
+        String userRole = pricingView(currentUser);
         ApiResponse<QuotationDto> response = quotationService.updateQuotation(
                 id, quotationDto, currentUser.getName(), userRole);
 
@@ -148,13 +164,11 @@ public class QuotationController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteQuotation(@PathVariable Long id) {
         return ResponseEntity.ok(quotationService.deleteQuotation(id));
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> updateQuotationStatus(
             @PathVariable Long id,
             @RequestParam Quotation.QuotationStatus status,
@@ -169,7 +183,7 @@ public class QuotationController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
-        String userRole = currentUser.getAuthorities().iterator().next().getAuthority();
+        String userRole = pricingView(currentUser);
         ApiResponse<QuotationDto> response = quotationService.duplicateQuotation(
                 id, currentUser.getName(), userRole);
 

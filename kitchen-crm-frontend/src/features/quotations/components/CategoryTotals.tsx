@@ -7,7 +7,7 @@
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Package, DoorClosed, Lightbulb, Wrench, Receipt } from 'lucide-react';
-import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
+import { useQuotationAccess } from '../useQuotationAccess';
 import type { QuotationOtherExpense } from '../types';
 
 export interface CategoryTotalsProps {
@@ -73,7 +73,7 @@ export function CategoryTotals({
   kitchenName,
 }: CategoryTotalsProps) {
   // Read the role here rather than threading a prop through every call site.
-  const isSuperAdmin = useIsSuperAdmin();
+  const access = useQuotationAccess();
   const calculateCategoryTotal = (
     items: Array<{ totalPrice?: number; price?: number }>,
     marginPercentage: number,
@@ -105,7 +105,7 @@ export function CategoryTotals({
     taxPercentage: number,
     itemCount: number,
   ): Omit<CategoryBreakdown, 'finalTotal'> & { finalTotal: number | null } => {
-    if (isSuperAdmin) return computed;
+    if (access.computesTotals) return computed;
     if (server == null) {
       return { ...computed, taxAmount: 0, finalTotal: itemCount === 0 ? 0 : null };
     }
@@ -158,6 +158,7 @@ export function CategoryTotals({
       },
     ];
   }, [
+    access.computesTotals,
     accessories,
     cabinets,
     doors,
@@ -211,21 +212,25 @@ export function CategoryTotals({
 
                 {hasItems ? (
                   <div className="space-y-1.5 text-xs">
-                    {isSuperAdmin && (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="text-text-600">Base Total</span>
-                          <span className="text-text-900 font-medium tabular-nums">
-                            ₹{category.breakdown.baseTotal.toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-text-600">Margin ({category.marginPercentage}%)</span>
+                    {/* The amount before margin and the margin are shown apart, each to those allowed. */}
+                    {access.seesRates && (
+                      <div className="flex justify-between">
+                        <span className="text-text-600">Base Total</span>
+                        <span className="text-text-900 font-medium tabular-nums">
+                          ₹{category.breakdown.baseTotal.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    )}
+                    {access.seesMargins && (
+                      <div className="flex justify-between">
+                        <span className="text-text-600">Margin ({category.marginPercentage}%)</span>
+                        {/* The amount is worked out from the rates, so it needs those too. */}
+                        {access.seesRates && (
                           <span className="text-text-900 font-medium tabular-nums">
                             ₹{category.breakdown.marginAmount.toLocaleString('en-IN')}
                           </span>
-                        </div>
-                      </>
+                        )}
+                      </div>
                     )}
                     {category.breakdown.finalTotal != null && (
                       <div className="flex justify-between">
@@ -261,21 +266,21 @@ export function CategoryTotals({
                 </span>
               </div>
               <div className="space-y-1.5 text-xs">
-                {isSuperAdmin && (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-text-600">Base Total</span>
-                      <span className="text-text-900 font-medium tabular-nums">
-                        ₹{otherExpensesBase.toLocaleString('en-IN')}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-text-600">Margin ({miscellaneousMarginPercentage}%)</span>
-                      <span className="text-text-900 font-medium tabular-nums">
-                        ₹{miscMargin.toLocaleString('en-IN')}
-                      </span>
-                    </div>
-                  </>
+                {access.seesRates && (
+                  <div className="flex justify-between">
+                    <span className="text-text-600">Base Total</span>
+                    <span className="text-text-900 font-medium tabular-nums">
+                      ₹{otherExpensesBase.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                )}
+                {access.seesMargins && (
+                  <div className="flex justify-between">
+                    <span className="text-text-600">Margin ({miscellaneousMarginPercentage}%)</span>
+                    <span className="text-text-900 font-medium tabular-nums">
+                      ₹{miscMargin.toLocaleString('en-IN')}
+                    </span>
+                  </div>
                 )}
                 <div className="flex justify-between">
                   <span className="text-text-600">Tax ({miscellaneousTaxPercentage}%)</span>
