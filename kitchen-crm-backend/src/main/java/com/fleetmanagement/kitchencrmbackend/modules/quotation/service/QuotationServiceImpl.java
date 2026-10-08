@@ -190,11 +190,11 @@ public class QuotationServiceImpl implements QuotationService {
             quotation.setInstallationPrice(dto.getInstallationPrice() != null ? dto.getInstallationPrice() : BigDecimal.ZERO);
             
             // Use category-specific margins from DTO if provided (super admin can override), otherwise use global defaults
-            boolean callerSeesPricing = "ROLE_SUPER_ADMIN".equals(userRole);
-            quotation.setAccessoriesMarginPercentage(startingMargin(dto.getAccessoriesMarginPercentage(), source != null ? source.getAccessoriesMarginPercentage() : null, "accessories", callerSeesPricing));
-            quotation.setCabinetsMarginPercentage(startingMargin(dto.getCabinetsMarginPercentage(), source != null ? source.getCabinetsMarginPercentage() : null, "cabinets", callerSeesPricing));
-            quotation.setDoorsMarginPercentage(startingMargin(dto.getDoorsMarginPercentage(), source != null ? source.getDoorsMarginPercentage() : null, "doors", callerSeesPricing));
-            quotation.setLightingMarginPercentage(startingMargin(dto.getLightingMarginPercentage(), source != null ? source.getLightingMarginPercentage() : null, "lighting", callerSeesPricing));
+            boolean callerSetsMargins = PricingView.setsMargins(userRole);
+            quotation.setAccessoriesMarginPercentage(startingMargin(dto.getAccessoriesMarginPercentage(), source != null ? source.getAccessoriesMarginPercentage() : null, "accessories", callerSetsMargins));
+            quotation.setCabinetsMarginPercentage(startingMargin(dto.getCabinetsMarginPercentage(), source != null ? source.getCabinetsMarginPercentage() : null, "cabinets", callerSetsMargins));
+            quotation.setDoorsMarginPercentage(startingMargin(dto.getDoorsMarginPercentage(), source != null ? source.getDoorsMarginPercentage() : null, "doors", callerSetsMargins));
+            quotation.setLightingMarginPercentage(startingMargin(dto.getLightingMarginPercentage(), source != null ? source.getLightingMarginPercentage() : null, "lighting", callerSetsMargins));
             
             // Use tax percentages from DTO if provided, otherwise use defaults
             quotation.setAccessoriesTaxPercentage(dto.getAccessoriesTaxPercentage() != null ? dto.getAccessoriesTaxPercentage() : BigDecimal.valueOf(18.0));
@@ -203,21 +203,21 @@ public class QuotationServiceImpl implements QuotationService {
             quotation.setLightingTaxPercentage(dto.getLightingTaxPercentage() != null ? dto.getLightingTaxPercentage() : BigDecimal.valueOf(18.0));
 
             // Miscellaneous (Other Expenses) margin & tax
-            quotation.setMiscellaneousMarginPercentage(callerSeesPricing
+            quotation.setMiscellaneousMarginPercentage(callerSetsMargins
                     ? (dto.getMiscellaneousMarginPercentage() != null ? dto.getMiscellaneousMarginPercentage() : BigDecimal.ZERO)
                     : startingMargin(null, source != null ? source.getMiscellaneousMarginPercentage() : null, "miscellaneous", false));
             quotation.setMiscellaneousTaxPercentage(dto.getMiscellaneousTaxPercentage() != null ? dto.getMiscellaneousTaxPercentage() : BigDecimal.valueOf(18.0));
 
             // Per-category MRP (list price) margin & tax — default to the matching offer value when not provided
-            quotation.setAccessoriesMrpMarginPercentage(dto.getAccessoriesMrpMarginPercentage() != null ? dto.getAccessoriesMrpMarginPercentage() : quotation.getAccessoriesMarginPercentage());
-            quotation.setCabinetsMrpMarginPercentage(dto.getCabinetsMrpMarginPercentage() != null ? dto.getCabinetsMrpMarginPercentage() : quotation.getCabinetsMarginPercentage());
-            quotation.setDoorsMrpMarginPercentage(dto.getDoorsMrpMarginPercentage() != null ? dto.getDoorsMrpMarginPercentage() : quotation.getDoorsMarginPercentage());
-            quotation.setLightingMrpMarginPercentage(dto.getLightingMrpMarginPercentage() != null ? dto.getLightingMrpMarginPercentage() : quotation.getLightingMarginPercentage());
+            quotation.setAccessoriesMrpMarginPercentage(startingMrpMargin(dto.getAccessoriesMrpMarginPercentage(), source != null ? source.getAccessoriesMrpMarginPercentage() : null, quotation.getAccessoriesMarginPercentage(), callerSetsMargins));
+            quotation.setCabinetsMrpMarginPercentage(startingMrpMargin(dto.getCabinetsMrpMarginPercentage(), source != null ? source.getCabinetsMrpMarginPercentage() : null, quotation.getCabinetsMarginPercentage(), callerSetsMargins));
+            quotation.setDoorsMrpMarginPercentage(startingMrpMargin(dto.getDoorsMrpMarginPercentage(), source != null ? source.getDoorsMrpMarginPercentage() : null, quotation.getDoorsMarginPercentage(), callerSetsMargins));
+            quotation.setLightingMrpMarginPercentage(startingMrpMargin(dto.getLightingMrpMarginPercentage(), source != null ? source.getLightingMrpMarginPercentage() : null, quotation.getLightingMarginPercentage(), callerSetsMargins));
             quotation.setAccessoriesMrpTaxPercentage(dto.getAccessoriesMrpTaxPercentage() != null ? dto.getAccessoriesMrpTaxPercentage() : quotation.getAccessoriesTaxPercentage());
             quotation.setCabinetsMrpTaxPercentage(dto.getCabinetsMrpTaxPercentage() != null ? dto.getCabinetsMrpTaxPercentage() : quotation.getCabinetsTaxPercentage());
             quotation.setDoorsMrpTaxPercentage(dto.getDoorsMrpTaxPercentage() != null ? dto.getDoorsMrpTaxPercentage() : quotation.getDoorsTaxPercentage());
             quotation.setLightingMrpTaxPercentage(dto.getLightingMrpTaxPercentage() != null ? dto.getLightingMrpTaxPercentage() : quotation.getLightingTaxPercentage());
-            quotation.setMiscellaneousMrpMarginPercentage(dto.getMiscellaneousMrpMarginPercentage() != null ? dto.getMiscellaneousMrpMarginPercentage() : quotation.getMiscellaneousMarginPercentage());
+            quotation.setMiscellaneousMrpMarginPercentage(startingMrpMargin(dto.getMiscellaneousMrpMarginPercentage(), source != null ? source.getMiscellaneousMrpMarginPercentage() : null, quotation.getMiscellaneousMarginPercentage(), callerSetsMargins));
             quotation.setMiscellaneousMrpTaxPercentage(dto.getMiscellaneousMrpTaxPercentage() != null ? dto.getMiscellaneousMrpTaxPercentage() : quotation.getMiscellaneousTaxPercentage());
 
             // Important Note & Payment Terms
@@ -277,13 +277,13 @@ public class QuotationServiceImpl implements QuotationService {
         // the builder sends the whole DTO straight back on save — so without this guard a staff
         // save silently writes the withheld value away. That is exactly how margin_percentage
         // reached 0.00 on the quotations whose accessory prices were wiped.
-        boolean callerSeesPricing = "ROLE_SUPER_ADMIN".equals(userRole);
+        boolean callerSetsMargins = PricingView.setsMargins(userRole);
 
         // Update quotation fields
         existingQuotation.setProjectName(quotationDto.getProjectName());
         existingQuotation.setTransportationPrice(quotationDto.getTransportationPrice());
         existingQuotation.setInstallationPrice(quotationDto.getInstallationPrice());
-        if (callerSeesPricing && quotationDto.getMarginPercentage() != null) {
+        if (callerSetsMargins && quotationDto.getMarginPercentage() != null) {
             existingQuotation.setMarginPercentage(quotationDto.getMarginPercentage());
         }
         existingQuotation.setTaxPercentage(quotationDto.getTaxPercentage());
@@ -294,7 +294,7 @@ public class QuotationServiceImpl implements QuotationService {
 
         // Update category-specific margin and tax percentages. Offer margins are the
         // administrator's (see startingMargin): a save by anyone else leaves them as they are.
-        if (callerSeesPricing) {
+        if (callerSetsMargins) {
             existingQuotation.setAccessoriesMarginPercentage(quotationDto.getAccessoriesMarginPercentage());
             existingQuotation.setCabinetsMarginPercentage(quotationDto.getCabinetsMarginPercentage());
             existingQuotation.setDoorsMarginPercentage(quotationDto.getDoorsMarginPercentage());
@@ -307,16 +307,17 @@ public class QuotationServiceImpl implements QuotationService {
         existingQuotation.setLightingTaxPercentage(quotationDto.getLightingTaxPercentage());
         existingQuotation.setMiscellaneousTaxPercentage(quotationDto.getMiscellaneousTaxPercentage());
 
-        // Per-category MRP (list price) margin & tax — fall back to the matching offer value when not supplied
-        existingQuotation.setAccessoriesMrpMarginPercentage(quotationDto.getAccessoriesMrpMarginPercentage() != null ? quotationDto.getAccessoriesMrpMarginPercentage() : existingQuotation.getAccessoriesMarginPercentage());
-        existingQuotation.setCabinetsMrpMarginPercentage(quotationDto.getCabinetsMrpMarginPercentage() != null ? quotationDto.getCabinetsMrpMarginPercentage() : existingQuotation.getCabinetsMarginPercentage());
-        existingQuotation.setDoorsMrpMarginPercentage(quotationDto.getDoorsMrpMarginPercentage() != null ? quotationDto.getDoorsMrpMarginPercentage() : existingQuotation.getDoorsMarginPercentage());
-        existingQuotation.setLightingMrpMarginPercentage(quotationDto.getLightingMrpMarginPercentage() != null ? quotationDto.getLightingMrpMarginPercentage() : existingQuotation.getLightingMarginPercentage());
+        // Per-category MRP (list price) margin & tax — fall back to the matching offer value when not supplied.
+        // The MRP margins are margins like the others: left alone unless the caller may set them.
+        if (callerSetsMargins) existingQuotation.setAccessoriesMrpMarginPercentage(quotationDto.getAccessoriesMrpMarginPercentage() != null ? quotationDto.getAccessoriesMrpMarginPercentage() : existingQuotation.getAccessoriesMarginPercentage());
+        if (callerSetsMargins) existingQuotation.setCabinetsMrpMarginPercentage(quotationDto.getCabinetsMrpMarginPercentage() != null ? quotationDto.getCabinetsMrpMarginPercentage() : existingQuotation.getCabinetsMarginPercentage());
+        if (callerSetsMargins) existingQuotation.setDoorsMrpMarginPercentage(quotationDto.getDoorsMrpMarginPercentage() != null ? quotationDto.getDoorsMrpMarginPercentage() : existingQuotation.getDoorsMarginPercentage());
+        if (callerSetsMargins) existingQuotation.setLightingMrpMarginPercentage(quotationDto.getLightingMrpMarginPercentage() != null ? quotationDto.getLightingMrpMarginPercentage() : existingQuotation.getLightingMarginPercentage());
         existingQuotation.setAccessoriesMrpTaxPercentage(quotationDto.getAccessoriesMrpTaxPercentage() != null ? quotationDto.getAccessoriesMrpTaxPercentage() : existingQuotation.getAccessoriesTaxPercentage());
         existingQuotation.setCabinetsMrpTaxPercentage(quotationDto.getCabinetsMrpTaxPercentage() != null ? quotationDto.getCabinetsMrpTaxPercentage() : existingQuotation.getCabinetsTaxPercentage());
         existingQuotation.setDoorsMrpTaxPercentage(quotationDto.getDoorsMrpTaxPercentage() != null ? quotationDto.getDoorsMrpTaxPercentage() : existingQuotation.getDoorsTaxPercentage());
         existingQuotation.setLightingMrpTaxPercentage(quotationDto.getLightingMrpTaxPercentage() != null ? quotationDto.getLightingMrpTaxPercentage() : existingQuotation.getLightingTaxPercentage());
-        existingQuotation.setMiscellaneousMrpMarginPercentage(quotationDto.getMiscellaneousMrpMarginPercentage() != null ? quotationDto.getMiscellaneousMrpMarginPercentage() : existingQuotation.getMiscellaneousMarginPercentage());
+        if (callerSetsMargins) existingQuotation.setMiscellaneousMrpMarginPercentage(quotationDto.getMiscellaneousMrpMarginPercentage() != null ? quotationDto.getMiscellaneousMrpMarginPercentage() : existingQuotation.getMiscellaneousMarginPercentage());
         existingQuotation.setMiscellaneousMrpTaxPercentage(quotationDto.getMiscellaneousMrpTaxPercentage() != null ? quotationDto.getMiscellaneousMrpTaxPercentage() : existingQuotation.getMiscellaneousTaxPercentage());
 
         // Important Note & Payment Terms
@@ -1283,9 +1284,25 @@ public class QuotationServiceImpl implements QuotationService {
         dto.setMiscellaneousMrpMarginPercentage(quotation.getMiscellaneousMrpMarginPercentage());
         dto.setMiscellaneousMrpTaxPercentage(quotation.getMiscellaneousMrpTaxPercentage());
 
+        // Margins are for those allowed to see them. These DTO fields carry a default of their own
+        // (20), so "not shown" has to be written explicitly — otherwise the default would look
+        // like the quotation's real margin.
+        if (!PricingView.seesMargins(userRole)) {
+            dto.setAccessoriesMarginPercentage(null);
+            dto.setCabinetsMarginPercentage(null);
+            dto.setDoorsMarginPercentage(null);
+            dto.setLightingMarginPercentage(null);
+            dto.setMiscellaneousMarginPercentage(null);
+            dto.setAccessoriesMrpMarginPercentage(null);
+            dto.setCabinetsMrpMarginPercentage(null);
+            dto.setDoorsMrpMarginPercentage(null);
+            dto.setLightingMrpMarginPercentage(null);
+            dto.setMiscellaneousMrpMarginPercentage(null);
+        }
+
         // Subtotal is the pre-margin cost base — internal. Tax and the total the customer pays
         // stay visible to everyone.
-        if ("ROLE_SUPER_ADMIN".equals(userRole)) {
+        if (PricingView.seesRates(userRole)) {
             dto.setSubtotal(quotation.getSubtotal());
         }
         dto.setTaxAmount(quotation.getTaxAmount());
@@ -1322,28 +1339,28 @@ public class QuotationServiceImpl implements QuotationService {
         dto.setPaymentInstallationPct(quotation.getPaymentInstallationPct());
 
         // Category-wise totals. The final totals are what the customer pays and stay visible to
-        // everyone; the base totals are pre-margin cost, so they go to a super admin only —
-        // a base total sitting next to a final total reveals the markup by subtraction.
-        boolean isAdmin = "ROLE_SUPER_ADMIN".equals(userRole);
+        // everyone; the base totals are pre-margin cost, so they go only to those allowed to see
+        // rates — a base total sitting next to a final total reveals the markup by subtraction.
+        boolean seesRates = PricingView.seesRates(userRole);
         if (quotation.getAccessoriesBaseTotal() != null) {
-            if (isAdmin) dto.setAccessoriesBaseTotal(quotation.getAccessoriesBaseTotal());
+            if (seesRates) dto.setAccessoriesBaseTotal(quotation.getAccessoriesBaseTotal());
             dto.setAccessoriesFinalTotal(quotation.getAccessoriesFinalTotal());
         }
         if (quotation.getCabinetsBaseTotal() != null) {
-            if (isAdmin) dto.setCabinetsBaseTotal(quotation.getCabinetsBaseTotal());
+            if (seesRates) dto.setCabinetsBaseTotal(quotation.getCabinetsBaseTotal());
             dto.setCabinetsFinalTotal(quotation.getCabinetsFinalTotal());
         }
         if (quotation.getDoorsBaseTotal() != null) {
-            if (isAdmin) dto.setDoorsBaseTotal(quotation.getDoorsBaseTotal());
+            if (seesRates) dto.setDoorsBaseTotal(quotation.getDoorsBaseTotal());
             dto.setDoorsFinalTotal(quotation.getDoorsFinalTotal());
         }
         if (quotation.getLightingBaseTotal() != null) {
-            if (isAdmin) dto.setLightingBaseTotal(quotation.getLightingBaseTotal());
+            if (seesRates) dto.setLightingBaseTotal(quotation.getLightingBaseTotal());
             dto.setLightingFinalTotal(quotation.getLightingFinalTotal());
         }
 
-        // Only show margin details to SUPER_ADMIN
-        if ("ROLE_SUPER_ADMIN".equals(userRole)) {
+        // Margin details only for those allowed to see margins
+        if (PricingView.seesMargins(userRole)) {
             dto.setMarginPercentage(quotation.getMarginPercentage());
             dto.setMarginAmount(quotation.getMarginAmount());
 
@@ -1424,7 +1441,7 @@ public class QuotationServiceImpl implements QuotationService {
             QuotationAccessoryDto dto = new QuotationAccessoryDto();
             dto.setId(quotationAccessory.getId());
             dto.setQuantity(quotationAccessory.getQuantity());
-            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(quotationAccessory.getUnitPrice());
+            if (PricingView.seesRates(userRole)) dto.setUnitPrice(quotationAccessory.getUnitPrice());
             dto.setTotalPrice(quotationAccessory.getTotalPrice());
             dto.setDescription(quotationAccessory.getDescription());
             dto.setCustomItem(quotationAccessory.getCustomItem());
@@ -1489,7 +1506,7 @@ public class QuotationServiceImpl implements QuotationService {
     private BigDecimal resolveAccessoryUnitPrice(QuotationAccessoryDto dto, String userRole) {
         // Staff are never shown unitPrice, so whatever their payload carries is an artefact of the
         // withheld field, not an intention. Ignore it outright and use the catalogue.
-        boolean callerSeesPricing = "ROLE_SUPER_ADMIN".equals(userRole);
+        boolean callerSeesPricing = PricingView.setsRates(userRole);
         if (callerSeesPricing && dto.getUnitPrice() != null && dto.getUnitPrice().signum() > 0) {
             return dto.getUnitPrice();
         }
@@ -1528,7 +1545,7 @@ public class QuotationServiceImpl implements QuotationService {
      */
     private BigDecimal resolveLightingUnitPrice(QuotationLightingDto dto, String userRole,
                                                 StoredLightingRates storedLightingRates, QuotationKitchen kitchen) {
-        boolean callerSeesPricing = "ROLE_SUPER_ADMIN".equals(userRole);
+        boolean callerSeesPricing = PricingView.setsRates(userRole);
         boolean priceSent = dto.getUnitPrice() != null && dto.getUnitPrice().signum() > 0;
         if (callerSeesPricing && priceSent) {
             return dto.getUnitPrice();
@@ -1574,23 +1591,36 @@ public class QuotationServiceImpl implements QuotationService {
      * administrator's setting. Before this a quotation started by staff carried different
      * margins, and so different rates, than the same quotation started by the administrator.
      */
-    private BigDecimal startingMargin(BigDecimal sent, BigDecimal copiedFrom, String category, boolean callerSeesPricing) {
-        if (callerSeesPricing && sent != null) {
+    private BigDecimal startingMargin(BigDecimal sent, BigDecimal copiedFrom, String category, boolean callerSetsMargins) {
+        if (callerSetsMargins && sent != null) {
             return sent;
         }
-        if (!callerSeesPricing && copiedFrom != null) {
+        if (!callerSetsMargins && copiedFrom != null) {
             return copiedFrom;
         }
         return systemSettingService.getMarginPercentage(category);
     }
 
     /**
-     * @param userRole ROLE_SUPER_ADMIN sees the full cost structure. Everyone else gets only the
-     *                 customer-facing figures: base totals and margin amounts are omitted, because
-     *                 a base total next to a final total gives the markup away.
+     * The MRP (list price) margin a new quotation starts with. A new version made by someone who
+     * may not set margins keeps the margin of the quotation it is made from. Otherwise it is what
+     * the screen sends — there is no setting for it — or, failing that, the offer margin.
+     */
+    private static BigDecimal startingMrpMargin(BigDecimal sent, BigDecimal copiedFrom, BigDecimal offer, boolean callerSetsMargins) {
+        if (!callerSetsMargins && copiedFrom != null) {
+            return copiedFrom;
+        }
+        return sent != null ? sent : offer;
+    }
+
+    /**
+     * @param userRole who is asking, as a {@link PricingView}. Base totals go to those allowed to
+     *                 see rates and margin amounts to those allowed to see margins; everyone else
+     *                 gets only the customer-facing figures.
      */
     private List<QuotationKitchenDto> loadKitchens(Long quotationId, String userRole) {
-        boolean isAdmin = "ROLE_SUPER_ADMIN".equals(userRole);
+        boolean seesRates = PricingView.seesRates(userRole);
+        boolean seesMargins = PricingView.seesMargins(userRole);
         List<QuotationKitchen> kitchens = kitchenRepository.findByQuotationIdOrderByKitchenOrderAsc(quotationId);
         return kitchens.stream().map(kitchen -> {
             QuotationKitchenDto dto = new QuotationKitchenDto();
@@ -1612,22 +1642,26 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setLightingTaxAmount(kitchen.getLightingTaxAmount());
             dto.setLightingFinalTotal(kitchen.getLightingFinalTotal());
 
-            if (isAdmin) {
+            if (seesRates) {
                 dto.setAccessoriesBaseTotal(kitchen.getAccessoriesBaseTotal());
-                dto.setAccessoriesMarginAmount(kitchen.getAccessoriesMarginAmount());
                 dto.setCabinetsBaseTotal(kitchen.getCabinetsBaseTotal());
-                dto.setCabinetsMarginAmount(kitchen.getCabinetsMarginAmount());
                 dto.setDoorsBaseTotal(kitchen.getDoorsBaseTotal());
-                dto.setDoorsMarginAmount(kitchen.getDoorsMarginAmount());
                 dto.setLightingBaseTotal(kitchen.getLightingBaseTotal());
+            }
+            if (seesMargins) {
+                dto.setAccessoriesMarginAmount(kitchen.getAccessoriesMarginAmount());
+                dto.setCabinetsMarginAmount(kitchen.getCabinetsMarginAmount());
+                dto.setDoorsMarginAmount(kitchen.getDoorsMarginAmount());
                 dto.setLightingMarginAmount(kitchen.getLightingMarginAmount());
             }
 
             // Kitchen totals
             dto.setTaxAmount(kitchen.getTaxAmount());
             dto.setTotalAmount(kitchen.getTotalAmount());
-            if (isAdmin) {
+            if (seesRates) {
                 dto.setSubtotal(kitchen.getSubtotal());
+            }
+            if (seesMargins) {
                 dto.setMarginAmount(kitchen.getMarginAmount());
             }
             
@@ -1738,15 +1772,15 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setHeightMm(cabinet.getHeightMm());
             dto.setDepthMm(cabinet.getDepthMm());
             dto.setCalculatedSqft(cabinet.getCalculatedSqft());
-            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(cabinet.getUnitPrice());
+            if (PricingView.seesRates(userRole)) dto.setUnitPrice(cabinet.getUnitPrice());
             dto.setTotalPrice(cabinet.getTotalPrice());
 
             if (cabinet.getCustomDimensions() != null) {
                 dto.setCustomDimensions("true".equals(cabinet.getCustomDimensions()));
             }
 
-            // Only show margin to super admin
-            if ("ROLE_SUPER_ADMIN".equals(userRole)) {
+            // Margin only for those allowed to see margins
+            if (PricingView.seesMargins(userRole)) {
                 BigDecimal baseAmount;
                 if (cabinet.getCalculatedSqft() != null) {
                     baseAmount = cabinet.getUnitPrice().multiply(cabinet.getCalculatedSqft()).multiply(BigDecimal.valueOf(cabinet.getQuantity()));
@@ -1820,7 +1854,7 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setWidthMm(door.getWidthMm());
             dto.setHeightMm(door.getHeightMm());
             dto.setCalculatedSqft(door.getCalculatedSqft());
-            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(door.getUnitPrice());
+            if (PricingView.seesRates(userRole)) dto.setUnitPrice(door.getUnitPrice());
             dto.setTotalPrice(door.getTotalPrice());
             dto.setDoorFinish(door.getDoorFinish());
             dto.setDoorStyle(door.getDoorStyle());
@@ -1830,8 +1864,8 @@ public class QuotationServiceImpl implements QuotationService {
                 dto.setCustomDimensions("true".equals(door.getCustomDimensions()));
             }
 
-            // Only show margin to super admin
-            if ("ROLE_SUPER_ADMIN".equals(userRole)) {
+            // Margin only for those allowed to see margins
+            if (PricingView.seesMargins(userRole)) {
                 BigDecimal baseAmount;
                 if (door.getCalculatedSqft() != null) {
                     baseAmount = door.getUnitPrice().multiply(door.getCalculatedSqft()).multiply(BigDecimal.valueOf(door.getQuantity()));
@@ -1876,7 +1910,7 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setItemName(lighting.getItemName()); // THIS IS KEY FOR PDF NAME DISPLAY
             dto.setQuantity(lighting.getQuantity());
             dto.setUnit(lighting.getUnit());
-            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(lighting.getUnitPrice());
+            if (PricingView.seesRates(userRole)) dto.setUnitPrice(lighting.getUnitPrice());
             dto.setTotalPrice(lighting.getTotalPrice());
             dto.setSpecifications(lighting.getSpecifications());
             dto.setDescription(lighting.getDescription());
@@ -1885,8 +1919,8 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setSensorType(lighting.getSensorType());
             dto.setConnectorType(lighting.getConnectorType());
 
-            // Only show margin to super admin
-            if ("ROLE_SUPER_ADMIN".equals(userRole)) {
+            // Margin only for those allowed to see margins
+            if (PricingView.seesMargins(userRole)) {
                 BigDecimal baseAmount = lighting.getUnitPrice().multiply(lighting.getQuantity());
                 BigDecimal marginAmount = pricingService.calculateMarginAmount(baseAmount, lighting.getQuotation().getMarginPercentage());
                 BigDecimal taxAmount = pricingService.calculateTaxAmount(baseAmount.add(marginAmount), lighting.getQuotation().getTaxPercentage());
@@ -1937,7 +1971,7 @@ public class QuotationServiceImpl implements QuotationService {
             QuotationAccessoryDto dto = new QuotationAccessoryDto();
             dto.setId(quotationAccessory.getId());
             dto.setQuantity(quotationAccessory.getQuantity());
-            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(quotationAccessory.getUnitPrice());
+            if (PricingView.seesRates(userRole)) dto.setUnitPrice(quotationAccessory.getUnitPrice());
             dto.setTotalPrice(quotationAccessory.getTotalPrice());
             dto.setDescription(quotationAccessory.getDescription());
             dto.setCustomItem(quotationAccessory.getCustomItem());
@@ -1980,7 +2014,7 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setHeightMm(cabinet.getHeightMm());
             dto.setDepthMm(cabinet.getDepthMm());
             dto.setCalculatedSqft(cabinet.getCalculatedSqft());
-            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(cabinet.getUnitPrice());
+            if (PricingView.seesRates(userRole)) dto.setUnitPrice(cabinet.getUnitPrice());
             dto.setTotalPrice(cabinet.getTotalPrice());
             dto.setKitchenId(kitchenId);
 
@@ -2043,7 +2077,7 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setWidthMm(door.getWidthMm());
             dto.setHeightMm(door.getHeightMm());
             dto.setCalculatedSqft(door.getCalculatedSqft());
-            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(door.getUnitPrice());
+            if (PricingView.seesRates(userRole)) dto.setUnitPrice(door.getUnitPrice());
             dto.setTotalPrice(door.getTotalPrice());
             dto.setDoorFinish(door.getDoorFinish());
             dto.setDoorStyle(door.getDoorStyle());
@@ -2080,7 +2114,7 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setItemName(lighting.getItemName());
             dto.setQuantity(lighting.getQuantity());
             dto.setUnit(lighting.getUnit());
-            if ("ROLE_SUPER_ADMIN".equals(userRole)) dto.setUnitPrice(lighting.getUnitPrice());
+            if (PricingView.seesRates(userRole)) dto.setUnitPrice(lighting.getUnitPrice());
             dto.setTotalPrice(lighting.getTotalPrice());
             dto.setSpecifications(lighting.getSpecifications());
             dto.setDescription(lighting.getDescription());

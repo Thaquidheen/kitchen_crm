@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Pencil, ChevronDown, ChevronRight, Layers, Receipt, X } from 'lucide-react';
 import { useState } from 'react';
-import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
+import { useQuotationAccess } from '../useQuotationAccess';
 import type { QuotationElevation, QuotationOtherExpense } from '../types';
 
 interface AccessoryItem {
@@ -123,7 +123,7 @@ export function SelectedProductsList({
   onEditCabinet,
   onEditDoor
 }: SelectedProductsListProps) {
-  const isSuperAdmin = useIsSuperAdmin();
+  const access = useQuotationAccess();
 
   // Which cabinet each linked door belongs to. A door created for a cabinet carries the same
   // _tempPairId; without showing it, every door row is the same shutter name and they cannot be
@@ -266,7 +266,7 @@ export function SelectedProductsList({
   const grandTotal = productTotal + otherExpensesTotal;
   // Staff are not sent unit prices, so the figure above is 0 for them - show the stored total.
   const displayGrandTotal =
-    !isSuperAdmin && serverGrandTotal != null ? Number(serverGrandTotal) : grandTotal;
+    !access.computesTotals && serverGrandTotal != null ? Number(serverGrandTotal) : grandTotal;
 
   const toggleElevation = (elevationName: string) => {
     setExpandedElevations(prev => ({
@@ -321,7 +321,7 @@ export function SelectedProductsList({
           </div>
           <div className="flex items-center gap-0.5 flex-shrink-0">
             {/* Pre-margin cost — hidden from staff. The Grand Total below is customer-facing. */}
-            {isSuperAdmin && (
+            {access.seesRates && (
               <span className="font-semibold whitespace-nowrap text-text-900 tabular-nums">
                 ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
               </span>
@@ -414,7 +414,7 @@ export function SelectedProductsList({
                 </span>
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
-                {isSuperAdmin && (
+                {access.seesRates && (
                   <span className="text-xs font-semibold text-text-900 tabular-nums">
                     ₹{group.subtotal.toLocaleString('en-IN')}
                   </span>

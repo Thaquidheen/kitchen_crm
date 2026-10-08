@@ -6,7 +6,6 @@
 
 import { Fragment, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/shared/Pagination';
@@ -24,7 +23,7 @@ import {
   useDeleteQuotationFolderMutation,
   useUpdateQuotationStatusMutation,
 } from '@/app/baseApi';
-import type { RootState } from '@/app/store';
+import { useQuotationAccess } from '../useQuotationAccess';
 
 export interface QuotationListProps {
   filters: QuotationFilters;
@@ -54,8 +53,8 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
   const [deleteFolderTarget, setDeleteFolderTarget] = useState<QuotationFolderSummary | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const currentUser = useSelector((state: RootState) => state.auth.user);
-  const isSuperAdmin = currentUser?.role === 'ROLE_SUPER_ADMIN';
+  // What the administrator allowed this person's staff type (Permissions page).
+  const access = useQuotationAccess();
 
   // Flat list (classic view)
   const { data, isLoading, error } = useGetQuotationsQuery(filters, { skip: viewMode !== 'all' });
@@ -185,7 +184,7 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
   // Interactive status cell: a clickable pill for a super-admin (opens the status menu), or the
   // plain read-only pill for everyone else / when there is no target quotation id.
   const statusCell = (id?: number, status?: string) => {
-    if (!isSuperAdmin || !id) return statusPill(status);
+    if (!access.changeStatus || !id) return statusPill(status);
     const m = (status && QSTATUS[status]) || { st: '', label: status ?? '—' };
     const fg = m.st ? `var(--st-${m.st}-fg)` : 'var(--color-text-700)';
     const bg = m.st ? `var(--st-${m.st}-bg)` : 'var(--color-background-700)';
@@ -239,7 +238,7 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
       >
         <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
       </Button>
-      {isSuperAdmin && (
+      {access.remove && (
         <Button
           variant="ghost"
           size="sm"
@@ -381,7 +380,7 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
                               >
                                 <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
                               </Button>
-                              {isSuperAdmin && (
+                              {access.remove && (
                                 <Button
                                   variant="ghost"
                                   size="sm"

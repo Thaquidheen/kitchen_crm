@@ -14,6 +14,7 @@ import { Download, RefreshCw, ChevronRight } from 'lucide-react';
 import { useGetDashboardSummaryQuery, useGetRevenueAnalyticsQuery } from '@/features/dashboard/dashboardAPI';
 import { useGetCustomerStatisticsQuery } from '@/features/customers/customersAPI';
 import { useGetQuotationsQuery, useGetRemindersQuery, useGetReminderStatsQuery } from '@/app/baseApi';
+import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
 import ROUTES from '@/routes/routes.config';
 import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 import { useAppSelector } from '@/app/hooks';
@@ -91,7 +92,12 @@ export function DashboardPage() {
   // Skipped for staff: the endpoint is super-admin only now, and firing it would just 403.
   const { data: revenue, refetch: refetchRevenue } = useGetRevenueAnalyticsQuery(undefined, { skip: !isSuperAdmin });
   const { data: custStats } = useGetCustomerStatisticsQuery();
-  const { data: latestQ } = useGetQuotationsQuery({ page: 0, size: 5, sortBy: 'createdAt', sortDir: 'desc' });
+  // Not asked for at all by someone who may not see quotations.
+  const mayReadQuotations = useQuotationAccess().view;
+  const { data: latestQ } = useGetQuotationsQuery(
+    { page: 0, size: 5, sortBy: 'createdAt', sortDir: 'desc' },
+    { skip: !mayReadQuotations },
+  );
   const { data: todayRem } = useGetRemindersQuery({ bucket: 'TODAY', page: 0, size: 6 });
   const { data: remStats } = useGetReminderStatsQuery();
 

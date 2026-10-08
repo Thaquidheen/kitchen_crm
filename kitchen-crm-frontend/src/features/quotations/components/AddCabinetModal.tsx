@@ -12,7 +12,7 @@ import { Select } from '../../../components/ui/Select';
 import type { CabinetType, DoorType, Material, InnerPanelType } from '../../products/types';
 import type { QuotationElevation } from '../types';
 import { useGetActiveMaterialsQuery, useGetActiveInnerPanelTypesQuery } from '../../products/productsAPI';
-import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
+import { useQuotationAccess } from '../useQuotationAccess';
 
 export interface CabinetWithDimensions {
   cabinetTypeId: number;
@@ -82,7 +82,8 @@ export function AddCabinetModal({
   editIndex,
 }: AddCabinetModalProps) {
   // Per-unit cost rates are internal; staff see the resulting line totals only.
-  const isSuperAdmin = useIsSuperAdmin();
+  // Rates are shown to whoever the administrator allowed to see them.
+  const seesRates = useQuotationAccess().seesRates;
   const isEditing = editIndex !== undefined;
   const [widthMm, setWidthMm] = useState<number>(0);
   const [heightMm, setHeightMm] = useState<number>(0);
@@ -348,7 +349,7 @@ export function AddCabinetModal({
           >
             {materials.map((material) => (
               <option key={material.id} value={material.id}>
-                {material.name}{isSuperAdmin ? ` - ₹${material.unitRatePerSqft?.toLocaleString('en-IN')}/sqft` : ''}
+                {material.name}{seesRates ? ` - ₹${material.unitRatePerSqft?.toLocaleString('en-IN')}/sqft` : ''}
               </option>
             ))}
           </Select>
@@ -386,7 +387,7 @@ export function AddCabinetModal({
           >
             {innerPanelTypes.map((ip) => (
               <option key={ip.id} value={ip.id}>
-                {ip.name}{isSuperAdmin ? ` - ₹${ip.ratePerSqft?.toLocaleString('en-IN')}/sqft` : ''} {ip.multiplier !== 1 ? `x${ip.multiplier}` : ''}
+                {ip.name}{seesRates ? ` - ₹${ip.ratePerSqft?.toLocaleString('en-IN')}/sqft` : ''} {ip.multiplier !== 1 ? `x${ip.multiplier}` : ''}
               </option>
             ))}
           </Select>
@@ -407,7 +408,7 @@ export function AddCabinetModal({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="flex items-center">
             <Checkbox
-              label={isSuperAdmin ? `Fixed Price - ₹${(cabinet.fixedPrice || 0).toLocaleString('en-IN')}` : 'Fixed Price'}
+              label={seesRates ? `Fixed Price - ₹${(cabinet.fixedPrice || 0).toLocaleString('en-IN')}` : 'Fixed Price'}
               checked={includeAccessories}
               onChange={(e) => setIncludeAccessories(e.target.checked)}
             />
@@ -416,7 +417,7 @@ export function AddCabinetModal({
             <Checkbox
               label={
                 powderCoatingRate > 0
-                  ? (isSuperAdmin ? `Powder Coating - ₹${powderCoatingRate.toLocaleString('en-IN')}/sq.ft` : 'Powder Coating')
+                  ? (seesRates ? `Powder Coating - ₹${powderCoatingRate.toLocaleString('en-IN')}/sq.ft` : 'Powder Coating')
                   : 'Powder Coating - no rate set'
               }
               checked={powderCoating}
@@ -442,7 +443,7 @@ export function AddCabinetModal({
             </div>
 
             {/* Material Rate — cost input, admin only */}
-            {isSuperAdmin && (
+            {seesRates && (
               <div className="flex justify-between text-xs mb-1.5">
                 <span className="text-text-600">Material Rate ({selectedMaterial?.name})</span>
                 <span className="text-text-900 font-medium tabular-nums">₹{materialRate.toLocaleString('en-IN')}/sqft</span>
@@ -453,7 +454,7 @@ export function AddCabinetModal({
             <div className="flex justify-between text-xs mb-1.5">
               <span className="text-text-600">Cabinet Price</span>
               <span className="text-text-900 font-medium tabular-nums">
-                {isSuperAdmin ? `${surfaceArea.toFixed(2)} × ₹${materialRate.toLocaleString('en-IN')} = ` : ''}₹{cabinetPrice.toFixed(2)}
+                {seesRates ? `${surfaceArea.toFixed(2)} × ₹${materialRate.toLocaleString('en-IN')} = ` : ''}₹{cabinetPrice.toFixed(2)}
               </span>
             </div>
 
@@ -485,7 +486,7 @@ export function AddCabinetModal({
             {powderCoating && (
               <div className="flex justify-between text-xs mb-1.5">
                 <span className="text-text-600">
-                  Powder Coating{isSuperAdmin ? ` (${boxSurfaceArea.toFixed(2)} sq.ft × ₹${powderCoatingRate})` : ''}
+                  Powder Coating{seesRates ? ` (${boxSurfaceArea.toFixed(2)} sq.ft × ₹${powderCoatingRate})` : ''}
                 </span>
                 <span className="text-text-900 font-medium tabular-nums">₹{powderCoatingCost.toFixed(2)}</span>
               </div>
@@ -533,7 +534,7 @@ export function AddCabinetModal({
             >
               {availableDoors.map((door) => (
                 <option key={door.id} value={door.id}>
-                  {door.name}{isSuperAdmin ? ` - ₹${door.companyPrice?.toLocaleString('en-IN')}/sqft` : ''}
+                  {door.name}{seesRates ? ` - ₹${door.companyPrice?.toLocaleString('en-IN')}/sqft` : ''}
                 </option>
               ))}
             </Select>
@@ -546,7 +547,7 @@ export function AddCabinetModal({
                   Uses cabinet width × height
                 </div>
                 <div className="text-text-900 font-medium mt-1 text-xs tabular-nums">
-                  {isSuperAdmin
+                  {seesRates
                     ? `${doorArea.toFixed(2)} sqft × ₹${selectedDoor.companyPrice?.toLocaleString('en-IN')} × ${quantity} = `
                     : ''}₹{doorPrice.toFixed(2)}
                 </div>

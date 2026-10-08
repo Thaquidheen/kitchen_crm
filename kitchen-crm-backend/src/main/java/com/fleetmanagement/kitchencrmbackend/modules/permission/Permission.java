@@ -10,7 +10,8 @@ import java.util.stream.Collectors;
  * what the Permissions page shows, so they are written for the administrator, not for developers.
  *
  * <p>The default is what a staff type gets until the administrator decides otherwise. Defaults
- * keep what staff could already do, with one exception: deleting a customer is off.
+ * keep what staff could already do, with two exceptions: deleting a customer is off, and so is
+ * deleting a quotation folder (which had no rule at all).
  *
  * <p>{@code screenOnly} marks permissions that only hide something on the screen. They cannot be
  * enforced by the server because the action itself happens in the browser (ticking rows, building
@@ -40,14 +41,34 @@ public enum Permission {
             "Add a note to a customer's activity.", true, false),
     CUSTOMERS_REMINDERS("customers.reminders", "Customers", "Reminders",
             "Set reminders on a customer and open the Reminders tab.", true, false),
-    CUSTOMERS_UPLOAD_DESIGN("customers.upload_design", "Customers", "Upload design PDF",
+    CUSTOMERS_UPLOAD_DESIGN("customers.upload_design", "Customers", "Upload design",
             "Upload a customer's existing design.", true, false),
     CUSTOMERS_SITE_MEASUREMENT("customers.site_measurement", "Customers", "Site measurement",
             "Open and save a customer's site measurement.", true, false),
     CUSTOMERS_PRODUCTION("customers.production", "Customers", "Production",
             "See and update a customer's production: stages, tasks and issues.", true, false),
     CUSTOMERS_QUOTATIONS("customers.quotations", "Customers", "Customer's quotations",
-            "See the list of a customer's quotations on the customer page.", true, false);
+            "See the list of a customer's quotations on the customer page.", true, false),
+
+    QUOTATIONS_VIEW("quotations.view", "Quotations", "See quotations",
+            "Open the Quotations page and any quotation on it. Without it the page is closed.", true, false),
+    QUOTATIONS_CREATE("quotations.create", "Quotations", "Create quotations",
+            "Make a new quotation, save one as a new version, or duplicate one.", true, false),
+    QUOTATIONS_EDIT("quotations.edit", "Quotations", "Edit quotations",
+            "Change and save a quotation that is still open, and rename its folder.", true, false),
+    QUOTATIONS_DELETE("quotations.delete", "Quotations", "Delete quotations",
+            "Delete a quotation, or a whole folder with all its versions, for good.", false, false),
+    QUOTATIONS_CHANGE_STATUS("quotations.change_status", "Quotations", "Change status",
+            "Set a quotation's status: on hold, approved, completed, cancelled.", false, false),
+    QUOTATIONS_PDF("quotations.pdf", "Quotations", "Download PDF",
+            "Download or print a quotation as a PDF.", true, false),
+    QUOTATIONS_SEE_RATES("quotations.see_rates", "Quotations", "See rates and amount before margin",
+            "Each item's rate, and each category's total before the margin is added. With the final "
+                    + "amount next to it, the margin can be worked out.", false, false),
+    QUOTATIONS_SEE_MARGINS("quotations.see_margins", "Quotations", "See margin",
+            "The margin percentage and margin amount of each category, and the MRP margins.", false, false),
+    QUOTATIONS_EDIT_MARGINS("quotations.edit_margins", "Quotations", "Change margin",
+            "Set the margin percentages on a quotation. Only works together with \"See margin\".", false, false);
 
     private static final Map<String, Permission> BY_KEY =
             Arrays.stream(values()).collect(Collectors.toMap(Permission::key, Function.identity()));

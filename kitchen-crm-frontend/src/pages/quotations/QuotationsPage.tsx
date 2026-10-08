@@ -17,6 +17,7 @@ import type { QuotationListParams } from '@/features/quotations/types';
 import { QuotationWorkBoard } from '@/features/quotation-work/components/QuotationWorkBoard';
 import { useQuotationBoardCount } from '@/features/quotation-work/useQuotationBoardCount';
 import { useGetQuotationWorkMeQuery } from '@/features/quotation-work/quotationWorkAPI';
+import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
 
 type PageView = 'board' | 'list';
 
@@ -150,6 +151,7 @@ export function QuotationsPage() {
   const { data: me, isError: meFailed } = useGetQuotationWorkMeQuery();
   const board = useQuotationBoardCount(me);
   const hasBoard = !!me?.canManage || board.any;
+  const access = useQuotationAccess();
   // Without a chosen view the page opens on the board when there is something on it for this
   // person (work to do, customers to assign, news) and on the list otherwise, as before. That is
   // decided once per visit, so a refresh in the background never switches the view under you.
@@ -241,6 +243,7 @@ export function QuotationsPage() {
             })}
           </div>
         )}
+        {access.create && (
         <button
           onClick={() => navigate('/quotations/new')}
           className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold whitespace-nowrap"
@@ -250,6 +253,7 @@ export function QuotationsPage() {
           </span>
           New Quotation
         </button>
+        )}
       </div>
 
       {deciding ? (

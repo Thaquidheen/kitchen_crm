@@ -13,7 +13,16 @@ export type PermissionKey =
   | 'customers.upload_design'
   | 'customers.site_measurement'
   | 'customers.production'
-  | 'customers.quotations';
+  | 'customers.quotations'
+  | 'quotations.view'
+  | 'quotations.create'
+  | 'quotations.edit'
+  | 'quotations.delete'
+  | 'quotations.change_status'
+  | 'quotations.pdf'
+  | 'quotations.see_rates'
+  | 'quotations.see_margins'
+  | 'quotations.edit_margins';
 
 /** What the signed-in person may do. */
 export interface MyPermissions {

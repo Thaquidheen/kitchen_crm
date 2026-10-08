@@ -20,13 +20,22 @@ public class SettingsController {
     @Autowired
     private SystemSettingService systemSettingService;
 
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.permission.service.PermissionService permissionService;
+
     /**
-     * Get all margin percentages (Super Admin only)
+     * Get all margin percentages — for the administrator, and for staff the administrator allowed
+     * to see margins (a new quotation on their screen starts from these, as it does on his).
      * @return Map of category names to margin percentages
      */
     @GetMapping("/margins")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ApiResponse<Map<String, BigDecimal>> getMargins() {
+    public ApiResponse<Map<String, BigDecimal>> getMargins(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            com.fleetmanagement.kitchencrmbackend.security.UserPrincipal user) {
+        if (!permissionService.can(user,
+                com.fleetmanagement.kitchencrmbackend.modules.permission.Permission.QUOTATIONS_SEE_MARGINS)) {
+            throw new org.springframework.security.access.AccessDeniedException("margin settings");
+        }
         try {
             Map<String, BigDecimal> margins = systemSettingService.getAllMargins();
             return ApiResponse.success("Margins retrieved successfully", margins);

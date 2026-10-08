@@ -32,6 +32,7 @@ import ApplianceQuartzPage from '../pages/appliance/ApplianceQuartzPage';
 import RemindersPage from '../pages/reminders/RemindersPage';
 import QuotationDetailPage from '../pages/quotations/QuotationDetailPage';
 import QuotationBuilderPage from '../pages/quotations/QuotationBuilderPage';
+import { QuotationGate } from '../features/quotations/QuotationGate';
 
 
 
@@ -157,19 +158,19 @@ const routes = [
           // Quotations
           {
             path: ROUTES.QUOTATIONS,
-            element: <QuotationsPage />,
+            element: <QuotationGate need="view"><QuotationsPage /></QuotationGate>,
           },
           {
             path: ROUTES.QUOTATIONS_NEW,
-            element: <QuotationBuilderPage />,
+            element: <QuotationGate need="builder"><QuotationBuilderPage /></QuotationGate>,
           },
           {
             path: ROUTES.QUOTATIONS_EDIT,
-            element: <QuotationBuilderPage />,
+            element: <QuotationGate need="builder"><QuotationBuilderPage /></QuotationGate>,
           },
           {
             path: ROUTES.QUOTATIONS_DETAIL,
-            element: <QuotationDetailPage />,
+            element: <QuotationGate need="view"><QuotationDetailPage /></QuotationGate>,
           },
 
           // Appliance & Quartz
