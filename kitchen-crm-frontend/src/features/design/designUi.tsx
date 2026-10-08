@@ -46,6 +46,23 @@ export const isDesignerWork = (s: DesignStatus) => s === 'PLANNING' || s === 'IN
 /** The current version is not approved yet: with the designer, or with the admin for review. */
 export const isOpenDesign = (s: DesignStatus) => isDesignerWork(s) || s === 'PENDING_SUPERADMIN_APPROVAL';
 
+/**
+ * Whether this person may bring in the finished design while the design is still open (the same
+ * rule the server applies): the administrator always; Admin staff while the designer is on a
+ * first pass — not once it is handed in, and not after the administrator asked for changes; and
+ * anyone when nobody has been given the design yet.
+ */
+export const canSettleOpenDesign = (
+  job: Pick<DesignJob, 'status' | 'designerId' | 'completedAt'> | null | undefined,
+  who: { admin: boolean; coordinator: boolean },
+): boolean => {
+  if (!job || !isOpenDesign(job.status)) {return false;}
+  if (who.admin || !job.designerId) {return true;}
+  // A first pass: `completedAt` is set once the version has been handed in and stays set when the
+  // administrator sends it back, also after the designer starts the changes.
+  return who.coordinator && (job.status === 'PLANNING' || job.status === 'IN_PROGRESS') && !job.completedAt;
+};
+
 /** The current version is approved: a quotation can be made from this design. */
 export const isApprovedDesign = (s: DesignStatus) =>
   s === 'APPROVED_BY_ADMIN' || s === 'SUBMITTED' || s === 'FEEDBACK_RECEIVED' || s === 'APPROVED' || s === 'FROZEN';

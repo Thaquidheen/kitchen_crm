@@ -1,8 +1,8 @@
 /**
  * UploadDesignModal — save an already existing design (PDFs, images, CAD drawings) as a
  * customer's design. Used for customers whose design was made outside the system, for a newer
- * design replacing an approved one (it becomes the next version), and by an admin to settle a
- * design a designer still has open.
+ * design replacing an approved one (it becomes the next version), and by the admin or Admin staff
+ * to settle a design a designer still has open.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -35,12 +35,16 @@ export const UploadDesignModal: React.FC<Props> = ({ target, onClose }) => {
   const input = useRef<HTMLInputElement>(null);
   const [uploadDesign, { isLoading }] = useUploadCustomerDesignMutation();
 
+  // Start empty each time the window opens (or the customer changes). Not on `target` itself: two
+  // of the callers build it anew on every render, and the page behind refreshes in the background
+  // and whenever the window gets focus back — which is exactly when a file picker closes.
+  const openFor = target?.customerId ?? null;
   useEffect(() => {
-    if (target) {
+    if (openFor !== null) {
       setFiles([]);
       setNote('');
     }
-  }, [target]);
+  }, [openFor]);
 
   const design = target?.design ?? null;
   const approved = !!design && isApprovedDesign(design.status);

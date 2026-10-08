@@ -5,20 +5,16 @@
  */
 import { useCallback } from 'react';
 import { useUpdateCustomerStatusMutation } from './customersAPI';
-import {
-  useLazyGetCustomerDesignJobQuery,
-  useUploadCustomerDesignMutation,
-  useUploadPlanDocumentsMutation,
-} from '../design/designAPI';
+import { useUploadCustomerDesignMutation, useUploadCustomerPlanDocumentsMutation } from '../design/designAPI';
 import type { DesignAssignment } from '../design/components/DesignerPicker';
 import type { CustomerStatus } from './types';
 
 export interface StatusChangeExtras {
   /** Moving to Design Stage: who designs it, by when, how urgent. */
   design?: DesignAssignment;
-  /** Moving to Design Stage: plan documents for the designer (admin only). */
+  /** Moving to Design Stage: plan documents for the designer (the admin and Admin staff). */
   planFiles?: File[];
-  /** Moving to Quotation Stage without an approved design: the existing design (PDF, images, CAD). */
+  /** Moving to Quotation Stage without an approved design: the finished design (PDF, images, CAD). */
   designFiles?: File[];
 }
 
@@ -32,8 +28,7 @@ const errMsg = (e: any, fallback: string) => e?.message || e?.data?.message || f
 export function useCustomerStatusChange() {
   const [updateStatus] = useUpdateCustomerStatusMutation();
   const [uploadCustomerDesign] = useUploadCustomerDesignMutation();
-  const [uploadPlanDocuments] = useUploadPlanDocumentsMutation();
-  const [fetchDesign] = useLazyGetCustomerDesignJobQuery();
+  const [uploadPlanDocuments] = useUploadCustomerPlanDocumentsMutation();
 
   /** Throws when the status itself could not be changed. */
   return useCallback(
@@ -64,19 +59,17 @@ export function useCustomerStatusChange() {
       const planFiles = extras?.planFiles ?? [];
       if (status === 'DESIGN_STAGE' && planFiles.length > 0) {
         try {
-          const job = await fetchDesign(customerId, false).unwrap();
-          if (!job) {
-            throw new Error('the design was not found');
-          }
-          await uploadPlanDocuments({ id: job.id, files: planFiles }).unwrap();
+          // By customer: when Admin staff move the customer, no designer has the design yet and
+          // the documents wait with the customer for whoever is chosen.
+          await uploadPlanDocuments({ customerId, files: planFiles }).unwrap();
         } catch (e) {
           return {
-            warning: `Status updated, but the plan documents were not added: ${errMsg(e, 'upload failed')}. Add them from the design.`,
+            warning: `Status updated, but the plan documents were not added: ${errMsg(e, 'upload failed')}. Add them from the Design box on the customer's page.`,
           };
         }
       }
       return {};
     },
-    [updateStatus, uploadCustomerDesign, uploadPlanDocuments, fetchDesign],
+    [updateStatus, uploadCustomerDesign, uploadPlanDocuments],
   );
 }

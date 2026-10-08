@@ -1,7 +1,7 @@
 /**
- * PlanDocumentsField — pick the plan documents (PDFs, photos, CAD drawings) an admin hands to the
- * designer along with an assignment. Only holds the chosen files; the caller uploads them once
- * the design exists.
+ * PlanDocumentsField — pick the plan documents (PDFs, photos, CAD drawings) handed to the
+ * designer: by the admin along with an assignment, or by Admin staff when they move a customer
+ * to Design Stage. Only holds the chosen files; the caller uploads them.
  */
 import React, { useRef } from 'react';
 import { Paperclip, X } from 'lucide-react';

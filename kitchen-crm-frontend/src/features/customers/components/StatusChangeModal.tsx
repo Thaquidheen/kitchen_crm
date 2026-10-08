@@ -8,12 +8,12 @@
  * change from the customers list, where one note is written to every selected row.
  *
  * Two stages need more than a note:
- *  - Design Stage: the designer who gets the design, and plan documents — chosen by the admin
- *    only. Anyone else moves the customer without a designer; it then waits under "To assign" in
- *    Designs.
- *  - Quotation Stage: the customer's design. When none is approved yet, the existing design
- *    (PDFs, images, CAD drawings) is uploaded here; while a designer still has it, the move waits
- *    for the admin's approval.
+ *  - Design Stage: the designer who gets the design — chosen by the admin only. Anyone else moves
+ *    the customer without a designer; it then waits under "To assign" in Designs. Plan documents
+ *    can be handed over by the admin and by Admin staff.
+ *  - Quotation Stage: the customer's design. When none is approved yet, the finished design
+ *    (PDFs, images, CAD drawings) is uploaded here. While a designer still has it, the admin and
+ *    Admin staff can upload it here; for anyone else the move waits for the admin's approval.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -24,10 +24,11 @@ import { STATUS_PILL } from './CustomerList';
 import type { CustomerStatus } from '../types';
 import type { StatusChangeExtras } from '../useCustomerStatusChange';
 import { useIsSuperAdmin } from '../../auth/useIsSuperAdmin';
+import { usePermissions } from '../../permissions/usePermissions';
 import { DesignerPicker, type DesignAssignment } from '../../design/components/DesignerPicker';
 import { DesignFilesBox } from '../../design/components/DesignFilesBox';
 import { PlanDocumentsField } from '../../design/components/PlanDocumentsField';
-import { useGetCustomerDesignJobQuery } from '../../design/designAPI';
+import { useGetCustomerDesignJobQuery, useGetDesignMeQuery } from '../../design/designAPI';
 import {
   DESIGN_ACCEPT,
   DESIGN_KINDS_TEXT,
@@ -38,6 +39,7 @@ import {
 } from '../../design/designFiles';
 import {
   DESIGN_STATUS,
+  canSettleOpenDesign,
   defaultDueDate,
   fileLinkProps,
   isApprovedDesign,
@@ -106,8 +108,11 @@ export function StatusChangeModal({
   });
   const [planFiles, setPlanFiles] = useState<File[]>([]);
   const [designFiles, setDesignFiles] = useState<File[]>([]);
-  // Choosing the designer (and handing over plan documents with it) is the admin's alone.
+  // Choosing the designer is the admin's alone. Admin staff hand over plan documents too.
   const canAssign = useIsSuperAdmin();
+  const { data: designMe } = useGetDesignMeQuery(undefined, { skip: !isOpen });
+  const coordinates = canAssign || !!designMe?.canCoordinate;
+  const { can } = usePermissions();
   const isBulk = count > 1;
   const toDesign = targetStatus === 'DESIGN_STAGE';
   const toQuotation = targetStatus === 'QUOTE_GIVEN';
@@ -145,10 +150,19 @@ export function StatusChangeModal({
   // A single move to Quotation Stage is settled here; a bulk one is checked per customer by the server.
   const quotationSingle = toQuotation && !isBulk && !!customerId;
   const designPending = quotationSingle && loadingDesign;
-  const designBlocks = quotationSingle && !loadingDesign && gate === 'WITH_DESIGNER';
-  const uploadsDesign = quotationSingle && !loadingDesign && gate === 'NEEDS_DESIGN';
+  // A design that is still open can be finished right here by whoever may do that.
+  const settlesOpen =
+    quotationSingle &&
+    !loadingDesign &&
+    gate === 'WITH_DESIGNER' &&
+    can('customers.upload_design') &&
+    canSettleOpenDesign(customerDesign, { admin: canAssign, coordinator: coordinates });
+  const designBlocks = quotationSingle && !loadingDesign && gate === 'WITH_DESIGNER' && !settlesOpen;
+  const uploadsDesign = quotationSingle && !loadingDesign && (gate === 'NEEDS_DESIGN' || settlesOpen);
   const needsDesign = uploadsDesign && designFiles.length === 0;
   const designTooLarge = uploadsDesign ? uploadSizeProblem(designFiles) : null;
+  const handsOverPlans = toDesign && coordinates && !isBulk;
+  const plansTooLarge = handsOverPlans ? uploadSizeProblem(planFiles) : null;
   const canSubmit =
     trimmed.length > 0 &&
     !isSubmitting &&
@@ -156,7 +170,8 @@ export function StatusChangeModal({
     !designPending &&
     !designBlocks &&
     !needsDesign &&
-    !designTooLarge;
+    !designTooLarge &&
+    !plansTooLarge;
 
   const pickDesign = (picked: FileList | null) => {
     if (!picked || picked.length === 0) {return;}
@@ -172,8 +187,8 @@ export function StatusChangeModal({
     if (!canSubmit) {return;}
     onConfirm(trimmed, {
       design: toDesign && canAssign ? design : undefined,
-      planFiles: toDesign && canAssign && !isBulk ? planFiles : undefined,
-      designFiles: quotationSingle && gate === 'NEEDS_DESIGN' ? designFiles : undefined,
+      planFiles: handsOverPlans ? planFiles : undefined,
+      designFiles: uploadsDesign ? designFiles : undefined,
     });
   };
 
@@ -184,8 +199,8 @@ export function StatusChangeModal({
         ? 'Choose a designer to continue'
         : needsDesign
           ? 'Choose the design files to continue'
-          : designTooLarge
-            ? designTooLarge
+          : designTooLarge || plansTooLarge
+            ? designTooLarge || plansTooLarge || undefined
             : designBlocks
               ? 'The design is still with the designer'
               : undefined;
@@ -254,13 +269,17 @@ export function StatusChangeModal({
 
         {/* Moving to Design: the admin assigns the design to a designer (required). */}
         {toDesign && !canAssign && (
-          <p className="mt-4 pt-4 border-t border-background-600 mb-0 flex items-start gap-2 text-[12.5px] text-text-700">
-            <Info size={14} className="text-primary-600 shrink-0 mt-px" />
-            <span>
-              The admin chooses the designer.{' '}
-              {isBulk ? 'These customers wait' : 'This customer waits'} under “To assign” in Designs until then.
-            </span>
-          </p>
+          <div className="mt-4 pt-4 border-t border-background-600 space-y-3">
+            <p className="m-0 flex items-start gap-2 text-[12.5px] text-text-700">
+              <Info size={14} className="text-primary-600 shrink-0 mt-px" />
+              <span>
+                The admin chooses the designer.{' '}
+                {isBulk ? 'These customers wait' : 'This customer waits'} under “To assign” in Designs until then.
+                {handsOverPlans ? ' Plan documents you add here are kept for the designer.' : ''}
+              </span>
+            </p>
+            {handsOverPlans && <PlanDocumentsField files={planFiles} onChange={setPlanFiles} disabled={isSubmitting} />}
+          </div>
         )}
         {toDesign && canAssign && (
           <div className="mt-4 pt-4 border-t border-background-600 space-y-3">
@@ -332,6 +351,30 @@ export function StatusChangeModal({
                     <FileText size={13} /> {fileKindLabel(customerDesign.currentDesignFile.originalFileName)}
                   </a>
                 )}
+              </div>
+            ) : settlesOpen && customerDesign ? (
+              <div>
+                <p className="m-0 mb-2.5 flex items-start gap-2 px-3 py-2.5 rounded-[10px] bg-background-900 border border-background-600 text-[12.5px] text-text-800">
+                  <Info size={14} className="text-primary-600 shrink-0 mt-px" />
+                  <span>
+                    {customerDesign.designerName
+                      ? `The design is with ${customerDesign.designerName} (${DESIGN_STATUS[customerDesign.status]?.label ?? customerDesign.status}). `
+                      : 'No designer has this design yet. '}
+                    Upload the finished design to approve it and move the customer now
+                    {customerDesign.designerName
+                      ? ` — ${customerDesign.designerName} is told. Otherwise the customer moves by itself when the admin approves the design in Designs.`
+                      : '.'}
+                  </span>
+                </p>
+                <DesignFilesBox
+                  files={designFiles}
+                  onChoose={() => designInput.current?.click()}
+                  onRemove={(i) => setDesignFiles(designFiles.filter((_, j) => j !== i))}
+                  disabled={isSubmitting}
+                />
+                <p className="text-[11.5px] text-text-600 mt-1">
+                  It is saved as {versionLabel(customerDesign.version)} of the customer’s design and shown in Designs.
+                </p>
               </div>
             ) : gate === 'WITH_DESIGNER' && customerDesign ? (
               <p className="m-0 flex items-start gap-2 px-3 py-2.5 rounded-[10px] text-[12.5px]" style={{ background: 'var(--st-potential-bg)', color: 'var(--st-potential-fg)' }}>

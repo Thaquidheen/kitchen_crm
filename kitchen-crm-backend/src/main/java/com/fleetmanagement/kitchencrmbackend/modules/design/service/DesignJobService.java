@@ -78,22 +78,42 @@ public interface DesignJobService {
 
     ApiResponse<DesignJobDto> markSeen(Long jobId, Long callerId, boolean admin);
 
+    /**
+     * A design file for the version in work: from its designer, the admin, or admin staff
+     * ({@code coordinator}) while the designer has not handed it in for approval.
+     */
     ApiResponse<DesignJobDto> uploadFile(Long jobId, MultipartFile file, String description, Long callerId,
-                                         String callerName, boolean admin);
+                                         String callerName, boolean admin, boolean coordinator);
 
     /** Plan documents the admin hands to the designer; kept apart from the design files. */
     ApiResponse<DesignJobDto> uploadPlanDocuments(Long jobId, MultipartFile[] files, String callerName, boolean admin);
 
-    ApiResponse<DesignJobDto> deleteFile(Long jobId, Long fileId, Long callerId, boolean admin, boolean coordinator);
+    /**
+     * Plan documents for a customer's design, whether or not anybody has been given it yet. A
+     * customer in Design Stage with no design gets one without a designer to hold them: they stay
+     * under "To assign", and the designer who is chosen later finds the documents there.
+     */
+    ApiResponse<DesignJobDto> uploadCustomerPlanDocuments(Long customerId, MultipartFile[] files, Long callerId,
+                                                          String callerName, boolean admin);
+
+    /**
+     * Plan documents: the admin and admin staff. Design files of the version in work: the admin,
+     * its designer, and admin staff for a file they uploaded themselves.
+     */
+    ApiResponse<DesignJobDto> deleteFile(Long jobId, Long fileId, Long callerId, String callerName, boolean admin,
+                                         boolean coordinator);
 
     /**
      * Saves an already existing design — one or more PDFs, images or CAD drawings — as the
      * customer's approved design (a new version when one is already approved) and, when asked,
      * moves the customer to Quotation Stage with the note.
+     *
+     * <p>A design a designer is working on can be settled this way by the admin, and by admin
+     * staff ({@code coordinator}) until the designer has handed it in for approval.
      */
     ApiResponse<DesignJobDto> uploadCustomerDesign(Long customerId, MultipartFile[] files, String note,
                                                    boolean moveToQuotation, Long callerId, String callerName,
-                                                   boolean admin);
+                                                   boolean admin, boolean coordinator);
 
     ApiResponse<List<DesignerSummaryDto>> designers();
 

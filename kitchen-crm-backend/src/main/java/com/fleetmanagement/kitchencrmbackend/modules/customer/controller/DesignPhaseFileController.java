@@ -9,6 +9,7 @@ import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,7 +24,11 @@ public class DesignPhaseFileController {
     @Autowired
     private DesignPhaseFileService fileService;
 
+    // The screens add, change and remove design files through /api/v1/design-jobs, which knows
+    // whose design it is and what state it is in. These three do not, so they are the admin's only.
+
     // Upload design file
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<DesignPhaseFileDto>> uploadDesignFile(
             @RequestParam("file") MultipartFile file,
@@ -104,6 +109,7 @@ public class DesignPhaseFileController {
     }
 
     // Update file info (not the file itself)
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<DesignPhaseFileDto>> updateFileInfo(
             @PathVariable Long id,
@@ -117,6 +123,7 @@ public class DesignPhaseFileController {
     }
 
     // Delete file
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<String>> deleteFile(@PathVariable Long id) {
         ApiResponse<String> response = fileService.deleteFile(id);
