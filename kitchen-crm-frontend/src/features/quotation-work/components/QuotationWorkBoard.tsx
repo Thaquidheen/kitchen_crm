@@ -117,9 +117,10 @@ const ToAssignRow: React.FC<{ customer: UnassignedQuotationCustomer; onAssign: (
   onAssign,
 }) => {
   const has = c.quotationCount ?? 0;
+  // What they have comes first: in a narrow column it is the place that gets cut short.
   const detail = [
-    c.customerPlace,
     has > 0 ? quotedText(has, c.latestQuotationStatus ? quotationStatusLabel(c.latestQuotationStatus) : null) : null,
+    c.customerPlace,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -127,7 +128,11 @@ const ToAssignRow: React.FC<{ customer: UnassignedQuotationCustomer; onAssign: (
     <div className="flex items-center gap-2 pl-2.5 pr-1.5 py-1.5 rounded-[11px] border border-background-600 bg-background-900">
       <div className="min-w-0 flex-1">
         <div className="text-[13px] font-semibold text-text-900 truncate">{c.customerName}</div>
-        {detail && <div className="text-[11.5px] text-text-500 truncate">{detail}</div>}
+        {detail && (
+          <div className="text-[11.5px] text-text-500 truncate" title={detail}>
+            {detail}
+          </div>
+        )}
       </div>
       <button
         type="button"
