@@ -31,6 +31,23 @@ export const queuesByAssignee = (jobs: QuotationJob[]): Array<{ assigneeId: numb
   return queues.sort((a, b) => a.name.localeCompare(b.name));
 };
 
+/**
+ * The "To assign" column lists everyone in Quotation Stage that nobody is preparing. Those still
+ * without a quotation are the ones waiting for somebody; the others already have one and are
+ * listed so that finishing or revising it can be handed out too. The order inside each group is kept.
+ */
+export const splitToAssign = <T extends { quotationCount?: number | null }>(customers: T[]): { waiting: T[]; quoted: T[] } => ({
+  waiting: customers.filter((c) => !c.quotationCount),
+  quoted: customers.filter((c) => !!c.quotationCount),
+});
+
+/** What such a customer already has: "1 quotation · Draft", "3 quotations · newest Completed". */
+export const quotedText = (count: number, latestStatusLabel?: string | null): string => {
+  const n = `${count} quotation${count === 1 ? '' : 's'}`;
+  if (!latestStatusLabel) {return n;}
+  return count === 1 ? `${n} · ${latestStatusLabel}` : `${n} · newest ${latestStatusLabel}`;
+};
+
 /** The quotation offered first when handing work in: the newest one that is not cancelled. */
 export const defaultHandIn = (quotations: QuotationRef[] | undefined): QuotationRef | null =>
   [...(quotations ?? [])].filter((q) => q.status !== 'CANCELLED').sort((a, b) => b.id - a.id)[0] ?? null;

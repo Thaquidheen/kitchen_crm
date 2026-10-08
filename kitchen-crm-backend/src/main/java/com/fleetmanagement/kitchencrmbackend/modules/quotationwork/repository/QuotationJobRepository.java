@@ -31,14 +31,14 @@ public interface QuotationJobRepository extends JpaRepository<QuotationJob, Long
                                                  @Param("statuses") Collection<String> statuses);
 
     /**
-     * Customers at the given stage that nobody is preparing a quotation for and that have no
-     * quotation at all yet. A customer whose quotation the admin starts directly drops out by itself.
+     * Every customer at the given stage that nobody is preparing a quotation for right now, newest
+     * first. Whether they already have a quotation is not asked here: the board lists them all and
+     * says which ones do.
      */
     @Query("SELECT c FROM Customer c WHERE c.status = :stage "
             + "AND NOT EXISTS (SELECT j.id FROM QuotationJob j WHERE j.customer = c AND j.status IN ('WAITING', 'IN_PROGRESS')) "
-            + "AND NOT EXISTS (SELECT q.id FROM Quotation q WHERE q.customer = c) "
             + "ORDER BY c.id DESC")
-    List<Customer> findCustomersWithoutQuotationWork(@Param("stage") Customer.CustomerStatus stage);
+    List<Customer> findCustomersNotBeingQuoted(@Param("stage") Customer.CustomerStatus stage);
 
     /**
      * The quotations of these customers, newest first — what a job can open or hand in. Rows are

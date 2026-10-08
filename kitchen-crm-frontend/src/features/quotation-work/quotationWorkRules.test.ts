@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { defaultHandIn, isOpenJob, quotationLabel, quotationNewsText, queuesByAssignee } from './quotationWorkRules';
+import {
+  defaultHandIn,
+  isOpenJob,
+  quotationLabel,
+  quotationNewsText,
+  queuesByAssignee,
+  quotedText,
+  splitToAssign,
+} from './quotationWorkRules';
 import type { QuotationJob } from './types';
 
 const job = (over: Partial<QuotationJob>): QuotationJob => ({
@@ -40,6 +48,38 @@ describe('isOpenJob', () => {
     expect(isOpenJob('IN_PROGRESS')).toBe(true);
     expect(isOpenJob('COMPLETED')).toBe(false);
     expect(isOpenJob('CANCELLED')).toBe(false);
+  });
+});
+
+describe('splitToAssign', () => {
+  const c = (customerId: number, quotationCount?: number | null) => ({ customerId, customerName: `C${customerId}`, quotationCount });
+
+  it('keeps everyone, those still without a quotation as their own group', () => {
+    const { waiting, quoted } = splitToAssign([c(9, 0), c(8, 2), c(7, 0), c(6, 1)]);
+    expect(waiting.map((x) => x.customerId)).toEqual([9, 7]);
+    expect(quoted.map((x) => x.customerId)).toEqual([8, 6]);
+  });
+
+  it('treats a customer the server says nothing about as still waiting', () => {
+    const { waiting, quoted } = splitToAssign([c(1), c(2, null)]);
+    expect(waiting).toHaveLength(2);
+    expect(quoted).toHaveLength(0);
+  });
+
+  it('is empty for an empty list', () => {
+    expect(splitToAssign([])).toEqual({ waiting: [], quoted: [] });
+  });
+});
+
+describe('quotedText', () => {
+  it('says how many quotations there are and where the newest stands', () => {
+    expect(quotedText(1, 'Draft')).toBe('1 quotation · Draft');
+    expect(quotedText(3, 'Completed')).toBe('3 quotations · newest Completed');
+  });
+
+  it('leaves the status out when there is none to show', () => {
+    expect(quotedText(2)).toBe('2 quotations');
+    expect(quotedText(1, null)).toBe('1 quotation');
   });
 });
 

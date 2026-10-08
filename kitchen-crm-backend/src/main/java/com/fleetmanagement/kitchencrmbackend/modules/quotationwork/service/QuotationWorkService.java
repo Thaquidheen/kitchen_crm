@@ -31,7 +31,10 @@ public interface QuotationWorkService {
     /** Whoever manages gets every open job plus recently completed ones; others only their own. */
     ApiResponse<List<QuotationJobDto>> list(Viewer viewer);
 
-    /** Customers at Quotation Stage with no quotation yet and nobody preparing one. */
+    /**
+     * Everyone at Quotation Stage that nobody is preparing a quotation for right now, with how many
+     * quotations they already have and where the newest one stands.
+     */
     ApiResponse<List<Map<String, Object>>> unassigned();
 
     ApiResponse<List<QuotationAssigneeDto>> assignees();

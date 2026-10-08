@@ -22,15 +22,16 @@ import {
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { dueText, PriorityPill } from '@/features/design/designUi';
+import { quotationStatusLabel } from '@/features/quotations/components/QuotationStatusPill';
 import {
   useGetQuotationJobsQuery,
   useGetUnassignedQuotationCustomersQuery,
   useMarkQuotationWorkSeenMutation,
   useReorderQuotationJobsMutation,
 } from '../quotationWorkAPI';
-import { queuesByAssignee } from '../quotationWorkRules';
+import { queuesByAssignee, quotedText, splitToAssign } from '../quotationWorkRules';
 import { fmtDayTime, JobStatusPill } from '../quotationWorkUi';
-import type { QuotationJob, QuotationWorkMe } from '../types';
+import type { QuotationJob, QuotationWorkMe, UnassignedQuotationCustomer } from '../types';
 import { AssignQuotationModal, type AssignQuotationTarget } from './AssignQuotationModal';
 import { QuotationJobModal } from './QuotationJobModal';
 
@@ -40,6 +41,7 @@ const countBadge = 'text-[11px] font-[650] px-1.5 py-px rounded-full bg-backgrou
 /** As tall as its content, up to the space under the page header; past that the list scrolls. */
 const columnShell = `${card} flex flex-col min-w-0 min-h-0 lg:max-h-[calc(100dvh-196px)]`;
 const columnBody = 'flex-1 min-h-0 overflow-y-auto px-3 pb-3 flex flex-col gap-1.5';
+const groupLabel = 'px-0.5 text-[10.5px] font-semibold tracking-[0.07em] uppercase text-text-500';
 
 interface RowProps {
   job: QuotationJob;
@@ -104,6 +106,40 @@ const JobRowView: React.FC<
           )}
         </div>
         {news && <div className="mt-1 text-[11.5px] text-text-700 truncate">{news}</div>}
+      </button>
+    </div>
+  );
+};
+
+/** A Quotation Stage customer nobody is preparing; the second line says what they already have. */
+const ToAssignRow: React.FC<{ customer: UnassignedQuotationCustomer; onAssign: (c: UnassignedQuotationCustomer) => void }> = ({
+  customer: c,
+  onAssign,
+}) => {
+  const has = c.quotationCount ?? 0;
+  // What they have comes first: in a narrow column it is the place that gets cut short.
+  const detail = [
+    has > 0 ? quotedText(has, c.latestQuotationStatus ? quotationStatusLabel(c.latestQuotationStatus) : null) : null,
+    c.customerPlace,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    <div className="flex items-center gap-2 pl-2.5 pr-1.5 py-1.5 rounded-[11px] border border-background-600 bg-background-900">
+      <div className="min-w-0 flex-1">
+        <div className="text-[13px] font-semibold text-text-900 truncate">{c.customerName}</div>
+        {detail && (
+          <div className="text-[11.5px] text-text-500 truncate" title={detail}>
+            {detail}
+          </div>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => onAssign(c)}
+        className="btn-raised-accent shrink-0 h-7 px-2.5 rounded-[8px] text-[12px] font-semibold"
+      >
+        Assign
       </button>
     </div>
   );
@@ -207,6 +243,8 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
   const queues = useMemo(() => queuesByAssignee(jobs), [jobs]);
   const mine = useMemo(() => queues.find((q) => q.assigneeId === me?.userId)?.jobs ?? [], [queues, me?.userId]);
   const completed = useMemo(() => jobs.filter((j) => j.status === 'COMPLETED'), [jobs]);
+  const toAssign = useMemo(() => splitToAssign(unassigned), [unassigned]);
+  const assignTo = (customer: UnassignedQuotationCustomer) => setAssignTarget({ mode: 'assign', customer });
 
   // Looking at the board is what clears the bell. What was news when it arrived keeps its "New"
   // mark, and what changed, for the rest of this visit.
@@ -278,7 +316,7 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
                 <span className={sectionTitle}>To assign</span>
                 <span className={countBadge}>{unassigned.length}</span>
               </div>
-              <div className="mt-1 text-[11.5px] text-text-600">In Quotation Stage with no quotation yet.</div>
+              <div className="mt-1 text-[11.5px] text-text-600">Everyone in Quotation Stage that nobody is preparing.</div>
             </div>
             <div className={columnBody}>
               {unassigned.length === 0 && (
@@ -286,23 +324,20 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
                   Nobody is waiting. Customers appear here when they reach Quotation Stage.
                 </p>
               )}
-              {unassigned.map((c) => (
-                <div
-                  key={c.customerId}
-                  className="flex items-center gap-2 pl-2.5 pr-1.5 py-1.5 rounded-[11px] border border-background-600 bg-background-900"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[13px] font-semibold text-text-900 truncate">{c.customerName}</div>
-                    {c.customerPlace && <div className="text-[11.5px] text-text-500 truncate">{c.customerPlace}</div>}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAssignTarget({ mode: 'assign', customer: c })}
-                    className="btn-raised-accent shrink-0 h-7 px-2.5 rounded-[8px] text-[12px] font-semibold"
-                  >
-                    Assign
-                  </button>
+              {/* With only one kind of customer in the list a heading would say nothing. */}
+              {toAssign.waiting.length > 0 && toAssign.quoted.length > 0 && (
+                <div className={groupLabel}>No quotation yet · {toAssign.waiting.length}</div>
+              )}
+              {toAssign.waiting.map((c) => (
+                <ToAssignRow key={c.customerId} customer={c} onAssign={assignTo} />
+              ))}
+              {toAssign.quoted.length > 0 && (
+                <div className={`${groupLabel} ${toAssign.waiting.length > 0 ? 'mt-1.5' : ''}`}>
+                  Already have a quotation · {toAssign.quoted.length}
                 </div>
+              )}
+              {toAssign.quoted.map((c) => (
+                <ToAssignRow key={c.customerId} customer={c} onAssign={assignTo} />
               ))}
               <button
                 type="button"
