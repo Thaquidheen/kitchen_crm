@@ -1,13 +1,23 @@
 /**
  * CustomerDesignCard — the customer's design on their own page: current version, who made it (or
  * that it was uploaded), the files a quotation is made from, plan documents and earlier versions.
- * Staff can add an existing design; an admin can send an approved design back for a redesign.
+ * Staff can add an existing design (while a designer has it: the admin and Admin staff); an admin
+ * can send an approved design back for a redesign.
  */
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, Palette, RotateCcw, Upload } from 'lucide-react';
 import { useGetCustomerDesignJobQuery, useGetDesignMeQuery } from '../designAPI';
-import { DesignStatusPill, FileKindIcon, ORIGIN_LABEL, fileLinkProps, isApprovedDesign, isOpenDesign, versionLabel } from '../designUi';
+import {
+  DesignStatusPill,
+  FileKindIcon,
+  ORIGIN_LABEL,
+  canSettleOpenDesign,
+  fileLinkProps,
+  isApprovedDesign,
+  isOpenDesign,
+  versionLabel,
+} from '../designUi';
 import { RedesignModal } from './RedesignModal';
 import { UploadDesignModal } from './UploadDesignModal';
 import type { DesignFile } from '../types';
@@ -66,8 +76,9 @@ export const CustomerDesignCard: React.FC<Props> = ({
   const files = design?.files ?? [];
   const planDocuments = design?.planDocuments ?? [];
   const earlier = (design?.versions ?? []).filter((v) => v.versionNo < version).sort((a, b) => b.versionNo - a.versionNo);
-  // Staff may add an existing design unless a designer is working on it (that one is the admin's to settle).
-  const canUpload = canUploadDesign && (!open || isAdmin);
+  // Staff may add an existing design. One a designer is working on is for the admin or Admin staff to settle.
+  const canUpload =
+    canUploadDesign && (!open || canSettleOpenDesign(design, { admin: isAdmin, coordinator: !!designMe?.canCoordinate }));
 
   return (
     <div className="bg-background-800 border border-background-600 rounded-[14px] p-4">

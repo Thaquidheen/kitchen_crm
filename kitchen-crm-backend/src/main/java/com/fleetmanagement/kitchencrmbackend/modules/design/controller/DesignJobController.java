@@ -141,8 +141,8 @@ public class DesignJobController {
     /**
      * An already existing design for a customer: one or more PDFs, images or CAD drawings (the
      * part is still called "file", repeated once per file). Any staff member may upload it (that
-     * is how a customer whose design was made elsewhere reaches Quotation Stage); only an admin
-     * may use it to settle a design a designer is still working on.
+     * is how a customer whose design was made elsewhere reaches Quotation Stage). A design a
+     * designer is still working on is settled this way by the admin or admin staff only.
      */
     @PostMapping(value = "/customer/{customerId}/design", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<DesignJobDto>> uploadCustomerDesign(
@@ -157,6 +157,22 @@ public class DesignJobController {
                     .body(ApiResponse.error(PermissionInterceptor.message(Permission.CUSTOMERS_CHANGE_STAGE)));
         }
         return respond(service.uploadCustomerDesign(customerId, files, note, moveToQuotation, id(user), name(user),
+                ViewerScope.isSuperAdmin(user), service.isCoordinator(id(user))));
+    }
+
+    /**
+     * Plan documents for a customer's design before or after a designer is chosen (the part is
+     * called "files", repeated once per file). The admin and admin staff.
+     */
+    @PostMapping(value = "/customer/{customerId}/plan-documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<DesignJobDto>> uploadCustomerPlanDocuments(
+            @PathVariable Long customerId,
+            @RequestParam("files") MultipartFile[] files,
+            @AuthenticationPrincipal UserPrincipal user) {
+        if (!coordinates(user)) {
+            return forbidden();
+        }
+        return respond(service.uploadCustomerPlanDocuments(customerId, files, id(user), name(user),
                 ViewerScope.isSuperAdmin(user)));
     }
 
@@ -249,7 +265,14 @@ public class DesignJobController {
                                                             @RequestParam("file") MultipartFile file,
                                                             @RequestParam(value = "description", required = false) String description,
                                                             @AuthenticationPrincipal UserPrincipal user) {
-        return respond(service.uploadFile(id, file, description, id(user), name(user), ViewerScope.isSuperAdmin(user)));
+        boolean admin = ViewerScope.isSuperAdmin(user);
+        boolean coordinator = !admin && service.isCoordinator(id(user));
+        // For admin staff this is uploading a customer's design: the same permission decides it.
+        if (coordinator && !permissionService.can(user, Permission.CUSTOMERS_UPLOAD_DESIGN)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error(PermissionInterceptor.message(Permission.CUSTOMERS_UPLOAD_DESIGN)));
+        }
+        return respond(service.uploadFile(id, file, description, id(user), name(user), admin, coordinator));
     }
 
     @DeleteMapping("/{id}/files/{fileId}")

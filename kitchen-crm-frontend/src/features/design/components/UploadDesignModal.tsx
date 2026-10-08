@@ -1,8 +1,8 @@
 /**
  * UploadDesignModal — save an already existing design (PDFs, images, CAD drawings) as a
  * customer's design. Used for customers whose design was made outside the system, for a newer
- * design replacing an approved one (it becomes the next version), and by an admin to settle a
- * design a designer still has open.
+ * design replacing an approved one (it becomes the next version), and by the admin or Admin staff
+ * to settle a design a designer still has open.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';

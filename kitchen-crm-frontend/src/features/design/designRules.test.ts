@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canSettleOpenDesign,
   designNewsText,
   isApprovedDesign,
   isOpenDesign,
@@ -88,6 +89,39 @@ describe('moving a customer to Quotation Stage', () => {
 
   it('needs the PDF again after a cancelled design', () => {
     expect(quotationGate(job({ status: 'CANCELLED' }))).toBe('NEEDS_DESIGN');
+  });
+});
+
+describe('bringing in the finished design while a designer has it', () => {
+  const admin = { admin: true, coordinator: true };
+  const adminStaff = { admin: false, coordinator: true };
+  const others = { admin: false, coordinator: false };
+
+  it('is for the administrator and Admin staff while the designer works on it', () => {
+    for (const status of ['PLANNING', 'IN_PROGRESS', 'REVISION_REQUIRED'] as DesignStatus[]) {
+      expect(canSettleOpenDesign(job({ status }), admin)).toBe(true);
+      expect(canSettleOpenDesign(job({ status }), adminStaff)).toBe(true);
+      expect(canSettleOpenDesign(job({ status }), others)).toBe(false);
+    }
+  });
+
+  it('is the administrator alone once the designer has handed it in for approval', () => {
+    const handedIn = job({ status: 'PENDING_SUPERADMIN_APPROVAL' });
+    expect(canSettleOpenDesign(handedIn, admin)).toBe(true);
+    expect(canSettleOpenDesign(handedIn, adminStaff)).toBe(false);
+    expect(canSettleOpenDesign(handedIn, others)).toBe(false);
+  });
+
+  it('is anybody when no designer has been given the design yet', () => {
+    const waiting = job({ status: 'PLANNING', designerId: null, designerName: null });
+    expect(canSettleOpenDesign(waiting, others)).toBe(true);
+    expect(canSettleOpenDesign(waiting, adminStaff)).toBe(true);
+  });
+
+  it('does not apply to a design that is not open', () => {
+    expect(canSettleOpenDesign(null, admin)).toBe(false);
+    expect(canSettleOpenDesign(job({ status: 'APPROVED_BY_ADMIN' }), admin)).toBe(false);
+    expect(canSettleOpenDesign(job({ status: 'CANCELLED' }), admin)).toBe(false);
   });
 });
 

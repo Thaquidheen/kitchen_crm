@@ -153,6 +153,21 @@ export const designAPI = baseApi.injectEndpoints({
       transformResponse: unwrap<DesignJob>('Failed to add the plan documents'),
       invalidatesTags: ['Designs'],
     }),
+    /** Plan documents by customer: also before anybody has been given the design. */
+    uploadCustomerPlanDocuments: builder.mutation<DesignJob, { customerId: number; files: File[] }>({
+      query: ({ customerId, files }) => {
+        const form = new FormData();
+        files.forEach((f) => form.append('files', f));
+        return {
+          url: `/design-jobs/customer/${customerId}/plan-documents`,
+          method: 'POST',
+          body: form,
+          headers: { 'X-Skip-Json-Content-Type': 'true' },
+        };
+      },
+      transformResponse: unwrap<DesignJob>('Failed to add the plan documents'),
+      invalidatesTags: ['Designs'],
+    }),
     deleteDesignFile: builder.mutation<DesignJob, { id: number; fileId: number }>({
       query: ({ id, fileId }) => ({ url: `/design-jobs/${id}/files/${fileId}`, method: 'DELETE' }),
       transformResponse: unwrap<DesignJob>('Failed to remove the file'),
@@ -217,6 +232,7 @@ export const {
   useRequestRedesignMutation,
   useUploadCustomerDesignMutation,
   useUploadPlanDocumentsMutation,
+  useUploadCustomerPlanDocumentsMutation,
   useDeleteDesignFileMutation,
   useAddDesignNoteMutation,
   useMarkDesignSeenMutation,

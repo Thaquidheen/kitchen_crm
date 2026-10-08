@@ -284,6 +284,10 @@ public class DesignJobServiceImpl implements DesignJobService {
         DesignPhaseVersion row = isNew
                 ? newVersionRow(job, DesignPhaseVersion.ORIGIN_DESIGNER, job.getDesignRequirements(), byUserId, userName(byUserId))
                 : currentVersionRow(job);
+        if (row.getRequestNote() == null) {
+            // The design waited without a designer (it held plan documents only): this is its brief.
+            row.setRequestNote(job.getDesignRequirements());
+        }
         row.setDesignerUserId(designer.getId());
         row.setDesignerName(designer.getName());
         versionRepository.save(row);
@@ -297,9 +301,9 @@ public class DesignJobServiceImpl implements DesignJobService {
         if (job != null && APPROVED_STATES.contains(status(job))) {
             return null;
         }
-        if (job != null && OPEN.contains(status(job))) {
-            String who = job.getStaffAssigned() != null ? job.getStaffAssigned().getName() : "a designer";
-            return "The design is still with " + who + ". The customer moves to Quotation Stage when the admin approves it.";
+        if (job != null && OPEN.contains(status(job)) && job.getStaffAssigned() != null) {
+            return "The design is still with " + job.getStaffAssigned().getName()
+                    + ". The customer moves to Quotation Stage when the admin approves it.";
         }
         return "Upload the design to move this customer to Quotation Stage";
     }
@@ -606,9 +610,10 @@ public class DesignJobServiceImpl implements DesignJobService {
 
     @Override
     public ApiResponse<DesignJobDto> uploadFile(Long jobId, MultipartFile file, String description, Long callerId,
-                                                String callerName, boolean admin) {
+                                                String callerName, boolean admin, boolean coordinator) {
         DesignPhase job = jobRepository.findById(jobId).orElse(null);
-        if (job == null || !canAccess(job, callerId, admin)) {
+        boolean own = job != null && isAssignedDesigner(job, callerId);
+        if (job == null || !(admin || own || coordinator)) {
             return ApiResponse.error("Design job not found");
         }
         if (file == null || file.isEmpty()) {
@@ -619,11 +624,16 @@ public class DesignJobServiceImpl implements DesignJobService {
                     ? "This design is cancelled"
                     : "This version is approved. A redesign opens the next version for new files.");
         }
+        if (!admin && !own && !DESIGNER_WORK.contains(status(job))) {
+            // Handed in: what happens to it now is the admin's decision.
+            return ApiResponse.error("This design is waiting for the admin's approval");
+        }
         ApiResponse<DesignPhaseFileDto> stored = store(job, file, DesignPhaseFile.FileCategory.DESIGN, description, callerName);
         if (!Boolean.TRUE.equals(stored.getSuccess())) {
             return ApiResponse.error(stored.getMessage());
         }
-        return ApiResponse.success("File uploaded", detail(job));
+        DesignJobDto dto = detail(job);
+        return ApiResponse.success("File uploaded", admin || own ? dto : withoutConversation(dto));
     }
 
     @Override
@@ -656,6 +666,31 @@ public class DesignJobServiceImpl implements DesignJobService {
     }
 
     @Override
+    public ApiResponse<DesignJobDto> uploadCustomerPlanDocuments(Long customerId, MultipartFile[] files, Long callerId,
+                                                                 String callerName, boolean admin) {
+        Customer customer = customerRepository.findById(customerId).orElse(null);
+        if (customer == null) {
+            return ApiResponse.error("Customer not found");
+        }
+        DesignPhase job = latestJob(customerId);
+        if (job == null) {
+            if (customer.getStatus() != CustomerStatus.DESIGN_STAGE) {
+                return ApiResponse.error("Move the customer to Design Stage first");
+            }
+            if (files == null || Arrays.stream(files).noneMatch(f -> f != null && !f.isEmpty())) {
+                return ApiResponse.error("Choose the plan documents to add");
+            }
+            // Nobody has been given this design yet. It is kept as version 1 without a designer: the
+            // customer stays under "To assign", and whoever is chosen finds the documents there.
+            // A document that is refused below takes this back with it (one transaction).
+            job = newJob(customer);
+            jobRepository.save(job);
+            newVersionRow(job, DesignPhaseVersion.ORIGIN_DESIGNER, null, callerId, callerName);
+        }
+        return uploadPlanDocuments(job.getId(), files, callerName, admin);
+    }
+
+    @Override
     public ApiResponse<DesignJobDto> deleteFile(Long jobId, Long fileId, Long callerId, boolean admin,
                                                 boolean coordinator) {
         DesignPhase job = jobRepository.findById(jobId).orElse(null);
@@ -672,11 +707,8 @@ public class DesignJobServiceImpl implements DesignJobService {
                 return ApiResponse.error("Only the admin or admin staff can remove plan documents");
             }
         } else {
-            // A design file can be taken back only while its version is still being worked on,
-            // and only by the admin or the designer who has it.
-            if (!admin && !own) {
-                return ApiResponse.error("Only the designer or the admin can remove design files");
-            }
+            // A design file can be taken back only while its version is still being worked on: by
+            // the admin, the designer who has it, or admin staff.
             if (versionOf(file) != version(job) || !OPEN.contains(status(job))) {
                 return ApiResponse.error("Files of an approved version cannot be removed");
             }
@@ -695,7 +727,7 @@ public class DesignJobServiceImpl implements DesignJobService {
     @Override
     public ApiResponse<DesignJobDto> uploadCustomerDesign(Long customerId, MultipartFile[] files, String note,
                                                           boolean moveToQuotation, Long callerId, String callerName,
-                                                          boolean admin) {
+                                                          boolean admin, boolean coordinator) {
         Customer customer = customerRepository.findById(customerId).orElse(null);
         if (customer == null) {
             return ApiResponse.error("Customer not found");
@@ -720,9 +752,18 @@ public class DesignJobServiceImpl implements DesignJobService {
         }
         DesignPhase existing = latestJob(customerId);
         boolean open = existing != null && OPEN.contains(status(existing));
-        if (open && !admin) {
-            String who = existing.getStaffAssigned() != null ? existing.getStaffAssigned().getName() : "a designer";
-            return ApiResponse.error("The design is still with " + who + ". The admin approves it from Designs.");
+        // A design nobody has been given yet (it holds plan documents at most) is nobody's work.
+        boolean withSomeone = open && existing.getStaffAssigned() != null;
+        if (withSomeone && !admin) {
+            // While the designer has it, admin staff may bring in the finished design. Once it is
+            // handed in for approval the decision is the admin's.
+            if (!coordinator) {
+                return ApiResponse.error("The design is still with " + existing.getStaffAssigned().getName()
+                        + ". The admin approves it from Designs.");
+            }
+            if (!DESIGNER_WORK.contains(status(existing))) {
+                return ApiResponse.error("This design is waiting for the admin's approval");
+            }
         }
         // Valid — now write.
         LocalDateTime now = LocalDateTime.now();
@@ -745,10 +786,11 @@ public class DesignJobServiceImpl implements DesignJobService {
             jobRepository.save(job);
             row = newVersionRow(job, DesignPhaseVersion.ORIGIN_UPLOADED, hasNote ? note.trim() : null, callerId, callerName);
         } else {
-            // Open (admin closes it with this file) or cancelled: the upload settles the current version.
+            // Open (closed with these files) or cancelled: the upload settles the current version.
+            // It stays the designer's version only when a designer had it.
             job = existing;
             row = currentVersionRow(job);
-            if (!open) {
+            if (!withSomeone) {
                 row.setOrigin(DesignPhaseVersion.ORIGIN_UPLOADED);
             }
         }

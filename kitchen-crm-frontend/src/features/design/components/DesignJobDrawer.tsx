@@ -4,7 +4,8 @@
  * Designer: Start → upload the design (PDF, images, CAD drawings) → Mark complete (admin is notified).
  * Admin: edit designer / due date / priority / brief, attach plan documents, Approve or Request
  * changes — and, once a version is approved, Request redesign to open the next one.
- * Admin staff (coordinator): see the design and its files, and add or remove plan documents.
+ * Admin staff (coordinator): see the design and its files, add or remove plan documents, and —
+ * while the designer has not handed it in — upload the design or bring in the finished one.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -33,6 +34,7 @@ import {
   ORIGIN_LABEL,
   PRIORITY_LABEL,
   PriorityPill,
+  canSettleOpenDesign,
   dueText,
   fileLinkProps,
   isApprovedDesign,
@@ -40,6 +42,7 @@ import {
   isOpenDesign,
   versionLabel,
 } from '../designUi';
+import { usePermissions } from '@/features/permissions/usePermissions';
 import { DesignNotesThread } from './DesignNotesThread';
 import { RedesignModal } from './RedesignModal';
 import { UploadDesignModal } from './UploadDesignModal';
@@ -106,6 +109,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
   const [completeDesign, { isLoading: completing }] = useCompleteDesignMutation();
   const [reviewDesign, { isLoading: reviewing }] = useReviewDesignMutation();
   const [updateJob, { isLoading: saving }] = useUpdateDesignJobMutation();
+  const { can } = usePermissions();
   const [uploadFile, { isLoading: uploading }] = useUploadDesignFileMutation();
   const [uploadPlanDocuments, { isLoading: addingPlans }] = useUploadPlanDocumentsMutation();
   const [deleteFile, { isLoading: removing }] = useDeleteDesignFileMutation();
@@ -264,7 +268,11 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
   const open = !!job && isOpenDesign(job.status);
   const approved = !!job && isApprovedDesign(job.status);
   const designerCanWork = viewer === 'designer' && !!job && isDesignerWork(job.status);
-  const canUploadDesign = open && (viewer === 'admin' || designerCanWork);
+  // Admin staff upload under the "Upload design" permission, until the designer has handed it in.
+  const staffUploads = viewer === 'coordinator' && can('customers.upload_design');
+  const canUploadDesign = open && (viewer === 'admin' || designerCanWork || (staffUploads && !!job && isDesignerWork(job.status)));
+  const canSettle =
+    (viewer === 'admin' || staffUploads) && canSettleOpenDesign(job, { admin: viewer === 'admin', coordinator: staffUploads });
   const managesPlans = viewer === 'admin' || viewer === 'coordinator';
   const files = job?.files ?? [];
   const planDocuments = job?.planDocuments ?? [];
@@ -583,7 +591,18 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                   </button>
                 </div>
               )}
-              {viewer === 'admin' && open && (
+              {staffUploads && approved && (
+                <div className="rounded-[12px] border border-background-600 p-3 flex items-center gap-2 flex-wrap">
+                  <span className="text-[13px] text-text-800 min-w-0 flex-1">
+                    <span className="font-semibold text-text-900">{versionLabel(version)} is approved.</span> A newer design is
+                    saved as {versionLabel(version + 1)}.
+                  </span>
+                  <button type="button" onClick={() => setUploadFinalOpen(true)} className={smallBtn}>
+                    <Upload size={13} /> Upload newer design
+                  </button>
+                </div>
+              )}
+              {canSettle && (
                 <button
                   type="button"
                   onClick={() => setUploadFinalOpen(true)}
