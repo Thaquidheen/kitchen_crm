@@ -228,16 +228,18 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
       <Button variant="ghost" size="sm" onClick={() => navigate(`/quotations/${q.id}`)} title="View" className="p-1 sm:p-2">
         <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
       </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => navigate(`/quotations/${q.id}/edit`)}
-        title="Edit"
-        disabled={!(q.status === 'DRAFT' || (q.status as string) === 'PENDING')}
-        className="p-1 sm:p-2"
-      >
-        <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
-      </Button>
+      {access.edit && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(`/quotations/${q.id}/edit`)}
+          title="Edit"
+          disabled={!(q.status === 'DRAFT' || (q.status as string) === 'PENDING')}
+          className="p-1 sm:p-2"
+        >
+          <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+        </Button>
+      )}
       {access.remove && (
         <Button
           variant="ghost"
@@ -371,15 +373,17 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
                           </td>
                           <td className="px-2 sm:px-4 py-3 sm:py-4" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1 sm:gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setRenameTarget({ id: f.id, name: f.name })}
-                                title="Rename folder"
-                                className="p-1 sm:p-2"
-                              >
-                                <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
+                              {access.edit && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setRenameTarget({ id: f.id, name: f.name })}
+                                  title="Rename folder"
+                                  className="p-1 sm:p-2"
+                                >
+                                  <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+                                </Button>
+                              )}
                               {access.remove && (
                                 <Button
                                   variant="ghost"

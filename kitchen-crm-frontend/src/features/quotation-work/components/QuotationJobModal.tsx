@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { dueText, PriorityPill } from '@/features/design/designUi';
 import { QuotationStatusPill } from '@/features/quotations/components/QuotationStatusPill';
+import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
 import { ROUTES } from '@/routes/routes.config';
 import {
   useCancelQuotationJobMutation,
@@ -36,6 +37,7 @@ const ghostBtn =
 
 export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClose, onEdit }) => {
   const navigate = useNavigate();
+  const access = useQuotationAccess();
   const [handIn, setHandIn] = useState<number | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [start, { isLoading: starting }] = useStartQuotationJobMutation();
@@ -223,9 +225,11 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
                 <Play size={13} /> {starting ? 'Starting…' : 'Start'}
               </button>
             )}
-            <button type="button" onClick={createQuotation} className={ghostBtn}>
-              <FilePlus2 size={13} /> {quotations.length === 0 ? 'Create quotation' : 'New quotation'}
-            </button>
+            {access.create && (
+              <button type="button" onClick={createQuotation} className={ghostBtn}>
+                <FilePlus2 size={13} /> {quotations.length === 0 ? 'Create quotation' : 'New quotation'}
+              </button>
+            )}
             <button
               type="button"
               onClick={onComplete}

@@ -1941,7 +1941,7 @@ export function QuotationBuilderPage() {
                     Back
                   </Button>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    {isEditMode && (
+                    {isEditMode && access.create && (
                       <Button
                         variant="secondary"
                         onClick={handleSaveAsNew}
