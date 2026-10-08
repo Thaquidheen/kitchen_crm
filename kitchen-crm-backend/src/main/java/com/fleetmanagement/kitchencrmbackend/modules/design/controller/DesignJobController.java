@@ -280,6 +280,7 @@ public class DesignJobController {
                                                                 @PathVariable Long fileId,
                                                                 @AuthenticationPrincipal UserPrincipal user) {
         boolean admin = ViewerScope.isSuperAdmin(user);
-        return respond(service.deleteFile(id, fileId, id(user), admin, !admin && service.isCoordinator(id(user))));
+        return respond(service.deleteFile(id, fileId, id(user), name(user), admin,
+                !admin && service.isCoordinator(id(user))));
     }
 }

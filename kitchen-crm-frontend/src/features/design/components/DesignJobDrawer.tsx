@@ -42,6 +42,7 @@ import {
   isOpenDesign,
   versionLabel,
 } from '../designUi';
+import { useAppSelector } from '@/app/hooks';
 import { usePermissions } from '@/features/permissions/usePermissions';
 import { DesignNotesThread } from './DesignNotesThread';
 import { RedesignModal } from './RedesignModal';
@@ -110,6 +111,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
   const [reviewDesign, { isLoading: reviewing }] = useReviewDesignMutation();
   const [updateJob, { isLoading: saving }] = useUpdateDesignJobMutation();
   const { can } = usePermissions();
+  const myName = useAppSelector((state) => state.auth.user?.username);
   const [uploadFile, { isLoading: uploading }] = useUploadDesignFileMutation();
   const [uploadPlanDocuments, { isLoading: addingPlans }] = useUploadPlanDocumentsMutation();
   const [deleteFile, { isLoading: removing }] = useDeleteDesignFileMutation();
@@ -273,6 +275,9 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
   const canUploadDesign = open && (viewer === 'admin' || designerCanWork || (staffUploads && !!job && isDesignerWork(job.status)));
   const canSettle =
     (viewer === 'admin' || staffUploads) && canSettleOpenDesign(job, { admin: viewer === 'admin', coordinator: staffUploads });
+  // Admin staff take back only what they uploaded themselves, not the designer's files.
+  const canRemoveDesignFile = (f: DesignFile) =>
+    canUploadDesign && (viewer !== 'coordinator' || (!!myName && f.uploadedBy === myName));
   const managesPlans = viewer === 'admin' || viewer === 'coordinator';
   const files = job?.files ?? [];
   const planDocuments = job?.planDocuments ?? [];
@@ -488,7 +493,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                       <FileRow
                         key={f.id}
                         file={f}
-                        onRemove={canUploadDesign ? () => removeFile(f) : undefined}
+                        onRemove={canRemoveDesignFile(f) ? () => removeFile(f) : undefined}
                         removing={removing}
                       />
                     ))}

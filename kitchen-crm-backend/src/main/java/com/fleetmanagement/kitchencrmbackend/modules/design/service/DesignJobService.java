@@ -96,7 +96,12 @@ public interface DesignJobService {
     ApiResponse<DesignJobDto> uploadCustomerPlanDocuments(Long customerId, MultipartFile[] files, Long callerId,
                                                           String callerName, boolean admin);
 
-    ApiResponse<DesignJobDto> deleteFile(Long jobId, Long fileId, Long callerId, boolean admin, boolean coordinator);
+    /**
+     * Plan documents: the admin and admin staff. Design files of the version in work: the admin,
+     * its designer, and admin staff for a file they uploaded themselves.
+     */
+    ApiResponse<DesignJobDto> deleteFile(Long jobId, Long fileId, Long callerId, String callerName, boolean admin,
+                                         boolean coordinator);
 
     /**
      * Saves an already existing design — one or more PDFs, images or CAD drawings — as the

@@ -691,8 +691,8 @@ public class DesignJobServiceImpl implements DesignJobService {
     }
 
     @Override
-    public ApiResponse<DesignJobDto> deleteFile(Long jobId, Long fileId, Long callerId, boolean admin,
-                                                boolean coordinator) {
+    public ApiResponse<DesignJobDto> deleteFile(Long jobId, Long fileId, Long callerId, String callerName,
+                                                boolean admin, boolean coordinator) {
         DesignPhase job = jobRepository.findById(jobId).orElse(null);
         boolean own = job != null && isAssignedDesigner(job, callerId);
         if (job == null || !(admin || coordinator || own)) {
@@ -708,7 +708,11 @@ public class DesignJobServiceImpl implements DesignJobService {
             }
         } else {
             // A design file can be taken back only while its version is still being worked on: by
-            // the admin, the designer who has it, or admin staff.
+            // the admin, the designer who has it, or admin staff for a file they brought in
+            // themselves — not the designer's work.
+            if (!admin && !own && (callerName == null || !callerName.equals(file.getUploadedBy()))) {
+                return ApiResponse.error("Only the designer or the admin can remove this file");
+            }
             if (versionOf(file) != version(job) || !OPEN.contains(status(job))) {
                 return ApiResponse.error("Files of an approved version cannot be removed");
             }
