@@ -41,6 +41,25 @@ export const splitToAssign = <T extends { quotationCount?: number | null }>(cust
   quoted: customers.filter((c) => !!c.quotationCount),
 });
 
+/**
+ * The rest of Quotation Stage: customers somebody is already preparing a quotation for. They are
+ * listed in the same column, after the ones still to assign, so the column is the whole stage.
+ * Grouped by who has them, each person's in the order they will be done.
+ */
+export const quotationStageWork = (jobs: QuotationJob[]): QuotationJob[] =>
+  jobs
+    .filter((j) => isOpenJob(j.status) && j.customerStatus === 'QUOTE_GIVEN')
+    .sort(
+      (a, b) =>
+        (a.assigneeName || '').localeCompare(b.assigneeName || '') ||
+        (a.position ?? Number.MAX_SAFE_INTEGER) - (b.position ?? Number.MAX_SAFE_INTEGER) ||
+        a.id - b.id,
+    );
+
+/** Who has it and how far it is: "With Anu · Waiting". */
+export const heldByText = (job: Pick<QuotationJob, 'assigneeName'>, statusLabel: string): string =>
+  `With ${job.assigneeName || 'someone'} · ${statusLabel}`;
+
 /** What such a customer already has: "1 quotation · Draft", "3 quotations · newest Completed". */
 export const quotedText = (count: number, latestStatusLabel?: string | null): string => {
   const n = `${count} quotation${count === 1 ? '' : 's'}`;
