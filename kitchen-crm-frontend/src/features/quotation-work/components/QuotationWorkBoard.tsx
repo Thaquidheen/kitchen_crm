@@ -29,8 +29,8 @@ import {
   useMarkQuotationWorkSeenMutation,
   useReorderQuotationJobsMutation,
 } from '../quotationWorkAPI';
-import { queuesByAssignee, quotedText, splitToAssign } from '../quotationWorkRules';
-import { fmtDayTime, JobStatusPill } from '../quotationWorkUi';
+import { heldByText, queuesByAssignee, quotationStageWork, quotedText, splitToAssign } from '../quotationWorkRules';
+import { fmtDayTime, JOB_STATUS, JobStatusPill } from '../quotationWorkUi';
 import type { QuotationJob, QuotationWorkMe, UnassignedQuotationCustomer } from '../types';
 import { AssignQuotationModal, type AssignQuotationTarget } from './AssignQuotationModal';
 import { QuotationJobModal } from './QuotationJobModal';
@@ -145,6 +145,29 @@ const ToAssignRow: React.FC<{ customer: UnassignedQuotationCustomer; onAssign: (
   );
 };
 
+/** A Quotation Stage customer somebody already has: who, how far, and a way to that work. */
+const WithSomeoneRow: React.FC<{ job: QuotationJob; onOpen: (id: number) => void }> = ({ job, onOpen }) => {
+  const detail = [heldByText(job, JOB_STATUS[job.status]?.label ?? job.status), job.customerPlace].filter(Boolean).join(' · ');
+  return (
+    <div className="flex items-center gap-2 pl-2.5 pr-1.5 py-1.5 rounded-[11px] border border-background-600 bg-background-900">
+      <div className="min-w-0 flex-1">
+        <div className="text-[13px] font-semibold text-text-900 truncate">{job.customerName}</div>
+        <div className="text-[11.5px] text-text-500 truncate" title={detail}>
+          {detail}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => onOpen(job.id)}
+        title="Open this work: see it, change who has it, the priority or the due date"
+        className="shrink-0 h-7 px-2.5 rounded-[8px] border border-background-600 bg-background-800 text-[12px] font-medium text-text-900 hover:border-primary-600 transition-colors"
+      >
+        Open
+      </button>
+    </div>
+  );
+};
+
 /** Draggable row inside a person's list — must render inside DndContext/SortableContext. */
 const SortableJobRow: React.FC<RowProps> = (props) => {
   const sortable = useSortable({ id: props.job.id });
@@ -244,6 +267,9 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
   const mine = useMemo(() => queues.find((q) => q.assigneeId === me?.userId)?.jobs ?? [], [queues, me?.userId]);
   const completed = useMemo(() => jobs.filter((j) => j.status === 'COMPLETED'), [jobs]);
   const toAssign = useMemo(() => splitToAssign(unassigned), [unassigned]);
+  // The same column also lists the Quotation Stage customers somebody already has, so that it
+  // shows the whole stage and nobody has to be looked up by name.
+  const withSomeone = useMemo(() => quotationStageWork(jobs), [jobs]);
   const assignTo = (customer: UnassignedQuotationCustomer) => setAssignTarget({ mode: 'assign', customer });
 
   // Looking at the board is what clears the bell. What was news when it arrived keeps its "New"
@@ -316,16 +342,20 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
                 <span className={sectionTitle}>To assign</span>
                 <span className={countBadge}>{unassigned.length}</span>
               </div>
-              <div className="mt-1 text-[11.5px] text-text-600">Everyone in Quotation Stage that nobody is preparing.</div>
+              <div className="mt-1 text-[11.5px] text-text-600">
+                Everyone in Quotation Stage. Assign the ones nobody is preparing.
+              </div>
             </div>
             <div className={columnBody}>
               {unassigned.length === 0 && (
                 <p className="m-0 py-3 text-center text-[12px] text-text-500">
-                  Nobody is waiting. Customers appear here when they reach Quotation Stage.
+                  {withSomeone.length > 0
+                    ? 'Nobody is waiting: everyone in Quotation Stage is with someone.'
+                    : 'Nobody is in Quotation Stage. Customers appear here when they reach it.'}
                 </p>
               )}
               {/* With only one kind of customer in the list a heading would say nothing. */}
-              {toAssign.waiting.length > 0 && toAssign.quoted.length > 0 && (
+              {toAssign.waiting.length > 0 && (toAssign.quoted.length > 0 || withSomeone.length > 0) && (
                 <div className={groupLabel}>No quotation yet · {toAssign.waiting.length}</div>
               )}
               {toAssign.waiting.map((c) => (
@@ -338,6 +368,14 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
               )}
               {toAssign.quoted.map((c) => (
                 <ToAssignRow key={c.customerId} customer={c} onAssign={assignTo} />
+              ))}
+              {withSomeone.length > 0 && (
+                <div className={`${groupLabel} ${unassigned.length > 0 ? 'mt-1.5' : ''}`}>
+                  Already with someone · {withSomeone.length}
+                </div>
+              )}
+              {withSomeone.map((j) => (
+                <WithSomeoneRow key={j.id} job={j} onOpen={open} />
               ))}
               <button
                 type="button"

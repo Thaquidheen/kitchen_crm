@@ -4,7 +4,9 @@ import {
   isOpenJob,
   quotationLabel,
   quotationNewsText,
+  heldByText,
   queuesByAssignee,
+  quotationStageWork,
   quotedText,
   splitToAssign,
 } from './quotationWorkRules';
@@ -68,6 +70,42 @@ describe('splitToAssign', () => {
 
   it('is empty for an empty list', () => {
     expect(splitToAssign([])).toEqual({ waiting: [], quoted: [] });
+  });
+});
+
+describe('quotationStageWork', () => {
+  it('is the open work of customers in Quotation Stage, by person and then in their order', () => {
+    const work = quotationStageWork([
+      job({ id: 1, customerStatus: 'QUOTE_GIVEN', assigneeName: 'Biju', position: 1 }),
+      job({ id: 2, customerStatus: 'QUOTE_GIVEN', assigneeName: 'Anu', position: 2 }),
+      job({ id: 3, customerStatus: 'QUOTE_GIVEN', assigneeName: 'Anu', position: 1, status: 'IN_PROGRESS' }),
+    ]);
+    expect(work.map((j) => j.id)).toEqual([3, 2, 1]);
+  });
+
+  it('leaves out work for customers in another stage, and work that is closed', () => {
+    const work = quotationStageWork([
+      job({ id: 1, customerStatus: 'LEAD' }),
+      job({ id: 2, customerStatus: 'FOLLOW_UP' }),
+      job({ id: 3, customerStatus: null }),
+      job({ id: 4, customerStatus: 'QUOTE_GIVEN', status: 'COMPLETED' }),
+      job({ id: 5, customerStatus: 'QUOTE_GIVEN', status: 'CANCELLED' }),
+      job({ id: 6, customerStatus: 'QUOTE_GIVEN' }),
+    ]);
+    expect(work.map((j) => j.id)).toEqual([6]);
+  });
+
+  it('does not reorder the list it was given', () => {
+    const given = [job({ id: 2, customerStatus: 'QUOTE_GIVEN', assigneeName: 'Biju' }), job({ id: 1, customerStatus: 'QUOTE_GIVEN', assigneeName: 'Anu' })];
+    quotationStageWork(given);
+    expect(given.map((j) => j.id)).toEqual([2, 1]);
+  });
+});
+
+describe('heldByText', () => {
+  it('says who has it and how far it is', () => {
+    expect(heldByText({ assigneeName: 'Anu' }, 'Waiting')).toBe('With Anu · Waiting');
+    expect(heldByText({ assigneeName: null }, 'In progress')).toBe('With someone · In progress');
   });
 });
 
