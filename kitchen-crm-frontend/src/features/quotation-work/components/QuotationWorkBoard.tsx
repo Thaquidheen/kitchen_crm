@@ -350,7 +350,7 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
               {unassigned.length === 0 && (
                 <p className="m-0 py-3 text-center text-[12px] text-text-500">
                   {withSomeone.length > 0
-                    ? 'Nobody is waiting: everyone in Quotation Stage is with someone.'
+                    ? 'Nothing left to assign: everyone in Quotation Stage is with someone.'
                     : 'Nobody is in Quotation Stage. Customers appear here when they reach it.'}
                 </p>
               )}
@@ -369,21 +369,20 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
               {toAssign.quoted.map((c) => (
                 <ToAssignRow key={c.customerId} customer={c} onAssign={assignTo} />
               ))}
+              {/* For a customer in another stage. Before the list below, which can be long. */}
+              <button
+                type="button"
+                onClick={() => setAssignTarget({ mode: 'assign' })}
+                className="shrink-0 inline-flex items-center justify-center gap-1.5 h-8 rounded-[10px] border border-dashed border-background-600 text-[12.5px] font-medium text-text-700 hover:border-primary-600 hover:text-text-900 transition-colors"
+              >
+                <Plus size={14} /> Assign another customer
+              </button>
               {withSomeone.length > 0 && (
-                <div className={`${groupLabel} ${unassigned.length > 0 ? 'mt-1.5' : ''}`}>
-                  Already with someone · {withSomeone.length}
-                </div>
+                <div className={`${groupLabel} mt-1.5`}>Already with someone · {withSomeone.length}</div>
               )}
               {withSomeone.map((j) => (
                 <WithSomeoneRow key={j.id} job={j} onOpen={open} />
               ))}
-              <button
-                type="button"
-                onClick={() => setAssignTarget({ mode: 'assign' })}
-                className="inline-flex items-center justify-center gap-1.5 h-8 rounded-[10px] border border-dashed border-background-600 text-[12.5px] font-medium text-text-700 hover:border-primary-600 hover:text-text-900 transition-colors"
-              >
-                <Plus size={14} /> Assign another customer
-              </button>
             </div>
           </section>
 
