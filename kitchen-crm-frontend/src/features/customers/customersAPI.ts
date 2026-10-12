@@ -18,6 +18,22 @@ import type {
   WorkflowHistoryDto,
 } from './types';
 
+/** A quotation that follows its customer's stage, as the status window names it. */
+export interface QuotationEffectRow {
+  id: number;
+  quotationNumber?: string | null;
+  projectName?: string | null;
+  versionNumber?: number | null;
+  status?: string | null;
+}
+
+export interface QuotationEffects {
+  /** Confirmed approves one completed quotation; Lost cancels every open one. */
+  action: 'APPROVE' | 'CANCEL' | null;
+  /** Newest first. */
+  quotations: QuotationEffectRow[];
+}
+
 export const customersAPI = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // List customers (paginated, filtered)
@@ -149,10 +165,12 @@ export const customersAPI = baseApi.injectEndpoints({
         designerId?: number;
         designDueDate?: string;
         designPriority?: string;
+        /** Moving to CONFIRMED: which completed quotation is approved (the newest when left out). */
+        approveQuotationId?: number;
       }
     >(
       {
-        query: ({ id, status, reason, designerId, designDueDate, designPriority }) => ({
+        query: ({ id, status, reason, designerId, designDueDate, designPriority, approveQuotationId }) => ({
           url: API_ENDPOINTS.CUSTOMERS.STATUS(id),
           method: 'PATCH',
           params: {
@@ -161,6 +179,7 @@ export const customersAPI = baseApi.injectEndpoints({
             ...(designerId ? { designerId } : {}),
             ...(designDueDate ? { designDueDate } : {}),
             ...(designPriority ? { designPriority } : {}),
+            ...(approveQuotationId ? { approveQuotationId } : {}),
           },
         }),
         // The endpoint answers 200 with success:false when it refuses (e.g. "Choose a designer"),
@@ -194,9 +213,24 @@ export const customersAPI = baseApi.injectEndpoints({
           { type: 'Customers', id: `WORKFLOW-${id}` },
           // Moving to Design assigns a designer (queues, workload, bells).
           'Designs',
+          // Confirmed approves a completed quotation, Lost cancels the open ones.
+          'Quotations',
+          'QuotationWork',
+          'QuotationEditRequests',
         ],
       }
     ),
+
+    // What moving this customer to a stage would do to their quotations (no amounts).
+    getQuotationEffects: builder.query<QuotationEffects, { customerId: number; status: string }>({
+      query: ({ customerId, status }) => ({
+        url: `${API_ENDPOINTS.CUSTOMERS.BY_ID(customerId)}/quotation-effects`,
+        params: { status },
+      }),
+      transformResponse: (response: ApiResponse<QuotationEffects>) =>
+        response.data ?? { action: null, quotations: [] },
+      providesTags: ['Quotations'],
+    }),
 
     // Statistics
     getCustomerStatistics: builder.query<CustomerStatistics, void>({
@@ -308,6 +342,7 @@ export const {
   useUpdateCustomerMutation,
   useDeleteCustomerMutation,
   useUpdateCustomerStatusMutation,
+  useGetQuotationEffectsQuery,
   useGetCustomerStatisticsQuery,
   useGetPipelineQuery,
   useUpdatePipelineMutation,

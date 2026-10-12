@@ -38,6 +38,9 @@ public class CustomerServiceImpl implements CustomerService {
     private WorkflowHistoryRepository workflowHistoryRepository;
 
     @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationStageEffects quotationStageEffects;
+
+    @Autowired
     private ArchitectRepository architectRepository;
 
     @Override
@@ -208,9 +211,24 @@ public class CustomerServiceImpl implements CustomerService {
     public ApiResponse<String> updateCustomerStatus(Long id, Customer.CustomerStatus newStatus, String changedBy,
                                                     String reason, Long designerId, java.time.LocalDate designDueDate,
                                                     String designPriority, Long changedByUserId, boolean changedByAdmin) {
+        return updateCustomerStatus(id, newStatus, changedBy, reason, designerId, designDueDate, designPriority,
+                changedByUserId, changedByAdmin, null);
+    }
+
+    @Override
+    public ApiResponse<String> updateCustomerStatus(Long id, Customer.CustomerStatus newStatus, String changedBy,
+                                                    String reason, Long designerId, java.time.LocalDate designDueDate,
+                                                    String designPriority, Long changedByUserId, boolean changedByAdmin,
+                                                    Long approveQuotationId) {
         Customer customer = customerRepository.findById(id).orElse(null);
         if (customer == null) {
             return ApiResponse.error("Customer not found");
+        }
+
+        // Confirmed approves one completed quotation: a chosen one must be one of them.
+        String choiceError = quotationStageEffects.checkChoice(id, newStatus, approveQuotationId);
+        if (choiceError != null) {
+            return ApiResponse.error(choiceError);
         }
 
         // Moving to Design assigns the design to a designer when the admin does it. Validated before
@@ -234,8 +252,12 @@ public class CustomerServiceImpl implements CustomerService {
         }
 
         String previousStatus = customer.getStatus().name();
+        boolean stageChanges = customer.getStatus() != newStatus;
         customer.setStatus(newStatus);
         customerRepository.save(customer);
+
+        // Confirmed / Lost carry the customer's quotations with them (see QuotationStageEffects).
+        int quotationsChanged = stageChanges ? quotationStageEffects.apply(id, newStatus, approveQuotationId, changedBy) : 0;
 
         // Create workflow history entry
         WorkflowHistory history = new WorkflowHistory();
@@ -247,6 +269,11 @@ public class CustomerServiceImpl implements CustomerService {
         history.setTimestamp(LocalDateTime.now());
         workflowHistoryRepository.save(history);
 
+        if (quotationsChanged > 0) {
+            String what = newStatus == Customer.CustomerStatus.CONFIRMED ? "approved" : "cancelled";
+            return ApiResponse.success("Customer status updated; " + quotationsChanged
+                    + (quotationsChanged == 1 ? " quotation " : " quotations ") + what);
+        }
         return ApiResponse.success("Customer status updated successfully");
     }
 

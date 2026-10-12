@@ -12,6 +12,9 @@ import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { dueText, PriorityPill } from '@/features/design/designUi';
 import { QuotationStatusPill } from '@/features/quotations/components/QuotationStatusPill';
 import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
+import { usePendingEditRequests } from '@/features/quotations/usePendingEditRequests';
+import { EditRequestControl } from '@/features/quotations/components/EditRequestControl';
+import { pendingFor } from '@/features/quotations/editRequestRules';
 import { ROUTES } from '@/routes/routes.config';
 import {
   useCancelQuotationJobMutation,
@@ -43,6 +46,8 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
   const [start, { isLoading: starting }] = useStartQuotationJobMutation();
   const [complete, { isLoading: completing }] = useCompleteQuotationJobMutation();
   const [cancel, { isLoading: removing }] = useCancelQuotationJobMutation();
+  // The quotation handed in is Completed; editing it again goes through the admin.
+  const pendingEdits = usePendingEditRequests(!job || job.status !== 'COMPLETED' || !access.view);
 
   const quotations = job?.customerQuotations ?? [];
   const usable = quotations.filter((q) => q.status !== 'CANCELLED');
@@ -181,6 +186,19 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
                 >
                   <FileText size={14} /> {quotationLabel(job.quotation)} — open quotation
                 </Link>
+              )}
+              {job.status === 'COMPLETED' && job.quotation && (
+                <div className="flex items-center gap-2 flex-wrap mt-2">
+                  {job.quotation.status && <QuotationStatusPill status={job.quotation.status} />}
+                  <EditRequestControl
+                    quotationId={job.quotation.id}
+                    status={job.quotation.status}
+                    pending={pendingFor(pendingEdits, job.quotation.id)}
+                    canAsk={access.edit && !access.changeStatus}
+                    canFinish={access.edit}
+                    label={quotationLabel(job.quotation)}
+                  />
+                </div>
               )}
             </div>
           )}

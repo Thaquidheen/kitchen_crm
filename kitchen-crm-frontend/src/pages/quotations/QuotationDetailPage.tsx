@@ -18,6 +18,9 @@ import { quotationLabel } from '@/features/quotations/components/QuotationList';
 import { ArrowLeft, Copy, Download, Edit, FileText, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
+import { usePendingEditRequests } from '@/features/quotations/usePendingEditRequests';
+import { EditRequestControl } from '@/features/quotations/components/EditRequestControl';
+import { pendingFor } from '@/features/quotations/editRequestRules';
 
 const TABS = ['Overview', 'Line Items', 'Revisions', 'Activity'];
 
@@ -125,6 +128,8 @@ export function QuotationDetailPage() {
   };
 
   const handleEdit = () => navigate(`/quotations/${quotationId}/edit`);
+  // A completed quotation is reopened by the admin; staff who may not change its status ask here.
+  const pendingEdits = usePendingEditRequests(!access.view);
 
   const handleDownloadPDF = async () => {
     try {
@@ -228,6 +233,14 @@ export function QuotationDetailPage() {
               </span>
             )}
             {statusPill(data.status)}
+            <EditRequestControl
+              quotationId={data.id}
+              status={data.status}
+              pending={pendingFor(pendingEdits, data.id)}
+              canAsk={access.edit && !access.changeStatus}
+              canFinish={access.edit}
+              label={quotationLabel(data).primary}
+            />
           </div>
           <p className="m-0 mt-0.5 text-[12.5px] text-text-600">
             {data.customerName}
@@ -247,7 +260,13 @@ export function QuotationDetailPage() {
           <button
             onClick={handleEdit}
             disabled={!canEdit || !access.edit}
-            title={!canEdit ? 'Cannot edit approved/rejected quotations' : 'Edit quotation'}
+            title={
+              canEdit
+                ? 'Edit quotation'
+                : data.status === 'COMPLETE'
+                  ? 'A completed quotation is edited after the admin puts it back to Draft'
+                  : 'Cannot edit approved/rejected quotations'
+            }
             className={ghostBtn}
           >
             <Edit size={13} className="text-text-700" />

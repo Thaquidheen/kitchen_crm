@@ -24,6 +24,8 @@ import {
   useUpdateQuotationStatusMutation,
 } from '@/app/baseApi';
 import { useQuotationAccess } from '../useQuotationAccess';
+import { usePendingEditRequests } from '../usePendingEditRequests';
+import { EditRequestControl } from './EditRequestControl';
 
 export interface QuotationListProps {
   filters: QuotationFilters;
@@ -71,6 +73,11 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
   const [renameFolder, { isLoading: isRenaming }] = useRenameQuotationFolderMutation();
   const [deleteFolder, { isLoading: isDeletingFolder }] = useDeleteQuotationFolderMutation();
   const [updateStatus] = useUpdateQuotationStatusMutation();
+  // Requests to reopen a completed quotation: waiting for the admin, or approved and being edited.
+  const pendingEdits = usePendingEditRequests(!access.view) ?? [];
+  const pendingEditOf = (id?: number) => (id ? pendingEdits.find((p) => p.quotationId === id) : undefined);
+  // Editing a completed quotation means putting it back to Draft. Whoever may not do that asks the admin.
+  const asksToEdit = access.edit && !access.changeStatus;
   // A super-admin can change a quotation's status straight from the list. The menu is rendered in a
   // fixed overlay (positioned from the pill's rect) so the table's overflow never clips it.
   const [statusMenu, setStatusMenu] = useState<{ id: number; status?: string; x: number; y: number } | null>(null);
@@ -168,8 +175,9 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
     );
   };
 
-  // The set of statuses a super-admin can move a quotation to, in workflow order.
-  const STATUS_OPTIONS: string[] = ['DRAFT', 'ON_HOLD', 'COMPLETE', 'APPROVED', 'CANCELLED'];
+  // The statuses a quotation can be moved to by hand, in workflow order. On Hold is no longer
+  // offered; a quotation that already has it keeps showing it.
+  const STATUS_OPTIONS: string[] = ['DRAFT', 'COMPLETE', 'APPROVED', 'CANCELLED'];
 
   const changeStatus = async (id: number, status: string) => {
     setStatusMenu(null);
@@ -183,8 +191,20 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
 
   // Interactive status cell: a clickable pill for a super-admin (opens the status menu), or the
   // plain read-only pill for everyone else / when there is no target quotation id.
-  const statusCell = (id?: number, status?: string) => {
-    if (!access.changeStatus || !id) return statusPill(status);
+  const statusCell = (id?: number, status?: string, label?: string) => {
+    if (!id) return statusPill(status);
+    const request = (
+      <EditRequestControl quotationId={id} status={status} pending={pendingEditOf(id)} canAsk={asksToEdit} canFinish={access.edit} label={label} />
+    );
+    return (
+      <div className="flex flex-col items-start gap-1" onClick={(e) => e.stopPropagation()}>
+        {statusButton(id, status)}
+        {request}
+      </div>
+    );
+  };
+  const statusButton = (id: number, status?: string) => {
+    if (!access.changeStatus) return statusPill(status);
     const m = (status && QSTATUS[status]) || { st: '', label: status ?? '—' };
     const fg = m.st ? `var(--st-${m.st}-fg)` : 'var(--color-text-700)';
     const bg = m.st ? `var(--st-${m.st}-bg)` : 'var(--color-background-700)';
@@ -366,7 +386,7 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
                             ₹{f.latestTotalAmount?.toLocaleString('en-IN') ?? '-'}
                           </td>
                           <td className="px-2 sm:px-4 py-3 sm:py-4">
-                            {statusCell(f.latestQuotationId, f.latestStatus)}
+                            {statusCell(f.latestQuotationId, f.latestStatus, f.name)}
                           </td>
                           <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-700 text-xs sm:text-sm hidden md:table-cell">
                             {formatDate(f.latestCreatedAt)}
@@ -437,7 +457,7 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
                                   ₹{q.totalAmount?.toLocaleString('en-IN') ?? '-'}
                                 </td>
                                 <td className="px-2 sm:px-4 py-2.5 sm:py-3">
-                                  {statusCell(q.id, q.status)}
+                                  {statusCell(q.id, q.status, quotationLabel(q).primary)}
                                 </td>
                                 <td className="px-2 sm:px-4 py-2.5 sm:py-3 text-text-700 text-xs sm:text-sm hidden md:table-cell">
                                   {formatDate(q.createdAt)}
@@ -553,7 +573,7 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
                         ₹{q.totalAmount?.toLocaleString('en-IN') ?? '-'}
                       </td>
                       <td className="px-2 sm:px-4 py-3 sm:py-4">
-                        {statusCell(q.id, q.status)}
+                        {statusCell(q.id, q.status, quotationLabel(q).primary)}
                       </td>
                       <td className="px-2 sm:px-4 py-3 sm:py-4 text-text-700 text-xs sm:text-sm hidden md:table-cell">
                         {formatDate(q.createdAt)}

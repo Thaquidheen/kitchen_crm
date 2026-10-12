@@ -16,6 +16,8 @@ export interface StatusChangeExtras {
   planFiles?: File[];
   /** Moving to Quotation Stage without an approved design: the finished design (PDF, images, CAD). */
   designFiles?: File[];
+  /** Moving to Confirmed: the completed quotation that becomes Approved (the newest when left out). */
+  approveQuotationId?: number;
 }
 
 export interface StatusChangeResult {
@@ -54,6 +56,7 @@ export function useCustomerStatusChange() {
         designerId: extras?.design?.designerId ?? undefined,
         designDueDate: extras?.design?.dueDate || undefined,
         designPriority: extras?.design?.priority,
+        approveQuotationId: status === 'CONFIRMED' ? extras?.approveQuotationId : undefined,
       }).unwrap();
 
       const planFiles = extras?.planFiles ?? [];

@@ -14,6 +14,10 @@
  *  - Quotation Stage: the customer's design. When none is approved yet, the finished design
  *    (PDFs, images, CAD drawings) is uploaded here. While a designer still has it, the admin and
  *    Admin staff can upload it here; for anyone else the move waits for the admin's approval.
+ *
+ * Two stages take the customer's quotations along, and the window says so before it is saved:
+ *  - Confirmed: a completed quotation becomes Approved (with several, the one chosen here).
+ *  - Lost: every quotation that is still open becomes Cancelled.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -25,6 +29,16 @@ import type { CustomerStatus } from '../types';
 import type { StatusChangeExtras } from '../useCustomerStatusChange';
 import { useIsSuperAdmin } from '../../auth/useIsSuperAdmin';
 import { usePermissions } from '../../permissions/usePermissions';
+import { useGetQuotationEffectsQuery } from '../customersAPI';
+import {
+  bulkEffectNote,
+  defaultApproveId,
+  effectRowLabel,
+  effectSummary,
+  needsApproveChoice,
+  stageMovesQuotations,
+} from '../quotationEffects';
+import { quotationStatusLabel } from '../../quotations/components/QuotationStatusPill';
 import { DesignerPicker, type DesignAssignment } from '../../design/components/DesignerPicker';
 import { DesignFilesBox } from '../../design/components/DesignFilesBox';
 import { PlanDocumentsField } from '../../design/components/PlanDocumentsField';
@@ -132,6 +146,24 @@ export function StatusChangeModal({
   const customerDesign = watchDesign ? designJob ?? null : null;
   const gate = quotationGate(customerDesign);
 
+  // Confirmed / Lost take the customer's quotations along: ask the server which ones.
+  const movesQuotations = stageMovesQuotations(targetStatus) && targetStatus !== currentStatus;
+  const watchEffects = isOpen && !isBulk && !!customerId && movesQuotations;
+  const { currentData: effects, isFetching: loadingEffects } = useGetQuotationEffectsQuery(
+    { customerId: customerId ?? 0, status: targetStatus ?? '' },
+    { skip: !watchEffects, refetchOnMountOrArgChange: true },
+  );
+  const shownEffects = watchEffects ? effects ?? null : null;
+  const [approveId, setApproveId] = useState<number | null>(null);
+  const chosenApproveId =
+    shownEffects?.action === 'APPROVE'
+      ? shownEffects.quotations.some((q) => q.id === approveId)
+        ? approveId
+        : defaultApproveId(shownEffects)
+      : null;
+  const effectLine = effectSummary(shownEffects);
+  const bulkEffectLine = isBulk && movesQuotations ? bulkEffectNote(targetStatus) : null;
+
   // Start every change with an empty box, and focus it so the note is the
   // obvious next action rather than an afterthought.
   useEffect(() => {
@@ -140,6 +172,7 @@ export function StatusChangeModal({
       setDesign({ designerId: currentDesignerId ?? null, dueDate: defaultDueDate(), priority: 'MEDIUM' });
       setPlanFiles([]);
       setDesignFiles([]);
+      setApproveId(null);
       const t = setTimeout(() => textareaRef.current?.focus(), 50);
       return () => clearTimeout(t);
     }
@@ -171,7 +204,9 @@ export function StatusChangeModal({
     !designBlocks &&
     !needsDesign &&
     !designTooLarge &&
-    !plansTooLarge;
+    !plansTooLarge &&
+    // Not before the window has said what happens to the quotations.
+    !(watchEffects && shownEffects === null && loadingEffects);
 
   const pickDesign = (picked: FileList | null) => {
     if (!picked || picked.length === 0) {return;}
@@ -189,6 +224,7 @@ export function StatusChangeModal({
       design: toDesign && canAssign ? design : undefined,
       planFiles: handsOverPlans ? planFiles : undefined,
       designFiles: uploadsDesign ? designFiles : undefined,
+      approveQuotationId: chosenApproveId ?? undefined,
     });
   };
 
@@ -266,6 +302,62 @@ export function StatusChangeModal({
             ? 'This note is saved to the timeline of every selected customer.'
             : 'This note is saved to the customer’s timeline.'}
         </p>
+
+        {/* Confirmed / Lost: what happens to the customer's quotations. */}
+        {watchEffects && shownEffects === null && loadingEffects && (
+          <div className="mt-4 h-10 rounded-[10px] bg-background-700 animate-pulse" />
+        )}
+        {(effectLine || bulkEffectLine) && (
+          <div
+            className="mt-4 px-3 py-2.5 rounded-[10px] text-[12.5px]"
+            style={
+              targetStatus === 'LOST'
+                ? { background: 'var(--st-lost-bg)', color: 'var(--st-lost-fg)' }
+                : { background: 'var(--st-confirmed-bg)', color: 'var(--st-confirmed-fg)' }
+            }
+            role="status"
+          >
+            <p className="m-0 flex items-start gap-2">
+              <Info size={14} className="shrink-0 mt-px" />
+              <span>
+                <span className="font-semibold">Quotations change too. </span>
+                {effectLine ?? bulkEffectLine}
+              </span>
+            </p>
+            {shownEffects && needsApproveChoice(shownEffects) && (
+              <div className="mt-2 flex flex-col gap-1">
+                {shownEffects.quotations.map((q) => (
+                  <label
+                    key={q.id}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-[9px] bg-background-800 border border-background-600 text-text-900 cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name="approve-quotation"
+                      checked={chosenApproveId === q.id}
+                      onChange={() => setApproveId(q.id)}
+                      disabled={isSubmitting}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{effectRowLabel(q)}</span>
+                    {q.projectName && q.quotationNumber && (
+                      <span className="text-[11.5px] text-text-600 tabular-nums shrink-0">{q.quotationNumber}</span>
+                    )}
+                  </label>
+                ))}
+              </div>
+            )}
+            {shownEffects?.action === 'CANCEL' && shownEffects.quotations.length > 1 && (
+              <ul className="m-0 mt-1.5 pl-[22px] list-disc">
+                {shownEffects.quotations.map((q) => (
+                  <li key={q.id}>
+                    {effectRowLabel(q)}
+                    {q.status ? ` (${quotationStatusLabel(q.status)})` : ''}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {/* Moving to Design: the admin assigns the design to a designer (required). */}
         {toDesign && !canAssign && (
