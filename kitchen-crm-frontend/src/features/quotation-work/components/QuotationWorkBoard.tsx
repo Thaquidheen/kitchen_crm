@@ -22,7 +22,11 @@ import {
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { dueText, PriorityPill } from '@/features/design/designUi';
-import { quotationStatusLabel } from '@/features/quotations/components/QuotationStatusPill';
+import { QuotationStatusPill, quotationStatusLabel } from '@/features/quotations/components/QuotationStatusPill';
+import type { PendingEditRequest } from '@/features/quotations/editRequestsAPI';
+import { usePendingEditRequests } from '@/features/quotations/usePendingEditRequests';
+import { EditRequestControl } from '@/features/quotations/components/EditRequestControl';
+import { pendingFor } from '@/features/quotations/editRequestRules';
 import {
   useGetQuotationJobsQuery,
   useGetUnassignedQuotationCustomersQuery,
@@ -49,13 +53,15 @@ interface RowProps {
   news?: string;
   /** Show who has it (lists that mix people). */
   showAssignee?: boolean;
+  /** Someone asked the admin to reopen the quotation handed in (completed rows). */
+  editRequest?: PendingEditRequest;
   onOpen: (id: number) => void;
 }
 
 /** One quotation in a list. `handle` + `outer` are only passed by the sortable wrapper below. */
 const JobRowView: React.FC<
   RowProps & { handle?: React.ReactNode; outerRef?: (el: HTMLElement | null) => void; outerStyle?: React.CSSProperties }
-> = ({ job, position, news, showAssignee, onOpen, handle, outerRef, outerStyle }) => {
+> = ({ job, position, news, showAssignee, editRequest, onOpen, handle, outerRef, outerStyle }) => {
   const fresh = news !== undefined;
   const due = dueText(job);
   const done = job.status === 'COMPLETED';
@@ -104,6 +110,18 @@ const JobRowView: React.FC<
             </span>
           )}
         </div>
+        {/* Where the quotation handed in stands now: reopened as a draft, approved, cancelled. */}
+        {done && (editRequest || (job.quotation?.status && job.quotation.status !== 'COMPLETE')) && (
+          <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+            {job.quotation?.status && job.quotation.status !== 'COMPLETE' && <QuotationStatusPill status={job.quotation.status} />}
+            {job.quotation?.status === 'DRAFT' && !editRequest && (
+              <span className="text-[11.5px] text-text-600">Reopened for editing</span>
+            )}
+            {editRequest && job.quotation && (
+              <EditRequestControl quotationId={job.quotation.id} status={job.quotation.status} pending={editRequest} canAsk={false} canFinish={false} />
+            )}
+          </div>
+        )}
         {news && <div className="mt-1 text-[11.5px] text-text-700 truncate">{news}</div>}
       </button>
     </div>
@@ -238,6 +256,8 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
   const { data: jobs = [], isLoading } = useGetQuotationJobsQuery(undefined, poll);
   const { data: unassigned = [] } = useGetUnassignedQuotationCustomersQuery(undefined, { ...poll, skip: !manages });
   const [markSeen] = useMarkQuotationWorkSeenMutation();
+  // Completed quotations somebody asked to reopen: the board says so until the admin answers.
+  const pendingEdits = usePendingEditRequests();
 
   const queues = useMemo(() => queuesByAssignee(jobs), [jobs]);
   const mine = useMemo(() => queues.find((q) => q.assigneeId === me?.userId)?.jobs ?? [], [queues, me?.userId]);
@@ -294,7 +314,7 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
       </div>
       <div className={columnBody}>
         {completed.map((j) => (
-          <JobRowView key={j.id} job={j} news={fresh.get(j.id)} onOpen={open} />
+          <JobRowView key={j.id} job={j} news={fresh.get(j.id)} editRequest={pendingFor(pendingEdits, j.quotation?.id)} onOpen={open} />
         ))}
       </div>
     </section>

@@ -13,7 +13,7 @@
 
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlarmClock, Bell, Check, Eye, FileText, MessageCircle, Palette } from 'lucide-react';
+import { AlarmClock, Bell, Check, Eye, FileText, MessageCircle, Palette, PencilLine } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useGetReminderNotificationsQuery, useMarkReminderDoneMutation } from '../../app/baseApi';
 import {
@@ -37,6 +37,12 @@ import type { DesignJob } from '../../features/design/types';
 import { useGetQuotationWorkFeedQuery, useGetQuotationWorkMeQuery } from '../../features/quotation-work/quotationWorkAPI';
 import { quotationNewsText } from '../../features/quotation-work/quotationWorkRules';
 import type { QuotationJob } from '../../features/quotation-work/types';
+import {
+  useGetEditRequestFeedQuery,
+  useMarkEditAnswersSeenMutation,
+  type QuotationEditRequest,
+} from '../../features/quotations/editRequestsAPI';
+import { editRequestNewsText, editRequestTitle } from '../../features/quotations/editRequestRules';
 
 type SourceKey = '' | 'TODOS' | 'ASSIGNED' | 'TEAM' | 'DESIGNS' | 'QUOTES' | 'CUSTOMERS' | 'PRODUCTION' | 'APPLIANCE' | 'ARCHITECT';
 
@@ -128,6 +134,13 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     pollingInterval: 30000,
     skip: !enabled,
   });
+  // Requests to reopen a completed quotation: the admin hears about each one waiting, whoever
+  // asked hears the answer.
+  const { data: editFeed } = useGetEditRequestFeedQuery(undefined, {
+    pollingInterval: 30000,
+    skip: !enabled,
+  });
+  const [markEditAnswersSeen] = useMarkEditAnswersSeenMutation();
   const [markReminderDone] = useMarkReminderDoneMutation();
   const [markTodoComplete] = useMarkTodoCompleteMutation();
   const [markTaskComplete] = useMarkTaskCompleteMutation();
@@ -141,13 +154,15 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const designs: DesignJob[] = isSuperAdmin ? designAttention?.jobs ?? [] : isDesigner ? myDesignFeed?.jobs ?? [] : [];
   const quotes: QuotationJob[] = quoteFeed?.jobs ?? [];
   const managesQuotes = !!quoteMe?.canManage;
+  const editRequests: QuotationEditRequest[] = editFeed?.items ?? [];
   const badgeCount =
     (notifData?.count ?? 0) +
     (todoNotif?.count ?? 0) +
     (dueTaskNotif?.count ?? 0) +
     (isSuperAdmin ? attentionNotif?.count ?? 0 : 0) +
     designs.length +
-    quotes.length;
+    quotes.length +
+    editRequests.length;
 
   const counts = useMemo(() => {
     const c = { CUSTOMERS: 0, PRODUCTION: 0, APPLIANCE: 0, ARCHITECT: 0 };
@@ -159,7 +174,14 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     {
       key: '',
       label: 'All',
-      count: reminders.length + todos.length + dueTasks.length + attention.length + designs.length + quotes.length,
+      count:
+        reminders.length +
+        todos.length +
+        dueTasks.length +
+        attention.length +
+        designs.length +
+        quotes.length +
+        editRequests.length,
     },
     { key: 'TODOS', label: 'To-dos', st: SOURCE_META.TODOS.st, count: todos.length },
     { key: 'ASSIGNED', label: 'Assigned to me', st: SOURCE_META.ASSIGNED.st, count: dueTasks.length },
@@ -167,8 +189,8 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     ...(isSuperAdmin || isDesigner
       ? [{ key: 'DESIGNS', label: 'Designs', st: SOURCE_META.DESIGNS.st, count: designs.length }]
       : []),
-    ...(managesQuotes || quotes.length > 0
-      ? [{ key: 'QUOTES', label: 'Quotations', st: SOURCE_META.QUOTES.st, count: quotes.length }]
+    ...(managesQuotes || quotes.length + editRequests.length > 0
+      ? [{ key: 'QUOTES', label: 'Quotations', st: SOURCE_META.QUOTES.st, count: quotes.length + editRequests.length }]
       : []),
     { key: 'CUSTOMERS', label: 'Customers', st: SOURCE_META.CUSTOMERS.st, count: counts.CUSTOMERS },
     { key: 'PRODUCTION', label: 'Production', st: SOURCE_META.PRODUCTION.st, count: counts.PRODUCTION },
@@ -185,6 +207,7 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const visibleTeam = filter === '' || filter === 'TEAM' ? attention : [];
   const visibleDesigns = filter === '' || filter === 'DESIGNS' ? designs : [];
   const visibleQuotes = filter === '' || filter === 'QUOTES' ? quotes : [];
+  const visibleEditRequests = filter === '' || filter === 'QUOTES' ? editRequests : [];
 
   // Server-computed bucket: everything in this feed is today-or-earlier, so it is either
   // OVERDUE or TODAY. To-dos due before today count as overdue by their date string; assigned
@@ -210,7 +233,8 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     visibleAssigned.length +
     visibleTeam.length +
     visibleDesigns.length +
-    visibleQuotes.length;
+    visibleQuotes.length +
+    visibleEditRequests.length;
 
   const viewAll = () => {
     setOpen(false);
@@ -440,6 +464,36 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     </div>
   );
 
+  /** A request to reopen a completed quotation: waiting for the admin, or answered for whoever asked. */
+  const EditRequestRow = ({ r }: { r: QuotationEditRequest }) => (
+    <div className="px-4 py-2.5 hover:bg-background-700 transition-colors">
+      <button
+        className="text-left w-full"
+        onClick={() => {
+          setOpen(false);
+          if (isSuperAdmin) {
+            navigate(`${ROUTES.REMINDERS}?tab=approvals`);
+            return;
+          }
+          // Opening the answer is what clears it from the bell.
+          markEditAnswersSeen()
+            .unwrap()
+            .catch(() => undefined);
+          navigate(r.status === 'APPROVED' ? `/quotations/${r.quotationId}/edit` : `/quotations/${r.quotationId}`);
+        }}
+      >
+        <p className="text-[13px] text-text-900 font-medium flex items-center gap-1.5">
+          <PencilLine size={13} className="shrink-0" style={{ color: 'var(--st-quote-fg)' }} />
+          <span className="truncate">{editRequestTitle(r)}</span>
+        </p>
+        <p className="text-[12.5px] text-text-900 mt-0.5 line-clamp-2 break-words">{editRequestNewsText(r, isSuperAdmin)}</p>
+        <p className="text-[11.5px] text-text-600 mt-0.5">
+          {isSuperAdmin ? 'Edit request · tap to answer' : 'Your edit request · tap to open'}
+        </p>
+      </button>
+    </div>
+  );
+
   const ReminderRow = ({ r }: { r: BellReminder }) => {
     const meta = metaOf(r);
     return (
@@ -467,6 +521,7 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     return slice;
   };
   const shownDesigns = take(visibleDesigns);
+  const shownEditRequests = take(visibleEditRequests);
   const shownQuotes = take(visibleQuotes);
   const shownRepliedTeam = take(repliedTeam);
   const shownRepliedAssigned = take(repliedAssigned);
@@ -480,6 +535,7 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const shownTodayReminders = take(todayReminders);
   const shownCount =
     shownDesigns.length +
+    shownEditRequests.length +
     shownQuotes.length +
     shownRepliedTeam.length +
     shownRepliedAssigned.length +
@@ -549,10 +605,13 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
                       </div>
                     </>
                   )}
-                  {shownQuotes.length > 0 && (
+                  {shownQuotes.length + shownEditRequests.length > 0 && (
                     <>
                       <GroupHeader label="Quotations" tone="nego" />
                       <div className="divide-y divide-background-600">
+                        {shownEditRequests.map((r) => (
+                          <EditRequestRow key={`e${r.id}`} r={r} />
+                        ))}
                         {shownQuotes.map((j) => (
                           <QuoteRow key={`q${j.id}`} job={j} />
                         ))}

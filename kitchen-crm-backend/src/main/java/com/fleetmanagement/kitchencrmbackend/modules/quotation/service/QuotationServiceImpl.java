@@ -41,6 +41,9 @@ public class QuotationServiceImpl implements QuotationService {
     private QuotationFolderRepository folderRepository;
 
     @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.quotation.editrequest.QuotationEditRequestService editRequests;
+
+    @Autowired
     private QuotationAccessoryRepository accessoryRepository;
 
     @Autowired
@@ -485,6 +488,8 @@ public class QuotationServiceImpl implements QuotationService {
         }
 
         quotationRepository.save(quotation);
+        // A request to reopen it that was still waiting is answered by this.
+        editRequests.statusSetByHand(id, newStatus, updatedBy);
         return ApiResponse.success("Quotation status updated successfully");
     }
 

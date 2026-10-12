@@ -37,5 +37,13 @@ public interface CustomerService {
     ApiResponse<String> updateCustomerStatus(Long id, Customer.CustomerStatus newStatus, String changedBy, String reason,
                                              Long designerId, java.time.LocalDate designDueDate, String designPriority,
                                              Long changedByUserId, boolean changedByAdmin);
+
+    /**
+     * The same, and the customer's quotations follow the stage: Confirmed approves one completed
+     * quotation ({@code approveQuotationId}, or the newest when null), Lost cancels the open ones.
+     */
+    ApiResponse<String> updateCustomerStatus(Long id, Customer.CustomerStatus newStatus, String changedBy, String reason,
+                                             Long designerId, java.time.LocalDate designDueDate, String designPriority,
+                                             Long changedByUserId, boolean changedByAdmin, Long approveQuotationId);
     ApiResponse<Map<String, Long>> getCustomerStatistics();
 }

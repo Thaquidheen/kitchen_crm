@@ -12,10 +12,12 @@ import type { ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FilterChips } from '../../components/shared/FilterChips';
 import { fmtReminderDate as fmtDate, fmtReminderTime as fmtTime } from '../../utils/reminderFormat';
-import { Search, Plus, Check, Pencil, Trash2, BellRing, ListTodo, Users, Palette } from 'lucide-react';
+import { Search, Plus, Check, Pencil, Trash2, BellRing, ListTodo, Users, Palette, FileCheck2 } from 'lucide-react';
 import { MyTodosTab } from './MyTodosTab';
 import { TeamTasksTab } from './TeamTasksTab';
 import { DesignsTab } from './DesignsTab';
+import { EditRequestsTab } from './EditRequestsTab';
+import { useGetEditRequestFeedQuery } from '@/features/quotations/editRequestsAPI';
 import { useGetDesignMeQuery } from '@/features/design/designAPI';
 import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 import toast from 'react-hot-toast';
@@ -266,15 +268,19 @@ export function RemindersPage() {
   // Designs: designers see their own designs here; admins see the designs that need them.
   const { data: designMe } = useGetDesignMeQuery();
   const canSeeDesigns = isSuperAdmin || !!designMe?.designer;
-  const tab: 'reminders' | 'todos' | 'team' | 'designs' =
+  // Edit requests: staff ask to reopen a completed quotation; the admin answers here.
+  const { data: editFeed } = useGetEditRequestFeedQuery(undefined, { skip: !isSuperAdmin, pollingInterval: 30000 });
+  const tab: 'reminders' | 'todos' | 'team' | 'designs' | 'approvals' =
     tabParam === 'todos'
       ? 'todos'
+      : tabParam === 'approvals' && isSuperAdmin
+        ? 'approvals'
       : tabParam === 'team' && isSuperAdmin
         ? 'team'
         : tabParam === 'designs' && canSeeDesigns
           ? 'designs'
           : 'reminders';
-  const setTab = (t: 'reminders' | 'todos' | 'team' | 'designs') =>
+  const setTab = (t: 'reminders' | 'todos' | 'team' | 'designs' | 'approvals') =>
     setSearchParams(t === 'reminders' ? {} : { tab: t }, { replace: true });
 
   return (
@@ -293,6 +299,8 @@ export function RemindersPage() {
               ? 'Your private task list — nobody else sees it.'
               : tab === 'designs'
                 ? 'Designs and their status — new assignments, notes and anything overdue.'
+                : tab === 'approvals'
+                  ? 'Requests from staff to edit a completed quotation.'
                 : 'A reminder shows for its whole day, from midnight — the time is just a note.'}
           </p>
         </div>
@@ -318,7 +326,10 @@ export function RemindersPage() {
             { key: 'todos', label: 'My To-dos', icon: <ListTodo size={14} /> },
             ...(isSuperAdmin ? [{ key: 'team', label: 'Team Tasks', icon: <Users size={14} /> }] : []),
             ...(canSeeDesigns ? [{ key: 'designs', label: 'Designs', icon: <Palette size={14} /> }] : []),
-          ] as { key: 'reminders' | 'todos' | 'team' | 'designs'; label: string; icon: ReactNode }[]
+            ...(isSuperAdmin
+              ? [{ key: 'approvals', label: 'Edit requests', icon: <FileCheck2 size={14} />, count: editFeed?.count ?? 0 }]
+              : []),
+          ] as { key: 'reminders' | 'todos' | 'team' | 'designs' | 'approvals'; label: string; icon: ReactNode; count?: number }[]
         ).map((t) => {
           const active = tab === t.key;
           return (
@@ -339,6 +350,11 @@ export function RemindersPage() {
               <span className={`text-[12.5px] whitespace-nowrap ${active ? 'font-semibold text-text-900' : 'font-medium text-text-700'}`}>
                 {t.label}
               </span>
+              {!!t.count && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary-600 text-background-900 text-[10.5px] font-bold flex items-center justify-center tabular-nums">
+                  {t.count}
+                </span>
+              )}
             </button>
           );
         })}
@@ -350,6 +366,8 @@ export function RemindersPage() {
         <TeamTasksTab />
       ) : tab === 'designs' ? (
         <DesignsTab viewer={isSuperAdmin ? 'admin' : 'designer'} />
+      ) : tab === 'approvals' ? (
+        <EditRequestsTab />
       ) : (
         <>
       {/* Whose reminders. Everyone sees only their own; a super admin sees all and can narrow

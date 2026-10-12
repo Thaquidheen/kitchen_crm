@@ -42,6 +42,8 @@ public class PermissionInterceptor implements HandlerInterceptor {
     static final List<Rule> RULES = List.of(
             // ---- customers: the record itself
             new Rule(Set.of("PATCH"), "/api/v1/customers/*/status", Permission.CUSTOMERS_CHANGE_STAGE),
+            // what a stage change would do to the customer's quotations: asked by whoever changes the stage
+            new Rule(READ, "/api/v1/customers/*/quotation-effects", Permission.CUSTOMERS_CHANGE_STAGE),
             new Rule(Set.of("POST"), "/api/v1/customers", Permission.CUSTOMERS_ADD),
             // plan images sit under /customers/plan-images/… and are part of a customer's details
             new Rule(WRITE, "/api/v1/customers/plan-images/**", Permission.CUSTOMERS_EDIT),

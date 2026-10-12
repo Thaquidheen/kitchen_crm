@@ -166,13 +166,30 @@ public class CustomerController {
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(
                     iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate designDueDate,
             @RequestParam(required = false) String designPriority,
+            @RequestParam(required = false) Long approveQuotationId,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         // Moving to Design: the admin chooses the designer (see CustomerService); every other status,
-        // and every other caller, ignores the extras.
+        // and every other caller, ignores the extras. Confirmed / Lost take the quotations along.
         return ResponseEntity.ok(customerService.updateCustomerStatus(
                 id, status, currentUser.getName(), reason, designerId, designDueDate, designPriority,
                 currentUser.getId(),
-                com.fleetmanagement.kitchencrmbackend.security.ViewerScope.isSuperAdmin(currentUser)));
+                com.fleetmanagement.kitchencrmbackend.security.ViewerScope.isSuperAdmin(currentUser),
+                approveQuotationId));
     }
+
+    /**
+     * What moving this customer to a stage would do to their quotations (Confirmed approves a
+     * completed one, Lost cancels the open ones): shown in the status window before it is saved.
+     * Names and statuses only, no amounts.
+     */
+    @GetMapping("/{id}/quotation-effects")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> quotationEffects(
+            @PathVariable Long id,
+            @RequestParam Customer.CustomerStatus status) {
+        return ResponseEntity.ok(ApiResponse.success(quotationStageEffects.preview(id, status)));
+    }
+
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationStageEffects quotationStageEffects;
 }
