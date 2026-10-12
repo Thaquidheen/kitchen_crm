@@ -487,9 +487,12 @@ export function QuotationPreview({
                                   <span className="text-text-500 ml-1">({item.brandName})</span>
                                 )}
                               </div>
-                              <span className="font-medium text-text-900 flex-shrink-0">
-                                ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
-                              </span>
+                              {/* Without "See rates" no line amount is sent: show none, not a ₹0 that looks like a price. */}
+                              {access.seesRates && (
+                                <span className="font-medium text-text-900 flex-shrink-0">
+                                  ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
+                                </span>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -630,9 +633,12 @@ export function QuotationPreview({
                               <span className="text-text-500">({item.brandName})</span>
                             )}
                           </div>
-                          <span className="font-medium text-text-900 flex-shrink-0">
-                            ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
-                          </span>
+                          {/* Without "See rates" no line amount is sent: show none, not a ₹0 that looks like a price. */}
+                          {access.seesRates && (
+                            <span className="font-medium text-text-900 flex-shrink-0">
+                              ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
+                            </span>
+                          )}
                         </div>
                       ))}
                     </div>
