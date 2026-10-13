@@ -71,6 +71,13 @@ export interface UnassignedQuotationCustomer {
   quotationCount?: number | null;
   /** Where the newest of them stands. */
   latestQuotationStatus?: string | null;
+  /**
+   * Waiting for somebody to be given the quotation: no quotation yet, or moved into Quotation
+   * Stage since the last one was made or worked on.
+   */
+  toAssign?: boolean | null;
+  /** In the list because of that move, although they already have a quotation. */
+  movedIn?: boolean | null;
 }
 
 export interface QuotationWorkFeed {

@@ -16,6 +16,11 @@ public interface WorkflowHistoryRepository extends JpaRepository<WorkflowHistory
     List<WorkflowHistory> findByCustomerIdOrderByTimestampDesc(Long customerId);
     Page<WorkflowHistory> findAllByOrderByTimestampDesc(Pageable pageable);
 
+    /** When each of these customers last moved INTO a stage from another one: rows {customerId, timestamp}. */
+    @Query("SELECT w.customer.id, MAX(w.timestamp) FROM WorkflowHistory w WHERE w.customer.id IN :customerIds "
+            + "AND w.newState = :state AND (w.previousState IS NULL OR w.previousState <> :state) GROUP BY w.customer.id")
+    List<Object[]> findLastEntered(@Param("customerIds") java.util.Collection<Long> customerIds, @Param("state") String state);
+
     @Query("SELECT w FROM WorkflowHistory w WHERE " +
             "(:customerId IS NULL OR w.customer.id = :customerId) AND " +
             "(:changedBy IS NULL OR LOWER(w.changedBy) LIKE LOWER(CONCAT('%', :changedBy, '%'))) AND " +

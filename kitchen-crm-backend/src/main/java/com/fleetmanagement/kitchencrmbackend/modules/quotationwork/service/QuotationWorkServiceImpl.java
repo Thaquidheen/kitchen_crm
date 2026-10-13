@@ -52,6 +52,8 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
     private UserRepository userRepository;
     @Autowired
     private QuotationRepository quotationRepository;
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.customer.repository.WorkflowHistoryRepository workflowHistoryRepository;
 
     @Value("${app.business-timezone:Asia/Kolkata}")
     private String businessTimezone;
@@ -77,6 +79,13 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
         dto.setCanManage(viewer.manages());
         dto.setOpenCount(viewer.id() == null ? 0 : jobRepository.findByAssigneeAndStatuses(viewer.id(), OPEN).size());
         return dto;
+    }
+
+    private static LocalDateTime later(LocalDateTime a, LocalDateTime b) {
+        if (a == null) {
+            return b;
+        }
+        return b == null || a.isAfter(b) ? a : b;
     }
 
     // ------------------------------------------------------------------ reads
@@ -105,12 +114,23 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
         List<Customer> customers = jobRepository.findCustomersNotBeingQuoted(CustomerStatus.QUOTE_GIVEN);
         // What each of them already has, newest first. A cancelled quotation is not one they have.
         Map<Long, List<String>> has = new HashMap<>();
+        // To decide who is waiting for somebody: when they entered the stage, against the last time
+        // anything was done about a quotation for them (one made, work handed out, work finished).
+        Map<Long, LocalDateTime> entered = new HashMap<>();
+        Map<Long, LocalDateTime> lastDone = new HashMap<>();
         if (!customers.isEmpty()) {
             Set<Long> ids = customers.stream().map(Customer::getId).collect(Collectors.toSet());
             for (Object[] row : jobRepository.findQuotationsOfCustomers(ids)) {
                 if (row[5] != QuotationStatus.CANCELLED) {
                     has.computeIfAbsent((Long) row[0], k -> new ArrayList<>()).add(row[5] == null ? null : row[5].toString());
+                    lastDone.merge((Long) row[0], (LocalDateTime) row[6], QuotationWorkServiceImpl::later);
                 }
+            }
+            for (Object[] row : jobRepository.findLastWorkOfCustomers(ids)) {
+                lastDone.merge((Long) row[0], later((LocalDateTime) row[1], (LocalDateTime) row[2]), QuotationWorkServiceImpl::later);
+            }
+            for (Object[] row : workflowHistoryRepository.findLastEntered(ids, CustomerStatus.QUOTE_GIVEN.name())) {
+                entered.put((Long) row[0], (LocalDateTime) row[1]);
             }
         }
         List<Map<String, Object>> rows = new ArrayList<>();
@@ -123,6 +143,13 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
             // No amounts here either: how many, and where the newest one stands.
             row.put("quotationCount", statuses.size());
             row.put("latestQuotationStatus", statuses.isEmpty() ? null : statuses.get(0));
+            // Waiting for somebody: no quotation yet, or moved (back) into Quotation Stage since the
+            // last quotation was made or worked on — the move is the request for a new one.
+            LocalDateTime in = entered.get(c.getId());
+            LocalDateTime done = lastDone.get(c.getId());
+            boolean movedSince = in != null && (done == null || in.isAfter(done));
+            row.put("toAssign", statuses.isEmpty() || movedSince);
+            row.put("movedIn", !statuses.isEmpty() && movedSince);
             rows.add(row);
         }
         return ApiResponse.success(rows);

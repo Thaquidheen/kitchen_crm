@@ -136,6 +136,7 @@ const ToAssignRow: React.FC<{ customer: UnassignedQuotationCustomer; onAssign: (
   const has = c.quotationCount ?? 0;
   // What they have comes first: in a narrow column it is the place that gets cut short.
   const detail = [
+    c.movedIn ? 'Moved to Quotation Stage' : null,
     has > 0 ? quotedText(has, c.latestQuotationStatus ? quotationStatusLabel(c.latestQuotationStatus) : null) : null,
     c.customerPlace,
   ]
@@ -335,7 +336,9 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
                 <span className={sectionTitle}>To assign</span>
                 <span className={countBadge}>{toAssign.waiting.length}</span>
               </div>
-              <div className="mt-1 text-[11.5px] text-text-600">In Quotation Stage with no quotation yet.</div>
+              <div className="mt-1 text-[11.5px] text-text-600">
+                In Quotation Stage: no quotation yet, or just moved here.
+              </div>
             </div>
             <div className={columnBody}>
               {toAssign.waiting.length === 0 && (
