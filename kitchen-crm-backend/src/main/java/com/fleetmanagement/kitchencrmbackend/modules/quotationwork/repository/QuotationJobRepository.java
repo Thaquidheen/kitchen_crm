@@ -40,6 +40,11 @@ public interface QuotationJobRepository extends JpaRepository<QuotationJob, Long
             + "ORDER BY c.id DESC")
     List<Customer> findCustomersNotBeingQuoted(@Param("stage") Customer.CustomerStatus stage);
 
+    /** The last time anyone was given, or finished, quotation work for these customers: rows {customerId, assignedAt, completedAt}. */
+    @Query("SELECT j.customer.id, MAX(j.assignedAt), MAX(j.completedAt) FROM QuotationJob j "
+            + "WHERE j.customer.id IN :customerIds GROUP BY j.customer.id")
+    List<Object[]> findLastWorkOfCustomers(@Param("customerIds") Collection<Long> customerIds);
+
     /**
      * The quotations of these customers, newest first — what a job can open or hand in. Rows are
      * {customerId, id, quotationNumber, projectName, versionNumber, status, createdAt}; no prices.

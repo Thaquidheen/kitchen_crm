@@ -32,14 +32,17 @@ export const queuesByAssignee = (jobs: QuotationJob[]): Array<{ assigneeId: numb
 };
 
 /**
- * The "To assign" column lists everyone in Quotation Stage that nobody is preparing. Those still
- * without a quotation are the ones waiting for somebody; the others already have one and are
- * listed so that finishing or revising it can be handed out too. The order inside each group is kept.
+ * Of everyone in Quotation Stage that nobody is preparing, the ones waiting for somebody: those
+ * without a quotation, and those moved into Quotation Stage since their last quotation was made or
+ * worked on (the server says which — the move is the request). The rest already have what they
+ * need. The order inside each group is kept.
  */
-export const splitToAssign = <T extends { quotationCount?: number | null }>(customers: T[]): { waiting: T[]; quoted: T[] } => ({
-  waiting: customers.filter((c) => !c.quotationCount),
-  quoted: customers.filter((c) => !!c.quotationCount),
-});
+export const splitToAssign = <T extends { quotationCount?: number | null; toAssign?: boolean | null }>(
+  customers: T[],
+): { waiting: T[]; quoted: T[] } => {
+  const waits = (c: T) => c.toAssign ?? !c.quotationCount;
+  return { waiting: customers.filter(waits), quoted: customers.filter((c) => !waits(c)) };
+};
 
 /**
  * The rest of Quotation Stage: customers somebody is already preparing a quotation for. They are

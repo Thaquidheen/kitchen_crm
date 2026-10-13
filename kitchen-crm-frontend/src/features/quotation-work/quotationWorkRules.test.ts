@@ -71,6 +71,15 @@ describe('splitToAssign', () => {
   it('is empty for an empty list', () => {
     expect(splitToAssign([])).toEqual({ waiting: [], quoted: [] });
   });
+
+  it('also waits: a customer with a quotation who was moved into Quotation Stage afterwards', () => {
+    const moved = { ...c(5, 2), toAssign: true };
+    const settled = { ...c(4, 1), toAssign: false };
+    const fresh = { ...c(3, 0), toAssign: true };
+    const { waiting, quoted } = splitToAssign([moved, settled, fresh]);
+    expect(waiting.map((x) => x.customerId)).toEqual([5, 3]);
+    expect(quoted.map((x) => x.customerId)).toEqual([4]);
+  });
 });
 
 describe('quotationStageWork', () => {
