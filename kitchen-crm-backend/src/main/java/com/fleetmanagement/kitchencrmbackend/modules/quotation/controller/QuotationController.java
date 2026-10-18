@@ -2,6 +2,7 @@ package com.fleetmanagement.kitchencrmbackend.modules.quotation.controller;
 
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
+import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationBulkDeleteService;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationService;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.JasperPdfGenerationService;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
@@ -37,6 +38,9 @@ public class QuotationController {
 
     @Autowired
     private JasperPdfGenerationService pdfGenerationService;
+
+    @Autowired
+    private QuotationBulkDeleteService bulkDeleteService;
 
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.permission.service.PermissionService permissionService;
@@ -166,6 +170,28 @@ public class QuotationController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<String>> deleteQuotation(@PathVariable Long id) {
         return ResponseEntity.ok(quotationService.deleteQuotation(id));
+    }
+
+    /**
+     * Deletes cancelled quotations: the chosen ones ({"ids": [...]}) or all of them
+     * ({"allCancelled": true}). Anything not cancelled, or still used elsewhere, is skipped and
+     * reported back. The permission is also asked here, not only by the PermissionInterceptor.
+     */
+    @PostMapping("/bulk-delete")
+    public ResponseEntity<ApiResponse<QuotationBulkDeleteService.Result>> bulkDeleteCancelled(
+            @RequestBody(required = false) QuotationBulkDeleteService.Request request,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        com.fleetmanagement.kitchencrmbackend.modules.permission.Permission needed =
+                com.fleetmanagement.kitchencrmbackend.modules.permission.Permission.QUOTATIONS_DELETE;
+        if (!permissionService.can(currentUser, needed)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(
+                    com.fleetmanagement.kitchencrmbackend.modules.permission.web.PermissionInterceptor.message(needed)));
+        }
+        ApiResponse<QuotationBulkDeleteService.Result> response = bulkDeleteService.deleteCancelled(request);
+        if (Boolean.TRUE.equals(response.getSuccess())) {
+            return ResponseEntity.ok(response);
+        }
+        return ResponseEntity.badRequest().body(response);
     }
 
     @PatchMapping("/{id}/status")

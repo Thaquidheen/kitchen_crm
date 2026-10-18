@@ -26,6 +26,7 @@ import {
 import { useQuotationAccess } from '../useQuotationAccess';
 import { usePendingEditRequests } from '../usePendingEditRequests';
 import { EditRequestControl } from './EditRequestControl';
+import { DeleteCancelledQuotations } from './DeleteCancelledQuotations';
 
 export interface QuotationListProps {
   filters: QuotationFilters;
@@ -319,6 +320,8 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
           onFiltersChange={onFiltersChange}
           onReset={onResetFilters ?? (() => onFiltersChange({ page: 0, size: 10, sortBy: 'createdAt', sortDir: 'desc' } as QuotationFilters))}
         />
+
+        {access.remove && <DeleteCancelledQuotations />}
       </div>
 
       <div className="overflow-x-auto -mx-4 sm:mx-0">

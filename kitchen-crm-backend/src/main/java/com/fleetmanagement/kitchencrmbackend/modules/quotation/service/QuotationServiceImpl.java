@@ -44,6 +44,9 @@ public class QuotationServiceImpl implements QuotationService {
     private com.fleetmanagement.kitchencrmbackend.modules.quotation.editrequest.QuotationEditRequestService editRequests;
 
     @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.quotationwork.repository.QuotationJobRepository quotationJobRepository;
+
+    @Autowired
     private QuotationAccessoryRepository accessoryRepository;
 
     @Autowired
@@ -463,9 +466,8 @@ public class QuotationServiceImpl implements QuotationService {
             return ApiResponse.error("Cannot delete approved quotation");
         }
 
-        deleteExistingLineItems(id);
         QuotationFolder folder = quotation.getFolder();
-        quotationRepository.delete(quotation);
+        removeQuotation(quotation);
         quotationRepository.flush();
         // Remove the folder when its last version is deleted
         if (folder != null && quotationRepository.countByFolderId(folder.getId()) == 0) {
@@ -866,8 +868,7 @@ public class QuotationServiceImpl implements QuotationService {
             return ApiResponse.error("Cannot delete folder: it contains an approved quotation");
         }
         for (Quotation q : versions) {
-            deleteExistingLineItems(q.getId());
-            quotationRepository.delete(q);
+            removeQuotation(q);
         }
         quotationRepository.flush();
         folderRepository.delete(folder);
@@ -1106,6 +1107,22 @@ public class QuotationServiceImpl implements QuotationService {
                 otherExpenseRepository.save(expense);
             }
         }
+    }
+
+    /**
+     * Deletes one quotation with everything that is only its own. Kitchens are removed by hand,
+     * the same way an update replaces them, so their plan images, scope details and elevations go
+     * with them whatever the foreign keys in a given database say. The work board and the edit
+     * requests keep the quotation's id without a foreign key: a finished job forgets it (the board
+     * shows the job without a quotation) and the quotation's edit requests are deleted.
+     */
+    private void removeQuotation(Quotation quotation) {
+        Long id = quotation.getId();
+        kitchenRepository.deleteByQuotationId(id);
+        deleteExistingLineItems(id);
+        quotationJobRepository.forgetQuotation(id);
+        editRequests.quotationDeleted(id);
+        quotationRepository.delete(quotation);
     }
 
     private void deleteExistingLineItems(Long quotationId) {

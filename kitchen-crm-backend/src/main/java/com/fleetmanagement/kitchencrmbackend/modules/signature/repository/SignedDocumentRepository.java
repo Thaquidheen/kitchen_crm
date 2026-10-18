@@ -39,6 +39,11 @@ public interface SignedDocumentRepository extends JpaRepository<SignedDocument, 
     Optional<SignedDocument> findTopByDocumentTypeAndReferenceIdOrderByCreatedAtDesc(DocumentType documentType, Long referenceId);
 
     /**
+     * Find every signature request of a document, whatever its status
+     */
+    List<SignedDocument> findByDocumentTypeAndReferenceId(DocumentType documentType, Long referenceId);
+
+    /**
      * Find all signed documents by status
      */
     List<SignedDocument> findByStatusOrderByCreatedAtDesc(SignatureStatus status);

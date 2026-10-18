@@ -176,6 +176,11 @@ public class QuotationEditRequestService {
         }
     }
 
+    /** The quotation itself was deleted: its requests, answered or not, have nothing left to point at. */
+    public void quotationDeleted(Long quotationId) {
+        repository.deleteByQuotationId(quotationId);
+    }
+
     /**
      * Someone with the "Change status" permission set the quotation's status by hand. Putting it
      * back to Draft is what a waiting request asked for; any other status than Completed leaves
