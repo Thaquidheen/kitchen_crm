@@ -99,6 +99,11 @@ public class QuotationEditRequestService {
         row.put("state", state);
         row.put("requestedByName", r.getRequestedByName());
         row.put("mine", userId != null && userId.equals(r.getRequestedByUserId()));
+        // What to change travels with the quotation: why it was asked, and the admin's note on
+        // approving it (shown where the quotation is edited). Words only, no amounts.
+        row.put("reason", r.getReason());
+        row.put("decisionNote", r.getDecisionNote());
+        row.put("decidedByName", r.getDecidedByName());
         return row;
     }
 
@@ -174,6 +179,11 @@ public class QuotationEditRequestService {
             r.setRequesterSeenAt(null);
             repository.save(r);
         }
+    }
+
+    /** The quotation itself was deleted: its requests, answered or not, have nothing left to point at. */
+    public void quotationDeleted(Long quotationId) {
+        repository.deleteByQuotationId(quotationId);
     }
 
     /**

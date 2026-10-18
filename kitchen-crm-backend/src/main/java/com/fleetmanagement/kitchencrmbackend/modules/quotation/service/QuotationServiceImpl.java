@@ -44,6 +44,9 @@ public class QuotationServiceImpl implements QuotationService {
     private com.fleetmanagement.kitchencrmbackend.modules.quotation.editrequest.QuotationEditRequestService editRequests;
 
     @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.quotationwork.repository.QuotationJobRepository quotationJobRepository;
+
+    @Autowired
     private QuotationAccessoryRepository accessoryRepository;
 
     @Autowired
@@ -463,9 +466,8 @@ public class QuotationServiceImpl implements QuotationService {
             return ApiResponse.error("Cannot delete approved quotation");
         }
 
-        deleteExistingLineItems(id);
         QuotationFolder folder = quotation.getFolder();
-        quotationRepository.delete(quotation);
+        removeQuotation(quotation);
         quotationRepository.flush();
         // Remove the folder when its last version is deleted
         if (folder != null && quotationRepository.countByFolderId(folder.getId()) == 0) {
@@ -866,8 +868,7 @@ public class QuotationServiceImpl implements QuotationService {
             return ApiResponse.error("Cannot delete folder: it contains an approved quotation");
         }
         for (Quotation q : versions) {
-            deleteExistingLineItems(q.getId());
-            quotationRepository.delete(q);
+            removeQuotation(q);
         }
         quotationRepository.flush();
         folderRepository.delete(folder);
@@ -1106,6 +1107,22 @@ public class QuotationServiceImpl implements QuotationService {
                 otherExpenseRepository.save(expense);
             }
         }
+    }
+
+    /**
+     * Deletes one quotation with everything that is only its own. Kitchens are removed by hand,
+     * the same way an update replaces them, so their plan images, scope details and elevations go
+     * with them whatever the foreign keys in a given database say. The work board and the edit
+     * requests keep the quotation's id without a foreign key: a finished job forgets it (the board
+     * shows the job without a quotation) and the quotation's edit requests are deleted.
+     */
+    private void removeQuotation(Quotation quotation) {
+        Long id = quotation.getId();
+        kitchenRepository.deleteByQuotationId(id);
+        deleteExistingLineItems(id);
+        quotationJobRepository.forgetQuotation(id);
+        editRequests.quotationDeleted(id);
+        quotationRepository.delete(quotation);
     }
 
     private void deleteExistingLineItems(Long quotationId) {
@@ -1364,27 +1381,30 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setLightingFinalTotal(quotation.getLightingFinalTotal());
         }
 
+        // GST per category is customer-facing, like each kitchen's (sent to everyone). Left at its
+        // default it read 0 next to a real total for anyone without "See margins".
+        if (quotation.getAccessoriesTaxAmount() != null) dto.setAccessoriesTaxAmount(quotation.getAccessoriesTaxAmount());
+        if (quotation.getCabinetsTaxAmount() != null) dto.setCabinetsTaxAmount(quotation.getCabinetsTaxAmount());
+        if (quotation.getDoorsTaxAmount() != null) dto.setDoorsTaxAmount(quotation.getDoorsTaxAmount());
+        if (quotation.getLightingTaxAmount() != null) dto.setLightingTaxAmount(quotation.getLightingTaxAmount());
+
         // Margin details only for those allowed to see margins
         if (PricingView.seesMargins(userRole)) {
             dto.setMarginPercentage(quotation.getMarginPercentage());
             dto.setMarginAmount(quotation.getMarginAmount());
 
-            // Category-wise margin and tax for admin if they exist
+            // Category-wise margin for admin if they exist
             if (quotation.getAccessoriesMarginAmount() != null) {
                 dto.setAccessoriesMarginAmount(quotation.getAccessoriesMarginAmount());
-                dto.setAccessoriesTaxAmount(quotation.getAccessoriesTaxAmount());
             }
             if (quotation.getCabinetsMarginAmount() != null) {
                 dto.setCabinetsMarginAmount(quotation.getCabinetsMarginAmount());
-                dto.setCabinetsTaxAmount(quotation.getCabinetsTaxAmount());
             }
             if (quotation.getDoorsMarginAmount() != null) {
                 dto.setDoorsMarginAmount(quotation.getDoorsMarginAmount());
-                dto.setDoorsTaxAmount(quotation.getDoorsTaxAmount());
             }
             if (quotation.getLightingMarginAmount() != null) {
                 dto.setLightingMarginAmount(quotation.getLightingMarginAmount());
-                dto.setLightingTaxAmount(quotation.getLightingTaxAmount());
             }
         }
 
@@ -1402,9 +1422,24 @@ public class QuotationServiceImpl implements QuotationService {
         // (always-available) per-category MRP margin/tax so it is correct for every role.
         // totalAmount is the Offer Price; the per-category MRP totals feed the PDF MRP split-up.
         QuotationMrpCalculator.MrpRates mrpRates = QuotationMrpCalculator.MrpRates.from(quotation);
+        // The MRP is customer-facing but is worked out from each category's total BEFORE margin,
+        // which is not sent to someone without "See rates". Worked out from what they were sent,
+        // every category of their PDF read 0, so it is worked out from the full figures here and
+        // only the result goes into their answer.
+        boolean fullFigures = PricingView.seesRates(userRole);
+        List<QuotationKitchenDto> mrpKitchens = fullFigures || dto.getKitchens() == null
+                ? dto.getKitchens()
+                : mrpInputs(quotation.getId());
+        Map<Long, QuotationKitchenDto> mrpKitchenById = new HashMap<>();
+        if (mrpKitchens != null) {
+            for (QuotationKitchenDto k : mrpKitchens) {
+                mrpKitchenById.put(k.getId(), k);
+            }
+        }
         if (dto.getKitchens() != null) {
             for (QuotationKitchenDto kdto : dto.getKitchens()) {
-                QuotationMrpCalculator.MrpBreakdown kb = QuotationMrpCalculator.computeKitchenMrp(kdto, mrpRates);
+                QuotationKitchenDto source = mrpKitchenById.getOrDefault(kdto.getId(), kdto);
+                QuotationMrpCalculator.MrpBreakdown kb = QuotationMrpCalculator.computeKitchenMrp(source, mrpRates);
                 kdto.setAccessoriesMrpTotal(kb.accessories);
                 kdto.setCabinetsMrpTotal(kb.cabinets);
                 kdto.setDoorsMrpTotal(kb.doors);
@@ -1413,7 +1448,19 @@ public class QuotationServiceImpl implements QuotationService {
                 kdto.setMrpTotal(kb.total);
             }
         }
-        QuotationMrpCalculator.MrpBreakdown mrp = QuotationMrpCalculator.computeQuotationMrp(dto, mrpRates);
+        QuotationDto mrpSource = dto;
+        if (!fullFigures) {
+            mrpSource = new QuotationDto();
+            mrpSource.setKitchens(mrpKitchens);
+            mrpSource.setTransportationPrice(quotation.getTransportationPrice());
+            mrpSource.setInstallationPrice(quotation.getInstallationPrice());
+            mrpSource.setOtherExpenses(dto.getOtherExpenses());
+            mrpSource.setAccessoriesBaseTotal(quotation.getAccessoriesBaseTotal());
+            mrpSource.setCabinetsBaseTotal(quotation.getCabinetsBaseTotal());
+            mrpSource.setDoorsBaseTotal(quotation.getDoorsBaseTotal());
+            mrpSource.setLightingBaseTotal(quotation.getLightingBaseTotal());
+        }
+        QuotationMrpCalculator.MrpBreakdown mrp = QuotationMrpCalculator.computeQuotationMrp(mrpSource, mrpRates);
         dto.setAccessoriesMrpTotal(mrp.accessories);
         dto.setCabinetsMrpTotal(mrp.cabinets);
         dto.setDoorsMrpTotal(mrp.doors);
@@ -1616,6 +1663,20 @@ public class QuotationServiceImpl implements QuotationService {
             return copiedFrom;
         }
         return sent != null ? sent : offer;
+    }
+
+    /** Per kitchen, only what the MRP is worked out from: the totals before margin and the expenses. */
+    private List<QuotationKitchenDto> mrpInputs(Long quotationId) {
+        return kitchenRepository.findByQuotationIdOrderByKitchenOrderAsc(quotationId).stream().map(kitchen -> {
+            QuotationKitchenDto k = new QuotationKitchenDto();
+            k.setId(kitchen.getId());
+            k.setAccessoriesBaseTotal(kitchen.getAccessoriesBaseTotal());
+            k.setCabinetsBaseTotal(kitchen.getCabinetsBaseTotal());
+            k.setDoorsBaseTotal(kitchen.getDoorsBaseTotal());
+            k.setLightingBaseTotal(kitchen.getLightingBaseTotal());
+            k.setOtherExpenses(loadOtherExpensesForKitchen(kitchen.getId()));
+            return k;
+        }).toList();
     }
 
     /**

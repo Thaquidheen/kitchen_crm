@@ -18,8 +18,9 @@ import { quotationLabel } from '@/features/quotations/components/QuotationList';
 import { ArrowLeft, Copy, Download, Edit, FileText, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
+import { QuotationBreakdown } from '@/features/quotations/components/QuotationBreakdown';
 import { usePendingEditRequests } from '@/features/quotations/usePendingEditRequests';
-import { EditRequestControl } from '@/features/quotations/components/EditRequestControl';
+import { EditRequestControl, EditRequestNotes } from '@/features/quotations/components/EditRequestControl';
 import { pendingFor } from '@/features/quotations/editRequestRules';
 
 const TABS = ['Overview', 'Line Items', 'Revisions', 'Activity'];
@@ -61,47 +62,6 @@ const ghostBtn =
 const cardCls = 'bg-background-800 border border-background-600 rounded-[14px]';
 const sectionLabelCls = 'text-[10.5px] font-semibold tracking-[0.09em] uppercase text-text-500';
 const thClass = 'px-3 py-[8px] text-left text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500';
-
-// One item table per non-empty category inside a kitchen (or the legacy lists)
-function ItemsTable({ title, rows }: { title: string; rows: Array<{ name: string; qty?: number | string; unit?: number; total?: number }> }) {
-  // Rate is the pre-margin unit price, so the column only renders for a super admin.
-  const access = useQuotationAccess();
-  if (!rows.length) return null;
-  const subtotal = rows.reduce((s, r) => s + (Number(r.total) || 0), 0);
-  return (
-    <div className="mb-4 last:mb-0">
-      <div className={`${sectionLabelCls} mb-1.5`}>{title}</div>
-      <div className="overflow-x-auto rounded-[10px] border border-background-600">
-        <table className="w-full min-w-[520px]">
-          <thead>
-            <tr className="bg-background-700">
-              <th className={thClass}>Item / Description</th>
-              <th className="px-3 py-[8px] text-center text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 w-16">Qty</th>
-              {access.seesRates && <th className="px-3 py-[8px] text-right text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 w-28">Rate</th>}
-              <th className="px-3 py-[8px] text-right text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 w-32">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={i} className="border-t border-background-600">
-                <td className="px-3 py-2 text-[13px] text-text-900">{r.name}</td>
-                <td className="px-3 py-2 text-[13px] text-text-700 text-center tabular-nums">{r.qty ?? '—'}</td>
-                {access.seesRates && <td className="px-3 py-2 text-[13px] text-text-700 text-right tabular-nums whitespace-nowrap">{fmtMoney(r.unit)}</td>}
-                <td className="px-3 py-2 text-[13px] font-semibold text-text-900 text-right tabular-nums whitespace-nowrap">{fmtMoney(r.total)}</td>
-              </tr>
-            ))}
-            <tr className="border-t border-background-600 bg-background-700/50">
-              <td colSpan={3} className="px-3 py-2 text-[12.5px] font-semibold text-text-700 text-right uppercase tracking-wide">
-                {title} subtotal
-              </td>
-              <td className="px-3 py-2 text-[13px] font-[650] text-text-900 text-right tabular-nums whitespace-nowrap">{fmtMoney(subtotal)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
 
 export function QuotationDetailPage() {
   const access = useQuotationAccess();
@@ -174,14 +134,6 @@ export function QuotationDetailPage() {
   const versionNumber: number | undefined = (data as any)?.versionNumber;
   const kitchens: any[] = (data as any)?.kitchens ?? [];
   const hasKitchens = kitchens.length > 0;
-
-  const itemRows = (list: any[] | undefined, nameKeys: string[]): Array<{ name: string; qty?: any; unit?: number; total?: number }> =>
-    (list ?? []).map((it: any) => ({
-      name: nameKeys.map((k) => it[k]).find((v) => v) || 'Item',
-      qty: it.quantity,
-      unit: it.unitPrice,
-      total: it.totalPrice,
-    }));
 
   const categoryTotals = [
     { label: 'Cabinets', offer: (data as any).cabinetsFinalTotal, mrp: (data as any).cabinetsMrpTotal },
@@ -286,6 +238,9 @@ export function QuotationDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* A reopened quotation: what the admin asked to change */}
+      <EditRequestNotes request={pendingFor(pendingEdits, data.id)} className="mb-4" />
 
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-background-600 mb-4 overflow-x-auto">
@@ -423,35 +378,7 @@ export function QuotationDetailPage() {
       )}
 
       {/* ===== Line Items ===== */}
-      {activeTab === 'Line Items' && (
-        <div className="space-y-4">
-          {hasKitchens ? (
-            kitchens.map((k: any, ki: number) => (
-              <div key={ki} className={`${cardCls} p-4`}>
-                <div className="flex items-center gap-2 mb-3">
-                  <FileText size={15} className="text-primary-600" />
-                  <span className="text-[14px] font-[650] text-text-900">{k.kitchenName || `Kitchen ${ki + 1}`}</span>
-                  <span className="flex-1" />
-                  <span className="text-[13px] font-semibold text-text-900 tabular-nums">
-                    {fmtMoney(Number(k.mrpTotal) > 0 ? k.mrpTotal : k.totalAmount)}
-                  </span>
-                </div>
-                <ItemsTable title="Cabinets" rows={itemRows(k.cabinets, ['description', 'cabinetTypeName'])} />
-                <ItemsTable title="Doors" rows={itemRows(k.doors, ['description', 'doorTypeName'])} />
-                <ItemsTable title="Accessories" rows={itemRows(k.accessories, ['description', 'accessoryName', 'customItemName'])} />
-                <ItemsTable title="Lighting" rows={itemRows(k.lighting, ['itemName', 'description'])} />
-              </div>
-            ))
-          ) : (
-            <div className={`${cardCls} p-4`}>
-              <ItemsTable title="Cabinets" rows={itemRows((data as any).cabinets, ['description', 'cabinetTypeName'])} />
-              <ItemsTable title="Doors" rows={itemRows((data as any).doors, ['description', 'doorTypeName'])} />
-              <ItemsTable title="Accessories" rows={itemRows((data as any).accessories, ['description', 'accessoryName', 'customItemName'])} />
-              <ItemsTable title="Lighting" rows={itemRows((data as any).lighting, ['itemName', 'description'])} />
-            </div>
-          )}
-        </div>
-      )}
+      {activeTab === 'Line Items' && <QuotationBreakdown quotation={data} access={access} />}
 
       {/* ===== Revisions ===== */}
       {activeTab === 'Revisions' && (

@@ -14,7 +14,8 @@ import { CustomerFormModal } from './CustomerFormModal';
 import { CustomerFilters } from './CustomerFilters';
 import { ProjectNetworkChips } from './ProjectNetworkChips';
 import { customerLeadSource, formatProjectNetwork, leadSourceLabel } from '../leadSource';
-import { Eye, Edit, Trash2, Search, Filter, Columns3 } from 'lucide-react';
+import { Eye, Edit, Trash2, Search, Filter, Columns3, Star } from 'lucide-react';
+import { CustomerStarButton, STAR_COLOR, starredRowStyle } from './CustomerStarButton';
 import toast from 'react-hot-toast';
 import {
   useGetCustomersPageQuery,
@@ -219,6 +220,25 @@ export function CustomerList({
           </div>
           <div className="flex-1" />
           <button
+            type="button"
+            onClick={() => onFiltersChange({ ...filters, highlighted: filters.highlighted ? undefined : true, page: 0 })}
+            title="Show only starred customers"
+            aria-pressed={!!filters.highlighted}
+            className="h-[34px] px-2.5 inline-flex items-center gap-1.5 rounded-[10px] border text-[12.5px] font-medium transition-colors"
+            style={
+              filters.highlighted
+                ? {
+                    borderColor: 'var(--color-primary-600)',
+                    background: 'color-mix(in oklab, var(--color-primary-600) 16%, transparent)',
+                    color: 'var(--color-text-900)',
+                  }
+                : { borderColor: 'var(--color-background-600)', background: 'var(--color-background-900)' }
+            }
+          >
+            <Star size={13} fill={filters.highlighted ? STAR_COLOR : 'none'} color={filters.highlighted ? STAR_COLOR : 'currentColor'} />
+            Starred
+          </button>
+          <button
             onClick={() => setShowFilters((s) => !s)}
             className={`inline-flex items-center gap-1.5 px-3 py-[7px] rounded-[10px] border text-[12.5px] font-medium transition-colors ${
               showFilters
@@ -407,7 +427,9 @@ export function CustomerList({
                     style={
                       selected
                         ? { background: 'color-mix(in oklab, var(--color-primary-600) 10%, transparent)' }
-                        : undefined
+                        : customer.highlighted
+                          ? starredRowStyle
+                          : undefined
                     }
                   >
                     <td className="pl-3.5 py-[13px]">
@@ -430,6 +452,7 @@ export function CustomerList({
                         <div className="w-8 h-8 rounded-[9px] bg-background-600 border border-background-500 flex items-center justify-center text-[11px] font-[650] text-text-700 shrink-0">
                           {initialsOf(customer.name)}
                         </div>
+                        {customer.highlighted && <Star size={12} fill={STAR_COLOR} color={STAR_COLOR} className="shrink-0" />}
                         <div className="text-[13.5px] font-semibold text-text-900 whitespace-nowrap overflow-hidden text-ellipsis group-hover:text-primary-600 transition-colors">
                           {customer.name}
                         </div>
@@ -463,7 +486,8 @@ export function CustomerList({
                       {formatCreated(customer.createdAt)}
                     </td>
                     <td className="px-3.5 py-[13px]">
-                      <div className="flex justify-end gap-0.5">
+                      <div className="flex justify-end items-center gap-0.5">
+                        <CustomerStarButton id={customer.id} highlighted={customer.highlighted} className="w-[30px] h-[30px]" />
                         <Button
                           variant="ghost"
                           size="sm"

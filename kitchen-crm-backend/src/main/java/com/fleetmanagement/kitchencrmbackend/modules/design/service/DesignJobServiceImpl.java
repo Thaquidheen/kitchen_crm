@@ -627,7 +627,10 @@ public class DesignJobServiceImpl implements DesignJobService {
         if (file == null || file.isEmpty()) {
             return ApiResponse.error("Choose a file to upload");
         }
-        if (!OPEN.contains(status(job))) {
+        // The admin corrects an approved version (the right file in, then the wrong one out); for
+        // everyone else a redesign opens the next version for new files.
+        boolean correctsApproved = admin && APPROVED_STATES.contains(status(job));
+        if (!OPEN.contains(status(job)) && !correctsApproved) {
             return ApiResponse.error(status(job) == DesignStatus.CANCELLED
                     ? "This design is cancelled"
                     : "This version is approved. A redesign opens the next version for new files.");
@@ -639,6 +642,11 @@ public class DesignJobServiceImpl implements DesignJobService {
         ApiResponse<DesignPhaseFileDto> stored = store(job, file, DesignPhaseFile.FileCategory.DESIGN, description, callerName);
         if (!Boolean.TRUE.equals(stored.getSuccess())) {
             return ApiResponse.error(stored.getMessage());
+        }
+        if (correctsApproved) {
+            // Kept in the conversation: an approved design changed after the approval.
+            saveNote(job, "Added " + file.getOriginalFilename() + " to the approved " + "V" + version(job) + ".",
+                    callerId, callerName, false);
         }
         DesignJobDto dto = detail(job);
         return ApiResponse.success("File uploaded", admin || own ? dto : withoutConversation(dto));
@@ -721,16 +729,37 @@ public class DesignJobServiceImpl implements DesignJobService {
             if (!admin && !own && (callerName == null || !callerName.equals(file.getUploadedBy()))) {
                 return ApiResponse.error("Only the designer or the admin can remove this file");
             }
-            if (versionOf(file) != version(job) || !OPEN.contains(status(job))) {
+            boolean workedOn = versionOf(file) == version(job) && OPEN.contains(status(job));
+            // The admin may take a wrong file out of the approved version the customer has now;
+            // earlier versions stay as they were, as the design's history.
+            boolean currentApproved = versionOf(file) == version(job) && APPROVED_STATES.contains(status(job));
+            if (!workedOn && !(admin && currentApproved)) {
                 return ApiResponse.error("Files of an approved version cannot be removed");
+            }
+            if (!workedOn) {
+                // That version must keep a design, so its last file is replaced first, not removed.
+                long left = fileRepository.findByDesignPhaseId(job.getId()).stream()
+                        .filter(f -> isDesignFile(f) && versionOf(f) == versionOf(file) && !f.getId().equals(file.getId()))
+                        .count();
+                if (left == 0) {
+                    return ApiResponse.error("This is the only file of the approved design. Add the right file first, then remove this one");
+                }
             }
             if (!admin && !DESIGNER_WORK.contains(status(job))) {
                 return ApiResponse.error("This design is with the admin for review");
             }
         }
+        boolean fromApproved = isDesignFile(file)
+                && !(versionOf(file) == version(job) && OPEN.contains(status(job)));
+        String removedName = file.getOriginalFileName();
+        int removedVersion = versionOf(file);
         ApiResponse<String> deleted = fileService.deleteFile(fileId);
         if (!Boolean.TRUE.equals(deleted.getSuccess())) {
             return ApiResponse.error(deleted.getMessage());
+        }
+        if (fromApproved) {
+            // Kept in the conversation: an approved design changed after the approval.
+            saveNote(job, "Removed " + removedName + " from the approved V" + removedVersion + ".", callerId, callerName, false);
         }
         DesignJobDto dto = detail(job);
         return ApiResponse.success("File removed", admin || own ? dto : withoutConversation(dto));

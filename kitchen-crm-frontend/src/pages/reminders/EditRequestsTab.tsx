@@ -89,7 +89,7 @@ export const EditRequestsTab: React.FC = () => {
                   value={notes[r.id] ?? ''}
                   onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })}
                   maxLength={500}
-                  placeholder="Note for the person (optional)"
+                  placeholder="What needs to change — shown with the quotation while it is edited (optional)"
                   className="mt-2 w-full h-[34px] px-3 rounded-[9px] border border-background-600 bg-background-800 text-text-900 text-[12.5px] outline-none focus:border-primary-600 placeholder:text-text-500"
                 />
               </div>

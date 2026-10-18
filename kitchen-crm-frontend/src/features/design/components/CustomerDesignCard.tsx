@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import { ChevronDown, Palette, Paperclip, RotateCcw, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useGetCustomerDesignJobQuery, useGetDesignMeQuery, useUploadCustomerPlanDocumentsMutation } from '../designAPI';
-import { PLAN_ACCEPT, addPickedFiles, isPlanFileName, uploadSizeProblem } from '../designFiles';
+import { PLAN_ACCEPT, addPickedFiles, designFilesHeading, isPlanFileName, uploadSizeProblem } from '../designFiles';
 import {
   DesignStatusPill,
   FileKindIcon,
@@ -175,10 +175,13 @@ export const CustomerDesignCard: React.FC<Props> = ({
           </div>
 
           {files.length > 0 ? (
-            <div className="flex flex-col gap-1.5">
-              {files.map((f) => (
-                <FileLink key={f.id} file={f} />
-              ))}
+            <div>
+              <div className="text-[11.5px] font-medium text-text-600 mb-1">{designFilesHeading(files.length, approved)}</div>
+              <div className="flex flex-col gap-1.5">
+                {files.map((f) => (
+                  <FileLink key={f.id} file={f} />
+                ))}
+              </div>
             </div>
           ) : (
             <p className="m-0 text-[12px] text-text-500">

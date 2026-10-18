@@ -13,7 +13,7 @@ import { dueText, PriorityPill } from '@/features/design/designUi';
 import { QuotationStatusPill } from '@/features/quotations/components/QuotationStatusPill';
 import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
 import { usePendingEditRequests } from '@/features/quotations/usePendingEditRequests';
-import { EditRequestControl } from '@/features/quotations/components/EditRequestControl';
+import { EditRequestControl, EditRequestNotes } from '@/features/quotations/components/EditRequestControl';
 import { pendingFor } from '@/features/quotations/editRequestRules';
 import { ROUTES } from '@/routes/routes.config';
 import {
@@ -199,6 +199,9 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
                     label={quotationLabel(job.quotation)}
                   />
                 </div>
+              )}
+              {job.status === 'COMPLETED' && job.quotation && (
+                <EditRequestNotes request={pendingFor(pendingEdits, job.quotation.id)} className="mt-2.5" />
               )}
             </div>
           )}

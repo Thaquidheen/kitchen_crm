@@ -42,6 +42,8 @@ public class PermissionInterceptor implements HandlerInterceptor {
     static final List<Rule> RULES = List.of(
             // ---- customers: the record itself
             new Rule(Set.of("PATCH"), "/api/v1/customers/*/status", Permission.CUSTOMERS_CHANGE_STAGE),
+            // the star is part of the customer's record: whoever may edit the customer sets it
+            new Rule(Set.of("PATCH"), "/api/v1/customers/*/highlight", Permission.CUSTOMERS_EDIT),
             // what a stage change would do to the customer's quotations: asked by whoever changes the stage
             new Rule(READ, "/api/v1/customers/*/quotation-effects", Permission.CUSTOMERS_CHANGE_STAGE),
             new Rule(Set.of("POST"), "/api/v1/customers", Permission.CUSTOMERS_ADD),
@@ -70,6 +72,8 @@ public class PermissionInterceptor implements HandlerInterceptor {
 
             // Quotations. The stamped "approved" PDF stays with the administrator (its own rule on
             // the controller); pricing — who sees rates and margins — is decided inside the answer.
+            // Deleting cancelled quotations in bulk is a POST: listed before the create rule.
+            new Rule(Set.of("POST"), "/api/v1/quotations/bulk-delete", Permission.QUOTATIONS_DELETE),
             new Rule(Set.of("DELETE"), "/api/v1/quotations/folders/*", Permission.QUOTATIONS_DELETE),
             new Rule(Set.of("DELETE"), "/api/v1/quotations/*", Permission.QUOTATIONS_DELETE),
             new Rule(Set.of("PATCH"), "/api/v1/quotations/*/status", Permission.QUOTATIONS_CHANGE_STATUS),

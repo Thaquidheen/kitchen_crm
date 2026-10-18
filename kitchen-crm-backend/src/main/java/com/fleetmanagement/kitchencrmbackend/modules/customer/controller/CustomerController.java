@@ -52,6 +52,7 @@ public class CustomerController {
         CustomerDto dto = new CustomerDto();
         dto.setId(full.getId());
         dto.setName(full.getName());
+        dto.setHighlighted(full.getHighlighted());
         dto.setPlace(full.getPlace());
         dto.setKitchenTypes(full.getKitchenTypes());
         dto.setStatus(full.getStatus());
@@ -75,11 +76,14 @@ public class CustomerController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) Boolean highlighted,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         String safeSortBy = SORTABLE.contains(sortBy) ? sortBy : "createdAt";
-        Sort sort = sortDir.equalsIgnoreCase("desc") ?
-                Sort.by(safeSortBy).descending() : Sort.by(safeSortBy).ascending();
+        // Starred customers stay at the top, whatever the chosen sort (as on Architects).
+        Sort sort = Sort.by(Sort.Order.desc("highlighted")).and(sortDir.equalsIgnoreCase("desc") ?
+                Sort.by(safeSortBy).descending() : Sort.by(safeSortBy).ascending());
+        boolean starredOnly = Boolean.TRUE.equals(highlighted);
         Pageable pageable = PageRequest.of(page, size, sort);
 
         LocalDateTime createdFromDt = createdFrom != null ? createdFrom.atStartOfDay() : null;
@@ -91,10 +95,10 @@ public class CustomerController {
         ApiResponse<Page<CustomerDto>> response = seesDetails
                 ? customerService.getAllCustomers(
                         search, name, email, status, leadSourceType, address, kitchenTypes,
-                        createdFromDt, createdToDt, pageable)
+                        createdFromDt, createdToDt, starredOnly, pageable)
                 : customerService.getAllCustomers(
                         null, name != null ? name : search, null, status, null, null, null,
-                        createdFromDt, createdToDt, pageable);
+                        createdFromDt, createdToDt, starredOnly, pageable);
         if (!seesDetails && response.getData() != null) {
             response.setData(response.getData().map(CustomerController::nameOnly));
         }
@@ -155,6 +159,17 @@ public class CustomerController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<String>> deleteCustomer(@PathVariable Long id) {
         return ResponseEntity.ok(customerService.deleteCustomer(id));
+    }
+
+    /** Star or unstar a customer: body {"highlighted": true|false}. Shared by the whole team. */
+    @PatchMapping("/{id}/highlight")
+    public ResponseEntity<ApiResponse<CustomerDto>> setHighlighted(@PathVariable Long id,
+                                                                   @RequestBody Map<String, Object> body) {
+        boolean on = body != null && Boolean.TRUE.equals(body.get("highlighted"));
+        ApiResponse<CustomerDto> result = customerService.setHighlighted(id, on);
+        return Boolean.TRUE.equals(result.getSuccess())
+                ? ResponseEntity.ok(result)
+                : ResponseEntity.status(org.springframework.http.HttpStatus.NOT_FOUND).body(result);
     }
 
     @PatchMapping("/{id}/status")

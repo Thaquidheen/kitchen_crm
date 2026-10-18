@@ -54,6 +54,10 @@ public class Customer extends Auditable {
     @Column(nullable = false)
     private CustomerStatus status = CustomerStatus.LEAD;
 
+    /** Starred by the team: a priority customer, kept at the top of the list (V160). */
+    @Column(name = "highlighted", nullable = false)
+    private Boolean highlighted = false;
+
     /**
      * Who is involved in this customer's project — architects, builders, whoever referred them.
      * Independent of {@link #leadSourceType}: an online lead can still have an architect on the

@@ -3,6 +3,7 @@ package com.fleetmanagement.kitchencrmbackend.modules.quotationwork.repository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
 import com.fleetmanagement.kitchencrmbackend.modules.quotationwork.entity.QuotationJob;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -52,4 +53,12 @@ public interface QuotationJobRepository extends JpaRepository<QuotationJob, Long
     @Query("SELECT q.customer.id, q.id, q.quotationNumber, q.projectName, q.versionNumber, q.status, q.createdAt "
             + "FROM Quotation q WHERE q.customer.id IN :customerIds ORDER BY q.id DESC")
     List<Object[]> findQuotationsOfCustomers(@Param("customerIds") Collection<Long> customerIds);
+
+    /**
+     * The quotation a finished job handed in was deleted. The column has no foreign key, so the
+     * jobs are told here; the board then shows the job without a quotation.
+     */
+    @Modifying
+    @Query("UPDATE QuotationJob j SET j.quotationId = NULL WHERE j.quotationId = :quotationId")
+    int forgetQuotation(@Param("quotationId") Long quotationId);
 }

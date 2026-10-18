@@ -40,6 +40,7 @@ import {
   CustomerQuotationsSummary,
 } from '../../features/customers/components/CustomerQuotationsTab';
 import { StatusChangeModal } from '../../features/customers/components/StatusChangeModal';
+import { CustomerStarButton } from '../../features/customers/components/CustomerStarButton';
 import { CustomerDesignCard } from '../../features/design/components/CustomerDesignCard';
 import { useGetCustomerDesignJobQuery } from '../../features/design/designAPI';
 import { DesignStatusPill } from '../../features/design/designUi';
@@ -195,6 +196,7 @@ const CustomerDetailPage: React.FC = () => {
             <h1 className="m-0 text-[19px] font-[650] tracking-[-0.01em] text-text-900 whitespace-nowrap overflow-hidden text-ellipsis">
               {customer.name}
             </h1>
+            <CustomerStarButton id={customer.id} highlighted={customer.highlighted} size={16} className="w-8 h-8" />
             <span
               className="inline-flex items-center gap-1.5 px-2.5 py-[3px] rounded-full text-xs font-semibold"
               style={{ background: `var(--st-${pill.st}-bg)`, color: `var(--st-${pill.st}-fg)` }}

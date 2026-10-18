@@ -67,6 +67,8 @@ export interface Customer {
   contactPerson?: string;
   followUpNotes?: string;
   status: CustomerStatus;
+  /** Starred by the team: a priority customer, kept at the top of the list. */
+  highlighted?: boolean;
   /** The channel they arrived through. Read through customerLeadSource(), never directly. */
   leadSourceType?: LeadSourceType;
   /** Who is on the project. Read through customerProjectNetwork(), never directly. */
@@ -131,6 +133,8 @@ export interface CustomerListParams {
   kitchenTypes?: string;
   createdFrom?: string; // YYYY-MM-DD
   createdTo?: string;   // YYYY-MM-DD
+  /** Only starred customers. */
+  highlighted?: boolean;
 }
 
 export interface CustomerStatistics {

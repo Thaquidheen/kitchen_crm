@@ -60,4 +60,13 @@ public interface CustomerRepository extends JpaRepository<Customer, Long>, JpaSp
     // unused before this change — the query has never applied it.
     @Query("SELECT c.id, c.name, SUM(q.totalAmount), COUNT(q) FROM Customer c JOIN Quotation q ON c.id = q.customer.id GROUP BY c.id, c.name ORDER BY SUM(q.totalAmount) DESC")
     List<Object[]> getTopCustomersByRevenue(@Param("limit") int limit);
+
+    /**
+     * Star or unstar, without touching anything else. updated_at is assigned to itself because the
+     * column refreshes itself on any UPDATE that does not set it.
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE Customer c SET c.highlighted = :on, c.updatedAt = c.updatedAt WHERE c.id = :id")
+    int setHighlighted(@org.springframework.data.repository.query.Param("id") Long id,
+                       @org.springframework.data.repository.query.Param("on") boolean on);
 }

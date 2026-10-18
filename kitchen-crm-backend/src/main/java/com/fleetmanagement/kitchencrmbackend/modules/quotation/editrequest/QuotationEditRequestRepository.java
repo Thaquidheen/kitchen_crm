@@ -13,6 +13,8 @@ public interface QuotationEditRequestRepository extends JpaRepository<QuotationE
 
     List<QuotationEditRequest> findByQuotationIdAndStatus(Long quotationId, String status);
 
+    void deleteByQuotationId(Long quotationId);
+
     List<QuotationEditRequest> findByRequestedByUserIdAndStatusOrderByIdDesc(Long userId, String status);
 
     /** What the admin's list shows under the open ones: answers given lately. */
