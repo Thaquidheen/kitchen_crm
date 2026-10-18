@@ -10,6 +10,17 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 public interface CustomerService {
+    /** The same list, only starred customers when {@code starredOnly}. */
+    ApiResponse<Page<CustomerDto>> getAllCustomers(String search, String name, String email,
+                                                   Customer.CustomerStatus status,
+                                                   Customer.LeadSourceType leadSourceType,
+                                                   String address, String kitchenTypes,
+                                                   LocalDateTime createdFrom, LocalDateTime createdTo,
+                                                   boolean starredOnly, Pageable pageable);
+
+    /** Star or unstar a customer. */
+    ApiResponse<CustomerDto> setHighlighted(Long id, boolean highlighted);
+
     ApiResponse<Page<CustomerDto>> getAllCustomers(String search, String name, String email,
                                                    Customer.CustomerStatus status,
                                                    Customer.LeadSourceType leadSourceType,

@@ -50,11 +50,38 @@ public class CustomerServiceImpl implements CustomerService {
                                                           String address, String kitchenTypes,
                                                           LocalDateTime createdFrom, LocalDateTime createdTo,
                                                           Pageable pageable) {
+        return getAllCustomers(search, name, email, status, leadSourceType, address, kitchenTypes,
+                createdFrom, createdTo, false, pageable);
+    }
+
+    @Override
+    public ApiResponse<Page<CustomerDto>> getAllCustomers(String search, String name, String email,
+                                                          Customer.CustomerStatus status,
+                                                          Customer.LeadSourceType leadSourceType,
+                                                          String address, String kitchenTypes,
+                                                          LocalDateTime createdFrom, LocalDateTime createdTo,
+                                                          boolean starredOnly, Pageable pageable) {
         Specification<Customer> spec = CustomerSpecifications.withFilters(
                 search, name, email, status, leadSourceType, address, kitchenTypes, createdFrom, createdTo);
+        if (starredOnly) {
+            spec = spec.and((root, query, cb) -> cb.isTrue(root.get("highlighted")));
+        }
         Page<Customer> customers = customerRepository.findAll(spec, pageable);
         Page<CustomerDto> customerDtos = customers.map(this::convertToDto);
         return ApiResponse.success(customerDtos);
+    }
+
+    @Override
+    public ApiResponse<CustomerDto> setHighlighted(Long id, boolean highlighted) {
+        if (customerRepository.setHighlighted(id, highlighted) == 0) {
+            return ApiResponse.error("Customer not found");
+        }
+        Customer customer = customerRepository.findById(id).orElse(null);
+        if (customer == null) {
+            return ApiResponse.error("Customer not found");
+        }
+        customer.setHighlighted(highlighted); // the update query bypassed the loaded entity
+        return ApiResponse.success(highlighted ? "Customer starred" : "Star removed", convertToDto(customer));
     }
 
     @Override
@@ -295,6 +322,7 @@ public class CustomerServiceImpl implements CustomerService {
         CustomerDto dto = new CustomerDto();
         dto.setId(customer.getId());
         dto.setName(customer.getName());
+        dto.setHighlighted(Boolean.TRUE.equals(customer.getHighlighted()));
         dto.setContact(customer.getContact());
         dto.setEmail(customer.getEmail());
         dto.setAddress(customer.getAddress());

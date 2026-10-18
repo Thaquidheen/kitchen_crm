@@ -31,6 +31,8 @@ public class CustomerDto {
     private String address;
     private String kitchenTypes;
     private Customer.CustomerStatus status;
+    /** Starred: a priority customer, kept at the top of the list. */
+    private Boolean highlighted;
 
     // Sales-tracker fields
     private String sqft;

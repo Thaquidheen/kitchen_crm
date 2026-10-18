@@ -221,6 +221,26 @@ export const customersAPI = baseApi.injectEndpoints({
       }
     ),
 
+    // Star or unstar a customer (shared by the whole team; starred ones stay at the top).
+    toggleCustomerHighlight: builder.mutation<Customer, { id: number; highlighted: boolean }>({
+      query: ({ id, highlighted }) => ({
+        url: `${API_ENDPOINTS.CUSTOMERS.BY_ID(id)}/highlight`,
+        method: 'PATCH',
+        body: { highlighted },
+      }),
+      transformResponse: (response: ApiResponse<Customer>) => {
+        if (response && response.success === false) {
+          throw new Error(response.message || 'Failed to change the star');
+        }
+        return response.data as Customer;
+      },
+      invalidatesTags: (r, e, { id }) => [
+        { type: 'Customers', id },
+        { type: 'Customers', id: 'LIST' },
+        { type: 'Customers', id: 'PAGE' },
+      ],
+    }),
+
     // What moving this customer to a stage would do to their quotations (no amounts).
     getQuotationEffects: builder.query<QuotationEffects, { customerId: number; status: string }>({
       query: ({ customerId, status }) => ({
@@ -343,6 +363,7 @@ export const {
   useDeleteCustomerMutation,
   useUpdateCustomerStatusMutation,
   useGetQuotationEffectsQuery,
+  useToggleCustomerHighlightMutation,
   useGetCustomerStatisticsQuery,
   useGetPipelineQuery,
   useUpdatePipelineMutation,
