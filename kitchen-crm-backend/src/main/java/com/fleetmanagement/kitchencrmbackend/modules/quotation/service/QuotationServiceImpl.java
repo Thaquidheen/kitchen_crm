@@ -1402,9 +1402,24 @@ public class QuotationServiceImpl implements QuotationService {
         // (always-available) per-category MRP margin/tax so it is correct for every role.
         // totalAmount is the Offer Price; the per-category MRP totals feed the PDF MRP split-up.
         QuotationMrpCalculator.MrpRates mrpRates = QuotationMrpCalculator.MrpRates.from(quotation);
+        // The MRP is customer-facing but is worked out from each category's total BEFORE margin,
+        // which is not sent to someone without "See rates". Worked out from what they were sent,
+        // every category of their PDF read 0, so it is worked out from the full figures here and
+        // only the result goes into their answer.
+        boolean fullFigures = PricingView.seesRates(userRole);
+        List<QuotationKitchenDto> mrpKitchens = fullFigures || dto.getKitchens() == null
+                ? dto.getKitchens()
+                : loadKitchens(quotation.getId(), PricingView.FULL);
+        Map<Long, QuotationKitchenDto> mrpKitchenById = new HashMap<>();
+        if (mrpKitchens != null) {
+            for (QuotationKitchenDto k : mrpKitchens) {
+                mrpKitchenById.put(k.getId(), k);
+            }
+        }
         if (dto.getKitchens() != null) {
             for (QuotationKitchenDto kdto : dto.getKitchens()) {
-                QuotationMrpCalculator.MrpBreakdown kb = QuotationMrpCalculator.computeKitchenMrp(kdto, mrpRates);
+                QuotationKitchenDto source = mrpKitchenById.getOrDefault(kdto.getId(), kdto);
+                QuotationMrpCalculator.MrpBreakdown kb = QuotationMrpCalculator.computeKitchenMrp(source, mrpRates);
                 kdto.setAccessoriesMrpTotal(kb.accessories);
                 kdto.setCabinetsMrpTotal(kb.cabinets);
                 kdto.setDoorsMrpTotal(kb.doors);
@@ -1413,7 +1428,19 @@ public class QuotationServiceImpl implements QuotationService {
                 kdto.setMrpTotal(kb.total);
             }
         }
-        QuotationMrpCalculator.MrpBreakdown mrp = QuotationMrpCalculator.computeQuotationMrp(dto, mrpRates);
+        QuotationDto mrpSource = dto;
+        if (!fullFigures) {
+            mrpSource = new QuotationDto();
+            mrpSource.setKitchens(mrpKitchens);
+            mrpSource.setTransportationPrice(quotation.getTransportationPrice());
+            mrpSource.setInstallationPrice(quotation.getInstallationPrice());
+            mrpSource.setOtherExpenses(dto.getOtherExpenses());
+            mrpSource.setAccessoriesBaseTotal(quotation.getAccessoriesBaseTotal());
+            mrpSource.setCabinetsBaseTotal(quotation.getCabinetsBaseTotal());
+            mrpSource.setDoorsBaseTotal(quotation.getDoorsBaseTotal());
+            mrpSource.setLightingBaseTotal(quotation.getLightingBaseTotal());
+        }
+        QuotationMrpCalculator.MrpBreakdown mrp = QuotationMrpCalculator.computeQuotationMrp(mrpSource, mrpRates);
         dto.setAccessoriesMrpTotal(mrp.accessories);
         dto.setCabinetsMrpTotal(mrp.cabinets);
         dto.setDoorsMrpTotal(mrp.doors);
