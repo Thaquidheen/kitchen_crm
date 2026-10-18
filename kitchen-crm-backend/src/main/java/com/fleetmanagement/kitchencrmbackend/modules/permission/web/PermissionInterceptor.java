@@ -70,6 +70,8 @@ public class PermissionInterceptor implements HandlerInterceptor {
 
             // Quotations. The stamped "approved" PDF stays with the administrator (its own rule on
             // the controller); pricing — who sees rates and margins — is decided inside the answer.
+            // Deleting cancelled quotations in bulk is a POST: listed before the create rule.
+            new Rule(Set.of("POST"), "/api/v1/quotations/bulk-delete", Permission.QUOTATIONS_DELETE),
             new Rule(Set.of("DELETE"), "/api/v1/quotations/folders/*", Permission.QUOTATIONS_DELETE),
             new Rule(Set.of("DELETE"), "/api/v1/quotations/*", Permission.QUOTATIONS_DELETE),
             new Rule(Set.of("PATCH"), "/api/v1/quotations/*/status", Permission.QUOTATIONS_CHANGE_STATUS),
