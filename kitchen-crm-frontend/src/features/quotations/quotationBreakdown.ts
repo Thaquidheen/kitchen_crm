@@ -76,7 +76,9 @@ export const breakdownLine = (kind: LineKind, item: any, marginPct?: number): Br
   const name = NAME_KEYS[kind].map((k) => item?.[k]).find((v) => v) || 'Item';
   const rate = num(item?.unitPrice);
   if (rate === undefined) {return { name, qty };}
-  const sqft = kind === 'doors' ? doorFaceSqft(num(item?.widthMm), num(item?.heightMm)) : undefined;
+  // The face area the server priced the door with; worked out from the size only when it is missing.
+  const sqft =
+    kind === 'doors' ? num(item?.calculatedSqft) ?? doorFaceSqft(num(item?.widthMm), num(item?.heightMm)) : undefined;
   const base = rate * (sqft ?? 1) * qty;
   return {
     name,
@@ -130,10 +132,26 @@ export const expenseBreakdown = (expenses: any[] | undefined, pct: { margin?: un
     .filter((e) => e.amount !== 0)
     .map((e) => ({ ...e, withMargin: marginPct === undefined ? undefined : e.amount * (1 + marginPct / 100) }));
   const base = rows.reduce((s, r) => s + r.amount, 0);
+  // Without the margin (not sent to everyone) GST and the total cannot be worked out: unknown, not
+  // a smaller figure.
   const margin = marginPct === undefined ? undefined : (base * marginPct) / 100;
-  const after = base + (margin ?? 0);
-  const tax = taxPct === undefined ? undefined : (after * taxPct) / 100;
-  return { rows, marginPct, taxPct, base, margin, tax, final: tax === undefined ? undefined : after + tax };
+  const after = margin === undefined ? undefined : base + margin;
+  const tax = after === undefined || taxPct === undefined ? undefined : (after * taxPct) / 100;
+  return { rows, marginPct, taxPct, base, margin, tax, final: after === undefined || tax === undefined ? undefined : after + tax };
+};
+
+/**
+ * Transportation charged once for a quotation with several kitchens (kept on the quotation, not on
+ * a kitchen), priced like the other expenses.
+ */
+export const commonTransport = (quotation: any): ExpenseBreakdown | null => {
+  const kitchens: any[] = quotation?.kitchens ?? [];
+  const amount = num(quotation?.transportationPrice) ?? 0;
+  if (kitchens.length < 2 || amount <= 0) {return null;}
+  return expenseBreakdown([{ name: 'Transportation (all kitchens)', amount }], {
+    margin: quotation?.miscellaneousMarginPercentage,
+    tax: quotation?.miscellaneousTaxPercentage,
+  });
 };
 
 const KINDS: LineKind[] = ['cabinets', 'doors', 'accessories', 'lighting'];

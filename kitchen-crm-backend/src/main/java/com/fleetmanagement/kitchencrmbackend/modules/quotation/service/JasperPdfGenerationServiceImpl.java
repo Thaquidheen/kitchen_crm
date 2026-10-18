@@ -346,6 +346,16 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
         BigDecimal commonTransportWithMargin = commonTransportBase.add(commonTransportMargin);
         BigDecimal commonTransportTax = commonTransportWithMargin.multiply(grandMrpMiscTaxPct).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
         BigDecimal commonTransportFinal = commonTransportWithMargin.add(commonTransportTax);
+        // The MRP margin % is not sent to someone without "See margins", so for them the line above
+        // misses the margin. The MRP totals are always complete: the transport line is what is
+        // left of the MRP total once the kitchens are counted.
+        if (isMultiKitchen && commonTransportBase.signum() > 0 && quotation.getMiscellaneousMrpMarginPercentage() == null
+                && quotation.getMrpFinal() != null) {
+            BigDecimal kitchensMrp = quotation.getKitchens().stream()
+                    .map(k -> k.getMrpTotal() != null ? k.getMrpTotal() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            commonTransportFinal = quotation.getMrpFinal().subtract(kitchensMrp);
+        }
         params.put("COMMON_TRANSPORTATION", commonTransportFinal);
 
         // MRP (list price): pre-computed in QuotationServiceImpl.convertToDto with the entity's
@@ -636,7 +646,12 @@ public class JasperPdfGenerationServiceImpl implements JasperPdfGenerationServic
 
     private BigDecimal calculateGrandTotal(QuotationDto quotation) {
         BigDecimal total;
-        if (quotation.getKitchens() != null && !quotation.getKitchens().isEmpty()) {
+        if (quotation.getKitchens() != null && !quotation.getKitchens().isEmpty()
+                && quotation.getMiscellaneousMarginPercentage() == null && quotation.getTotalAmount() != null) {
+            // Without "See margins" the miscellaneous margin is not sent, and the sum below would
+            // leave it out of the transport; the stored total is that same sum, sent to everyone.
+            total = quotation.getTotalAmount();
+        } else if (quotation.getKitchens() != null && !quotation.getKitchens().isEmpty()) {
             // Multi-kitchen: kitchen totals already include per-kitchen installation.
             total = quotation.getKitchens().stream()
                 .map(k -> k.getTotalAmount() != null ? k.getTotalAmount() : BigDecimal.ZERO)

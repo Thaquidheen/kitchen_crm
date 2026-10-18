@@ -7,6 +7,7 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
 import {
+  commonTransport,
   expenseBreakdown,
   kitchenCategories,
   money,
@@ -245,6 +246,7 @@ export const QuotationBreakdown: React.FC<Props> = ({ quotation, access }) => {
         },
       ];
   const looseExpenses = kitchens.length > 1 && !kitchenHasExpenses ? expenseBreakdown(quotationExpenses, miscPct) : null;
+  const transport = commonTransport(quotation);
 
   return (
     <div className="space-y-4">
@@ -266,6 +268,17 @@ export const QuotationBreakdown: React.FC<Props> = ({ quotation, access }) => {
           {(s.cats.length > 0 || s.exp.rows.length > 0) && <Summary cats={s.cats} exp={s.exp} total={s.total} access={access} />}
         </div>
       ))}
+      {transport && (
+        <div className={`${card} p-4`}>
+          <ExpensesTable e={transport} access={access} />
+          <div className="flex items-center justify-end gap-6 px-3 pt-2 text-[13px] font-[650] text-text-900">
+            <span className="uppercase tracking-wide text-[12px]">Quotation total</span>
+            <span className="w-36 text-right tabular-nums">
+              {money(quotation?.totalAmount === null || quotation?.totalAmount === undefined ? undefined : Number(quotation.totalAmount))}
+            </span>
+          </div>
+        </div>
+      )}
       {looseExpenses && looseExpenses.rows.length > 0 && (
         <div className={`${card} p-4`}>
           <ExpensesTable e={looseExpenses} access={access} />

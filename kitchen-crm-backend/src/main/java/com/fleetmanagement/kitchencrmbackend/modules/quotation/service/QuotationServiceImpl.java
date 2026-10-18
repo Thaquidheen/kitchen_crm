@@ -1364,27 +1364,30 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setLightingFinalTotal(quotation.getLightingFinalTotal());
         }
 
+        // GST per category is customer-facing, like each kitchen's (sent to everyone). Left at its
+        // default it read 0 next to a real total for anyone without "See margins".
+        if (quotation.getAccessoriesTaxAmount() != null) dto.setAccessoriesTaxAmount(quotation.getAccessoriesTaxAmount());
+        if (quotation.getCabinetsTaxAmount() != null) dto.setCabinetsTaxAmount(quotation.getCabinetsTaxAmount());
+        if (quotation.getDoorsTaxAmount() != null) dto.setDoorsTaxAmount(quotation.getDoorsTaxAmount());
+        if (quotation.getLightingTaxAmount() != null) dto.setLightingTaxAmount(quotation.getLightingTaxAmount());
+
         // Margin details only for those allowed to see margins
         if (PricingView.seesMargins(userRole)) {
             dto.setMarginPercentage(quotation.getMarginPercentage());
             dto.setMarginAmount(quotation.getMarginAmount());
 
-            // Category-wise margin and tax for admin if they exist
+            // Category-wise margin for admin if they exist
             if (quotation.getAccessoriesMarginAmount() != null) {
                 dto.setAccessoriesMarginAmount(quotation.getAccessoriesMarginAmount());
-                dto.setAccessoriesTaxAmount(quotation.getAccessoriesTaxAmount());
             }
             if (quotation.getCabinetsMarginAmount() != null) {
                 dto.setCabinetsMarginAmount(quotation.getCabinetsMarginAmount());
-                dto.setCabinetsTaxAmount(quotation.getCabinetsTaxAmount());
             }
             if (quotation.getDoorsMarginAmount() != null) {
                 dto.setDoorsMarginAmount(quotation.getDoorsMarginAmount());
-                dto.setDoorsTaxAmount(quotation.getDoorsTaxAmount());
             }
             if (quotation.getLightingMarginAmount() != null) {
                 dto.setLightingMarginAmount(quotation.getLightingMarginAmount());
-                dto.setLightingTaxAmount(quotation.getLightingTaxAmount());
             }
         }
 
@@ -1409,7 +1412,7 @@ public class QuotationServiceImpl implements QuotationService {
         boolean fullFigures = PricingView.seesRates(userRole);
         List<QuotationKitchenDto> mrpKitchens = fullFigures || dto.getKitchens() == null
                 ? dto.getKitchens()
-                : loadKitchens(quotation.getId(), PricingView.FULL);
+                : mrpInputs(quotation.getId());
         Map<Long, QuotationKitchenDto> mrpKitchenById = new HashMap<>();
         if (mrpKitchens != null) {
             for (QuotationKitchenDto k : mrpKitchens) {
@@ -1643,6 +1646,20 @@ public class QuotationServiceImpl implements QuotationService {
             return copiedFrom;
         }
         return sent != null ? sent : offer;
+    }
+
+    /** Per kitchen, only what the MRP is worked out from: the totals before margin and the expenses. */
+    private List<QuotationKitchenDto> mrpInputs(Long quotationId) {
+        return kitchenRepository.findByQuotationIdOrderByKitchenOrderAsc(quotationId).stream().map(kitchen -> {
+            QuotationKitchenDto k = new QuotationKitchenDto();
+            k.setId(kitchen.getId());
+            k.setAccessoriesBaseTotal(kitchen.getAccessoriesBaseTotal());
+            k.setCabinetsBaseTotal(kitchen.getCabinetsBaseTotal());
+            k.setDoorsBaseTotal(kitchen.getDoorsBaseTotal());
+            k.setLightingBaseTotal(kitchen.getLightingBaseTotal());
+            k.setOtherExpenses(loadOtherExpensesForKitchen(kitchen.getId()));
+            return k;
+        }).toList();
     }
 
     /**

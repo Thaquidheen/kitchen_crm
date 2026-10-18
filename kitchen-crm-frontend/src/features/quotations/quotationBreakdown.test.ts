@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { breakdownLine, categoryBreakdown, doorFaceSqft, expenseBreakdown, kitchenCategories, money, pctText } from './quotationBreakdown';
+import {
+  breakdownLine,
+  categoryBreakdown,
+  commonTransport,
+  doorFaceSqft,
+  expenseBreakdown,
+  kitchenCategories,
+  money,
+  pctText,
+} from './quotationBreakdown';
 
 const close = (a: number | undefined, b: number) => expect(a).toBeCloseTo(b, 2);
 
@@ -21,6 +30,12 @@ describe('a line before margin', () => {
 
   it('a door without a size counts one sq ft, as the builder does', () => {
     expect(doorFaceSqft(undefined, 720)).toBe(1);
+  });
+
+  it('a door uses the face area the server priced it with when it is sent', () => {
+    const l = breakdownLine('doors', { quantity: 1, unitPrice: 900, widthMm: 600, heightMm: 720, calculatedSqft: 0 });
+    expect(l.sqft).toBe(0);
+    expect(l.base).toBe(0);
   });
 
   it('accessory and lighting: rate × qty', () => {
@@ -72,6 +87,20 @@ describe('other expenses', () => {
     expect(e.rows.map((r) => r.name)).toEqual(['Transportation', 'Installation']);
     expect(e.base).toBe(130000);
     close(e.final, 153400);
+  });
+
+  it('without the margin, GST and the total are unknown rather than too small', () => {
+    const e = expenseBreakdown([{ name: 'Transportation', amount: 70000 }], { tax: 18 });
+    expect(e.base).toBe(70000);
+    expect(e.tax).toBeUndefined();
+    expect(e.final).toBeUndefined();
+  });
+
+  it('a quotation with several kitchens shows its shared transportation once', () => {
+    const q = { kitchens: [{}, {}], transportationPrice: 70000, miscellaneousMarginPercentage: 0, miscellaneousTaxPercentage: 18 };
+    close(commonTransport(q)?.final, 82600);
+    expect(commonTransport({ ...q, kitchens: [{}] })).toBeNull();
+    expect(commonTransport({ ...q, transportationPrice: 0 })).toBeNull();
   });
 });
 
