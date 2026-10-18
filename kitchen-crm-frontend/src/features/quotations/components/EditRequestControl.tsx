@@ -145,4 +145,32 @@ export const EditRequestControl: React.FC<Props> = ({ quotationId, status, pendi
   );
 };
 
+/**
+ * What to change on a quotation that is being reopened: why it was asked, and the admin's note on
+ * approving it. Shown where the quotation is worked on (the work board window, the quotation page).
+ */
+export const EditRequestNotes: React.FC<{ request?: PendingEditRequest; className?: string }> = ({ request, className = '' }) => {
+  if (!request || (!request.reason && !request.decisionNote)) {return null;}
+  return (
+    <div className={`rounded-[10px] border border-background-600 bg-background-900 px-3 py-2.5 space-y-2 ${className}`}>
+      {request.state === 'REOPENED' && request.decisionNote && (
+        <div>
+          <div className="text-[10.5px] font-semibold tracking-[0.08em] uppercase" style={{ color: 'var(--st-confirmed-fg)' }}>
+            What to change{request.decidedByName ? ` · ${request.decidedByName}` : ''}
+          </div>
+          <p className="m-0 mt-0.5 text-[13px] text-text-900 whitespace-pre-wrap break-words">{request.decisionNote}</p>
+        </div>
+      )}
+      {request.reason && (
+        <div>
+          <div className="text-[10.5px] font-semibold tracking-[0.08em] uppercase text-text-500">
+            Asked{request.requestedByName ? ` by ${request.requestedByName}` : ''}
+          </div>
+          <p className="m-0 mt-0.5 text-[12.5px] text-text-700 whitespace-pre-wrap break-words">{request.reason}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default EditRequestControl;

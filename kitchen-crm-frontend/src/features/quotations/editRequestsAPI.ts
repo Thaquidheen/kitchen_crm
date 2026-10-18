@@ -38,6 +38,11 @@ export interface PendingEditRequest {
   state: 'PENDING' | 'REOPENED';
   requestedByName?: string | null;
   mine: boolean;
+  /** Why it was asked. */
+  reason?: string | null;
+  /** The admin's note on approving it: what to change. */
+  decisionNote?: string | null;
+  decidedByName?: string | null;
 }
 
 export interface EditRequestFeed {

@@ -20,7 +20,7 @@ import toast from 'react-hot-toast';
 import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
 import { QuotationBreakdown } from '@/features/quotations/components/QuotationBreakdown';
 import { usePendingEditRequests } from '@/features/quotations/usePendingEditRequests';
-import { EditRequestControl } from '@/features/quotations/components/EditRequestControl';
+import { EditRequestControl, EditRequestNotes } from '@/features/quotations/components/EditRequestControl';
 import { pendingFor } from '@/features/quotations/editRequestRules';
 
 const TABS = ['Overview', 'Line Items', 'Revisions', 'Activity'];
@@ -238,6 +238,9 @@ export function QuotationDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* A reopened quotation: what the admin asked to change */}
+      <EditRequestNotes request={pendingFor(pendingEdits, data.id)} className="mb-4" />
 
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-background-600 mb-4 overflow-x-auto">

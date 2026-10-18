@@ -99,6 +99,11 @@ public class QuotationEditRequestService {
         row.put("state", state);
         row.put("requestedByName", r.getRequestedByName());
         row.put("mine", userId != null && userId.equals(r.getRequestedByUserId()));
+        // What to change travels with the quotation: why it was asked, and the admin's note on
+        // approving it (shown where the quotation is edited). Words only, no amounts.
+        row.put("reason", r.getReason());
+        row.put("decisionNote", r.getDecisionNote());
+        row.put("decidedByName", r.getDecidedByName());
         return row;
     }
 
