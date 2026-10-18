@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle2, Paperclip, Pencil, Play, RotateCcw, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Modal, ModalBody } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { STATUS_PILL } from '@/features/customers/components/CustomerList';
 import { fmtReminderDateTime } from '@/utils/reminderFormat';
 import {
@@ -256,6 +257,10 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
     }
   };
 
+  // Taking a file out of an approved design is asked first: the customer may already have it.
+  const [confirmRemove, setConfirmRemove] = useState<DesignFile | null>(null);
+  const askRemove = (file: DesignFile) => (correctsApproved ? setConfirmRemove(file) : removeFile(file));
+
   const removeFile = async (file: DesignFile) => {
     if (!job) {return;}
     try {
@@ -272,12 +277,18 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
   const designerCanWork = viewer === 'designer' && !!job && isDesignerWork(job.status);
   // Admin staff upload under the "Upload design" permission, until the designer has handed it in.
   const staffUploads = viewer === 'coordinator' && can('customers.upload_design');
-  const canUploadDesign = open && (viewer === 'admin' || designerCanWork || (staffUploads && !!job && isDesignerWork(job.status)));
+  // The admin alone corrects an approved version: puts the right file in, takes a wrong one out.
+  const correctsApproved = viewer === 'admin' && approved;
+  const canUploadDesign =
+    (open && (viewer === 'admin' || designerCanWork || (staffUploads && !!job && isDesignerWork(job.status)))) || correctsApproved;
   const canSettle =
     (viewer === 'admin' || staffUploads) && canSettleOpenDesign(job, { admin: viewer === 'admin', coordinator: staffUploads });
   // Admin staff take back only what they uploaded themselves, not the designer's files.
+  // An approved version keeps at least one design file: the last one is replaced, not removed.
   const canRemoveDesignFile = (f: DesignFile) =>
-    canUploadDesign && (viewer !== 'coordinator' || (!!myName && f.uploadedBy === myName));
+    canUploadDesign &&
+    (viewer !== 'coordinator' || (!!myName && f.uploadedBy === myName)) &&
+    !(correctsApproved && (job?.files ?? []).length < 2);
   const managesPlans = viewer === 'admin' || viewer === 'coordinator';
   const files = job?.files ?? [];
   const planDocuments = job?.planDocuments ?? [];
@@ -289,6 +300,20 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
 
   return (
     <>
+      <ConfirmDialog
+        isOpen={confirmRemove !== null}
+        onClose={() => setConfirmRemove(null)}
+        onConfirm={() => {
+          const f = confirmRemove;
+          setConfirmRemove(null);
+          if (f) {void removeFile(f);}
+        }}
+        title="Remove from the approved design?"
+        message={`${confirmRemove?.originalFileName ?? 'This file'} is removed from the approved ${versionLabel(job?.version ?? 1)} for good. It is noted in the design's conversation.`}
+        confirmText="Remove file"
+        type="danger"
+        isLoading={removing}
+      />
       <Modal isOpen={jobId !== null} onClose={onClose} title={job ? job.customerName : 'Design'} size="lg">
         <ModalBody>
           {isLoading || !job ? (
@@ -476,11 +501,18 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                         onChange={(e) => onPickFiles(e.target.files)}
                       />
                       <button type="button" onClick={() => fileInput.current?.click()} disabled={uploading} className={smallBtn}>
-                        <Upload size={13} /> {uploading ? 'Uploading…' : 'Upload design'}
+                        <Upload size={13} /> {uploading ? 'Uploading…' : correctsApproved ? 'Add file' : 'Upload design'}
                       </button>
                     </>
                   )}
                 </div>
+                {correctsApproved && files.length > 0 && (
+                  <p className="m-0 mb-1.5 text-[11.5px] text-text-600">
+                    {files.length < 2
+                      ? 'To replace the only file of this approved design, add the right file first, then remove the wrong one.'
+                      : 'You can remove a wrong file from this approved design. Each change is noted in the conversation.'}
+                  </p>
+                )}
                 {files.length === 0 ? (
                   <p className="m-0 text-[12.5px] text-text-500">
                     {viewer === 'designer'
@@ -493,7 +525,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                       <FileRow
                         key={f.id}
                         file={f}
-                        onRemove={canRemoveDesignFile(f) ? () => removeFile(f) : undefined}
+                        onRemove={canRemoveDesignFile(f) ? () => askRemove(f) : undefined}
                         removing={removing}
                       />
                     ))}
