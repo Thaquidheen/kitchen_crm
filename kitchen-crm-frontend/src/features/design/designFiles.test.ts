@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  designFilesHeading,
   DESIGN_ACCEPT,
   MAX_FILE_BYTES,
   MAX_UPLOAD_BYTES,
@@ -152,5 +153,15 @@ describe('uploadSizeProblem', () => {
     expect(uploadSizeProblem(five)).toBe('Together these files are 225 MB — one upload can carry 200 MB');
     expect(uploadSizeProblem(five.slice(0, 4))).toBeNull();
     expect(MAX_UPLOAD_BYTES).toBe(200 * 1024 * 1024);
+  });
+});
+
+describe('designFilesHeading', () => {
+  it('names an approved design the client design file', () => {
+    expect(designFilesHeading(1, true)).toBe('Client design file (1)');
+    expect(designFilesHeading(3, true)).toBe('Client design files (3)');
+  });
+  it('keeps a design that is still being made as design files', () => {
+    expect(designFilesHeading(2, false)).toBe('Design files (2)');
   });
 });

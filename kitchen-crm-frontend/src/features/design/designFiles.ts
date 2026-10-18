@@ -106,3 +106,10 @@ export const uploadSizeProblem = (files: Sized[]): string | null => {
   const total = files.reduce((sum, f) => sum + f.size, 0);
   return total > MAX_UPLOAD_BYTES ? `Together these files are ${formatFileSize(total)} — one upload can carry 200 MB` : null;
 };
+
+/**
+ * The heading over a design's files. Once the design is approved those files are the design
+ * the client gets, so they are named that way; plan documents keep their own heading.
+ */
+export const designFilesHeading = (count: number, approved: boolean): string =>
+  `${approved ? (count === 1 ? 'Client design file' : 'Client design files') : 'Design files'} (${count})`;

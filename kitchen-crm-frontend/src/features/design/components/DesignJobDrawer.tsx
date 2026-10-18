@@ -26,7 +26,7 @@ import {
   useUploadDesignFileMutation,
   useUploadPlanDocumentsMutation,
 } from '../designAPI';
-import { DESIGN_ACCEPT, PLAN_ACCEPT, isDesignFileName } from '../designFiles';
+import { DESIGN_ACCEPT, PLAN_ACCEPT, designFilesHeading, isDesignFileName } from '../designFiles';
 import {
   DESIGN_STATUS,
   DesignStatusPill,
@@ -462,7 +462,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
               <div>
                 <div className="flex items-center gap-2">
                   <div className={sectionLabel}>
-                    Design files · {versionLabel(version)} ({files.length})
+                    {designFilesHeading(files.length, approved).replace(' (', ` · ${versionLabel(version)} (`)}
                   </div>
                   <span className="flex-1" />
                   {canUploadDesign && (
