@@ -38,6 +38,21 @@ export const defaultCodes = (
   return out as MarginCodeFields;
 };
 
+/**
+ * The codes a save sends. For a quotation being edited, only those changed since it was opened: a
+ * code left as it was is not sent, so its margin stays as it is, even if the administrator has since
+ * changed what the code stands for. For a new quotation (nothing opened), all of them.
+ */
+export const codesToSend = (
+  opened: Partial<MarginCodeFields> | null | undefined,
+  now: Partial<MarginCodeFields>,
+): MarginCodeFields => {
+  const same = (a?: string | null, b?: string | null) => (a ?? '').trim().toUpperCase() === (b ?? '').trim().toUpperCase();
+  return Object.fromEntries(
+    CODE_FIELDS.map((f) => [f, opened && same(opened[f], now[f]) ? null : now[f] ?? null]),
+  ) as MarginCodeFields;
+};
+
 /** The choices of a code list: the codes on offer, plus the current one if it is not among them. */
 export const codeChoices = (offered: string[], current?: string | null): string[] =>
   current && !offered.some((c) => c.toUpperCase() === current.toUpperCase()) ? [current, ...offered] : offered;

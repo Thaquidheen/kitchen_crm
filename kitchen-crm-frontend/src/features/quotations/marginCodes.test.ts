@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CODE_FIELDS, codeChoices, codeField, codeLabel, defaultCodes, lineAmountWithMargin, pickCodes, sumWithMargin } from './marginCodeRules';
+import { CODE_FIELDS, codeChoices, codeField, codeLabel, codesToSend, defaultCodes, lineAmountWithMargin, pickCodes, sumWithMargin } from './marginCodeRules';
 
 describe('margin code fields', () => {
   it('names the field of each category, offer and MRP', () => {
@@ -36,6 +36,21 @@ describe('the codes a quotation carries', () => {
     expect(codes.lightingMarginCode).toBeNull();
     expect(codes.miscellaneousMarginCode).toBeNull();
     expect(defaultCodes({ cabinets: 'R' }).cabinetsMrpMarginCode).toBeNull();
+  });
+});
+
+describe('the codes a save sends', () => {
+  it('are only the changed ones for a quotation being edited', () => {
+    const sent = codesToSend({ cabinetsMarginCode: 'R', lightingMarginCode: 'K' }, { cabinetsMarginCode: 'r', lightingMarginCode: 'T' });
+    expect(sent.cabinetsMarginCode).toBeNull();
+    expect(sent.lightingMarginCode).toBe('T');
+    expect(Object.keys(sent)).toHaveLength(10);
+  });
+  it('are all of them for a new quotation', () => {
+    const sent = codesToSend(null, { cabinetsMarginCode: 'R', doorsMrpMarginCode: 'K' });
+    expect(sent.cabinetsMarginCode).toBe('R');
+    expect(sent.doorsMrpMarginCode).toBe('K');
+    expect(sent.accessoriesMarginCode).toBeNull();
   });
 });
 

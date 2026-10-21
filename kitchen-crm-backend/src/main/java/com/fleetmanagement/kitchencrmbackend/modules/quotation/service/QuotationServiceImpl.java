@@ -207,10 +207,12 @@ public class QuotationServiceImpl implements QuotationService {
             quotation.setStatus(Quotation.QuotationStatus.DRAFT);
 
             // Set default values. The old single margin is a margin like the others: the administrator's.
+            // Anyone else's quotation keeps the copied one's, or starts at the screen's usual 20.
             boolean callerSetsMargins = PricingView.setsMargins(userRole);
-            quotation.setMarginPercentage(callerSetsMargins && dto.getMarginPercentage() != null ? dto.getMarginPercentage()
-                    : !callerSetsMargins && source != null && source.getMarginPercentage() != null ? source.getMarginPercentage()
-                    : BigDecimal.ZERO);
+            quotation.setMarginPercentage(callerSetsMargins
+                    ? (dto.getMarginPercentage() != null ? dto.getMarginPercentage() : BigDecimal.ZERO)
+                    : source != null && source.getMarginPercentage() != null ? source.getMarginPercentage()
+                    : BigDecimal.valueOf(20));
             quotation.setTaxPercentage(dto.getTaxPercentage() != null ? dto.getTaxPercentage() : BigDecimal.valueOf(18.0));
             quotation.setTransportationPrice(dto.getTransportationPrice() != null ? dto.getTransportationPrice() : BigDecimal.ZERO);
             quotation.setInstallationPrice(dto.getInstallationPrice() != null ? dto.getInstallationPrice() : BigDecimal.ZERO);

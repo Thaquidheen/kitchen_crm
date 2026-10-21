@@ -50,7 +50,7 @@ import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
 import { useCreateQuotationMutation, useUpdateQuotationMutation, useGetQuotationByIdQuery } from '@/app/baseApi';
 import { useGetMarginsQuery } from '@/services/settingsAPI';
 import { useGetMarginCodeOptionsQuery } from '@/features/quotations/marginCodesAPI';
-import { MarginCodeProvider, defaultCodes, pickCodes } from '@/features/quotations/marginCodes';
+import { MarginCodeProvider, codesToSend, defaultCodes, pickCodes } from '@/features/quotations/marginCodes';
 import { ServerFiguresProvider, changedCodeCategories, otherExpensesFromServer, pricingSnapshot } from '@/features/quotations/serverFigures';
 import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
 import { useGetCabinetsQuery, useGetDoorsQuery } from '@/features/products/productsAPI';
@@ -636,7 +636,7 @@ export function QuotationBuilderPage() {
       miscellaneousMrpMarginPercentage: formData.miscellaneousMrpMarginPercentage ?? 0,
       miscellaneousMrpTaxPercentage: formData.miscellaneousMrpTaxPercentage ?? 18,
       // Staff choosing margin codes send the codes; the server turns them into percentages.
-      ...(access.picksMarginCodes ? pickCodes(formData) : {}),
+      ...(access.picksMarginCodes ? codesToSend(isEditMode && existingQuotation ? pickCodes(existingQuotation as any) : null, formData) : {}),
       validUntil: formData.validUntil || undefined,
       notes: formData.notes || undefined,
       termsConditions: formData.termsConditions || undefined,
@@ -1206,7 +1206,13 @@ export function QuotationBuilderPage() {
     if (isEditMode || presetApplied.current || !presetCustomerId || !customersData?.content) {return;}
     presetApplied.current = true;
     if (!formData.customerId && customersData.content.some((c) => c.id === presetCustomerId)) {
+      // Nothing typed yet: the quotation starts with this customer, so leaving it is not leaving
+      // unsaved changes — the starting point is taken again once the customer is in.
+      const untouched = initialFormDataRef.current === null || initialFormDataRef.current === JSON.stringify(formData);
       handleCustomerSelect(presetCustomerId);
+      if (untouched) {
+        initialFormDataRef.current = null;
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditMode, presetCustomerId, customersData]);

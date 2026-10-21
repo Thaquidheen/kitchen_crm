@@ -278,11 +278,12 @@ export function CategoryPricingPanel({
   const saved = useServerFigure();
 
   // Worked out here only by whoever has the miscellaneous margin (the administrator); for staff it
-  // is the server's figure. No expenses come to 0 whatever the margin.
+  // is the server's figure. No expenses come to 0 whatever the margin — but the server's figure can
+  // hold an expense this list does not (a single kitchen's transportation), so it decides.
   const otherExpensesBase = otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   const otherExpensesTotal: number | null = useMemo(() => {
     if (!access.seesMargins) {
-      return otherExpensesBase === 0 ? 0 : saved(serverOtherExpenses);
+      return otherExpensesBase === 0 && !serverOtherExpenses ? 0 : saved(serverOtherExpenses);
     }
     const margin = (otherExpensesBase * miscellaneousMarginPercentage) / 100;
     const withMargin = otherExpensesBase + margin;

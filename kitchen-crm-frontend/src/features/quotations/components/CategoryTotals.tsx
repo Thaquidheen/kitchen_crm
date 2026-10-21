@@ -191,7 +191,8 @@ export function CategoryTotals({
     miscTax = (miscWithMargin * miscellaneousTaxPercentage) / 100;
     otherExpensesFinal = miscWithMargin + miscTax;
   } else {
-    otherExpensesFinal = otherExpensesBase === 0 ? 0 : saved(serverOtherExpenses);
+    // The server's figure can hold an expense this list does not (a single kitchen's transportation).
+    otherExpensesFinal = otherExpensesBase === 0 && !serverOtherExpenses ? 0 : saved(serverOtherExpenses);
     miscTax = otherExpensesFinal === null ? null : taxInside(otherExpensesFinal, miscellaneousTaxPercentage);
   }
   // One unknown category makes the whole figure unknown - better a dash than a number that
@@ -273,7 +274,7 @@ export function CategoryTotals({
             );
           })}
           {/* Miscellaneous (Other Expenses) */}
-          {otherExpenses.length > 0 && otherExpensesBase > 0 && (
+          {((otherExpenses.length > 0 && otherExpensesBase > 0) || (!access.seesMargins && (serverOtherExpenses ?? 0) > 0)) && (
             <div className="p-3.5 rounded-xl bg-background-700/40 border border-background-600">
               <div className="flex items-center gap-2 mb-2.5">
                 <Receipt className="h-3.5 w-3.5 text-text-600" />
