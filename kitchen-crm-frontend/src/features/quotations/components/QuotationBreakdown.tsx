@@ -6,6 +6,7 @@
  */
 import React from 'react';
 import { FileText } from 'lucide-react';
+import { codeLabel } from '../marginCodes';
 import {
   commonTransport,
   expenseBreakdown,
@@ -19,6 +20,8 @@ import {
 interface Access {
   seesRates: boolean;
   seesMargins: boolean;
+  /** Staff shown margins as the administrator's codes: amounts with margin, a code instead of the %. */
+  seesMarginCodes?: boolean;
 }
 
 const card = 'bg-background-800 border border-background-600 rounded-[14px]';
@@ -41,6 +44,9 @@ const SumRow: React.FC<{ name: string; value?: number; strong?: boolean; tone?: 
 const CategoryTable: React.FC<{ c: CategoryBreakdown; access: Access }> = ({ c, access }) => {
   const rates = access.seesRates;
   const margins = access.seesMargins;
+  // Staff shown codes, without the rates: each line with margin, the code instead of the %.
+  const codes = !margins && !!access.seesMarginCodes;
+  const withMarginLines = codes && !rates;
   return (
     <div className="mb-5 last:mb-0">
       <div className="flex items-baseline gap-3 mb-1.5">
@@ -48,6 +54,11 @@ const CategoryTable: React.FC<{ c: CategoryBreakdown; access: Access }> = ({ c, 
         {margins && c.marginPct !== undefined && (
           <span className="text-[11.5px] font-semibold" style={{ color: 'var(--st-confirmed-fg)' }}>
             Margin {pctText(c.marginPct)}
+          </span>
+        )}
+        {codes && (
+          <span className="text-[11.5px] font-semibold" style={{ color: 'var(--st-confirmed-fg)' }}>
+            Margin code {codeLabel(c.marginCode)}
           </span>
         )}
         {c.taxPct !== undefined && <span className="text-[11.5px] text-text-500">GST {pctText(c.taxPct)}</span>}
@@ -61,6 +72,8 @@ const CategoryTable: React.FC<{ c: CategoryBreakdown; access: Access }> = ({ c, 
               {rates && <th className={`${th} text-right`}>Rate before margin</th>}
               {rates && <th className={`${th} text-right`}>Amount before margin</th>}
               {rates && margins && <th className={`${th} text-right`}>With margin</th>}
+              {withMarginLines && <th className={`${th} text-right`}>Rate with margin</th>}
+              {withMarginLines && <th className={`${th} text-right`}>Amount with margin</th>}
             </tr>
           </thead>
           <tbody>
@@ -83,6 +96,13 @@ const CategoryTable: React.FC<{ c: CategoryBreakdown; access: Access }> = ({ c, 
                 )}
                 {rates && <td className={`${td} text-right text-text-900`}>{money(l.base)}</td>}
                 {rates && margins && <td className={`${td} text-right font-semibold text-text-900`}>{money(l.withMargin)}</td>}
+                {withMarginLines && (
+                  <td className={`${td} text-right text-text-700`}>
+                    {money(l.rateWithMargin)}
+                    {c.kind === 'doors' && l.rateWithMargin !== undefined && <span className="text-text-500"> /sq ft</span>}
+                  </td>
+                )}
+                {withMarginLines && <td className={`${td} text-right font-semibold text-text-900`}>{money(l.withMargin)}</td>}
               </tr>
             ))}
           </tbody>
@@ -91,6 +111,7 @@ const CategoryTable: React.FC<{ c: CategoryBreakdown; access: Access }> = ({ c, 
           {rates && <SumRow name="Before margin" value={c.base} />}
           {margins && <SumRow name={`Margin ${pctText(c.marginPct)}`} value={c.margin} tone="margin" />}
           {rates && margins && <SumRow name="After margin" value={c.afterMargin} />}
+          {codes && <SumRow name="With margin" value={c.afterMargin} />}
           <SumRow name={`GST ${pctText(c.taxPct)}`} value={c.tax} />
           <SumRow name={`${c.title} total`} value={c.final} strong />
         </div>
@@ -144,18 +165,20 @@ const ExpensesTable: React.FC<{ e: ExpenseBreakdown; access: Access }> = ({ e, a
 };
 
 /** One row per category: how the kitchen's price is built up. */
-const Summary: React.FC<{ cats: CategoryBreakdown[]; exp: ExpenseBreakdown; total?: number; access: Access }> = ({
+const Summary: React.FC<{ cats: CategoryBreakdown[]; exp: ExpenseBreakdown; total?: number; access: Access; miscCode?: string | null }> = ({
   cats,
   exp,
   total,
   access,
+  miscCode,
 }) => {
   const rates = access.seesRates;
   const margins = access.seesMargins;
+  const codes = !margins && !!access.seesMarginCodes;
   const rows = [
-    ...cats.map((c) => ({ name: c.title, base: c.base, pct: c.marginPct, margin: c.margin, after: c.afterMargin, tax: c.tax, final: c.final })),
+    ...cats.map((c) => ({ name: c.title, code: c.marginCode, base: c.base, pct: c.marginPct, margin: c.margin, after: c.afterMargin, tax: c.tax, final: c.final })),
     ...(exp.rows.length
-      ? [{ name: 'Other expenses', base: exp.base, pct: exp.marginPct, margin: exp.margin, after: exp.base + (exp.margin ?? 0), tax: exp.tax, final: exp.final }]
+      ? [{ name: 'Other expenses', code: miscCode, base: exp.base, pct: exp.marginPct, margin: exp.margin, after: exp.margin === undefined ? undefined : exp.base + exp.margin, tax: exp.tax, final: exp.final }]
       : []),
   ];
   const sum = (k: 'base' | 'margin' | 'after' | 'tax' | 'final') =>
@@ -172,6 +195,8 @@ const Summary: React.FC<{ cats: CategoryBreakdown[]; exp: ExpenseBreakdown; tota
               {margins && <th className={`${th} text-right`}>Margin %</th>}
               {margins && <th className={`${th} text-right`}>Margin</th>}
               {rates && margins && <th className={`${th} text-right`}>After margin</th>}
+              {codes && <th className={`${th} text-right`}>Margin code</th>}
+              {codes && <th className={`${th} text-right`}>With margin</th>}
               <th className={`${th} text-right`}>GST</th>
               <th className={`${th} text-right`}>Total</th>
             </tr>
@@ -188,6 +213,8 @@ const Summary: React.FC<{ cats: CategoryBreakdown[]; exp: ExpenseBreakdown; tota
                   </td>
                 )}
                 {rates && margins && <td className={`${td} text-right text-text-700`}>{money(r.after)}</td>}
+                {codes && <td className={`${td} text-right text-text-700`}>{codeLabel(r.code)}</td>}
+                {codes && <td className={`${td} text-right text-text-700`}>{money(r.after)}</td>}
                 <td className={`${td} text-right text-text-700`}>{money(r.tax)}</td>
                 <td className={`${td} text-right font-semibold text-text-900`}>{money(r.final)}</td>
               </tr>
@@ -202,6 +229,8 @@ const Summary: React.FC<{ cats: CategoryBreakdown[]; exp: ExpenseBreakdown; tota
                 </td>
               )}
               {rates && margins && <td className={`${td} text-right font-[650] text-text-900`}>{money(sum('after'))}</td>}
+              {codes && <td className={td} />}
+              {codes && <td className={`${td} text-right font-[650] text-text-900`}>{money(sum('after'))}</td>}
               <td className={`${td} text-right font-[650] text-text-900`}>{money(sum('tax'))}</td>
               <td className={`${td} text-right font-[650] text-text-900`}>{money(total ?? sum('final'))}</td>
             </tr>
@@ -265,7 +294,9 @@ export const QuotationBreakdown: React.FC<Props> = ({ quotation, access }) => {
             <CategoryTable key={c.kind} c={c} access={access} />
           ))}
           <ExpensesTable e={s.exp} access={access} />
-          {(s.cats.length > 0 || s.exp.rows.length > 0) && <Summary cats={s.cats} exp={s.exp} total={s.total} access={access} />}
+          {(s.cats.length > 0 || s.exp.rows.length > 0) && (
+            <Summary cats={s.cats} exp={s.exp} total={s.total} access={access} miscCode={quotation?.miscellaneousMarginCode ?? null} />
+          )}
         </div>
       ))}
       {transport && (

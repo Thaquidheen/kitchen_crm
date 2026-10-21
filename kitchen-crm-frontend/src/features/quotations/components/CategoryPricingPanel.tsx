@@ -9,6 +9,7 @@ import { Calculator, TrendingUp, Percent, Receipt } from 'lucide-react';
 import clsx from 'clsx';
 import type { QuotationOtherExpense } from '../types';
 import { useQuotationAccess } from '../useQuotationAccess';
+import { MarginCodeField, type MarginCodeCategory, type MarginKind } from '../marginCodes';
 
 interface CategorySectionProps {
   label: string;
@@ -24,6 +25,9 @@ interface CategorySectionProps {
   showMargins: boolean;
   /** The amount before margin — for those allowed to see rates. */
   showSubtotal: boolean;
+  /** Which margin this is, for staff shown it as a code. */
+  codeCategory: MarginCodeCategory;
+  marginKind: MarginKind;
 }
 
 import { useState, useEffect } from 'react';
@@ -41,6 +45,8 @@ function CategorySection({
   total,
   showMargins,
   showSubtotal,
+  codeCategory,
+  marginKind,
 }: CategorySectionProps) {
   const [marginStr, setMarginStr] = useState(marginPercent ? String(marginPercent) : '');
   const [taxStr, setTaxStr] = useState(taxPercent ? String(taxPercent) : '');
@@ -93,6 +99,9 @@ function CategorySection({
             <span className="font-medium text-text-900 tabular-nums">₹{subtotal.toLocaleString('en-IN')}</span>
           </div>
         )}
+
+        {/* Staff see the margin as the administrator's code (and choose one if allowed). */}
+        {!showMargins && <MarginCodeField category={codeCategory} kind={marginKind} />}
 
         {/* Margin Input - Only visible to Super Admin */}
         {showMargins && (
@@ -216,6 +225,9 @@ export interface CategoryPricingPanelProps {
 
   // Optional kitchen name for context
   kitchenName?: string;
+
+  /** The offer margins (default) or the MRP ones — for staff shown margins as codes. */
+  marginKind?: MarginKind;
 }
 
 export function CategoryPricingPanel({
@@ -246,6 +258,7 @@ export function CategoryPricingPanel({
   onMiscellaneousTaxChange,
   serverCategoryTotals,
   kitchenName,
+  marginKind = 'offer',
 }: CategoryPricingPanelProps) {
 
   // Who sees what is the administrator's choice on the Permissions page, not the role. The hook
@@ -351,6 +364,8 @@ export function CategoryPricingPanel({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <CategorySection
               label="Accessories"
+              codeCategory="accessories"
+              marginKind={marginKind}
               icon={<TrendingUp className="h-3.5 w-3.5 text-text-600" />}
               color="bg-background-700 border border-background-600"
               subtotal={categorySubtotals.accessories}
@@ -365,6 +380,8 @@ export function CategoryPricingPanel({
 
             <CategorySection
               label="Cabinets"
+              codeCategory="cabinets"
+              marginKind={marginKind}
               icon={<TrendingUp className="h-3.5 w-3.5 text-text-600" />}
               color="bg-background-700 border border-background-600"
               subtotal={categorySubtotals.cabinets}
@@ -379,6 +396,8 @@ export function CategoryPricingPanel({
 
             <CategorySection
               label="Doors"
+              codeCategory="doors"
+              marginKind={marginKind}
               icon={<TrendingUp className="h-3.5 w-3.5 text-text-600" />}
               color="bg-background-700 border border-background-600"
               subtotal={categorySubtotals.doors}
@@ -393,6 +412,8 @@ export function CategoryPricingPanel({
 
             <CategorySection
               label="Lighting"
+              codeCategory="lighting"
+              marginKind={marginKind}
               icon={<TrendingUp className="h-3.5 w-3.5 text-text-600" />}
               color="bg-background-700 border border-background-600"
               subtotal={categorySubtotals.lighting}
@@ -413,6 +434,8 @@ export function CategoryPricingPanel({
             <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Miscellaneous</h4>
             <CategorySection
               label="Other Expenses"
+              codeCategory="miscellaneous"
+              marginKind={marginKind}
               icon={<Receipt className="h-3.5 w-3.5 text-text-600" />}
               color="bg-background-700 border border-background-600"
               subtotal={otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0)}

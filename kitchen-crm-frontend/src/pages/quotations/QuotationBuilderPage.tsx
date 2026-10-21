@@ -49,6 +49,8 @@ import toast from 'react-hot-toast';
 import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
 import { useCreateQuotationMutation, useUpdateQuotationMutation, useGetQuotationByIdQuery } from '@/app/baseApi';
 import { useGetMarginsQuery } from '@/services/settingsAPI';
+import { useGetMarginCodeOptionsQuery } from '@/features/quotations/marginCodesAPI';
+import { MarginCodeProvider, defaultCodes, pickCodes } from '@/features/quotations/marginCodes';
 import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
 import { useGetCabinetsQuery, useGetDoorsQuery } from '@/features/products/productsAPI';
 import { useParams } from 'react-router-dom';
@@ -69,6 +71,7 @@ function mapLoadedAccessory(a: any) {
     unitPrice: unit,
     // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
     totalPrice: unit == null ? undefined : unit * (a.quantity || 1),
+    rateWithMargin: a.rateWithMargin ?? undefined,
     name: a.description || a.accessoryName || 'Accessory',
     description: a.description || a.accessoryName || 'Accessory',
     price: unit,
@@ -90,6 +93,7 @@ function mapLoadedLighting(l: any) {
     unitPrice: unit,
     // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
     totalPrice: unit == null ? undefined : unit * (l.quantity || 1),
+    rateWithMargin: l.rateWithMargin ?? undefined,
     name: displayName,
     description: displayName,
     itemType: l.itemType || 'LIGHT_PROFILE',
@@ -136,6 +140,10 @@ export function QuotationBuilderPage() {
   const access = useQuotationAccess();
   // The margin settings are readable only by those who may see margins.
   const { data: marginsResponse, isLoading: isMarginsLoading } = useGetMarginsQuery(undefined, { skip: !access.seesMargins });
+  // Staff shown margins as codes: the codes they may choose, and the code of each default margin.
+  const { data: codeOptions } = useGetMarginCodeOptionsQuery(undefined, {
+    skip: access.seesMargins || !access.seesMarginCodes,
+  });
 
   // Fetch cabinet and door types for edit modal (with large page size to get all)
   const { data: cabinetTypes = [] } = useGetCabinetsQuery({ page: 0, size: 100 });
@@ -250,6 +258,13 @@ export function QuotationBuilderPage() {
     }
   }, [marginsResponse, isEditMode]);
 
+  // A new quotation made by staff shown codes starts from the default codes.
+  useEffect(() => {
+    if (!isEditMode && codeOptions) {
+      setFormData((prev) => ({ ...prev, ...defaultCodes(codeOptions.defaults) }));
+    }
+  }, [codeOptions, isEditMode]);
+
   // Load existing quotation when editing
   const quotationId = isEditMode ? Number(id) : undefined;
   const { data: existingQuotation } = useGetQuotationByIdQuery(quotationId as number, { skip: !isEditMode });
@@ -269,6 +284,7 @@ export function QuotationBuilderPage() {
         quantity: c.quantity,
         unitPrice: Number(c.unitPrice || 0),
         totalPrice: Number(c.unitPrice || 0) * (c.quantity || 1),
+        rateWithMargin: c.rateWithMargin ?? undefined,
         cabinetTypeName: c.cabinetTypeName || c.cabinetType?.name || c.description || 'Cabinet',
         description: c.description || `${c.cabinetTypeName || c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.depthMm}×${c.heightMm}mm)`,
         materialId: c.materialId,
@@ -304,6 +320,7 @@ export function QuotationBuilderPage() {
           quantity: d.quantity,
           unitPrice: Number(d.unitPrice || 0),
           totalPrice: faceArea * Number(d.unitPrice || 0) * (d.quantity || 1),
+          rateWithMargin: d.rateWithMargin ?? undefined,
           doorTypeName: d.doorType?.name || d.description || 'Door',
           description: d.description || `${d.doorType?.name || 'Door'} (${d.widthMm}×${d.heightMm}mm)`,
         };
@@ -403,6 +420,8 @@ export function QuotationBuilderPage() {
       lightingMrpTaxPercentage: Number(existingQuotation.lightingMrpTaxPercentage ?? existingQuotation.lightingTaxPercentage ?? 18),
       miscellaneousMrpMarginPercentage: Number(existingQuotation.miscellaneousMrpMarginPercentage ?? existingQuotation.miscellaneousMarginPercentage ?? 0),
       miscellaneousMrpTaxPercentage: Number(existingQuotation.miscellaneousMrpTaxPercentage ?? existingQuotation.miscellaneousTaxPercentage ?? 18),
+      // The margin codes staff see and choose (null = "Custom", left as it is on save).
+      ...pickCodes(existingQuotation as any),
       // If the saved validity date has already passed (quotes are valid 30 days), re-issue
       // with a fresh 30-day validity so editing an old quotation isn't blocked by the
       // "Validity date must be in the future" check. The user can still change the date.
@@ -595,6 +614,8 @@ export function QuotationBuilderPage() {
       lightingMrpTaxPercentage: formData.lightingMrpTaxPercentage ?? 18,
       miscellaneousMrpMarginPercentage: formData.miscellaneousMrpMarginPercentage ?? 0,
       miscellaneousMrpTaxPercentage: formData.miscellaneousMrpTaxPercentage ?? 18,
+      // Staff choosing margin codes send the codes; the server turns them into percentages.
+      ...(access.picksMarginCodes ? pickCodes(formData) : {}),
       validUntil: formData.validUntil || undefined,
       notes: formData.notes || undefined,
       termsConditions: formData.termsConditions || undefined,
@@ -1342,6 +1363,13 @@ export function QuotationBuilderPage() {
   ];
 
   return (
+    <MarginCodeProvider
+      value={{
+        codes: pickCodes(formData),
+        offered: (codeOptions?.codes ?? []).map((c) => c.code),
+        setCode: (field, code) => setFormData((prev) => ({ ...prev, [field]: code })),
+      }}
+    >
     <div className="min-h-screen bg-background-900 p-4 sm:p-6">
       {/* Header */}
       <div className="mb-4 sm:mb-5">
@@ -1849,7 +1877,7 @@ export function QuotationBuilderPage() {
 
                 {/* MRP (List Price) — per-category pricing, mirrors the offer "Pricing by Category".
                     A single quotation-level set of MRP margins/taxes (super-admin only). */}
-                {access.seesMargins && (() => {
+                {(access.seesMargins || access.seesMarginCodes) && (() => {
                   const ks = formData.kitchens || [];
                   const hasK = ks.length > 0;
                   const isMulti = ks.length >= 2;
@@ -1870,6 +1898,13 @@ export function QuotationBuilderPage() {
                       <h3 className="text-sm font-[650] text-text-900 mb-1">Pricing by Category — MRP (List Price)</h3>
                       <p className="text-xs text-text-500 mb-4">Set the per-category margin &amp; tax used for the MRP. The Offer Price uses the rates above.</p>
                       <CategoryPricingPanel
+                        marginKind="mrp"
+                        serverCategoryTotals={{
+                          accessories: (existingQuotation as any)?.accessoriesMrpTotal,
+                          cabinets: (existingQuotation as any)?.cabinetsMrpTotal,
+                          doors: (existingQuotation as any)?.doorsMrpTotal,
+                          lighting: (existingQuotation as any)?.lightingMrpTotal,
+                        }}
                         accessories={acc}
                         cabinets={cab}
                         doors={dor}
@@ -2213,6 +2248,7 @@ export function QuotationBuilderPage() {
         isSaving={isCreating || isUpdating}
       />
     </div>
+    </MarginCodeProvider>
   );
 }
 

@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Pencil, ChevronDown, ChevronRight, Layers, Receipt, X } from 'lucide-react';
 import { useState } from 'react';
 import { useQuotationAccess } from '../useQuotationAccess';
+import { lineAmountWithMargin } from '../marginCodes';
 import type { QuotationElevation, QuotationOtherExpense } from '../types';
 
 interface AccessoryItem {
@@ -326,6 +327,17 @@ export function SelectedProductsList({
                 ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
               </span>
             )}
+            {/* Staff shown margins as codes: the amount with margin, as priced at the last save. */}
+            {!access.seesRates && access.seesMarginCodes && (() => {
+              const amount = lineAmountWithMargin(item as any, category === 'doors');
+              return amount === undefined ? (
+                <span className="text-text-500 whitespace-nowrap" title="Priced when the quotation is saved">—</span>
+              ) : (
+                <span className="font-semibold whitespace-nowrap text-text-900 tabular-nums" title="With margin, before GST">
+                  ₹{amount.toLocaleString('en-IN')}
+                </span>
+              );
+            })()}
             {showEdit && (
               <button
                 onClick={handleEdit}

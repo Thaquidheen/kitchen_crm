@@ -46,6 +46,8 @@ export interface BreakdownLine {
   base?: number;
   /** Amount with the category margin, before GST. */
   withMargin?: number;
+  /** Rate with the category margin (per sq ft for a door), as the server sent it to staff shown codes. */
+  rateWithMargin?: number;
 }
 
 export interface CategoryBreakdown {
@@ -53,6 +55,8 @@ export interface CategoryBreakdown {
   title: string;
   lines: BreakdownLine[];
   marginPct?: number;
+  /** The administrator's code for the margin (null = "Custom"), for staff shown codes. */
+  marginCode?: string | null;
   taxPct?: number;
   /** Before margin. */
   base?: number;
@@ -75,7 +79,14 @@ export const breakdownLine = (kind: LineKind, item: any, marginPct?: number): Br
   const qty = num(item?.quantity) ?? 1;
   const name = NAME_KEYS[kind].map((k) => item?.[k]).find((v) => v) || 'Item';
   const rate = num(item?.unitPrice);
-  if (rate === undefined) {return { name, qty };}
+  if (rate === undefined) {
+    // No rate for this person: the server's amount with margin, when it sent one.
+    const withMargin = num(item?.amountWithMargin);
+    const rateWithMargin = num(item?.rateWithMargin);
+    return withMargin === undefined && rateWithMargin === undefined
+      ? { name, qty }
+      : { name, qty, withMargin, rateWithMargin, sqft: kind === 'doors' ? num(item?.calculatedSqft) : undefined };
+  }
   // The face area the server priced the door with; worked out from the size only when it is missing.
   const sqft =
     kind === 'doors' ? num(item?.calculatedSqft) ?? doorFaceSqft(num(item?.widthMm), num(item?.heightMm)) : undefined;
@@ -97,7 +108,7 @@ export const breakdownLine = (kind: LineKind, item: any, marginPct?: number): Br
 export const categoryBreakdown = (
   kind: LineKind,
   items: any[] | undefined,
-  pct: { margin?: unknown; tax?: unknown },
+  pct: { margin?: unknown; tax?: unknown; code?: string | null },
   stored: StoredTotals = {},
 ): CategoryBreakdown => {
   const marginPct = num(pct.margin);
@@ -107,10 +118,14 @@ export const categoryBreakdown = (
   const lineBase = haveRates ? lines.reduce((s, l) => s + (l.base ?? 0), 0) : undefined;
   const base = num(stored.base) ?? lineBase;
   const margin = num(stored.margin) ?? (base !== undefined && marginPct !== undefined ? (base * marginPct) / 100 : undefined);
-  const afterMargin = base !== undefined && margin !== undefined ? base + margin : undefined;
+  let afterMargin = base !== undefined && margin !== undefined ? base + margin : undefined;
   const tax = num(stored.tax) ?? (afterMargin !== undefined && taxPct !== undefined ? (afterMargin * taxPct) / 100 : undefined);
   const final = num(stored.final) ?? (afterMargin !== undefined && tax !== undefined ? afterMargin + tax : undefined);
-  return { kind, title: CATEGORY_TITLE[kind], lines, marginPct, taxPct, base, margin, afterMargin, tax, final };
+  // Without the rates or the margin (staff shown codes): what the customer pays less GST.
+  if (afterMargin === undefined && final !== undefined && tax !== undefined) {
+    afterMargin = final - tax;
+  }
+  return { kind, title: CATEGORY_TITLE[kind], lines, marginPct, marginCode: pct.code, taxPct, base, margin, afterMargin, tax, final };
 };
 
 export interface ExpenseBreakdown {
@@ -162,7 +177,11 @@ export const kitchenCategories = (source: any, quotation: any): CategoryBreakdow
     categoryBreakdown(
       kind,
       source?.[kind],
-      { margin: quotation?.[`${kind}MarginPercentage`], tax: quotation?.[`${kind}TaxPercentage`] },
+      {
+        margin: quotation?.[`${kind}MarginPercentage`],
+        tax: quotation?.[`${kind}TaxPercentage`],
+        code: quotation?.[`${kind}MarginCode`] ?? null,
+      },
       {
         base: source?.[`${kind}BaseTotal`],
         margin: source?.[`${kind}MarginAmount`],

@@ -138,3 +138,19 @@ describe('formatting', () => {
     expect(pctText(undefined)).toBe('—');
   });
 });
+
+describe('staff shown margin codes', () => {
+  it('get each line with margin from the server, and the code instead of the percentage', () => {
+    const c = categoryBreakdown(
+      'cabinets',
+      [{ description: 'Storage Base Cabinet', quantity: 1, rateWithMargin: 28036.55, amountWithMargin: 28036.55 }],
+      { tax: 18, code: 'R' },
+      { tax: 63516.73, final: 416387.48 },
+    );
+    expect(c.lines[0]).toMatchObject({ name: 'Storage Base Cabinet', withMargin: 28036.55, rateWithMargin: 28036.55 });
+    expect(c.lines[0].base).toBeUndefined();
+    expect(c.marginCode).toBe('R');
+    expect(c.marginPct).toBeUndefined();
+    close(c.afterMargin, 352870.75);
+  });
+});

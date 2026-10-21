@@ -8,6 +8,7 @@ import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Package, DoorClosed, Lightbulb, Wrench, Receipt } from 'lucide-react';
 import { useQuotationAccess } from '../useQuotationAccess';
+import { MarginCodeRow, type MarginCodeCategory } from '../marginCodes';
 import type { QuotationOtherExpense } from '../types';
 
 export interface CategoryTotalsProps {
@@ -221,6 +222,7 @@ export function CategoryTotals({
                         </span>
                       </div>
                     )}
+                    <MarginCodeRow category={category.label.toLowerCase() as MarginCodeCategory} />
                     {access.seesMargins && (
                       <div className="flex justify-between">
                         <span className="text-text-600">Margin ({category.marginPercentage}%)</span>
@@ -274,6 +276,7 @@ export function CategoryTotals({
                     </span>
                   </div>
                 )}
+                <MarginCodeRow category="miscellaneous" />
                 {access.seesMargins && (
                   <div className="flex justify-between">
                     <span className="text-text-600">Margin ({miscellaneousMarginPercentage}%)</span>

@@ -9,6 +9,7 @@ import { User, Package, DollarSign, Calculator, Home, Image as ImageIcon } from 
 import type { QuotationKitchenFormData, QuotationOtherExpense } from '@/features/quotations/types';
 import { getImageUrl } from '@/utils/imageUtils';
 import { useQuotationAccess } from '../useQuotationAccess';
+import { lineAmountWithMargin } from '../marginCodes';
 
 export interface QuotationPreviewProps {
   customer?: {
@@ -493,6 +494,11 @@ export function QuotationPreview({
                                   ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
                                 </span>
                               )}
+                              {!access.seesRates && access.seesMarginCodes && lineAmountWithMargin(item, category.category === 'Doors') !== undefined && (
+                                <span className="font-medium text-text-900 flex-shrink-0" title="With margin, before GST">
+                                  ₹{lineAmountWithMargin(item, category.category === 'Doors')!.toLocaleString('en-IN')}
+                                </span>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -637,6 +643,11 @@ export function QuotationPreview({
                           {access.seesRates && (
                             <span className="font-medium text-text-900 flex-shrink-0">
                               ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
+                            </span>
+                          )}
+                          {!access.seesRates && access.seesMarginCodes && lineAmountWithMargin(item, category.category === 'Doors') !== undefined && (
+                            <span className="font-medium text-text-900 flex-shrink-0" title="With margin, before GST">
+                              ₹{lineAmountWithMargin(item, category.category === 'Doors')!.toLocaleString('en-IN')}
                             </span>
                           )}
                         </div>
