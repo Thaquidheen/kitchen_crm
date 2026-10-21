@@ -298,6 +298,8 @@ export interface QuotationSummary {
   // Folder / version info
   folderId?: number;
   versionNumber?: number;
+  /** The latest version of a folder holding two or more versions (tagged "Latest"). */
+  latestInFolder?: boolean;
 }
 
 // Folder grouping all versions of a quotation

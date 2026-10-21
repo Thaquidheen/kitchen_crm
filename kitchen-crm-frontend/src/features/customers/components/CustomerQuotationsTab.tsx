@@ -6,6 +6,8 @@ import {
   QuotationStatusPill,
   formatQuotationValue,
 } from '@/features/quotations/components/QuotationStatusPill';
+import { LatestVersionTag } from '@/features/quotations/components/LatestVersionTag';
+import { isMarkedLatest } from '@/features/quotations/latestVersion';
 
 export interface CustomerQuotationsTabProps {
   customerId: number;
@@ -22,6 +24,8 @@ export interface CustomerQuotationRow {
   createdBy?: string | null;
   folderId?: number | null;
   versionNumber?: number | null;
+  /** Set by the server on the latest version of a folder holding two or more versions. */
+  latestInFolder?: boolean | null;
 }
 
 export interface QuotationSet {
@@ -60,19 +64,6 @@ export function groupCustomerQuotations(list: CustomerQuotationRow[]): Quotation
   return sets.sort((a, b) => firstCreated(a) - firstCreated(b));
 }
 
-/** The most recently created quotation across all sets (marked "Latest" when there are several). */
-export function latestQuotationId(sets: QuotationSet[]): number | null {
-  let best: CustomerQuotationRow | null = null;
-  for (const set of sets) {
-    for (const r of set.rows) {
-      if (!best || ts(r.createdAt) > ts(best.createdAt)) {
-        best = r;
-      }
-    }
-  }
-  return best?.id ?? null;
-}
-
 const fmtDate = (d?: string | null) =>
   d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
@@ -80,7 +71,6 @@ const fmtDate = (d?: string | null) =>
 // tints use color-mix like the rest of the app.
 const TINT_HEAD = 'color-mix(in oklab, var(--color-background-700) 45%, transparent)';
 const TINT_SET = 'color-mix(in oklab, var(--color-background-700) 28%, transparent)';
-const TINT_ACCENT = 'color-mix(in oklab, var(--color-primary-600) 12%, transparent)';
 
 const thCls =
   'px-4 py-2.5 text-left text-[10.5px] font-semibold tracking-[0.07em] uppercase text-text-500 whitespace-nowrap';
@@ -92,7 +82,6 @@ export const CustomerQuotationsTab: React.FC<CustomerQuotationsTabProps> = ({ cu
   const list: CustomerQuotationRow[] = (response as any)?.data?.content ?? [];
   const sets = useMemo(() => groupCustomerQuotations(list), [list]);
   const count = sets.reduce((n, s) => n + s.rows.length, 0);
-  const latestId = useMemo(() => latestQuotationId(sets), [sets]);
 
   const open = (id: number) => navigate(`/quotations/${id}`);
 
@@ -171,12 +160,7 @@ export const CustomerQuotationsTab: React.FC<CustomerQuotationsTabProps> = ({ cu
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="text-text-900 font-medium tabular-nums">v{q.versionNumber ?? 1}</span>
-                    {q.id === latestId && count > 1 && (
-                      <span className="ml-2 px-1.5 py-[1px] rounded-md text-[10.5px] font-semibold text-primary-600"
-                        style={{ background: TINT_ACCENT }}>
-                        Latest
-                      </span>
-                    )}
+                    {isMarkedLatest(q) && <LatestVersionTag className="ml-2" />}
                   </td>
                   <td className="px-4 py-3">
                     <QuotationStatusPill status={q.status} />
@@ -220,12 +204,7 @@ export const CustomerQuotationsTab: React.FC<CustomerQuotationsTabProps> = ({ cu
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-text-900 text-[13px] tabular-nums">v{q.versionNumber ?? 1}</span>
                     <QuotationStatusPill status={q.status} />
-                    {q.id === latestId && count > 1 && (
-                      <span className="px-1.5 py-[1px] rounded-md text-[10.5px] font-semibold text-primary-600"
-                        style={{ background: TINT_ACCENT }}>
-                        Latest
-                      </span>
-                    )}
+                    {isMarkedLatest(q) && <LatestVersionTag />}
                   </div>
                   <div className="text-[12px] text-text-600 mt-1 tabular-nums">
                     {q.quotationNumber} · {fmtDate(q.createdAt)}
@@ -258,7 +237,6 @@ export const CustomerQuotationsSummary: React.FC<{ customerId: number; onViewAll
   const list: CustomerQuotationRow[] = (response as any)?.data?.content ?? [];
   const sets = useMemo(() => groupCustomerQuotations(list), [list]);
   const rows = useMemo(() => sets.flatMap((s) => s.rows), [sets]);
-  const latestId = useMemo(() => latestQuotationId(sets), [sets]);
 
   return (
     <div className="bg-background-800 border border-background-600 rounded-[14px] overflow-hidden">
@@ -300,14 +278,7 @@ export const CustomerQuotationsSummary: React.FC<{ customerId: number; onViewAll
               </span>
               <span className="min-w-0 flex-1 truncate text-[12.5px] text-text-700 tabular-nums">
                 {q.quotationNumber}
-                {q.id === latestId && rows.length > 1 && (
-                  <span
-                    className="ml-2 px-1.5 py-[1px] rounded-md text-[10.5px] font-semibold text-primary-600"
-                    style={{ background: TINT_ACCENT }}
-                  >
-                    Latest
-                  </span>
-                )}
+                {isMarkedLatest(q) && <LatestVersionTag className="ml-2" />}
               </span>
               <span className="hidden sm:inline-flex">
                 <QuotationStatusPill status={q.status} />

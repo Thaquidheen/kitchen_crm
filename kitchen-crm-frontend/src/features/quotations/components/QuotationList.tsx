@@ -27,6 +27,8 @@ import { useQuotationAccess } from '../useQuotationAccess';
 import { usePendingEditRequests } from '../usePendingEditRequests';
 import { EditRequestControl } from './EditRequestControl';
 import { DeleteCancelledQuotations } from './DeleteCancelledQuotations';
+import { LatestVersionTag } from './LatestVersionTag';
+import { isLatestOfFolder, isMarkedLatest } from '../latestVersion';
 
 export interface QuotationListProps {
   filters: QuotationFilters;
@@ -436,6 +438,7 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
                                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-semibold bg-primary-600/15 text-primary-600 shrink-0">
                                       V{q.versionNumber ?? '?'}
                                     </span>
+                                    {isLatestOfFolder(q.id, f) && <LatestVersionTag />}
                                     {(() => {
                                       const { primary, secondary } = quotationLabel(q);
                                       return (
@@ -554,6 +557,7 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
                                     Rev {q.versionNumber}
                                   </span>
                                 )}
+                                {isMarkedLatest(q) && <LatestVersionTag />}
                               </div>
                               {secondary && (
                                 <div className="text-text-500 font-normal text-[11px] tabular-nums truncate">

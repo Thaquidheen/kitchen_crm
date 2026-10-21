@@ -125,6 +125,17 @@ public class QuotationServiceImpl implements QuotationService {
                                                                    LocalDateTime toDate, Pageable pageable) {
         Page<Quotation> quotations = quotationRepository.findByFilters(customerId, status, customerName, fromDate, toDate, pageable);
         Page<QuotationSummaryDto> quotationDtos = quotations.map(this::convertToSummaryDto);
+        // Mark each folder's latest version. A page (or a filtered list) may hold only some versions
+        // of a folder, so the latest is decided over every version of the folders on this page.
+        List<Long> folderIds = quotations.getContent().stream()
+                .filter(q -> q.getFolder() != null)
+                .map(q -> q.getFolder().getId())
+                .distinct()
+                .toList();
+        if (!folderIds.isEmpty()) {
+            java.util.Set<Long> latest = latestOfSeveralVersions(quotationRepository.findByFolderIdIn(folderIds));
+            quotationDtos.forEach(dto -> dto.setLatestInFolder(latest.contains(dto.getId())));
+        }
         return ApiResponse.success(quotationDtos);
     }
 
@@ -832,6 +843,36 @@ public class QuotationServiceImpl implements QuotationService {
 
     // ==================== Quotation folders (version grouping) ====================
 
+    /**
+     * Orders a folder's versions; the maximum is the folder's latest version: the highest version
+     * number (none counts as 0), the quotation saved last (higher id) on a tie. The folder list's
+     * "Latest Amount" and the quotation lists' "Latest" tag both use it, so they name the same row.
+     */
+    private static final java.util.Comparator<Quotation> VERSION_ORDER = java.util.Comparator
+            .comparing((Quotation q) -> q.getVersionNumber() != null ? q.getVersionNumber() : 0)
+            .thenComparing(Quotation::getId);
+
+    /**
+     * Ids of the quotations tagged "Latest": the latest version of each folder that holds two or
+     * more versions. Pass every version of the folders concerned; quotations without a folder are
+     * never tagged.
+     */
+    private static java.util.Set<Long> latestOfSeveralVersions(List<Quotation> quotations) {
+        Map<Long, List<Quotation>> byFolder = new HashMap<>();
+        for (Quotation q : quotations) {
+            if (q.getFolder() != null) {
+                byFolder.computeIfAbsent(q.getFolder().getId(), k -> new java.util.ArrayList<>()).add(q);
+            }
+        }
+        java.util.Set<Long> ids = new java.util.HashSet<>();
+        for (List<Quotation> versions : byFolder.values()) {
+            if (versions.size() >= 2) {
+                versions.stream().max(VERSION_ORDER).ifPresent(latest -> ids.add(latest.getId()));
+            }
+        }
+        return ids;
+    }
+
     private String buildFolderName(String customerName, String projectName) {
         String base = customerName != null ? customerName : "Quotation";
         if (projectName != null && !projectName.isBlank()) {
@@ -862,7 +903,7 @@ public class QuotationServiceImpl implements QuotationService {
             List<Quotation> versions = byFolder.getOrDefault(f.getId(), List.of());
             dto.setVersionCount(versions.size());
             versions.stream()
-                    .max(java.util.Comparator.comparing(q -> q.getVersionNumber() != null ? q.getVersionNumber() : 0))
+                    .max(VERSION_ORDER)
                     .ifPresent(latest -> {
                         dto.setLatestQuotationId(latest.getId());
                         dto.setLatestQuotationNumber(latest.getQuotationNumber());
@@ -881,8 +922,10 @@ public class QuotationServiceImpl implements QuotationService {
         if (!folderRepository.existsById(folderId)) {
             return ApiResponse.error("Folder not found");
         }
-        List<QuotationSummaryDto> versions = quotationRepository.findByFolderIdOrderByVersionNumberDesc(folderId)
-                .stream().map(this::convertToSummaryDto).toList();
+        List<Quotation> folderVersions = quotationRepository.findByFolderIdOrderByVersionNumberDesc(folderId);
+        java.util.Set<Long> latest = latestOfSeveralVersions(folderVersions);
+        List<QuotationSummaryDto> versions = folderVersions.stream().map(this::convertToSummaryDto).toList();
+        versions.forEach(dto -> dto.setLatestInFolder(latest.contains(dto.getId())));
         return ApiResponse.success(versions);
     }
 
@@ -1542,7 +1585,8 @@ public class QuotationServiceImpl implements QuotationService {
                 quotation.getUpdatedAt() != null ? quotation.getUpdatedAt() : quotation.getCreatedAt(),
                 quotation.getCreatedBy(),
                 quotation.getFolder() != null ? quotation.getFolder().getId() : null,
-                quotation.getVersionNumber()
+                quotation.getVersionNumber(),
+                false // latestInFolder: set by the caller, which sees the whole folder
         );
     }
 
