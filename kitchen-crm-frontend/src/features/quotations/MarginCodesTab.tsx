@@ -37,7 +37,7 @@ import {
   samePercentage,
   sortMarginCodes,
   type MarginCodeDraft,
-} from './marginCodeRules';
+} from './marginCodeAdminRules';
 
 const COL_COUNT = 5;
 const EMPTY: MarginCodeDraft = { code: '', percentage: '', note: '' };

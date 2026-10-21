@@ -6,7 +6,7 @@ import {
   refusalMessage,
   samePercentage,
   sortMarginCodes,
-} from './marginCodeRules';
+} from './marginCodeAdminRules';
 import type { MarginCode } from './marginCodesAPI';
 
 const codes: MarginCode[] = [

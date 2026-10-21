@@ -38,7 +38,7 @@ import { selectCurrentTheme } from '../../features/theme/themeSlice';
 import { useIsSuperAdmin } from '../../features/auth/useIsSuperAdmin';
 import { MarginCodesTab } from '../../features/quotations/MarginCodesTab';
 import { useGetMarginCodesQuery } from '../../features/quotations/marginCodesAPI';
-import { codeForPercentage, formatPercentage } from '../../features/quotations/marginCodeRules';
+import { codeForPercentage, formatPercentage } from '../../features/quotations/marginCodeAdminRules';
 
 export const SettingsPage: React.FC = () => {
   // Get current theme for dynamic colors
