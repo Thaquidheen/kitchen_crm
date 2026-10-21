@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Pencil, ChevronDown, ChevronRight, Layers, Receipt, X } from 'lucide-react';
 import { useState } from 'react';
 import { useQuotationAccess } from '../useQuotationAccess';
-import { lineAmountWithMargin } from '../marginCodes';
+import { useLineWithMargin, useServerFigure } from '../serverFigures';
 import type { QuotationElevation, QuotationOtherExpense } from '../types';
 
 interface AccessoryItem {
@@ -125,6 +125,8 @@ export function SelectedProductsList({
   onEditDoor
 }: SelectedProductsListProps) {
   const access = useQuotationAccess();
+  const saved = useServerFigure();
+  const lineWithMargin = useLineWithMargin();
 
   // Which cabinet each linked door belongs to. A door created for a cabinet carries the same
   // _tempPairId; without showing it, every door row is the same shutter name and they cannot be
@@ -265,9 +267,9 @@ export function SelectedProductsList({
   const miscTax = (miscWithMargin * miscellaneousTaxPercentage) / 100;
   const otherExpensesTotal = miscWithMargin + miscTax;
   const grandTotal = productTotal + otherExpensesTotal;
-  // Staff are not sent unit prices, so the figure above is 0 for them - show the stored total.
-  const displayGrandTotal =
-    !access.computesTotals && serverGrandTotal != null ? Number(serverGrandTotal) : grandTotal;
+  // Staff are not sent the prices or margins, so the figure above is not theirs: they see the total
+  // the server saved — "—" for a new quotation, or once something that changes it was changed.
+  const displayGrandTotal: number | null = access.computesTotals ? grandTotal : saved(serverGrandTotal);
 
   const toggleElevation = (elevationName: string) => {
     setExpandedElevations(prev => ({
@@ -329,7 +331,7 @@ export function SelectedProductsList({
             )}
             {/* Staff shown margins as codes: the amount with margin, as priced at the last save. */}
             {!access.seesRates && access.seesMarginCodes && (() => {
-              const amount = lineAmountWithMargin(item as any, category === 'doors');
+              const amount = lineWithMargin(item as any, category);
               return amount === undefined ? (
                 <span className="text-text-500 whitespace-nowrap" title="Priced when the quotation is saved">—</span>
               ) : (
@@ -496,8 +498,11 @@ export function SelectedProductsList({
       <Card className="p-3 sm:p-4 bg-primary-600/[0.06] border-primary-600/40 rounded-xl">
         <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-text-600 mb-0.5">Grand Total</div>
         <div className="text-lg sm:text-xl font-bold text-primary-600 tabular-nums break-all">
-          ₹{displayGrandTotal.toLocaleString('en-IN')}
+          {displayGrandTotal === null ? '—' : `₹${displayGrandTotal.toLocaleString('en-IN')}`}
         </div>
+        {displayGrandTotal === null && (
+          <div className="text-[11px] text-text-500 mt-0.5">Shown once the quotation is saved.</div>
+        )}
       </Card>
     </div>
   );

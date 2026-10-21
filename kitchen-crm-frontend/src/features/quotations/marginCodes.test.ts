@@ -27,13 +27,15 @@ describe('the codes a quotation carries', () => {
     expect(pickCodes(undefined).lightingMarginCode).toBeNull();
   });
 
-  it('starts a new quotation from the default codes, MRP the same as the offer', () => {
-    const codes = defaultCodes({ cabinets: 'R', accessories: 'K', lighting: null });
+  it('starts a new quotation from the codes of the starting margins, offer and MRP', () => {
+    const codes = defaultCodes({ cabinets: 'R', accessories: 'K', lighting: null }, { cabinets: 'S', miscellaneous: 'Z' });
     expect(codes.cabinetsMarginCode).toBe('R');
-    expect(codes.cabinetsMrpMarginCode).toBe('R');
-    expect(codes.accessoriesMrpMarginCode).toBe('K');
+    expect(codes.cabinetsMrpMarginCode).toBe('S');
+    expect(codes.accessoriesMrpMarginCode).toBeNull();
+    expect(codes.miscellaneousMrpMarginCode).toBe('Z');
     expect(codes.lightingMarginCode).toBeNull();
     expect(codes.miscellaneousMarginCode).toBeNull();
+    expect(defaultCodes({ cabinets: 'R' }).cabinetsMrpMarginCode).toBeNull();
   });
 });
 

@@ -9,4 +9,6 @@ import java.util.List;
 public interface MarginCodeRepository extends JpaRepository<MarginCode, Long> {
 
     List<MarginCode> findAllByOrderByPercentageAsc();
+
+    List<MarginCode> findAllByOrderByCodeAsc();
 }

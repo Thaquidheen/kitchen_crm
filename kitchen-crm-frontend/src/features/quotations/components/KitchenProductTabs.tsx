@@ -12,6 +12,11 @@ import { CategoryTotals } from './CategoryTotals';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import type { QuotationKitchenFormData } from '../types';
+import { otherExpensesFromServer } from '../serverFigureRules';
+
+/** A kitchen's other expenses as the server worked them out: its total less its category totals. */
+const savedOtherExpenses = (k: QuotationKitchenFormData) =>
+  otherExpensesFromServer(k.totalAmount, [k.accessoriesFinalTotal, k.cabinetsFinalTotal, k.doorsFinalTotal, k.lightingFinalTotal]);
 
 export interface KitchenProductTabsProps {
   kitchens: QuotationKitchenFormData[];
@@ -179,6 +184,7 @@ export function KitchenProductTabs({
                   doors: kitchen.doorsFinalTotal,
                   lighting: kitchen.lightingFinalTotal,
                 }}
+                serverOtherExpenses={savedOtherExpenses(kitchen)}
                 kitchenName={kitchen.kitchenName}
               />
             </div>
@@ -211,6 +217,7 @@ export function KitchenProductTabs({
                   doors: kitchen.doorsFinalTotal,
                   lighting: kitchen.lightingFinalTotal,
                 }}
+                serverOtherExpenses={savedOtherExpenses(kitchen)}
                 accessories={kitchen.accessories || []}
                 cabinets={kitchen.cabinets || []}
                 doors={kitchen.doors || []}

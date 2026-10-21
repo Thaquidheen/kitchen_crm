@@ -10,6 +10,7 @@ import clsx from 'clsx';
 import type { QuotationOtherExpense } from '../types';
 import { useQuotationAccess } from '../useQuotationAccess';
 import { MarginCodeField, type MarginCodeCategory, type MarginKind } from '../marginCodes';
+import { useServerFigure } from '../serverFigures';
 
 interface CategorySectionProps {
   label: string;
@@ -157,7 +158,7 @@ function CategorySection({
             </span>
           </div>
           {total.finalTotal == null && (
-            <p className="mt-1 mb-0 text-[11px] text-text-500">Available once the quotation is saved.</p>
+            <p className="mt-1 mb-0 text-[11px] text-text-500">Shown once the quotation is saved.</p>
           )}
         </div>
       </div>
@@ -219,6 +220,11 @@ export interface CategoryPricingPanelProps {
     doors?: number | null;
     lighting?: number | null;
   };
+  /**
+   * The other expenses with margin and GST, as the server worked them out. Staff are not sent the
+   * miscellaneous margin, so this is their figure for it.
+   */
+  serverOtherExpenses?: number | null;
 
   // User role for conditional rendering
   userRole?: 'ROLE_SUPER_ADMIN' | 'ROLE_STAFF';
@@ -257,6 +263,7 @@ export function CategoryPricingPanel({
   onMiscellaneousMarginChange,
   onMiscellaneousTaxChange,
   serverCategoryTotals,
+  serverOtherExpenses,
   kitchenName,
   marginKind = 'offer',
 }: CategoryPricingPanelProps) {
@@ -267,14 +274,21 @@ export function CategoryPricingPanel({
   const showMargins = access.seesMargins;
   const showSubtotal = access.seesRates;
   const computesTotals = access.computesTotals;
+  // A figure the server saved, or null once something on the screen changed it.
+  const saved = useServerFigure();
 
-  const otherExpensesTotal = useMemo(() => {
-    const base = otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-    const margin = (base * miscellaneousMarginPercentage) / 100;
-    const withMargin = base + margin;
+  // Worked out here only by whoever has the miscellaneous margin (the administrator); for staff it
+  // is the server's figure. No expenses come to 0 whatever the margin.
+  const otherExpensesBase = otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const otherExpensesTotal: number | null = useMemo(() => {
+    if (!access.seesMargins) {
+      return otherExpensesBase === 0 ? 0 : saved(serverOtherExpenses);
+    }
+    const margin = (otherExpensesBase * miscellaneousMarginPercentage) / 100;
+    const withMargin = otherExpensesBase + margin;
     const tax = (withMargin * miscellaneousTaxPercentage) / 100;
     return withMargin + tax;
-  }, [otherExpenses, miscellaneousMarginPercentage, miscellaneousTaxPercentage]);
+  }, [access.seesMargins, otherExpensesBase, saved, serverOtherExpenses, miscellaneousMarginPercentage, miscellaneousTaxPercentage]);
 
   const categorySubtotals = useMemo(() => {
     const accessoriesSubtotal = accessories.reduce((sum, item) => sum + (item.totalPrice ?? item.price ?? 0), 0);
@@ -313,8 +327,8 @@ export function CategoryPricingPanel({
       itemCount: number,
     ) => {
       if (computesTotals) return computed;
-      if (server != null) return { ...computed, finalTotal: Number(server) };
-      return { ...computed, finalTotal: itemCount === 0 ? 0 : null };
+      if (itemCount === 0) {return { ...computed, finalTotal: 0 };}
+      return { ...computed, finalTotal: saved(server) };
     };
 
     return {
@@ -332,7 +346,7 @@ export function CategoryPricingPanel({
         serverCategoryTotals?.lighting, lighting.length),
     };
   }, [categorySubtotals, accessoriesMargin, accessoriesTax, cabinetsMargin, cabinetsTax, doorsMargin,
-      doorsTax, lightingMargin, lightingTax, computesTotals, serverCategoryTotals,
+      doorsTax, lightingMargin, lightingTax, computesTotals, serverCategoryTotals, saved,
       accessories.length, cabinets.length, doors.length, lighting.length]);
 
   // One unknown category makes the grand total unknown too — better an em dash than a number
@@ -343,7 +357,7 @@ export function CategoryPricingPanel({
     categoryTotals.doors.finalTotal,
     categoryTotals.lighting.finalTotal,
   ];
-  const grandTotal: number | null = categoryFinals.some((v) => v == null)
+  const grandTotal: number | null = categoryFinals.some((v) => v === null || v === undefined) || otherExpensesTotal === null
     ? null
     : categoryFinals.reduce((sum, v) => (sum as number) + (v as number), 0)! + otherExpensesTotal;
 
@@ -438,13 +452,13 @@ export function CategoryPricingPanel({
               marginKind={marginKind}
               icon={<Receipt className="h-3.5 w-3.5 text-text-600" />}
               color="bg-background-700 border border-background-600"
-              subtotal={otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0)}
+              subtotal={otherExpensesBase}
               marginPercent={miscellaneousMarginPercentage}
               taxPercent={miscellaneousTaxPercentage}
               onMarginChange={onMiscellaneousMarginChange}
               onTaxChange={onMiscellaneousTaxChange || (() => {})}
               total={{
-                marginAmount: otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0) * miscellaneousMarginPercentage / 100,
+                marginAmount: otherExpensesBase * miscellaneousMarginPercentage / 100,
                 finalTotal: otherExpensesTotal,
               }}
               showMargins={showMargins}

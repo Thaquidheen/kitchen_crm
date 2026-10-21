@@ -23,14 +23,17 @@ export const pickCodes = (source: MarginCodeFields | null | undefined): MarginCo
   Object.fromEntries(CODE_FIELDS.map((f) => [f, source?.[f] ?? null])) as MarginCodeFields;
 
 /**
- * The codes a new quotation starts from: each category's default code, the MRP ones the same as
- * the offer ones (as the server does with the percentages).
+ * The codes a new quotation starts from: the code of each category's starting margin, offer and
+ * MRP, as the server gave them (null = no code for it: "Custom", and the server's starting margin).
  */
-export const defaultCodes = (defaults: Partial<Record<MarginCodeCategory, string | null>> | undefined): MarginCodeFields => {
+export const defaultCodes = (
+  defaults: Partial<Record<MarginCodeCategory, string | null>> | undefined,
+  mrpDefaults?: Partial<Record<MarginCodeCategory, string | null>>,
+): MarginCodeFields => {
   const out: Record<string, string | null> = {};
   for (const c of ['accessories', 'cabinets', 'doors', 'lighting', 'miscellaneous'] as MarginCodeCategory[]) {
     out[codeField(c, 'offer')] = defaults?.[c] ?? null;
-    out[codeField(c, 'mrp')] = defaults?.[c] ?? null;
+    out[codeField(c, 'mrp')] = mrpDefaults?.[c] ?? null;
   }
   return out as MarginCodeFields;
 };

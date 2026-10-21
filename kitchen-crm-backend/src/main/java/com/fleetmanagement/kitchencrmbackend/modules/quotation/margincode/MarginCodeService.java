@@ -26,6 +26,14 @@ public class MarginCodeService {
     /** The margin categories of a quotation, as the settings and the quotation fields name them. */
     public static final List<String> CATEGORIES = List.of("accessories", "cabinets", "doors", "lighting", "miscellaneous");
 
+    /**
+     * The MRP (list price) margin a new quotation starts with when nobody who sets margins chose one:
+     * 60% (0% for other expenses), the figures the quotation screen has always started from.
+     */
+    public static BigDecimal startingMrpPercent(String category) {
+        return "miscellaneous".equals(category) ? BigDecimal.ZERO : BigDecimal.valueOf(60);
+    }
+
     @Autowired
     private MarginCodeRepository repository;
     @Autowired
@@ -107,26 +115,32 @@ public class MarginCodeService {
     // ------------------------------------------------------------------ what staff are given
 
     /**
-     * For a screen that shows codes: the codes that can be chosen (no percentages), and the code of
-     * each category's default margin a new quotation starts from.
+     * For a screen that shows codes: the codes that can be chosen (no percentages), in the order of
+     * their names — an order by percentage would tell which code is the bigger margin — and the
+     * code of each category's starting margin for a new quotation, offer and MRP. A starting margin
+     * with no code that can be chosen has none (the screen shows "Custom").
      */
     @Transactional(readOnly = true)
     public Map<String, Object> options() {
         List<Map<String, Object>> codes = new ArrayList<>();
-        for (MarginCode c : repository.findAllByOrderByPercentageAsc()) {
+        Map<BigDecimal, String> offered = new HashMap<>();
+        for (MarginCode c : repository.findAllByOrderByCodeAsc()) {
             if (Boolean.TRUE.equals(c.getActive())) {
                 codes.add(Map.of("code", c.getCode()));
+                offered.put(norm(c.getPercentage()), c.getCode());
             }
         }
-        Map<BigDecimal, String> byPercent = byPercent();
         Map<String, Object> defaults = new LinkedHashMap<>();
+        Map<String, Object> mrpDefaults = new LinkedHashMap<>();
         for (String category : CATEGORIES) {
             BigDecimal pct = systemSettingService.getMarginPercentage(category);
-            defaults.put(category, pct == null ? null : byPercent.get(norm(pct)));
+            defaults.put(category, pct == null ? null : offered.get(norm(pct)));
+            mrpDefaults.put(category, offered.get(norm(startingMrpPercent(category))));
         }
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("codes", codes);
         out.put("defaults", defaults);
+        out.put("mrpDefaults", mrpDefaults);
         return out;
     }
 
@@ -147,13 +161,19 @@ public class MarginCodeService {
 
     /**
      * The percentages of the codes someone chose, by field name. A blank or missing code means
-     * "no change". A code that does not exist is refused, before anything is written.
+     * "no change". A code that does not exist is refused, before anything is written, and so is a
+     * switched-off code — unless the margin already is that code's percentage (current, by field
+     * name), as on a quotation made while the code was still offered.
+     *
+     * The refusal is an IllegalArgumentException that the quotation service turns into its message;
+     * noRollbackFor keeps it from marking the caller's transaction for rollback on its way out
+     * (which turned the message into a 500 when that transaction committed).
      */
-    @Transactional(readOnly = true)
-    public Map<String, BigDecimal> resolve(Map<String, String> chosen) {
-        Map<String, BigDecimal> byCode = new HashMap<>();
+    @Transactional(readOnly = true, noRollbackFor = IllegalArgumentException.class)
+    public Map<String, BigDecimal> resolve(Map<String, String> chosen, Map<String, BigDecimal> current) {
+        Map<String, MarginCode> byCode = new HashMap<>();
         for (MarginCode c : repository.findAll()) {
-            byCode.put(c.getCode().toUpperCase(Locale.ROOT), c.getPercentage());
+            byCode.put(c.getCode().toUpperCase(Locale.ROOT), c);
         }
         Map<String, BigDecimal> out = new LinkedHashMap<>();
         for (Map.Entry<String, String> e : chosen.entrySet()) {
@@ -161,9 +181,16 @@ public class MarginCodeService {
             if (code.isEmpty()) {
                 continue;
             }
-            BigDecimal pct = byCode.get(code.toUpperCase(Locale.ROOT));
-            if (pct == null) {
+            MarginCode c = byCode.get(code.toUpperCase(Locale.ROOT));
+            if (c == null) {
                 throw new IllegalArgumentException("There is no margin code " + code + ". Choose one from the list");
+            }
+            BigDecimal pct = norm(c.getPercentage());
+            if (!Boolean.TRUE.equals(c.getActive())) {
+                BigDecimal now = current == null ? null : norm(current.get(e.getKey()));
+                if (now == null || now.compareTo(pct) != 0) {
+                    throw new IllegalArgumentException("The margin code " + c.getCode() + " is switched off. Choose one from the list");
+                }
             }
             out.put(e.getKey(), pct);
         }

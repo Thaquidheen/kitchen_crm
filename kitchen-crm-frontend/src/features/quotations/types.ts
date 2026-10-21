@@ -517,6 +517,8 @@ export interface QuotationKitchenFormData {
    */
   /** The kitchen total as computed by the server — the only correct figure for staff. */
   totalAmount?: number | null;
+  /** The GST on the kitchen's products, as computed by the server. */
+  taxAmount?: number | null;
   accessoriesFinalTotal?: number | null;
   cabinetsFinalTotal?: number | null;
   doorsFinalTotal?: number | null;

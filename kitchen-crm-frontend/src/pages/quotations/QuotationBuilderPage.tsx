@@ -3,7 +3,7 @@
  * Multi-step quotation builder with customer selection and product selection
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useBlocker, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/app/store';
@@ -51,6 +51,7 @@ import { useCreateQuotationMutation, useUpdateQuotationMutation, useGetQuotation
 import { useGetMarginsQuery } from '@/services/settingsAPI';
 import { useGetMarginCodeOptionsQuery } from '@/features/quotations/marginCodesAPI';
 import { MarginCodeProvider, defaultCodes, pickCodes } from '@/features/quotations/marginCodes';
+import { ServerFiguresProvider, changedCodeCategories, otherExpensesFromServer, pricingSnapshot } from '@/features/quotations/serverFigures';
 import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
 import { useGetCabinetsQuery, useGetDoorsQuery } from '@/features/products/productsAPI';
 import { useParams } from 'react-router-dom';
@@ -194,6 +195,9 @@ export function QuotationBuilderPage() {
   const [customerKitchenTypes, setCustomerKitchenTypes] = useState<string[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const initialFormDataRef = useRef<string | null>(null);
+  // The price-setting part of the form as it was opened: staff see the server's figures only while
+  // the form still matches it (see serverFigureRules).
+  const [pricingBaseline, setPricingBaseline] = useState<string | null>(null);
   const skipNavigationBlockRef = useRef(false);
   const [formData, setFormData] = useState<Partial<QuotationFormData>>({
     customerId: 0,
@@ -261,7 +265,7 @@ export function QuotationBuilderPage() {
   // A new quotation made by staff shown codes starts from the default codes.
   useEffect(() => {
     if (!isEditMode && codeOptions) {
-      setFormData((prev) => ({ ...prev, ...defaultCodes(codeOptions.defaults) }));
+      setFormData((prev) => ({ ...prev, ...defaultCodes(codeOptions.defaults, codeOptions.mrpDefaults) }));
     }
   }, [codeOptions, isEditMode]);
 
@@ -481,6 +485,7 @@ export function QuotationBuilderPage() {
         })),
         // Server-computed totals: the only correct figures for a staff viewer.
         totalAmount: k.totalAmount,
+        taxAmount: k.taxAmount,
         accessoriesFinalTotal: k.accessoriesFinalTotal,
         cabinetsFinalTotal: k.cabinetsFinalTotal,
         doorsFinalTotal: k.doorsFinalTotal,
@@ -508,22 +513,38 @@ export function QuotationBuilderPage() {
   }, [isEditMode, existingQuotation]);
 
   // Track initial form data for dirty state detection
+  // A new quotation starts from the administrator's margins (the administrator) or the default
+  // margin codes (staff shown codes); other staff are given neither, and have nothing to wait for.
+  const newQuotationStarted = access.ready && (access.seesMargins ? !!marginsResponse?.data : !access.seesMarginCodes || !!codeOptions);
   useEffect(() => {
     // Only set initial snapshot after margins are loaded (for new) or quotation is loaded (for edit)
-    if (!isEditMode && marginsResponse?.data && initialFormDataRef.current === null) {
+    if (!isEditMode && newQuotationStarted && initialFormDataRef.current === null) {
       // Small delay to let margins apply to formData
       const timer = setTimeout(() => {
         initialFormDataRef.current = JSON.stringify(formData);
+        setPricingBaseline(pricingSnapshot(formData));
       }, 100);
       return () => clearTimeout(timer);
     } else if (isEditMode && existingQuotation && initialFormDataRef.current === null) {
       // For edit mode, snapshot after quotation is loaded
       const timer = setTimeout(() => {
         initialFormDataRef.current = JSON.stringify(formData);
+        setPricingBaseline(pricingSnapshot(formData));
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [marginsResponse, existingQuotation, isEditMode, formData]);
+  }, [newQuotationStarted, existingQuotation, isEditMode, formData]);
+
+  // Whether the figures the server saved still describe the form (for staff, who cannot work
+  // totals out), and which categories' codes were changed since the quotation was opened.
+  const currentPricing = useMemo(() => pricingSnapshot(formData), [formData]);
+  const serverFigures = useMemo(
+    () => ({
+      current: pricingBaseline === null || currentPricing === pricingBaseline,
+      changedCodes: isEditMode && existingQuotation ? changedCodeCategories(pickCodes(existingQuotation as any), pickCodes(formData)) : [],
+    }),
+    [pricingBaseline, currentPricing, isEditMode, existingQuotation, formData],
+  );
 
   // Track dirty state
   useEffect(() => {
@@ -885,6 +906,9 @@ export function QuotationBuilderPage() {
             const doorPrice = data.linkedDoor!.doorType?.companyPrice || 0;
             return {
               ...d,
+              // Re-sized or re-typed: its rate with margin is the server's to work out again.
+              rateWithMargin: undefined,
+              amountWithMargin: undefined,
               doorTypeId: data.linkedDoor!.doorTypeId,
               doorTypeName: data.linkedDoor!.doorType?.name,
               brandName: data.linkedDoor!.doorType?.brandName,
@@ -927,7 +951,7 @@ export function QuotationBuilderPage() {
         (data as any)._tempPairId = oldPairId;
       }
 
-      cabinets[editIndex] = data;
+      cabinets[editIndex] = { ...data, rateWithMargin: undefined, amountWithMargin: undefined } as typeof data;
       kitchen.cabinets = cabinets;
       kitchen.doors = doors;
       updatedKitchens[editingKitchenIndex] = kitchen;
@@ -952,6 +976,9 @@ export function QuotationBuilderPage() {
             const doorPrice = data.linkedDoor!.doorType?.companyPrice || 0;
             return {
               ...d,
+              // Re-sized or re-typed: its rate with margin is the server's to work out again.
+              rateWithMargin: undefined,
+              amountWithMargin: undefined,
               doorTypeId: data.linkedDoor!.doorTypeId,
               doorTypeName: data.linkedDoor!.doorType?.name,
               brandName: data.linkedDoor!.doorType?.brandName,
@@ -994,7 +1021,7 @@ export function QuotationBuilderPage() {
         (data as any)._tempPairId = oldPairId;
       }
 
-      cabinets[editIndex] = data;
+      cabinets[editIndex] = { ...data, rateWithMargin: undefined, amountWithMargin: undefined } as typeof data;
       setFormData({ ...formData, cabinets, doors });
     }
 
@@ -1135,14 +1162,14 @@ export function QuotationBuilderPage() {
       const updatedKitchens = [...(formData.kitchens || [])];
       const kitchen = { ...updatedKitchens[editingDoorKitchenIndex] };
       const doors = [...(kitchen.doors || [])];
-      doors[editingDoorIndex] = { ...(doors[editingDoorIndex] as any), ...data };
+      doors[editingDoorIndex] = { ...(doors[editingDoorIndex] as any), ...data, rateWithMargin: undefined, amountWithMargin: undefined };
       kitchen.doors = doors;
       updatedKitchens[editingDoorKitchenIndex] = kitchen;
       setFormData({ ...formData, kitchens: updatedKitchens });
     } else {
       // Update in global list (merge to preserve id / _tempPairId)
       const doors = [...(formData.doors || [])];
-      doors[editingDoorIndex] = { ...(doors[editingDoorIndex] as any), ...data };
+      doors[editingDoorIndex] = { ...(doors[editingDoorIndex] as any), ...data, rateWithMargin: undefined, amountWithMargin: undefined };
       setFormData({ ...formData, doors });
     }
 
@@ -1230,6 +1257,14 @@ export function QuotationBuilderPage() {
   };
 
   const stepOrder: BuilderStep[] = ['customer', 'kitchens', 'products', 'review'];
+
+  // A quotation without kitchens: its other expenses as the server worked them out (staff's figure).
+  const savedOtherExpenses = otherExpensesFromServer((existingQuotation as any)?.totalAmount, [
+    (existingQuotation as any)?.accessoriesFinalTotal,
+    (existingQuotation as any)?.cabinetsFinalTotal,
+    (existingQuotation as any)?.doorsFinalTotal,
+    (existingQuotation as any)?.lightingFinalTotal,
+  ]);
 
   const handleStepClick = (stepId: string) => {
     const targetIndex = stepOrder.indexOf(stepId as BuilderStep);
@@ -1370,6 +1405,7 @@ export function QuotationBuilderPage() {
         setCode: (field, code) => setFormData((prev) => ({ ...prev, [field]: code })),
       }}
     >
+    <ServerFiguresProvider value={serverFigures}>
     <div className="min-h-screen bg-background-900 p-4 sm:p-6">
       {/* Header */}
       <div className="mb-4 sm:mb-5">
@@ -1690,6 +1726,7 @@ export function QuotationBuilderPage() {
                           doors: (existingQuotation as any)?.doorsFinalTotal,
                           lighting: (existingQuotation as any)?.lightingFinalTotal,
                         }}
+                        serverOtherExpenses={savedOtherExpenses}
                         accessories={formData.accessories || []}
                         cabinets={formData.cabinets || []}
                         doors={formData.doors || []}
@@ -1728,6 +1765,7 @@ export function QuotationBuilderPage() {
                           doors: (existingQuotation as any)?.doorsFinalTotal,
                           lighting: (existingQuotation as any)?.lightingFinalTotal,
                         }}
+                        serverOtherExpenses={savedOtherExpenses}
                         accessories={formData.accessories || []}
                         cabinets={formData.cabinets || []}
                         doors={formData.doors || []}
@@ -1905,6 +1943,7 @@ export function QuotationBuilderPage() {
                           doors: (existingQuotation as any)?.doorsMrpTotal,
                           lighting: (existingQuotation as any)?.lightingMrpTotal,
                         }}
+                        serverOtherExpenses={(existingQuotation as any)?.miscMrpTotal}
                         accessories={acc}
                         cabinets={cab}
                         doors={dor}
@@ -1940,6 +1979,13 @@ export function QuotationBuilderPage() {
                 <QuotationPreview
                   serverGrandTotal={(existingQuotation as any)?.totalAmount}
                   serverTaxAmount={(existingQuotation as any)?.taxAmount}
+                  serverMrpFinal={(existingQuotation as any)?.mrpFinal}
+                  serverCategoryTotals={{
+                    accessories: (existingQuotation as any)?.accessoriesFinalTotal,
+                    cabinets: (existingQuotation as any)?.cabinetsFinalTotal,
+                    doors: (existingQuotation as any)?.doorsFinalTotal,
+                    lighting: (existingQuotation as any)?.lightingFinalTotal,
+                  }}
                   customer={selectedCustomer}
                   accessories={formData.accessories || []}
                   cabinets={formData.cabinets || []}
@@ -2248,6 +2294,7 @@ export function QuotationBuilderPage() {
         isSaving={isCreating || isUpdating}
       />
     </div>
+    </ServerFiguresProvider>
     </MarginCodeProvider>
   );
 }

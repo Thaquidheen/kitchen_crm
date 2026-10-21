@@ -15,10 +15,14 @@ export interface MarginCode {
 
 export type MarginCategory = 'accessories' | 'cabinets' | 'doors' | 'lighting' | 'miscellaneous';
 
-/** What a screen showing codes is given: the codes that can be chosen, and each category's default. */
+/**
+ * What a screen showing codes is given: the codes that can be chosen (in the order of their names),
+ * and the code of each category's starting margin, offer and MRP.
+ */
 export interface MarginCodeOptions {
   codes: Array<{ code: string }>;
   defaults: Partial<Record<MarginCategory, string | null>>;
+  mrpDefaults?: Partial<Record<MarginCategory, string | null>>;
 }
 
 const unwrap = <T,>(fallback: string) => (r: ApiResponse<T>): T => {
@@ -35,7 +39,7 @@ export const marginCodesAPI = baseApi.injectEndpoints({
     }),
     getMarginCodeOptions: builder.query<MarginCodeOptions, void>({
       query: () => '/margin-codes/options',
-      transformResponse: (r: ApiResponse<MarginCodeOptions>) => r.data ?? { codes: [], defaults: {} },
+      transformResponse: (r: ApiResponse<MarginCodeOptions>) => r.data ?? { codes: [], defaults: {}, mrpDefaults: {} },
       providesTags: ['MarginCodes'],
     }),
     saveMarginCode: builder.mutation<
