@@ -17,9 +17,14 @@ export interface QuotationAccess {
   pdf: boolean;
   /** Each line's rate and each category's total before margin. */
   seesRates: boolean;
-  /** Margin percentages and amounts (also the MRP margins). */
+  /** Margin percentages and amounts (also the MRP margins): the administrator only. */
   seesMargins: boolean;
+  /** Typing margin percentages: the administrator only. */
   editsMargins: boolean;
+  /** The margin of each category as the administrator's code ("See margin codes"). */
+  seesMarginCodes: boolean;
+  /** Choosing a margin code per category ("Choose margin codes"); staff, never the administrator. */
+  picksMarginCodes: boolean;
   /**
    * The screen can work a total out by itself only when it has both the rates and the margins.
    * Without either it shows the figure the server saved.
@@ -27,9 +32,11 @@ export interface QuotationAccess {
   computesTotals: boolean;
 }
 
-export const quotationAccess = (can: (key: PermissionKey) => boolean): QuotationAccess => {
+export const quotationAccess = (can: (key: PermissionKey) => boolean, admin = false): QuotationAccess => {
   const seesRates = can('quotations.see_rates');
-  const seesMargins = can('quotations.see_margins');
+  // Percentages are the administrator's; staff allowed to see margins see codes.
+  const seesMargins = admin;
+  const seesMarginCodes = admin || can('quotations.see_margins');
   return {
     view: can('quotations.view'),
     create: can('quotations.create'),
@@ -39,8 +46,10 @@ export const quotationAccess = (can: (key: PermissionKey) => boolean): Quotation
     pdf: can('quotations.pdf'),
     seesRates,
     seesMargins,
-    // Nobody changes a margin they cannot see.
-    editsMargins: seesMargins && can('quotations.edit_margins'),
+    editsMargins: admin,
+    seesMarginCodes,
+    // Nobody chooses a margin they cannot see.
+    picksMarginCodes: !admin && seesMarginCodes && can('quotations.edit_margins'),
     computesTotals: seesRates && seesMargins,
   };
 };

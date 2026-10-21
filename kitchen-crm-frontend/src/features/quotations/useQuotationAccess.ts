@@ -2,10 +2,12 @@
 import { useMemo } from 'react';
 import { usePermissions } from '@/features/permissions/usePermissions';
 import { quotationAccess } from './quotationAccess';
+import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 
 export function useQuotationAccess() {
   const { can, ready } = usePermissions();
-  return useMemo(() => ({ ...quotationAccess(can), ready }), [can, ready]);
+  const admin = useIsSuperAdmin();
+  return useMemo(() => ({ ...quotationAccess(can, admin), ready }), [can, admin, ready]);
 }
 
 export default useQuotationAccess;
