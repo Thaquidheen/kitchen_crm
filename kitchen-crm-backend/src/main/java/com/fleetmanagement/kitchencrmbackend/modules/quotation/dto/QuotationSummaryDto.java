@@ -26,4 +26,7 @@ public class QuotationSummaryDto {
     private String createdBy;
     private Long folderId;
     private Integer versionNumber;
+    // The latest version of a folder that holds two or more versions (the lists' "Latest" tag);
+    // the same quotation as the folder's "Latest Amount". Read-only, set by the service.
+    private boolean latestInFolder;
 }
