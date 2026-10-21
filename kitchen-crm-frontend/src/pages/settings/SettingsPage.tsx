@@ -29,11 +29,16 @@ import {
   FileText,
   Palette,
   Tags,
+  BadgePercent,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ThemeSelector } from '../../features/theme/components/ThemeSelector';
 import { useAppSelector } from '../../app/hooks';
 import { selectCurrentTheme } from '../../features/theme/themeSlice';
+import { useIsSuperAdmin } from '../../features/auth/useIsSuperAdmin';
+import { MarginCodesTab } from '../../features/quotations/MarginCodesTab';
+import { useGetMarginCodesQuery } from '../../features/quotations/marginCodesAPI';
+import { codeForPercentage, formatPercentage } from '../../features/quotations/marginCodeAdminRules';
 
 export const SettingsPage: React.FC = () => {
   // Get current theme for dynamic colors
@@ -68,6 +73,10 @@ export const SettingsPage: React.FC = () => {
   const { data: marginsResponse, isLoading: isLoadingMargins, error: marginsError } = useGetMarginsQuery();
   const [updateMargins, { isLoading: isUpdatingMargins }] = useUpdateMarginsMutation();
 
+  // Margin codes: the administrator's alone. Each default margin below shows the code staff start from.
+  const isSuperAdmin = useIsSuperAdmin();
+  const { data: marginCodes } = useGetMarginCodesQuery(undefined, { skip: !isSuperAdmin });
+
   const { data: priorityColorsResponse } = useGetPriorityColorsQuery();
   const [updatePriorityColors, { isLoading: isUpdatingPriorityColors }] = useUpdatePriorityColorsMutation();
   const [priorityColorForm, setPriorityColorForm] = useState<PriorityColors>({
@@ -79,6 +88,7 @@ export const SettingsPage: React.FC = () => {
     cabinets: 20,
     doors: 20,
     lighting: 20,
+    miscellaneous: 0,
   });
 
   const [marginSaveSuccess, setMarginSaveSuccess] = useState(false);
@@ -328,6 +338,7 @@ export const SettingsPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-4 sm:mb-6">
             {marginCategories.map((category) => {
               const Icon = category.icon;
+              const code = codeForPercentage(marginCodes, marginFormData[category.key]);
               return (
                 <div
                   key={category.key}
@@ -393,6 +404,34 @@ export const SettingsPage: React.FC = () => {
                           {marginFormData[category.key].toFixed(2)}%
                         </span>
                       </div>
+
+                      {/* The code staff start from: the one standing for this percentage, if any */}
+                      {marginCodes && (
+                        <>
+                          <div className="flex items-center justify-between text-xs mt-2">
+                            <span className="text-text-600">Margin code</span>
+                            {code ? (
+                              <span className="font-bold" style={{ color: themeColors.primary }}>
+                                {code.code}
+                                {!code.active && <span className="font-normal text-text-600"> (switched off)</span>}
+                              </span>
+                            ) : (
+                              <span className="font-semibold text-text-700">No code</span>
+                            )}
+                          </div>
+                          {!code && (
+                            <p className="mt-1 text-[11px] text-text-500">
+                              Staff see "Custom". Add a code for {formatPercentage(marginFormData[category.key])}% in
+                              Margin Codes to show them one.
+                            </p>
+                          )}
+                          {code && !code.active && (
+                            <p className="mt-1 text-[11px] text-text-500">
+                              Staff start from {code.code} but cannot choose it again.
+                            </p>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -630,7 +669,7 @@ export const SettingsPage: React.FC = () => {
                 value={companyFormData['company.address_line1']}
                 onChange={(e) => handleCompanyInputChange('company.address_line1', e.target.value)}
                 placeholder="Street address, Building name"
-                icon={<MapPin className="w-4 h-4" />}
+                leftIcon={<MapPin className="w-4 h-4" />}
               />
             </div>
 
@@ -641,7 +680,7 @@ export const SettingsPage: React.FC = () => {
                 value={companyFormData['company.address_line2']}
                 onChange={(e) => handleCompanyInputChange('company.address_line2', e.target.value)}
                 placeholder="City, State, Zip Code"
-                icon={<MapPin className="w-4 h-4" />}
+                leftIcon={<MapPin className="w-4 h-4" />}
               />
             </div>
 
@@ -652,7 +691,7 @@ export const SettingsPage: React.FC = () => {
                 value={companyFormData['company.phone']}
                 onChange={(e) => handleCompanyInputChange('company.phone', e.target.value)}
                 placeholder="+1 (555) 123-4567"
-                icon={<Phone className="w-4 h-4" />}
+                leftIcon={<Phone className="w-4 h-4" />}
               />
             </div>
 
@@ -664,7 +703,7 @@ export const SettingsPage: React.FC = () => {
                 value={companyFormData['company.email']}
                 onChange={(e) => handleCompanyInputChange('company.email', e.target.value)}
                 placeholder="info@company.com"
-                icon={<Mail className="w-4 h-4" />}
+                leftIcon={<Mail className="w-4 h-4" />}
               />
             </div>
 
@@ -676,7 +715,7 @@ export const SettingsPage: React.FC = () => {
                 value={companyFormData['company.website']}
                 onChange={(e) => handleCompanyInputChange('company.website', e.target.value)}
                 placeholder="https://www.company.com"
-                icon={<Globe className="w-4 h-4" />}
+                leftIcon={<Globe className="w-4 h-4" />}
               />
             </div>
           </div>
@@ -809,6 +848,15 @@ export const SettingsPage: React.FC = () => {
               icon: <TrendingUp className="w-4 h-4" />,
               content: marginSettingsContent,
             },
+            ...(isSuperAdmin
+              ? [
+                  {
+                    label: 'Margin Codes',
+                    icon: <BadgePercent className="w-4 h-4" />,
+                    content: <MarginCodesTab />,
+                  },
+                ]
+              : []),
             {
               label: 'Company Settings',
               icon: <Building2 className="w-4 h-4" />,

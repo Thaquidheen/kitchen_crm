@@ -9,6 +9,11 @@ import { User, Package, DollarSign, Calculator, Home, Image as ImageIcon } from 
 import type { QuotationKitchenFormData, QuotationOtherExpense } from '@/features/quotations/types';
 import { getImageUrl } from '@/utils/imageUtils';
 import { useQuotationAccess } from '../useQuotationAccess';
+import { otherExpensesFromServer, useLineWithMargin, useServerFigure } from '../serverFigures';
+import type { MarginCodeCategory } from '../marginCodeRules';
+
+/** An amount, or a dash for one not known yet (staff, before the quotation is saved). */
+const money = (v: number | null | undefined) => (v === null || v === undefined ? '—' : `₹${v.toLocaleString('en-IN')}`);
 
 export interface QuotationPreviewProps {
   customer?: {
@@ -54,6 +59,15 @@ export interface QuotationPreviewProps {
    */
   serverGrandTotal?: number | null;
   serverTaxAmount?: number | null;
+  /** The MRP as the server worked it out. */
+  serverMrpFinal?: number | null;
+  /** Each category's total with margin and GST (a quotation without kitchens). */
+  serverCategoryTotals?: {
+    accessories?: number | null;
+    cabinets?: number | null;
+    doors?: number | null;
+    lighting?: number | null;
+  };
   miscellaneousMrpMarginPercentage: number;
   miscellaneousMrpTaxPercentage: number;
   // Multi-kitchen support
@@ -91,9 +105,14 @@ export function QuotationPreview({
   miscellaneousMrpTaxPercentage,
   serverGrandTotal,
   serverTaxAmount,
+  serverMrpFinal,
+  serverCategoryTotals,
   kitchens,
 }: QuotationPreviewProps) {
   const access = useQuotationAccess();
+  // A figure the server saved, or null once something on the screen changed it.
+  const saved = useServerFigure();
+  const lineWithMargin = useLineWithMargin();
   // Check if this is a multi-kitchen quotation
   const isMultiKitchen = kitchens && kitchens.length > 0;
   const calculations = useMemo(() => {
@@ -312,13 +331,28 @@ export function QuotationPreview({
     return calculations.grandTotal;
   }, [isMultiKitchen, kitchenCalculations, commonTransportFinal, calculations.grandTotal]);
 
-  // Staff cannot derive any of this (the prices it is built from are withheld), so show the
-  // server's stored figures to them instead of a computed zero.
+  // Staff cannot derive any of this (the prices and margins it is built from are withheld), so
+  // they see the server's stored figures instead — a dash for a new quotation, or once something
+  // that changes them was changed on the screen.
   const canComputeLocally = access.computesTotals;
-  const displayGrandTotal =
-    !canComputeLocally && serverGrandTotal != null ? Number(serverGrandTotal) : grandTotal;
-  const displayTaxAmount = (computed: number) =>
-    !canComputeLocally && serverTaxAmount != null ? Number(serverTaxAmount) : computed;
+  const displayGrandTotal: number | null = canComputeLocally ? grandTotal : saved(serverGrandTotal);
+  const displayTaxAmount = (computed: number): number | null => (canComputeLocally ? computed : saved(serverTaxAmount));
+  const kitchenFigures = (kitchenCalc: NonNullable<typeof kitchenCalculations>[number]) => {
+    const k = kitchenCalc.kitchen;
+    if (canComputeLocally) {
+      return { tax: kitchenCalc.taxAmount, other: kitchenCalc.otherExpenses, total: kitchenCalc.total };
+    }
+    const other = otherExpensesFromServer(k.totalAmount, [k.accessoriesFinalTotal, k.cabinetsFinalTotal, k.doorsFinalTotal, k.lightingFinalTotal]);
+    return {
+      tax: saved(k.taxAmount),
+      other: kitchenCalc.otherExpensesBase === 0 && (other ?? 0) === 0 ? 0 : saved(other),
+      total: saved(k.totalAmount),
+    };
+  };
+  // Common transportation for staff: what the whole quotation comes to beyond its kitchens.
+  const displayCommonTransport: number | null = canComputeLocally
+    ? commonTransportFinal
+    : saved(otherExpensesFromServer(serverGrandTotal, (kitchens || []).map((k) => k.totalAmount)));
 
   // MRP (list price): one common margin + tax applied to the full BASE sum of products
   // (pre per-category margin/tax) + installation + custom other-expenses + common transportation.
@@ -354,6 +388,10 @@ export function QuotationPreview({
       accessoriesMrpMarginPercentage, cabinetsMrpMarginPercentage, doorsMrpMarginPercentage, lightingMrpMarginPercentage,
       accessoriesMrpTaxPercentage, cabinetsMrpTaxPercentage, doorsMrpTaxPercentage, lightingMrpTaxPercentage,
       miscellaneousMrpMarginPercentage, miscellaneousMrpTaxPercentage]);
+  const displayMrp: number | null = canComputeLocally ? mrpFinal : saved(serverMrpFinal);
+  const mrpStruck = displayMrp !== null && displayGrandTotal !== null && displayMrp > displayGrandTotal;
+  const categoryFinal = (key: 'accessories' | 'cabinets' | 'doors' | 'lighting'): number | null =>
+    canComputeLocally ? calculations.categoryTotals[key].finalTotal : saved(serverCategoryTotals?.[key]);
 
   return (
     <div className="space-y-4 bg-background-900/60 p-4 sm:p-5 rounded-xl">
@@ -493,6 +531,11 @@ export function QuotationPreview({
                                   ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
                                 </span>
                               )}
+                              {!access.seesRates && access.seesMarginCodes && (
+                                <span className="font-medium text-text-900 flex-shrink-0" title="With margin, before GST">
+                                  {money(lineWithMargin(item, category.category.toLowerCase() as MarginCodeCategory))}
+                                </span>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -524,15 +567,15 @@ export function QuotationPreview({
                   <div className="flex justify-between">
                     <span className="text-text-700">Tax</span>
                     <span className="font-medium text-text-900 tabular-nums">
-                      ₹{kitchenCalc.taxAmount.toLocaleString('en-IN')}
+                      {money(kitchenFigures(kitchenCalc).tax)}
                     </span>
                   </div>
-                  {kitchenCalc.otherExpenses > 0 && (
+                  {(kitchenFigures(kitchenCalc).other ?? 1) > 0 && (
                     <>
                       <div className="flex justify-between">
                         <span className="text-text-700">Other Expenses</span>
                         <span className="font-medium text-text-900">
-                          ₹{kitchenCalc.otherExpenses.toLocaleString('en-IN')}
+                          {money(kitchenFigures(kitchenCalc).other)}
                         </span>
                       </div>
                       {(kitchenCalc.kitchen.otherExpenses || [])
@@ -550,9 +593,7 @@ export function QuotationPreview({
                   <div className="flex justify-between border-t border-background-600 pt-2">
                     <span className="font-semibold text-text-900">Kitchen Total</span>
                     <span className="font-bold text-primary-600 tabular-nums">
-                      ₹{(!canComputeLocally && (kitchenCalc.kitchen as any)?.totalAmount != null
-                        ? Number((kitchenCalc.kitchen as any).totalAmount)
-                        : kitchenCalc.total).toLocaleString('en-IN')}
+                      {money(kitchenFigures(kitchenCalc).total)}
                     </span>
                   </div>
                 </div>
@@ -571,35 +612,36 @@ export function QuotationPreview({
                 <div key={idx} className="flex justify-between text-xs">
                   <span className="text-text-700">{kitchenCalc.kitchen.kitchenName}</span>
                   <span className="font-medium text-text-900 tabular-nums">
-                    ₹{(!canComputeLocally && (kitchenCalc.kitchen as any)?.totalAmount != null
-                        ? Number((kitchenCalc.kitchen as any).totalAmount)
-                        : kitchenCalc.total).toLocaleString('en-IN')}
+                    {money(kitchenFigures(kitchenCalc).total)}
                   </span>
                 </div>
               ))}
-              {commonTransportFinal > 0 && (
+              {(displayCommonTransport === null ? (transportationPrice || 0) > 0 : displayCommonTransport > 0) && (
                 <div className="flex justify-between text-xs">
                   <span className="text-text-700">Transportation (common)</span>
                   <span className="font-medium text-text-900 tabular-nums">
-                    ₹{commonTransportFinal.toLocaleString('en-IN')}
+                    {money(displayCommonTransport)}
                   </span>
                 </div>
               )}
               <div className="border-t border-primary-600/30 pt-2.5 mt-2.5 space-y-1">
-                {mrpFinal > 0 && (
+                {displayMrp !== null && displayMrp > 0 && (
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-text-600">MRP</span>
-                    <span className={`text-sm tabular-nums ${mrpFinal > displayGrandTotal ? 'text-text-500 line-through' : 'text-text-700'}`}>
-                      ₹{mrpFinal.toLocaleString('en-IN')}
+                    <span className={`text-sm tabular-nums ${mrpStruck ? 'text-text-500 line-through' : 'text-text-700'}`}>
+                      {money(displayMrp)}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between items-baseline">
                   <span className="text-sm font-[650] text-text-900">Offer Price</span>
                   <span className="text-2xl font-bold text-primary-600 tabular-nums">
-                    ₹{displayGrandTotal.toLocaleString('en-IN')}
+                    {money(displayGrandTotal)}
                   </span>
                 </div>
+                {displayGrandTotal === null && (
+                  <p className="m-0 text-[11px] text-text-500 text-right">Shown once the quotation is saved.</p>
+                )}
               </div>
             </div>
           </Card>
@@ -639,6 +681,11 @@ export function QuotationPreview({
                               ₹{(item.totalPrice ?? item.price ?? 0).toLocaleString('en-IN')}
                             </span>
                           )}
+                          {!access.seesRates && access.seesMarginCodes && (
+                            <span className="font-medium text-text-900 flex-shrink-0" title="With margin, before GST">
+                              {money(lineWithMargin(item, category.category.toLowerCase() as MarginCodeCategory))}
+                            </span>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -661,41 +708,22 @@ export function QuotationPreview({
           </div>
 
           <div className="space-y-2 sm:space-y-3">
-            {calculations.categoryTotals.cabinets.finalTotal > 0 && (
-              <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-text-700">Cabinets</span>
-                <span className="font-medium text-text-900">
-                  ₹{calculations.categoryTotals.cabinets.finalTotal.toLocaleString('en-IN')}
-                </span>
-              </div>
-            )}
-
-            {calculations.categoryTotals.doors.finalTotal > 0 && (
-              <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-text-700">Doors</span>
-                <span className="font-medium text-text-900">
-                  ₹{calculations.categoryTotals.doors.finalTotal.toLocaleString('en-IN')}
-                </span>
-              </div>
-            )}
-
-            {calculations.categoryTotals.accessories.finalTotal > 0 && (
-              <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-text-700">Accessories</span>
-                <span className="font-medium text-text-900">
-                  ₹{calculations.categoryTotals.accessories.finalTotal.toLocaleString('en-IN')}
-                </span>
-              </div>
-            )}
-
-            {calculations.categoryTotals.lighting.finalTotal > 0 && (
-              <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-text-700">Lighting</span>
-                <span className="font-medium text-text-900">
-                  ₹{calculations.categoryTotals.lighting.finalTotal.toLocaleString('en-IN')}
-                </span>
-              </div>
-            )}
+            {([
+              ['cabinets', 'Cabinets', cabinets.length],
+              ['doors', 'Doors', doors.length],
+              ['accessories', 'Accessories', accessories.length],
+              ['lighting', 'Lighting', lighting.length],
+            ] as const).map(([key, label, count]) => {
+              const value = categoryFinal(key);
+              // A category with lines whose total is not known yet still gets its row, with a dash.
+              if (value === null ? count === 0 : value <= 0) {return null;}
+              return (
+                <div key={key} className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-text-700">{label}</span>
+                  <span className="font-medium text-text-900">{money(value)}</span>
+                </div>
+              );
+            })}
 
             {(otherExpensesProp && otherExpensesProp.length > 0 ? otherExpensesProp : [
               { name: 'Transportation', amount: transportationPrice },
@@ -711,20 +739,23 @@ export function QuotationPreview({
 
             {/* MRP + Offer Price */}
             <div className="border-t border-background-600 pt-2.5 mt-2.5 space-y-1">
-              {mrpFinal > 0 && (
+              {displayMrp !== null && displayMrp > 0 && (
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-text-600">MRP</span>
-                  <span className={`text-sm tabular-nums ${mrpFinal > calculations.grandTotal ? 'text-text-500 line-through' : 'text-text-700'}`}>
-                    ₹{mrpFinal.toLocaleString('en-IN')}
+                  <span className={`text-sm tabular-nums ${mrpStruck ? 'text-text-500 line-through' : 'text-text-700'}`}>
+                    {money(displayMrp)}
                   </span>
                 </div>
               )}
               <div className="flex justify-between items-baseline">
                 <span className="text-sm font-[650] text-text-900">Offer Price</span>
                 <span className="text-2xl font-bold text-primary-600 tabular-nums">
-                  ₹{calculations.grandTotal.toLocaleString('en-IN')}
+                  {money(displayGrandTotal)}
                 </span>
               </div>
+              {displayGrandTotal === null && (
+                <p className="m-0 text-[11px] text-text-500 text-right">Shown once the quotation is saved.</p>
+              )}
             </div>
           </div>
         </Card>
@@ -762,17 +793,17 @@ export function QuotationPreview({
           <div className="p-3 rounded-xl border border-background-600 bg-background-700/40">
             <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Total Tax</div>
             <div className="text-lg font-bold text-text-900 tabular-nums mt-0.5">
-              ₹{displayTaxAmount(isMultiKitchen && kitchenCalculations
+              {money(displayTaxAmount(isMultiKitchen && kitchenCalculations
                 ? kitchenCalculations.reduce((sum, k) => sum + k.categoryTotals.accessories.taxAmount + k.categoryTotals.cabinets.taxAmount + k.categoryTotals.doors.taxAmount + k.categoryTotals.lighting.taxAmount, 0)
                 : calculations.totalTaxAmount
-              ).toLocaleString('en-IN')}
+              ))}
             </div>
           </div>
 
           <div className="p-3 rounded-xl border border-primary-600/40 bg-primary-600/[0.06]">
             <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-600">Grand Total</div>
             <div className="text-lg font-bold text-primary-600 tabular-nums mt-0.5">
-              ₹{displayGrandTotal.toLocaleString('en-IN')}
+              {money(displayGrandTotal)}
             </div>
           </div>
         </div>

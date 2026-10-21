@@ -1,5 +1,6 @@
 package com.fleetmanagement.kitchencrmbackend.modules.quotation.service;
 
+import com.fleetmanagement.kitchencrmbackend.modules.quotation.margincode.MarginCodeService;
 import com.fleetmanagement.kitchencrmbackend.modules.product.entity.Accessory;
 import com.fleetmanagement.kitchencrmbackend.modules.product.entity.CabinetType;
 import com.fleetmanagement.kitchencrmbackend.modules.product.entity.DoorType;
@@ -39,6 +40,9 @@ public class QuotationServiceImpl implements QuotationService {
 
     @Autowired
     private QuotationFolderRepository folderRepository;
+
+    @Autowired
+    private MarginCodeService marginCodes;
 
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.quotation.editrequest.QuotationEditRequestService editRequests;
@@ -138,6 +142,19 @@ public class QuotationServiceImpl implements QuotationService {
     @Override
     @Transactional
     public ApiResponse<QuotationDto> createQuotation(QuotationCreateDto dto, String createdBy, String userRole) {
+        // Margin codes chosen by staff who choose codes: their percentages, checked before anything is written.
+        Map<String, BigDecimal> picked;
+        try {
+            picked = PricingView.setsMarginCodes(userRole) ? marginCodes.resolve(chosenCodes(
+                    dto.getAccessoriesMarginCode(), dto.getCabinetsMarginCode(), dto.getDoorsMarginCode(),
+                    dto.getLightingMarginCode(), dto.getMiscellaneousMarginCode(), dto.getAccessoriesMrpMarginCode(),
+                    dto.getCabinetsMrpMarginCode(), dto.getDoorsMrpMarginCode(), dto.getLightingMrpMarginCode(),
+                    dto.getMiscellaneousMrpMarginCode()),
+                    dto.getSourceQuotationId() == null ? Map.of()
+                            : marginsOf(quotationRepository.findById(dto.getSourceQuotationId()).orElse(null))) : Map.of();
+        } catch (IllegalArgumentException e) {
+            return ApiResponse.error(e.getMessage());
+        }
         try {
             // Validate customer exists
             Customer customer = customerRepository.findById(dto.getCustomerId()).orElse(null);
@@ -189,18 +206,22 @@ public class QuotationServiceImpl implements QuotationService {
             quotation.setCreatedBy(createdBy);
             quotation.setStatus(Quotation.QuotationStatus.DRAFT);
 
-            // Set default values
-            quotation.setMarginPercentage(dto.getMarginPercentage() != null ? dto.getMarginPercentage() : BigDecimal.ZERO);
+            // Set default values. The old single margin is a margin like the others: the administrator's.
+            // Anyone else's quotation keeps the copied one's, or starts at the screen's usual 20.
+            boolean callerSetsMargins = PricingView.setsMargins(userRole);
+            quotation.setMarginPercentage(callerSetsMargins
+                    ? (dto.getMarginPercentage() != null ? dto.getMarginPercentage() : BigDecimal.ZERO)
+                    : source != null && source.getMarginPercentage() != null ? source.getMarginPercentage()
+                    : BigDecimal.valueOf(20));
             quotation.setTaxPercentage(dto.getTaxPercentage() != null ? dto.getTaxPercentage() : BigDecimal.valueOf(18.0));
             quotation.setTransportationPrice(dto.getTransportationPrice() != null ? dto.getTransportationPrice() : BigDecimal.ZERO);
             quotation.setInstallationPrice(dto.getInstallationPrice() != null ? dto.getInstallationPrice() : BigDecimal.ZERO);
             
             // Use category-specific margins from DTO if provided (super admin can override), otherwise use global defaults
-            boolean callerSetsMargins = PricingView.setsMargins(userRole);
-            quotation.setAccessoriesMarginPercentage(startingMargin(dto.getAccessoriesMarginPercentage(), source != null ? source.getAccessoriesMarginPercentage() : null, "accessories", callerSetsMargins));
-            quotation.setCabinetsMarginPercentage(startingMargin(dto.getCabinetsMarginPercentage(), source != null ? source.getCabinetsMarginPercentage() : null, "cabinets", callerSetsMargins));
-            quotation.setDoorsMarginPercentage(startingMargin(dto.getDoorsMarginPercentage(), source != null ? source.getDoorsMarginPercentage() : null, "doors", callerSetsMargins));
-            quotation.setLightingMarginPercentage(startingMargin(dto.getLightingMarginPercentage(), source != null ? source.getLightingMarginPercentage() : null, "lighting", callerSetsMargins));
+            quotation.setAccessoriesMarginPercentage(picked.getOrDefault("accessories", startingMargin(dto.getAccessoriesMarginPercentage(), source != null ? source.getAccessoriesMarginPercentage() : null, "accessories", callerSetsMargins)));
+            quotation.setCabinetsMarginPercentage(picked.getOrDefault("cabinets", startingMargin(dto.getCabinetsMarginPercentage(), source != null ? source.getCabinetsMarginPercentage() : null, "cabinets", callerSetsMargins)));
+            quotation.setDoorsMarginPercentage(picked.getOrDefault("doors", startingMargin(dto.getDoorsMarginPercentage(), source != null ? source.getDoorsMarginPercentage() : null, "doors", callerSetsMargins)));
+            quotation.setLightingMarginPercentage(picked.getOrDefault("lighting", startingMargin(dto.getLightingMarginPercentage(), source != null ? source.getLightingMarginPercentage() : null, "lighting", callerSetsMargins)));
             
             // Use tax percentages from DTO if provided, otherwise use defaults
             quotation.setAccessoriesTaxPercentage(dto.getAccessoriesTaxPercentage() != null ? dto.getAccessoriesTaxPercentage() : BigDecimal.valueOf(18.0));
@@ -209,21 +230,21 @@ public class QuotationServiceImpl implements QuotationService {
             quotation.setLightingTaxPercentage(dto.getLightingTaxPercentage() != null ? dto.getLightingTaxPercentage() : BigDecimal.valueOf(18.0));
 
             // Miscellaneous (Other Expenses) margin & tax
-            quotation.setMiscellaneousMarginPercentage(callerSetsMargins
+            quotation.setMiscellaneousMarginPercentage(picked.getOrDefault("miscellaneous", callerSetsMargins
                     ? (dto.getMiscellaneousMarginPercentage() != null ? dto.getMiscellaneousMarginPercentage() : BigDecimal.ZERO)
-                    : startingMargin(null, source != null ? source.getMiscellaneousMarginPercentage() : null, "miscellaneous", false));
+                    : startingMargin(null, source != null ? source.getMiscellaneousMarginPercentage() : null, "miscellaneous", false)));
             quotation.setMiscellaneousTaxPercentage(dto.getMiscellaneousTaxPercentage() != null ? dto.getMiscellaneousTaxPercentage() : BigDecimal.valueOf(18.0));
 
             // Per-category MRP (list price) margin & tax — default to the matching offer value when not provided
-            quotation.setAccessoriesMrpMarginPercentage(startingMrpMargin(dto.getAccessoriesMrpMarginPercentage(), source != null ? source.getAccessoriesMrpMarginPercentage() : null, quotation.getAccessoriesMarginPercentage(), callerSetsMargins));
-            quotation.setCabinetsMrpMarginPercentage(startingMrpMargin(dto.getCabinetsMrpMarginPercentage(), source != null ? source.getCabinetsMrpMarginPercentage() : null, quotation.getCabinetsMarginPercentage(), callerSetsMargins));
-            quotation.setDoorsMrpMarginPercentage(startingMrpMargin(dto.getDoorsMrpMarginPercentage(), source != null ? source.getDoorsMrpMarginPercentage() : null, quotation.getDoorsMarginPercentage(), callerSetsMargins));
-            quotation.setLightingMrpMarginPercentage(startingMrpMargin(dto.getLightingMrpMarginPercentage(), source != null ? source.getLightingMrpMarginPercentage() : null, quotation.getLightingMarginPercentage(), callerSetsMargins));
+            quotation.setAccessoriesMrpMarginPercentage(picked.containsKey("mrpAccessories") ? picked.get("mrpAccessories") : startingMrpMargin(dto.getAccessoriesMrpMarginPercentage(), source != null ? source.getAccessoriesMrpMarginPercentage() : null, quotation.getAccessoriesMarginPercentage(), "accessories", callerSetsMargins));
+            quotation.setCabinetsMrpMarginPercentage(picked.containsKey("mrpCabinets") ? picked.get("mrpCabinets") : startingMrpMargin(dto.getCabinetsMrpMarginPercentage(), source != null ? source.getCabinetsMrpMarginPercentage() : null, quotation.getCabinetsMarginPercentage(), "cabinets", callerSetsMargins));
+            quotation.setDoorsMrpMarginPercentage(picked.containsKey("mrpDoors") ? picked.get("mrpDoors") : startingMrpMargin(dto.getDoorsMrpMarginPercentage(), source != null ? source.getDoorsMrpMarginPercentage() : null, quotation.getDoorsMarginPercentage(), "doors", callerSetsMargins));
+            quotation.setLightingMrpMarginPercentage(picked.containsKey("mrpLighting") ? picked.get("mrpLighting") : startingMrpMargin(dto.getLightingMrpMarginPercentage(), source != null ? source.getLightingMrpMarginPercentage() : null, quotation.getLightingMarginPercentage(), "lighting", callerSetsMargins));
             quotation.setAccessoriesMrpTaxPercentage(dto.getAccessoriesMrpTaxPercentage() != null ? dto.getAccessoriesMrpTaxPercentage() : quotation.getAccessoriesTaxPercentage());
             quotation.setCabinetsMrpTaxPercentage(dto.getCabinetsMrpTaxPercentage() != null ? dto.getCabinetsMrpTaxPercentage() : quotation.getCabinetsTaxPercentage());
             quotation.setDoorsMrpTaxPercentage(dto.getDoorsMrpTaxPercentage() != null ? dto.getDoorsMrpTaxPercentage() : quotation.getDoorsTaxPercentage());
             quotation.setLightingMrpTaxPercentage(dto.getLightingMrpTaxPercentage() != null ? dto.getLightingMrpTaxPercentage() : quotation.getLightingTaxPercentage());
-            quotation.setMiscellaneousMrpMarginPercentage(startingMrpMargin(dto.getMiscellaneousMrpMarginPercentage(), source != null ? source.getMiscellaneousMrpMarginPercentage() : null, quotation.getMiscellaneousMarginPercentage(), callerSetsMargins));
+            quotation.setMiscellaneousMrpMarginPercentage(picked.containsKey("mrpMiscellaneous") ? picked.get("mrpMiscellaneous") : startingMrpMargin(dto.getMiscellaneousMrpMarginPercentage(), source != null ? source.getMiscellaneousMrpMarginPercentage() : null, quotation.getMiscellaneousMarginPercentage(), "miscellaneous", callerSetsMargins));
             quotation.setMiscellaneousMrpTaxPercentage(dto.getMiscellaneousMrpTaxPercentage() != null ? dto.getMiscellaneousMrpTaxPercentage() : quotation.getMiscellaneousTaxPercentage());
 
             // Important Note & Payment Terms
@@ -284,6 +305,17 @@ public class QuotationServiceImpl implements QuotationService {
         // save silently writes the withheld value away. That is exactly how margin_percentage
         // reached 0.00 on the quotations whose accessory prices were wiped.
         boolean callerSetsMargins = PricingView.setsMargins(userRole);
+        // Margin codes chosen by staff who choose codes: their percentages, checked before anything is written.
+        Map<String, BigDecimal> picked;
+        try {
+            picked = PricingView.setsMarginCodes(userRole) ? marginCodes.resolve(chosenCodes(
+                    quotationDto.getAccessoriesMarginCode(), quotationDto.getCabinetsMarginCode(), quotationDto.getDoorsMarginCode(),
+                    quotationDto.getLightingMarginCode(), quotationDto.getMiscellaneousMarginCode(), quotationDto.getAccessoriesMrpMarginCode(),
+                    quotationDto.getCabinetsMrpMarginCode(), quotationDto.getDoorsMrpMarginCode(), quotationDto.getLightingMrpMarginCode(),
+                    quotationDto.getMiscellaneousMrpMarginCode()), marginsOf(existingQuotation)) : Map.of();
+        } catch (IllegalArgumentException e) {
+            return ApiResponse.error(e.getMessage());
+        }
 
         // Update quotation fields
         existingQuotation.setProjectName(quotationDto.getProjectName());
@@ -306,6 +338,18 @@ public class QuotationServiceImpl implements QuotationService {
             existingQuotation.setDoorsMarginPercentage(quotationDto.getDoorsMarginPercentage());
             existingQuotation.setLightingMarginPercentage(quotationDto.getLightingMarginPercentage());
             existingQuotation.setMiscellaneousMarginPercentage(quotationDto.getMiscellaneousMarginPercentage());
+        } else if (!picked.isEmpty()) {
+            // A code left as it was (or "custom") is not sent, and that margin stays as it is.
+            if (picked.containsKey("accessories")) existingQuotation.setAccessoriesMarginPercentage(picked.get("accessories"));
+            if (picked.containsKey("cabinets")) existingQuotation.setCabinetsMarginPercentage(picked.get("cabinets"));
+            if (picked.containsKey("doors")) existingQuotation.setDoorsMarginPercentage(picked.get("doors"));
+            if (picked.containsKey("lighting")) existingQuotation.setLightingMarginPercentage(picked.get("lighting"));
+            if (picked.containsKey("miscellaneous")) existingQuotation.setMiscellaneousMarginPercentage(picked.get("miscellaneous"));
+            if (picked.containsKey("mrpAccessories")) existingQuotation.setAccessoriesMrpMarginPercentage(picked.get("mrpAccessories"));
+            if (picked.containsKey("mrpCabinets")) existingQuotation.setCabinetsMrpMarginPercentage(picked.get("mrpCabinets"));
+            if (picked.containsKey("mrpDoors")) existingQuotation.setDoorsMrpMarginPercentage(picked.get("mrpDoors"));
+            if (picked.containsKey("mrpLighting")) existingQuotation.setLightingMrpMarginPercentage(picked.get("mrpLighting"));
+            if (picked.containsKey("mrpMiscellaneous")) existingQuotation.setMiscellaneousMrpMarginPercentage(picked.get("mrpMiscellaneous"));
         }
         existingQuotation.setAccessoriesTaxPercentage(quotationDto.getAccessoriesTaxPercentage());
         existingQuotation.setCabinetsTaxPercentage(quotationDto.getCabinetsTaxPercentage());
@@ -1306,6 +1350,21 @@ public class QuotationServiceImpl implements QuotationService {
         dto.setMiscellaneousMrpMarginPercentage(quotation.getMiscellaneousMrpMarginPercentage());
         dto.setMiscellaneousMrpTaxPercentage(quotation.getMiscellaneousMrpTaxPercentage());
 
+        // Margin codes for whoever is shown margins as codes (the administrator gets them too).
+        if (PricingView.seesMarginCodes(userRole)) {
+            Map<BigDecimal, String> codes = marginCodes.byPercent();
+            dto.setAccessoriesMarginCode(MarginCodeService.codeOf(codes, quotation.getAccessoriesMarginPercentage()));
+            dto.setCabinetsMarginCode(MarginCodeService.codeOf(codes, quotation.getCabinetsMarginPercentage()));
+            dto.setDoorsMarginCode(MarginCodeService.codeOf(codes, quotation.getDoorsMarginPercentage()));
+            dto.setLightingMarginCode(MarginCodeService.codeOf(codes, quotation.getLightingMarginPercentage()));
+            dto.setMiscellaneousMarginCode(MarginCodeService.codeOf(codes, quotation.getMiscellaneousMarginPercentage()));
+            dto.setAccessoriesMrpMarginCode(MarginCodeService.codeOf(codes, quotation.getAccessoriesMrpMarginPercentage()));
+            dto.setCabinetsMrpMarginCode(MarginCodeService.codeOf(codes, quotation.getCabinetsMrpMarginPercentage()));
+            dto.setDoorsMrpMarginCode(MarginCodeService.codeOf(codes, quotation.getDoorsMrpMarginPercentage()));
+            dto.setLightingMrpMarginCode(MarginCodeService.codeOf(codes, quotation.getLightingMrpMarginPercentage()));
+            dto.setMiscellaneousMrpMarginCode(MarginCodeService.codeOf(codes, quotation.getMiscellaneousMrpMarginPercentage()));
+        }
+
         // Margins are for those allowed to see them. These DTO fields carry a default of their own
         // (20), so "not shown" has to be written explicitly — otherwise the default would look
         // like the quotation's real margin.
@@ -1494,6 +1553,8 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setId(quotationAccessory.getId());
             dto.setQuantity(quotationAccessory.getQuantity());
             if (PricingView.seesRates(userRole)) dto.setUnitPrice(quotationAccessory.getUnitPrice());
+            withMargin(dto::setRateWithMargin, dto::setAmountWithMargin, quotationAccessory.getUnitPrice(), BigDecimal.ONE,
+                    quantityOf(quotationAccessory.getQuantity()), quotationAccessory.getQuotation() == null ? null : quotationAccessory.getQuotation().getAccessoriesMarginPercentage());
             dto.setTotalPrice(quotationAccessory.getTotalPrice());
             dto.setDescription(quotationAccessory.getDescription());
             dto.setCustomItem(quotationAccessory.getCustomItem());
@@ -1654,15 +1715,75 @@ public class QuotationServiceImpl implements QuotationService {
     }
 
     /**
-     * The MRP (list price) margin a new quotation starts with. A new version made by someone who
-     * may not set margins keeps the margin of the quotation it is made from. Otherwise it is what
-     * the screen sends — there is no setting for it — or, failing that, the offer margin.
+     * The MRP (list price) margin a new quotation starts with. The administrator's is what the screen
+     * sends — there is no setting for it — or, failing that, the offer margin. Anyone else may not
+     * set it: what they send is ignored, and the quotation keeps the margin of the one it is made
+     * from ("Save as New"), or else starts from the screen's usual 60% (see startingMrpPercent).
      */
-    private static BigDecimal startingMrpMargin(BigDecimal sent, BigDecimal copiedFrom, BigDecimal offer, boolean callerSetsMargins) {
-        if (!callerSetsMargins && copiedFrom != null) {
-            return copiedFrom;
+    private static BigDecimal startingMrpMargin(BigDecimal sent, BigDecimal copiedFrom, BigDecimal offer, String category,
+                                                boolean callerSetsMargins) {
+        if (!callerSetsMargins) {
+            return copiedFrom != null ? copiedFrom : MarginCodeService.startingMrpPercent(category);
         }
         return sent != null ? sent : offer;
+    }
+
+    /** A quotation's margins by the field names margin codes use (none for no quotation). */
+    private static Map<String, BigDecimal> marginsOf(Quotation q) {
+        Map<String, BigDecimal> m = new java.util.HashMap<>();
+        if (q == null) {
+            return m;
+        }
+        m.put("accessories", q.getAccessoriesMarginPercentage());
+        m.put("cabinets", q.getCabinetsMarginPercentage());
+        m.put("doors", q.getDoorsMarginPercentage());
+        m.put("lighting", q.getLightingMarginPercentage());
+        m.put("miscellaneous", q.getMiscellaneousMarginPercentage());
+        m.put("mrpAccessories", q.getAccessoriesMrpMarginPercentage());
+        m.put("mrpCabinets", q.getCabinetsMrpMarginPercentage());
+        m.put("mrpDoors", q.getDoorsMrpMarginPercentage());
+        m.put("mrpLighting", q.getLightingMrpMarginPercentage());
+        m.put("mrpMiscellaneous", q.getMiscellaneousMrpMarginPercentage());
+        return m;
+    }
+
+    /** The margin codes someone chose, by the field they belong to (blank = not chosen). */
+    private static Map<String, String> chosenCodes(String accessories, String cabinets, String doors, String lighting,
+                                                   String miscellaneous, String mrpAccessories, String mrpCabinets,
+                                                   String mrpDoors, String mrpLighting, String mrpMiscellaneous) {
+        Map<String, String> chosen = new java.util.LinkedHashMap<>();
+        chosen.put("accessories", accessories);
+        chosen.put("cabinets", cabinets);
+        chosen.put("doors", doors);
+        chosen.put("lighting", lighting);
+        chosen.put("miscellaneous", miscellaneous);
+        chosen.put("mrpAccessories", mrpAccessories);
+        chosen.put("mrpCabinets", mrpCabinets);
+        chosen.put("mrpDoors", mrpDoors);
+        chosen.put("mrpLighting", mrpLighting);
+        chosen.put("mrpMiscellaneous", mrpMiscellaneous);
+        return chosen;
+    }
+
+    private static BigDecimal quantityOf(Integer quantity) {
+        return BigDecimal.valueOf(quantity == null ? 1 : quantity);
+    }
+
+    /**
+     * A line's rate and amount with its category's margin, before GST: the price the customer is
+     * charged for it. Sent to everyone who sees the quotation (staff shown margin codes see these
+     * instead of the rates and percentages). Nothing is set when the rate or margin is unknown.
+     */
+    private static void withMargin(java.util.function.Consumer<BigDecimal> rateOut, java.util.function.Consumer<BigDecimal> amountOut,
+                                   BigDecimal unitPrice, BigDecimal per, BigDecimal quantity, BigDecimal marginPct) {
+        if (unitPrice == null || marginPct == null) {
+            return;
+        }
+        BigDecimal factor = BigDecimal.ONE.add(marginPct.divide(BigDecimal.valueOf(100), 10, java.math.RoundingMode.HALF_UP));
+        BigDecimal rate = unitPrice.multiply(factor);
+        BigDecimal amount = rate.multiply(per == null ? BigDecimal.ONE : per).multiply(quantity == null ? BigDecimal.ONE : quantity);
+        rateOut.accept(rate.setScale(2, java.math.RoundingMode.HALF_UP));
+        amountOut.accept(amount.setScale(2, java.math.RoundingMode.HALF_UP));
     }
 
     /** Per kitchen, only what the MRP is worked out from: the totals before margin and the expenses. */
@@ -1839,6 +1960,8 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setDepthMm(cabinet.getDepthMm());
             dto.setCalculatedSqft(cabinet.getCalculatedSqft());
             if (PricingView.seesRates(userRole)) dto.setUnitPrice(cabinet.getUnitPrice());
+            withMargin(dto::setRateWithMargin, dto::setAmountWithMargin, cabinet.getUnitPrice(), BigDecimal.ONE,
+                    quantityOf(cabinet.getQuantity()), cabinet.getQuotation() == null ? null : cabinet.getQuotation().getCabinetsMarginPercentage());
             dto.setTotalPrice(cabinet.getTotalPrice());
 
             if (cabinet.getCustomDimensions() != null) {
@@ -1921,6 +2044,9 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setHeightMm(door.getHeightMm());
             dto.setCalculatedSqft(door.getCalculatedSqft());
             if (PricingView.seesRates(userRole)) dto.setUnitPrice(door.getUnitPrice());
+            withMargin(dto::setRateWithMargin, dto::setAmountWithMargin, door.getUnitPrice(),
+                    door.getCalculatedSqft() != null ? door.getCalculatedSqft() : BigDecimal.ONE,
+                    quantityOf(door.getQuantity()), door.getQuotation() == null ? null : door.getQuotation().getDoorsMarginPercentage());
             dto.setTotalPrice(door.getTotalPrice());
             dto.setDoorFinish(door.getDoorFinish());
             dto.setDoorStyle(door.getDoorStyle());
@@ -1977,6 +2103,8 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setQuantity(lighting.getQuantity());
             dto.setUnit(lighting.getUnit());
             if (PricingView.seesRates(userRole)) dto.setUnitPrice(lighting.getUnitPrice());
+            withMargin(dto::setRateWithMargin, dto::setAmountWithMargin, lighting.getUnitPrice(), BigDecimal.ONE,
+                    lighting.getQuantity(), lighting.getQuotation() == null ? null : lighting.getQuotation().getLightingMarginPercentage());
             dto.setTotalPrice(lighting.getTotalPrice());
             dto.setSpecifications(lighting.getSpecifications());
             dto.setDescription(lighting.getDescription());
@@ -2038,6 +2166,8 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setId(quotationAccessory.getId());
             dto.setQuantity(quotationAccessory.getQuantity());
             if (PricingView.seesRates(userRole)) dto.setUnitPrice(quotationAccessory.getUnitPrice());
+            withMargin(dto::setRateWithMargin, dto::setAmountWithMargin, quotationAccessory.getUnitPrice(), BigDecimal.ONE,
+                    quantityOf(quotationAccessory.getQuantity()), quotationAccessory.getQuotation() == null ? null : quotationAccessory.getQuotation().getAccessoriesMarginPercentage());
             dto.setTotalPrice(quotationAccessory.getTotalPrice());
             dto.setDescription(quotationAccessory.getDescription());
             dto.setCustomItem(quotationAccessory.getCustomItem());
@@ -2081,6 +2211,8 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setDepthMm(cabinet.getDepthMm());
             dto.setCalculatedSqft(cabinet.getCalculatedSqft());
             if (PricingView.seesRates(userRole)) dto.setUnitPrice(cabinet.getUnitPrice());
+            withMargin(dto::setRateWithMargin, dto::setAmountWithMargin, cabinet.getUnitPrice(), BigDecimal.ONE,
+                    quantityOf(cabinet.getQuantity()), cabinet.getQuotation() == null ? null : cabinet.getQuotation().getCabinetsMarginPercentage());
             dto.setTotalPrice(cabinet.getTotalPrice());
             dto.setKitchenId(kitchenId);
 
@@ -2144,6 +2276,9 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setHeightMm(door.getHeightMm());
             dto.setCalculatedSqft(door.getCalculatedSqft());
             if (PricingView.seesRates(userRole)) dto.setUnitPrice(door.getUnitPrice());
+            withMargin(dto::setRateWithMargin, dto::setAmountWithMargin, door.getUnitPrice(),
+                    door.getCalculatedSqft() != null ? door.getCalculatedSqft() : BigDecimal.ONE,
+                    quantityOf(door.getQuantity()), door.getQuotation() == null ? null : door.getQuotation().getDoorsMarginPercentage());
             dto.setTotalPrice(door.getTotalPrice());
             dto.setDoorFinish(door.getDoorFinish());
             dto.setDoorStyle(door.getDoorStyle());
@@ -2181,6 +2316,8 @@ public class QuotationServiceImpl implements QuotationService {
             dto.setQuantity(lighting.getQuantity());
             dto.setUnit(lighting.getUnit());
             if (PricingView.seesRates(userRole)) dto.setUnitPrice(lighting.getUnitPrice());
+            withMargin(dto::setRateWithMargin, dto::setAmountWithMargin, lighting.getUnitPrice(), BigDecimal.ONE,
+                    lighting.getQuantity(), lighting.getQuotation() == null ? null : lighting.getQuotation().getLightingMarginPercentage());
             dto.setTotalPrice(lighting.getTotalPrice());
             dto.setSpecifications(lighting.getSpecifications());
             dto.setDescription(lighting.getDescription());

@@ -11,12 +11,34 @@ export const QuotationStatus = {
 export type QuotationStatus = typeof QuotationStatus[keyof typeof QuotationStatus];
 
 // Base quotation line item interface
+
+/**
+ * Margin codes (the administrator names margin percentages, e.g. R = 45%). Staff shown margins as
+ * codes get these instead of the percentages; null = no code stands for the margin ("Custom").
+ */
+export interface MarginCodeFields {
+  accessoriesMarginCode?: string | null;
+  cabinetsMarginCode?: string | null;
+  doorsMarginCode?: string | null;
+  lightingMarginCode?: string | null;
+  miscellaneousMarginCode?: string | null;
+  accessoriesMrpMarginCode?: string | null;
+  cabinetsMrpMarginCode?: string | null;
+  doorsMrpMarginCode?: string | null;
+  lightingMrpMarginCode?: string | null;
+  miscellaneousMrpMarginCode?: string | null;
+}
+
 export interface QuotationLineItem {
   id?: number;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
   description?: string;
+  /** Rate with the category's margin (per sq ft for a door), before GST; sent by the server. */
+  rateWithMargin?: number | null;
+  /** The line's amount with the category's margin, before GST; sent by the server. */
+  amountWithMargin?: number | null;
 }
 
 // Accessory line item
@@ -152,7 +174,7 @@ export interface QuotationTotals {
 }
 
 // Main quotation interface
-export interface Quotation {
+export interface Quotation extends MarginCodeFields {
   id?: number;
   customerId: number;
   customerName?: string;
@@ -294,7 +316,7 @@ export interface QuotationFolderSummary {
 }
 
 // Create quotation request
-export interface CreateQuotationRequest {
+export interface CreateQuotationRequest extends MarginCodeFields {
   customerId: number;
   projectName?: string;
   // "Save as New": the quotation this one is a new version of (joins its folder)
@@ -495,6 +517,8 @@ export interface QuotationKitchenFormData {
    */
   /** The kitchen total as computed by the server — the only correct figure for staff. */
   totalAmount?: number | null;
+  /** The GST on the kitchen's products, as computed by the server. */
+  taxAmount?: number | null;
   accessoriesFinalTotal?: number | null;
   cabinetsFinalTotal?: number | null;
   doorsFinalTotal?: number | null;
@@ -514,7 +538,7 @@ export interface QuotationKitchenFormData {
 }
 
 // Quotation form data for the builder
-export interface QuotationFormData {
+export interface QuotationFormData extends MarginCodeFields {
   customerId: number;
   projectName: string;
   transportationPrice: number;

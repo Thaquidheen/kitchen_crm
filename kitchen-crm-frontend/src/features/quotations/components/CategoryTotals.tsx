@@ -8,6 +8,8 @@ import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Package, DoorClosed, Lightbulb, Wrench, Receipt } from 'lucide-react';
 import { useQuotationAccess } from '../useQuotationAccess';
+import { MarginCodeRow, type MarginCodeCategory } from '../marginCodes';
+import { taxInside, useServerFigure } from '../serverFigures';
 import type { QuotationOtherExpense } from '../types';
 
 export interface CategoryTotalsProps {
@@ -41,6 +43,8 @@ export interface CategoryTotalsProps {
     doors?: number | null;
     lighting?: number | null;
   };
+  /** The other expenses with margin and GST, as the server worked them out (staff's figure). */
+  serverOtherExpenses?: number | null;
   // Optional kitchen name for context
   kitchenName?: string;
 }
@@ -70,10 +74,13 @@ export function CategoryTotals({
   miscellaneousMarginPercentage = 0,
   miscellaneousTaxPercentage = 18,
   serverCategoryTotals,
+  serverOtherExpenses,
   kitchenName,
 }: CategoryTotalsProps) {
   // Read the role here rather than threading a prop through every call site.
   const access = useQuotationAccess();
+  // A figure the server saved, or null once something on the screen changed it.
+  const saved = useServerFigure();
   const calculateCategoryTotal = (
     items: Array<{ totalPrice?: number; price?: number }>,
     marginPercentage: number,
@@ -106,12 +113,11 @@ export function CategoryTotals({
     itemCount: number,
   ): Omit<CategoryBreakdown, 'finalTotal'> & { finalTotal: number | null } => {
     if (access.computesTotals) return computed;
-    if (server == null) {
-      return { ...computed, taxAmount: 0, finalTotal: itemCount === 0 ? 0 : null };
+    const finalTotal = itemCount === 0 ? 0 : saved(server);
+    if (finalTotal === null) {
+      return { ...computed, taxAmount: 0, finalTotal: null };
     }
-    const finalTotal = Number(server);
-    const taxAmount = taxPercentage > 0 ? (finalTotal * taxPercentage) / (100 + taxPercentage) : 0;
-    return { ...computed, taxAmount, finalTotal };
+    return { ...computed, taxAmount: taxInside(finalTotal, taxPercentage), finalTotal };
   };
 
   const categories = useMemo(() => {
@@ -159,6 +165,8 @@ export function CategoryTotals({
     ];
   }, [
     access.computesTotals,
+    saved,
+    serverCategoryTotals,
     accessories,
     cabinets,
     doors,
@@ -175,15 +183,24 @@ export function CategoryTotals({
 
   const otherExpensesBase = otherExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   const miscMargin = (otherExpensesBase * miscellaneousMarginPercentage) / 100;
-  const miscWithMargin = otherExpensesBase + miscMargin;
-  const miscTax = (miscWithMargin * miscellaneousTaxPercentage) / 100;
-  const otherExpensesFinal = miscWithMargin + miscTax;
+  // Worked out here only with the miscellaneous margin (the administrator); staff get the server's.
+  let otherExpensesFinal: number | null;
+  let miscTax: number | null;
+  if (access.seesMargins) {
+    const miscWithMargin = otherExpensesBase + miscMargin;
+    miscTax = (miscWithMargin * miscellaneousTaxPercentage) / 100;
+    otherExpensesFinal = miscWithMargin + miscTax;
+  } else {
+    // The server's figure can hold an expense this list does not (a single kitchen's transportation).
+    otherExpensesFinal = otherExpensesBase === 0 && !serverOtherExpenses ? 0 : saved(serverOtherExpenses);
+    miscTax = otherExpensesFinal === null ? null : taxInside(otherExpensesFinal, miscellaneousTaxPercentage);
+  }
   // One unknown category makes the whole figure unknown - better a dash than a number that
   // is quietly missing a category.
-  const anyUnknown = categories.some((cat) => cat.breakdown.finalTotal == null);
+  const anyUnknown = otherExpensesFinal === null || categories.some((cat) => cat.breakdown.finalTotal === null);
   const grandTotal: number | null = anyUnknown
     ? null
-    : categories.reduce((sum, cat) => sum + (cat.breakdown.finalTotal as number), 0) + otherExpensesFinal;
+    : categories.reduce((sum, cat) => sum + (cat.breakdown.finalTotal as number), 0) + (otherExpensesFinal as number);
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -221,6 +238,7 @@ export function CategoryTotals({
                         </span>
                       </div>
                     )}
+                    <MarginCodeRow category={category.label.toLowerCase() as MarginCodeCategory} />
                     {access.seesMargins && (
                       <div className="flex justify-between">
                         <span className="text-text-600">Margin ({category.marginPercentage}%)</span>
@@ -256,7 +274,7 @@ export function CategoryTotals({
             );
           })}
           {/* Miscellaneous (Other Expenses) */}
-          {otherExpenses.length > 0 && otherExpensesBase > 0 && (
+          {((otherExpenses.length > 0 && otherExpensesBase > 0) || (!access.seesMargins && (serverOtherExpenses ?? 0) > 0)) && (
             <div className="p-3.5 rounded-xl bg-background-700/40 border border-background-600">
               <div className="flex items-center gap-2 mb-2.5">
                 <Receipt className="h-3.5 w-3.5 text-text-600" />
@@ -274,6 +292,7 @@ export function CategoryTotals({
                     </span>
                   </div>
                 )}
+                <MarginCodeRow category="miscellaneous" />
                 {access.seesMargins && (
                   <div className="flex justify-between">
                     <span className="text-text-600">Margin ({miscellaneousMarginPercentage}%)</span>
@@ -282,16 +301,18 @@ export function CategoryTotals({
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span className="text-text-600">Tax ({miscellaneousTaxPercentage}%)</span>
-                  <span className="text-text-900 font-medium tabular-nums">
-                    ₹{miscTax.toLocaleString('en-IN')}
-                  </span>
-                </div>
+                {miscTax !== null && (
+                  <div className="flex justify-between">
+                    <span className="text-text-600">Tax ({miscellaneousTaxPercentage}%)</span>
+                    <span className="text-text-900 font-medium tabular-nums">
+                      ₹{(access.seesMargins ? miscTax : Math.round(miscTax)).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between pt-1.5 border-t border-background-600">
                   <span className="font-semibold text-text-800">Miscellaneous Total</span>
                   <span className="font-semibold text-text-900 tabular-nums">
-                    ₹{otherExpensesFinal.toLocaleString('en-IN')}
+                    {otherExpensesFinal === null ? '—' : `₹${otherExpensesFinal.toLocaleString('en-IN')}`}
                   </span>
                 </div>
               </div>

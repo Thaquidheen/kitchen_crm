@@ -3,7 +3,7 @@
  * Multi-step quotation builder with customer selection and product selection
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useBlocker, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/app/store';
@@ -49,6 +49,9 @@ import toast from 'react-hot-toast';
 import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
 import { useCreateQuotationMutation, useUpdateQuotationMutation, useGetQuotationByIdQuery } from '@/app/baseApi';
 import { useGetMarginsQuery } from '@/services/settingsAPI';
+import { useGetMarginCodeOptionsQuery } from '@/features/quotations/marginCodesAPI';
+import { MarginCodeProvider, codesToSend, defaultCodes, pickCodes } from '@/features/quotations/marginCodes';
+import { ServerFiguresProvider, changedCodeCategories, otherExpensesFromServer, pricingSnapshot } from '@/features/quotations/serverFigures';
 import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
 import { useGetCabinetsQuery, useGetDoorsQuery } from '@/features/products/productsAPI';
 import { useParams } from 'react-router-dom';
@@ -69,6 +72,7 @@ function mapLoadedAccessory(a: any) {
     unitPrice: unit,
     // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
     totalPrice: unit == null ? undefined : unit * (a.quantity || 1),
+    rateWithMargin: a.rateWithMargin ?? undefined,
     name: a.description || a.accessoryName || 'Accessory',
     description: a.description || a.accessoryName || 'Accessory',
     price: unit,
@@ -90,6 +94,7 @@ function mapLoadedLighting(l: any) {
     unitPrice: unit,
     // Use unitPrice × quantity as base (backend totalPrice includes margin+tax)
     totalPrice: unit == null ? undefined : unit * (l.quantity || 1),
+    rateWithMargin: l.rateWithMargin ?? undefined,
     name: displayName,
     description: displayName,
     itemType: l.itemType || 'LIGHT_PROFILE',
@@ -136,6 +141,10 @@ export function QuotationBuilderPage() {
   const access = useQuotationAccess();
   // The margin settings are readable only by those who may see margins.
   const { data: marginsResponse, isLoading: isMarginsLoading } = useGetMarginsQuery(undefined, { skip: !access.seesMargins });
+  // Staff shown margins as codes: the codes they may choose, and the code of each default margin.
+  const { data: codeOptions } = useGetMarginCodeOptionsQuery(undefined, {
+    skip: access.seesMargins || !access.seesMarginCodes,
+  });
 
   // Fetch cabinet and door types for edit modal (with large page size to get all)
   const { data: cabinetTypes = [] } = useGetCabinetsQuery({ page: 0, size: 100 });
@@ -186,6 +195,9 @@ export function QuotationBuilderPage() {
   const [customerKitchenTypes, setCustomerKitchenTypes] = useState<string[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const initialFormDataRef = useRef<string | null>(null);
+  // The price-setting part of the form as it was opened: staff see the server's figures only while
+  // the form still matches it (see serverFigureRules).
+  const [pricingBaseline, setPricingBaseline] = useState<string | null>(null);
   const skipNavigationBlockRef = useRef(false);
   const [formData, setFormData] = useState<Partial<QuotationFormData>>({
     customerId: 0,
@@ -250,6 +262,13 @@ export function QuotationBuilderPage() {
     }
   }, [marginsResponse, isEditMode]);
 
+  // A new quotation made by staff shown codes starts from the default codes.
+  useEffect(() => {
+    if (!isEditMode && codeOptions) {
+      setFormData((prev) => ({ ...prev, ...defaultCodes(codeOptions.defaults, codeOptions.mrpDefaults) }));
+    }
+  }, [codeOptions, isEditMode]);
+
   // Load existing quotation when editing
   const quotationId = isEditMode ? Number(id) : undefined;
   const { data: existingQuotation } = useGetQuotationByIdQuery(quotationId as number, { skip: !isEditMode });
@@ -269,6 +288,7 @@ export function QuotationBuilderPage() {
         quantity: c.quantity,
         unitPrice: Number(c.unitPrice || 0),
         totalPrice: Number(c.unitPrice || 0) * (c.quantity || 1),
+        rateWithMargin: c.rateWithMargin ?? undefined,
         cabinetTypeName: c.cabinetTypeName || c.cabinetType?.name || c.description || 'Cabinet',
         description: c.description || `${c.cabinetTypeName || c.cabinetType?.name || 'Cabinet'} (${c.widthMm}×${c.depthMm}×${c.heightMm}mm)`,
         materialId: c.materialId,
@@ -304,6 +324,7 @@ export function QuotationBuilderPage() {
           quantity: d.quantity,
           unitPrice: Number(d.unitPrice || 0),
           totalPrice: faceArea * Number(d.unitPrice || 0) * (d.quantity || 1),
+          rateWithMargin: d.rateWithMargin ?? undefined,
           doorTypeName: d.doorType?.name || d.description || 'Door',
           description: d.description || `${d.doorType?.name || 'Door'} (${d.widthMm}×${d.heightMm}mm)`,
         };
@@ -403,6 +424,8 @@ export function QuotationBuilderPage() {
       lightingMrpTaxPercentage: Number(existingQuotation.lightingMrpTaxPercentage ?? existingQuotation.lightingTaxPercentage ?? 18),
       miscellaneousMrpMarginPercentage: Number(existingQuotation.miscellaneousMrpMarginPercentage ?? existingQuotation.miscellaneousMarginPercentage ?? 0),
       miscellaneousMrpTaxPercentage: Number(existingQuotation.miscellaneousMrpTaxPercentage ?? existingQuotation.miscellaneousTaxPercentage ?? 18),
+      // The margin codes staff see and choose (null = "Custom", left as it is on save).
+      ...pickCodes(existingQuotation as any),
       // If the saved validity date has already passed (quotes are valid 30 days), re-issue
       // with a fresh 30-day validity so editing an old quotation isn't blocked by the
       // "Validity date must be in the future" check. The user can still change the date.
@@ -462,6 +485,7 @@ export function QuotationBuilderPage() {
         })),
         // Server-computed totals: the only correct figures for a staff viewer.
         totalAmount: k.totalAmount,
+        taxAmount: k.taxAmount,
         accessoriesFinalTotal: k.accessoriesFinalTotal,
         cabinetsFinalTotal: k.cabinetsFinalTotal,
         doorsFinalTotal: k.doorsFinalTotal,
@@ -489,22 +513,38 @@ export function QuotationBuilderPage() {
   }, [isEditMode, existingQuotation]);
 
   // Track initial form data for dirty state detection
+  // A new quotation starts from the administrator's margins (the administrator) or the default
+  // margin codes (staff shown codes); other staff are given neither, and have nothing to wait for.
+  const newQuotationStarted = access.ready && (access.seesMargins ? !!marginsResponse?.data : !access.seesMarginCodes || !!codeOptions);
   useEffect(() => {
     // Only set initial snapshot after margins are loaded (for new) or quotation is loaded (for edit)
-    if (!isEditMode && marginsResponse?.data && initialFormDataRef.current === null) {
+    if (!isEditMode && newQuotationStarted && initialFormDataRef.current === null) {
       // Small delay to let margins apply to formData
       const timer = setTimeout(() => {
         initialFormDataRef.current = JSON.stringify(formData);
+        setPricingBaseline(pricingSnapshot(formData));
       }, 100);
       return () => clearTimeout(timer);
     } else if (isEditMode && existingQuotation && initialFormDataRef.current === null) {
       // For edit mode, snapshot after quotation is loaded
       const timer = setTimeout(() => {
         initialFormDataRef.current = JSON.stringify(formData);
+        setPricingBaseline(pricingSnapshot(formData));
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [marginsResponse, existingQuotation, isEditMode, formData]);
+  }, [newQuotationStarted, existingQuotation, isEditMode, formData]);
+
+  // Whether the figures the server saved still describe the form (for staff, who cannot work
+  // totals out), and which categories' codes were changed since the quotation was opened.
+  const currentPricing = useMemo(() => pricingSnapshot(formData), [formData]);
+  const serverFigures = useMemo(
+    () => ({
+      current: pricingBaseline === null || currentPricing === pricingBaseline,
+      changedCodes: isEditMode && existingQuotation ? changedCodeCategories(pickCodes(existingQuotation as any), pickCodes(formData)) : [],
+    }),
+    [pricingBaseline, currentPricing, isEditMode, existingQuotation, formData],
+  );
 
   // Track dirty state
   useEffect(() => {
@@ -595,6 +635,8 @@ export function QuotationBuilderPage() {
       lightingMrpTaxPercentage: formData.lightingMrpTaxPercentage ?? 18,
       miscellaneousMrpMarginPercentage: formData.miscellaneousMrpMarginPercentage ?? 0,
       miscellaneousMrpTaxPercentage: formData.miscellaneousMrpTaxPercentage ?? 18,
+      // Staff choosing margin codes send the codes; the server turns them into percentages.
+      ...(access.picksMarginCodes ? codesToSend(isEditMode && existingQuotation ? pickCodes(existingQuotation as any) : null, formData) : {}),
       validUntil: formData.validUntil || undefined,
       notes: formData.notes || undefined,
       termsConditions: formData.termsConditions || undefined,
@@ -864,6 +906,9 @@ export function QuotationBuilderPage() {
             const doorPrice = data.linkedDoor!.doorType?.companyPrice || 0;
             return {
               ...d,
+              // Re-sized or re-typed: its rate with margin is the server's to work out again.
+              rateWithMargin: undefined,
+              amountWithMargin: undefined,
               doorTypeId: data.linkedDoor!.doorTypeId,
               doorTypeName: data.linkedDoor!.doorType?.name,
               brandName: data.linkedDoor!.doorType?.brandName,
@@ -906,7 +951,7 @@ export function QuotationBuilderPage() {
         (data as any)._tempPairId = oldPairId;
       }
 
-      cabinets[editIndex] = data;
+      cabinets[editIndex] = { ...data, rateWithMargin: undefined, amountWithMargin: undefined } as typeof data;
       kitchen.cabinets = cabinets;
       kitchen.doors = doors;
       updatedKitchens[editingKitchenIndex] = kitchen;
@@ -931,6 +976,9 @@ export function QuotationBuilderPage() {
             const doorPrice = data.linkedDoor!.doorType?.companyPrice || 0;
             return {
               ...d,
+              // Re-sized or re-typed: its rate with margin is the server's to work out again.
+              rateWithMargin: undefined,
+              amountWithMargin: undefined,
               doorTypeId: data.linkedDoor!.doorTypeId,
               doorTypeName: data.linkedDoor!.doorType?.name,
               brandName: data.linkedDoor!.doorType?.brandName,
@@ -973,7 +1021,7 @@ export function QuotationBuilderPage() {
         (data as any)._tempPairId = oldPairId;
       }
 
-      cabinets[editIndex] = data;
+      cabinets[editIndex] = { ...data, rateWithMargin: undefined, amountWithMargin: undefined } as typeof data;
       setFormData({ ...formData, cabinets, doors });
     }
 
@@ -1114,14 +1162,14 @@ export function QuotationBuilderPage() {
       const updatedKitchens = [...(formData.kitchens || [])];
       const kitchen = { ...updatedKitchens[editingDoorKitchenIndex] };
       const doors = [...(kitchen.doors || [])];
-      doors[editingDoorIndex] = { ...(doors[editingDoorIndex] as any), ...data };
+      doors[editingDoorIndex] = { ...(doors[editingDoorIndex] as any), ...data, rateWithMargin: undefined, amountWithMargin: undefined };
       kitchen.doors = doors;
       updatedKitchens[editingDoorKitchenIndex] = kitchen;
       setFormData({ ...formData, kitchens: updatedKitchens });
     } else {
       // Update in global list (merge to preserve id / _tempPairId)
       const doors = [...(formData.doors || [])];
-      doors[editingDoorIndex] = { ...(doors[editingDoorIndex] as any), ...data };
+      doors[editingDoorIndex] = { ...(doors[editingDoorIndex] as any), ...data, rateWithMargin: undefined, amountWithMargin: undefined };
       setFormData({ ...formData, doors });
     }
 
@@ -1158,7 +1206,13 @@ export function QuotationBuilderPage() {
     if (isEditMode || presetApplied.current || !presetCustomerId || !customersData?.content) {return;}
     presetApplied.current = true;
     if (!formData.customerId && customersData.content.some((c) => c.id === presetCustomerId)) {
+      // Nothing typed yet: the quotation starts with this customer, so leaving it is not leaving
+      // unsaved changes — the starting point is taken again once the customer is in.
+      const untouched = initialFormDataRef.current === null || initialFormDataRef.current === JSON.stringify(formData);
       handleCustomerSelect(presetCustomerId);
+      if (untouched) {
+        initialFormDataRef.current = null;
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditMode, presetCustomerId, customersData]);
@@ -1209,6 +1263,14 @@ export function QuotationBuilderPage() {
   };
 
   const stepOrder: BuilderStep[] = ['customer', 'kitchens', 'products', 'review'];
+
+  // A quotation without kitchens: its other expenses as the server worked them out (staff's figure).
+  const savedOtherExpenses = otherExpensesFromServer((existingQuotation as any)?.totalAmount, [
+    (existingQuotation as any)?.accessoriesFinalTotal,
+    (existingQuotation as any)?.cabinetsFinalTotal,
+    (existingQuotation as any)?.doorsFinalTotal,
+    (existingQuotation as any)?.lightingFinalTotal,
+  ]);
 
   const handleStepClick = (stepId: string) => {
     const targetIndex = stepOrder.indexOf(stepId as BuilderStep);
@@ -1342,6 +1404,14 @@ export function QuotationBuilderPage() {
   ];
 
   return (
+    <MarginCodeProvider
+      value={{
+        codes: pickCodes(formData),
+        offered: (codeOptions?.codes ?? []).map((c) => c.code),
+        setCode: (field, code) => setFormData((prev) => ({ ...prev, [field]: code })),
+      }}
+    >
+    <ServerFiguresProvider value={serverFigures}>
     <div className="min-h-screen bg-background-900 p-4 sm:p-6">
       {/* Header */}
       <div className="mb-4 sm:mb-5">
@@ -1662,6 +1732,7 @@ export function QuotationBuilderPage() {
                           doors: (existingQuotation as any)?.doorsFinalTotal,
                           lighting: (existingQuotation as any)?.lightingFinalTotal,
                         }}
+                        serverOtherExpenses={savedOtherExpenses}
                         accessories={formData.accessories || []}
                         cabinets={formData.cabinets || []}
                         doors={formData.doors || []}
@@ -1700,6 +1771,7 @@ export function QuotationBuilderPage() {
                           doors: (existingQuotation as any)?.doorsFinalTotal,
                           lighting: (existingQuotation as any)?.lightingFinalTotal,
                         }}
+                        serverOtherExpenses={savedOtherExpenses}
                         accessories={formData.accessories || []}
                         cabinets={formData.cabinets || []}
                         doors={formData.doors || []}
@@ -1849,7 +1921,7 @@ export function QuotationBuilderPage() {
 
                 {/* MRP (List Price) — per-category pricing, mirrors the offer "Pricing by Category".
                     A single quotation-level set of MRP margins/taxes (super-admin only). */}
-                {access.seesMargins && (() => {
+                {(access.seesMargins || access.seesMarginCodes) && (() => {
                   const ks = formData.kitchens || [];
                   const hasK = ks.length > 0;
                   const isMulti = ks.length >= 2;
@@ -1870,6 +1942,14 @@ export function QuotationBuilderPage() {
                       <h3 className="text-sm font-[650] text-text-900 mb-1">Pricing by Category — MRP (List Price)</h3>
                       <p className="text-xs text-text-500 mb-4">Set the per-category margin &amp; tax used for the MRP. The Offer Price uses the rates above.</p>
                       <CategoryPricingPanel
+                        marginKind="mrp"
+                        serverCategoryTotals={{
+                          accessories: (existingQuotation as any)?.accessoriesMrpTotal,
+                          cabinets: (existingQuotation as any)?.cabinetsMrpTotal,
+                          doors: (existingQuotation as any)?.doorsMrpTotal,
+                          lighting: (existingQuotation as any)?.lightingMrpTotal,
+                        }}
+                        serverOtherExpenses={(existingQuotation as any)?.miscMrpTotal}
                         accessories={acc}
                         cabinets={cab}
                         doors={dor}
@@ -1905,6 +1985,13 @@ export function QuotationBuilderPage() {
                 <QuotationPreview
                   serverGrandTotal={(existingQuotation as any)?.totalAmount}
                   serverTaxAmount={(existingQuotation as any)?.taxAmount}
+                  serverMrpFinal={(existingQuotation as any)?.mrpFinal}
+                  serverCategoryTotals={{
+                    accessories: (existingQuotation as any)?.accessoriesFinalTotal,
+                    cabinets: (existingQuotation as any)?.cabinetsFinalTotal,
+                    doors: (existingQuotation as any)?.doorsFinalTotal,
+                    lighting: (existingQuotation as any)?.lightingFinalTotal,
+                  }}
                   customer={selectedCustomer}
                   accessories={formData.accessories || []}
                   cabinets={formData.cabinets || []}
@@ -2213,6 +2300,8 @@ export function QuotationBuilderPage() {
         isSaving={isCreating || isUpdating}
       />
     </div>
+    </ServerFiguresProvider>
+    </MarginCodeProvider>
   );
 }
 

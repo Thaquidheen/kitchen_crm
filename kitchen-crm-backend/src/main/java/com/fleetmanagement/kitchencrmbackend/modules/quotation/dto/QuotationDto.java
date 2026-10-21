@@ -73,6 +73,19 @@ public class QuotationDto {
     private BigDecimal lightingMrpTaxPercentage = BigDecimal.valueOf(18.00);
     // Miscellaneous (services) MRP margin & tax
     private BigDecimal miscellaneousMrpMarginPercentage = BigDecimal.ZERO;
+
+    // Margin codes (V161): what staff allowed to see margins see, and choose, instead of the
+    // percentages. Sent as the code of the stored percentage, or null when no code stands for it.
+    private String accessoriesMarginCode;
+    private String cabinetsMarginCode;
+    private String doorsMarginCode;
+    private String lightingMarginCode;
+    private String miscellaneousMarginCode;
+    private String accessoriesMrpMarginCode;
+    private String cabinetsMrpMarginCode;
+    private String doorsMrpMarginCode;
+    private String lightingMrpMarginCode;
+    private String miscellaneousMrpMarginCode;
     private BigDecimal miscellaneousMrpTaxPercentage = BigDecimal.valueOf(18.00);
 
     private BigDecimal subtotal;

@@ -10,10 +10,12 @@ package com.fleetmanagement.kitchencrmbackend.modules.quotation.service;
  * it always did.
  *
  * <p>Two things are kept apart, because a quotation shows them apart: the <b>rates</b> (each
- * line's unit price and each category's total before margin) and the <b>margins</b> (percentage
- * and amount). Whatever is not shown is not accepted back either: nobody sets a margin they
- * cannot see, and rates are set by the administrator alone — for everyone else the server works
- * them out, whatever their screen sends.
+ * line's unit price and each category's total before margin) and the <b>margins</b>. Margin
+ * percentages and amounts are the administrator's alone; staff allowed to see margins see the
+ * administrator's <b>margin codes</b> instead (V161), and staff allowed to change them choose a
+ * code, which the server turns into its percentage. Whatever is not shown is not accepted back
+ * either, and rates are set by the administrator alone — for everyone else the server works them
+ * out, whatever their screen sends.
  */
 public final class PricingView {
 
@@ -49,13 +51,24 @@ public final class PricingView {
         return FULL.equals(view) || has(view, RATES);
     }
 
-    /** Margin percentages and margin amounts. */
+    /** Margin percentages and margin amounts: the administrator only. */
     public static boolean seesMargins(String view) {
+        return FULL.equals(view);
+    }
+
+    /** Typing margin percentages: the administrator only. */
+    public static boolean setsMargins(String view) {
+        return FULL.equals(view);
+    }
+
+    /** The margin of each category as the administrator's code ("See margin codes"). */
+    public static boolean seesMarginCodes(String view) {
         return FULL.equals(view) || has(view, MARGINS);
     }
 
-    public static boolean setsMargins(String view) {
-        return FULL.equals(view) || has(view, SET_MARGINS);
+    /** Choosing a margin code for each category ("Choose margin codes"); not the administrator, who types percentages. */
+    public static boolean setsMarginCodes(String view) {
+        return !FULL.equals(view) && has(view, SET_MARGINS);
     }
 
     /** A price sent for a line is taken from the administrator only. */

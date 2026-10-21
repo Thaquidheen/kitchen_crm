@@ -25,6 +25,11 @@ public class QuotationDoorDto {
     private BigDecimal marginAmount;
     private BigDecimal taxAmount;
     private BigDecimal totalPrice;
+
+    /** The rate with the category's margin (per sq ft for a door), before GST. Sent to everyone who sees the quotation. */
+    private BigDecimal rateWithMargin;
+    /** The line's amount with the category's margin, before GST. */
+    private BigDecimal amountWithMargin;
     private String doorFinish;
     private String doorStyle;
     private String description;

@@ -66,10 +66,12 @@ public enum Permission {
     QUOTATIONS_SEE_RATES("quotations.see_rates", "Quotations", "See rates and amount before margin",
             "Each item's rate, and each category's total before the margin is added. With the final "
                     + "amount next to it, the margin can be worked out.", false, false),
-    QUOTATIONS_SEE_MARGINS("quotations.see_margins", "Quotations", "See margin",
-            "The margin percentage and margin amount of each category, and the MRP margins.", false, false),
-    QUOTATIONS_EDIT_MARGINS("quotations.edit_margins", "Quotations", "Change margin",
-            "Set the margin percentages on a quotation. Only works together with \"See margin\".", false, false);
+    QUOTATIONS_SEE_MARGINS("quotations.see_margins", "Quotations", "See margin codes",
+            "The margin of each category as the code the administrator set (for example R), never the "
+                    + "percentage. The administrator always sees the percentages.", false, false),
+    QUOTATIONS_EDIT_MARGINS("quotations.edit_margins", "Quotations", "Choose margin codes",
+            "Choose a margin code for each category on a quotation. Only works together with "
+                    + "\"See margin codes\".", false, false);
 
     private static final Map<String, Permission> BY_KEY =
             Arrays.stream(values()).collect(Collectors.toMap(Permission::key, Function.identity()));

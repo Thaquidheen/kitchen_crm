@@ -26,9 +26,11 @@ const staff = (...allowed: PermissionKey[]) => {
 };
 
 describe('quotationAccess', () => {
-  it('gives the administrator everything', () => {
-    const a = quotationAccess((key) => isAllowed(true, undefined, key));
-    expect(Object.values(a).every(Boolean)).toBe(true);
+  it('gives the administrator everything but choosing codes (the administrator types percentages)', () => {
+    const a = quotationAccess((key) => isAllowed(true, undefined, key), true);
+    const { picksMarginCodes, ...rest } = a;
+    expect(Object.values(rest).every(Boolean)).toBe(true);
+    expect(picksMarginCodes).toBe(false);
   });
 
   it('gives nothing before the permissions are known', () => {
@@ -47,21 +49,20 @@ describe('quotationAccess', () => {
     expect(staff('quotations.edit')).toMatchObject({ create: false, remove: false, changeStatus: false, seesRates: false });
   });
 
-  it('keeps rates and margins apart', () => {
-    expect(staff('quotations.see_rates')).toMatchObject({ seesRates: true, seesMargins: false, editsMargins: false });
-    expect(staff('quotations.see_margins')).toMatchObject({ seesRates: false, seesMargins: true, editsMargins: false });
+  it('keeps rates and margins apart; staff see margins as codes, never percentages', () => {
+    expect(staff('quotations.see_rates')).toMatchObject({ seesRates: true, seesMargins: false, seesMarginCodes: false });
+    expect(staff('quotations.see_margins')).toMatchObject({ seesRates: false, seesMargins: false, seesMarginCodes: true });
   });
 
-  it('lets nobody change a margin they cannot see', () => {
-    expect(staff('quotations.edit_margins').editsMargins).toBe(false);
-    expect(staff('quotations.see_rates', 'quotations.edit_margins').editsMargins).toBe(false);
-    expect(staff('quotations.see_margins', 'quotations.edit_margins').editsMargins).toBe(true);
+  it('lets staff choose codes only with both margin permissions, and never type percentages', () => {
+    expect(staff('quotations.edit_margins').picksMarginCodes).toBe(false);
+    expect(staff('quotations.see_rates', 'quotations.edit_margins').picksMarginCodes).toBe(false);
+    expect(staff('quotations.see_margins', 'quotations.edit_margins')).toMatchObject({ picksMarginCodes: true, editsMargins: false });
   });
 
-  it('lets the screen work totals out only with both rates and margins', () => {
+  it('lets the screen work totals out only for the administrator (staff have no percentages)', () => {
     expect(staff().computesTotals).toBe(false);
-    expect(staff('quotations.see_rates').computesTotals).toBe(false);
-    expect(staff('quotations.see_margins').computesTotals).toBe(false);
-    expect(staff('quotations.see_rates', 'quotations.see_margins').computesTotals).toBe(true);
+    expect(staff('quotations.see_rates', 'quotations.see_margins', 'quotations.edit_margins').computesTotals).toBe(false);
+    expect(quotationAccess((key) => isAllowed(true, undefined, key), true).computesTotals).toBe(true);
   });
 });
