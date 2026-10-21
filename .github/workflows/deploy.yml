@@ -14,6 +14,10 @@ jobs:
         with:
           host: 157.173.114.116
           username: root
+          # Log in with the deploy key (secret SERVER_SSH_KEY). The password is only a fallback
+          # while the key is being set up: once the server refuses passwords, delete the
+          # SERVER_PASSWORD secret.
+          key: ${{ secrets.SERVER_SSH_KEY }}
           password: ${{ secrets.SERVER_PASSWORD }}
           command_timeout: 45m
           script: |
