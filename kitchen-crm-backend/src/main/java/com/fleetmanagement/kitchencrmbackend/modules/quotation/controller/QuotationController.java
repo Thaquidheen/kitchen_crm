@@ -3,6 +3,7 @@ package com.fleetmanagement.kitchencrmbackend.modules.quotation.controller;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationBulkDeleteService;
+import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationPreviewService;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationService;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.JasperPdfGenerationService;
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
@@ -41,6 +42,9 @@ public class QuotationController {
 
     @Autowired
     private QuotationBulkDeleteService bulkDeleteService;
+
+    @Autowired
+    private QuotationPreviewService previewService;
 
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.permission.service.PermissionService permissionService;
@@ -165,6 +169,57 @@ public class QuotationController {
         } else {
             return ResponseEntity.badRequest().body(response);
         }
+    }
+
+    /**
+     * A quotation being edited, priced with the changes on the screen but not saved (see
+     * QuotationPreviewService): the answer a save would give, and nothing kept. It asks the
+     * permission of the save (PermissionInterceptor).
+     */
+    @PostMapping("/{id}/preview")
+    public ResponseEntity<ApiResponse<QuotationDto>> previewUpdate(
+            @PathVariable Long id,
+            @Valid @RequestBody QuotationDto quotationDto,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        ResponseEntity<ApiResponse<QuotationDto>> refused = previewRefused(currentUser);
+        if (refused != null) {
+            return refused;
+        }
+        ApiResponse<QuotationDto> response = previewService.previewUpdate(
+                id, quotationDto, currentUser.getName(), pricingView(currentUser));
+        return Boolean.TRUE.equals(response.getSuccess())
+                ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    /** A new quotation (or a new version of one) priced before it is first saved; nothing is kept. */
+    @PostMapping("/preview")
+    public ResponseEntity<ApiResponse<QuotationDto>> previewCreate(
+            @Valid @RequestBody QuotationCreateDto quotationCreateDto,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        ResponseEntity<ApiResponse<QuotationDto>> refused = previewRefused(currentUser);
+        if (refused != null) {
+            return refused;
+        }
+        ApiResponse<QuotationDto> response = previewService.previewCreate(
+                quotationCreateDto, currentUser.getName(), pricingView(currentUser));
+        return Boolean.TRUE.equals(response.getSuccess())
+                ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    /**
+     * A preview answers with the whole quotation, so besides the permission of the save (the
+     * PermissionInterceptor's rule) it asks the one to view quotations.
+     */
+    private ResponseEntity<ApiResponse<QuotationDto>> previewRefused(UserPrincipal user) {
+        com.fleetmanagement.kitchencrmbackend.modules.permission.Permission needed =
+                com.fleetmanagement.kitchencrmbackend.modules.permission.Permission.QUOTATIONS_VIEW;
+        if (permissionService.can(user, needed)) {
+            return null;
+        }
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(
+                com.fleetmanagement.kitchencrmbackend.modules.permission.web.PermissionInterceptor.message(needed)));
     }
 
     @DeleteMapping("/{id}")

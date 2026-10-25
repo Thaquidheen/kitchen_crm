@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Pencil, ChevronDown, ChevronRight, Layers, Receipt, X } from 'lucide-react';
 import { useState } from 'react';
 import { useQuotationAccess } from '../useQuotationAccess';
-import { useLineWithMargin, useServerFigure } from '../serverFigures';
+import { useFigureHint, useLineWithMargin, useServerFigure } from '../serverFigures';
 import type { QuotationElevation, QuotationOtherExpense } from '../types';
 
 interface AccessoryItem {
@@ -127,6 +127,7 @@ export function SelectedProductsList({
   const access = useQuotationAccess();
   const saved = useServerFigure();
   const lineWithMargin = useLineWithMargin();
+  const hint = useFigureHint();
 
   // Which cabinet each linked door belongs to. A door created for a cabinet carries the same
   // _tempPairId; without showing it, every door row is the same shutter name and they cannot be
@@ -333,7 +334,7 @@ export function SelectedProductsList({
             {!access.seesRates && access.seesMarginCodes && (() => {
               const amount = lineWithMargin(item as any, category);
               return amount === undefined ? (
-                <span className="text-text-500 whitespace-nowrap" title="Priced when the quotation is saved">—</span>
+                <span className="text-text-500 whitespace-nowrap" title={hint}>—</span>
               ) : (
                 <span className="font-semibold whitespace-nowrap text-text-900 tabular-nums" title="With margin, before GST">
                   ₹{amount.toLocaleString('en-IN')}
@@ -501,7 +502,7 @@ export function SelectedProductsList({
           {displayGrandTotal === null ? '—' : `₹${displayGrandTotal.toLocaleString('en-IN')}`}
         </div>
         {displayGrandTotal === null && (
-          <div className="text-[11px] text-text-500 mt-0.5">Shown once the quotation is saved.</div>
+          <div className="text-[11px] text-text-500 mt-0.5">{hint}</div>
         )}
       </Card>
     </div>

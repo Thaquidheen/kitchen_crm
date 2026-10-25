@@ -27,7 +27,7 @@ import { KitchenPlanImageSelector } from '@/features/quotations/components/Kitch
 import { KitchenProductTabs } from '@/features/quotations/components/KitchenProductTabs';
 import { AddCabinetModal, type CabinetWithDimensions } from '@/features/quotations/components/AddCabinetModal';
 import { AddDoorModal, type DoorWithDimensions } from '@/features/quotations/components/AddDoorModal';
-import type { QuotationFormData, CreateQuotationRequest, QuotationAccessory, QuotationCabinet, QuotationDoor, QuotationLighting, QuotationKitchenFormData, QuotationOtherExpense } from '@/features/quotations/types';
+import type { MarginCodeFields, QuotationFormData, CreateQuotationRequest, QuotationAccessory, QuotationCabinet, QuotationDoor, QuotationLighting, QuotationKitchenFormData, QuotationOtherExpense } from '@/features/quotations/types';
 
 const DEFAULT_TERMS_CONDITIONS = `• The Above-mentioned Terms are Subjected to Change depending upon the delay from Client side to provide necessary Inputs/Approvals
 • Kitchen Delivery and Installation will not proceed unless site condition requirements outlined in our Terms and Conditions.
@@ -51,7 +51,16 @@ import { useCreateQuotationMutation, useUpdateQuotationMutation, useGetQuotation
 import { useGetMarginsQuery } from '@/services/settingsAPI';
 import { useGetMarginCodeOptionsQuery } from '@/features/quotations/marginCodesAPI';
 import { MarginCodeProvider, codesToSend, defaultCodes, pickCodes } from '@/features/quotations/marginCodes';
-import { ServerFiguresProvider, changedCodeCategories, otherExpensesFromServer, pricingSnapshot } from '@/features/quotations/serverFigures';
+import {
+  ServerFiguresProvider,
+  changedCodeCategories,
+  formKey,
+  otherExpensesFromServer,
+  pricingSnapshot,
+  roundAmounts,
+  withPricedFigures,
+} from '@/features/quotations/serverFigures';
+import { usePreviewNewQuotationMutation, usePreviewQuotationChangesMutation } from '@/features/quotations/quotationPreviewAPI';
 import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
 import { useGetCabinetsQuery, useGetDoorsQuery } from '@/features/products/productsAPI';
 import { useParams } from 'react-router-dom';
@@ -195,9 +204,10 @@ export function QuotationBuilderPage() {
   const [customerKitchenTypes, setCustomerKitchenTypes] = useState<string[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const initialFormDataRef = useRef<string | null>(null);
-  // The price-setting part of the form as it was opened: staff see the server's figures only while
-  // the form still matches it (see serverFigureRules).
-  const [pricingBaseline, setPricingBaseline] = useState<string | null>(null);
+  // The figures on screen for staff and the form they describe (its pricingSnapshot): the saved
+  // quotation's when it was opened, then the server's preview of the form as edited. Staff see them
+  // only while the form still matches; until a fresh preview is back, "—" (see serverFigureRules).
+  const [figures, setFigures] = useState<{ key: string; quotation: any; codes: MarginCodeFields | null } | null>(null);
   const skipNavigationBlockRef = useRef(false);
   const [formData, setFormData] = useState<Partial<QuotationFormData>>({
     customerId: 0,
@@ -521,35 +531,45 @@ export function QuotationBuilderPage() {
     if (!isEditMode && newQuotationStarted && initialFormDataRef.current === null) {
       // Small delay to let margins apply to formData
       const timer = setTimeout(() => {
-        initialFormDataRef.current = JSON.stringify(formData);
-        setPricingBaseline(pricingSnapshot(formData));
+        initialFormDataRef.current = formKey(formData);
+        setFigures({
+          key: pricingSnapshot(formData),
+          quotation: existingQuotation ?? null,
+          codes: existingQuotation ? pickCodes(existingQuotation as any) : null,
+        });
       }, 100);
       return () => clearTimeout(timer);
     } else if (isEditMode && existingQuotation && initialFormDataRef.current === null) {
       // For edit mode, snapshot after quotation is loaded
       const timer = setTimeout(() => {
-        initialFormDataRef.current = JSON.stringify(formData);
-        setPricingBaseline(pricingSnapshot(formData));
+        initialFormDataRef.current = formKey(formData);
+        setFigures({
+          key: pricingSnapshot(formData),
+          quotation: existingQuotation ?? null,
+          codes: existingQuotation ? pickCodes(existingQuotation as any) : null,
+        });
       }, 100);
       return () => clearTimeout(timer);
     }
   }, [newQuotationStarted, existingQuotation, isEditMode, formData]);
 
-  // Whether the figures the server saved still describe the form (for staff, who cannot work
-  // totals out), and which categories' codes were changed since the quotation was opened.
+  // Whether the server's figures still describe the form (for staff, who cannot work totals out),
+  // and which categories' codes differ from the ones those figures were worked out with.
   const currentPricing = useMemo(() => pricingSnapshot(formData), [formData]);
   const serverFigures = useMemo(
     () => ({
-      current: pricingBaseline === null || currentPricing === pricingBaseline,
-      changedCodes: isEditMode && existingQuotation ? changedCodeCategories(pickCodes(existingQuotation as any), pickCodes(formData)) : [],
+      current: figures === null || currentPricing === figures.key,
+      changedCodes: figures?.codes ? changedCodeCategories(figures.codes, pickCodes(formData)) : [],
     }),
-    [pricingBaseline, currentPricing, isEditMode, existingQuotation, formData],
+    [figures, currentPricing, formData],
   );
+  // Where the quotation-level figures come from: the preview, the saved quotation, or (new) none.
+  const figureSource: any = figures ? figures.quotation : existingQuotation;
 
   // Track dirty state
   useEffect(() => {
     if (initialFormDataRef.current !== null) {
-      const currentFormData = JSON.stringify(formData);
+      const currentFormData = formKey(formData);
       setIsDirty(currentFormData !== initialFormDataRef.current);
     }
   }, [formData]);
@@ -1208,7 +1228,7 @@ export function QuotationBuilderPage() {
     if (!formData.customerId && customersData.content.some((c) => c.id === presetCustomerId)) {
       // Nothing typed yet: the quotation starts with this customer, so leaving it is not leaving
       // unsaved changes — the starting point is taken again once the customer is in.
-      const untouched = initialFormDataRef.current === null || initialFormDataRef.current === JSON.stringify(formData);
+      const untouched = initialFormDataRef.current === null || initialFormDataRef.current === formKey(formData);
       handleCustomerSelect(presetCustomerId);
       if (untouched) {
         initialFormDataRef.current = null;
@@ -1265,12 +1285,59 @@ export function QuotationBuilderPage() {
   const stepOrder: BuilderStep[] = ['customer', 'kitchens', 'products', 'review'];
 
   // A quotation without kitchens: its other expenses as the server worked them out (staff's figure).
-  const savedOtherExpenses = otherExpensesFromServer((existingQuotation as any)?.totalAmount, [
-    (existingQuotation as any)?.accessoriesFinalTotal,
-    (existingQuotation as any)?.cabinetsFinalTotal,
-    (existingQuotation as any)?.doorsFinalTotal,
-    (existingQuotation as any)?.lightingFinalTotal,
+  const savedOtherExpenses = otherExpensesFromServer(figureSource?.totalAmount, [
+    figureSource?.accessoriesFinalTotal,
+    figureSource?.cabinetsFinalTotal,
+    figureSource?.doorsFinalTotal,
+    figureSource?.lightingFinalTotal,
   ]);
+
+  // Staff cannot work their figures out on screen (they are not given the margins), so once they
+  // change something that sets the price, the server prices the form as a save would — keeping
+  // nothing — and its figures are shown. Asked when the editing pauses, one at a time and never
+  // while a save is on its way; an answer for a form that has changed again since is dropped, and
+  // the form as it is then is asked next. A form the server will not price (a refused code, a
+  // closed quotation) keeps its dashes until it is saved, where the reason is shown.
+  const [previewNew] = usePreviewNewQuotationMutation();
+  const [previewChanges] = usePreviewQuotationChangesMutation();
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const [previewFailedFor, setPreviewFailedFor] = useState<string | null>(null);
+  const latestPricing = useRef(currentPricing);
+  latestPricing.current = currentPricing;
+  const staffPrices = !access.computesTotals && (isEditMode ? access.edit : access.create);
+  const saving = isCreating || isUpdating;
+  const previewDue =
+    staffPrices && figures !== null && currentPricing !== figures.key && !!formData.customerId && previewFailedFor !== currentPricing;
+  useEffect(() => {
+    if (!previewDue || previewBusy || saving) {return;}
+    const key = currentPricing;
+    const codes = pickCodes(formData);
+    const timer = setTimeout(async () => {
+      setPreviewBusy(true);
+      try {
+        const body = convertFormDataToRequest(true) as unknown as Record<string, unknown>;
+        const answer = isEditMode && id
+          ? await previewChanges({ id: Number(id), ...body }).unwrap()
+          : await previewNew(body).unwrap();
+        const priced = answer?.data ? roundAmounts(answer.data as unknown as Record<string, unknown>) : undefined;
+        if (!priced || latestPricing.current !== key) {return;}
+        setFormData((prev) => withPricedFigures(prev as Record<string, unknown>, priced) as Partial<QuotationFormData>);
+        setFigures({ key, quotation: priced, codes });
+      } catch {
+        // Not priced (see above): the dashes stay until the form changes again.
+        if (latestPricing.current === key) {
+          setPreviewFailedFor(key);
+        }
+      } finally {
+        setPreviewBusy(false);
+      }
+    }, 700);
+    return () => clearTimeout(timer);
+    // The request is built from formData, whose price-setting part currentPricing follows.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewDue, previewBusy, saving, currentPricing]);
+  // What the figure displays are told: the server's figures, and whether new ones are on their way.
+  const figureContext = useMemo(() => ({ ...serverFigures, pending: previewDue }), [serverFigures, previewDue]);
 
   const handleStepClick = (stepId: string) => {
     const targetIndex = stepOrder.indexOf(stepId as BuilderStep);
@@ -1302,7 +1369,7 @@ export function QuotationBuilderPage() {
       }
 
       // Reset dirty state after successful save
-      initialFormDataRef.current = JSON.stringify(formData);
+      initialFormDataRef.current = formKey(formData);
       setIsDirty(false);
       skipNavigationBlockRef.current = true;
       navigate('/quotations');
@@ -1332,7 +1399,7 @@ export function QuotationBuilderPage() {
       }
 
       // Reset dirty state after successful save
-      initialFormDataRef.current = JSON.stringify(formData);
+      initialFormDataRef.current = formKey(formData);
       setIsDirty(false);
       skipNavigationBlockRef.current = true;
       navigate('/quotations');
@@ -1354,7 +1421,7 @@ export function QuotationBuilderPage() {
       const created = await createQuotation(requestData).unwrap();
       const newVersion = created?.data?.versionNumber ?? created?.versionNumber;
       toast.success(newVersion ? `Saved as version V${newVersion}` : 'New quotation created successfully');
-      initialFormDataRef.current = JSON.stringify(formData);
+      initialFormDataRef.current = formKey(formData);
       setIsDirty(false);
       skipNavigationBlockRef.current = true;
       navigate('/quotations');
@@ -1376,7 +1443,7 @@ export function QuotationBuilderPage() {
         toast.success('Quotation draft saved');
       }
       // Reset dirty state and proceed with navigation
-      initialFormDataRef.current = JSON.stringify(formData);
+      initialFormDataRef.current = formKey(formData);
       setIsDirty(false);
       blocker.proceed?.();
     } catch (error: any) {
@@ -1411,7 +1478,7 @@ export function QuotationBuilderPage() {
         setCode: (field, code) => setFormData((prev) => ({ ...prev, [field]: code })),
       }}
     >
-    <ServerFiguresProvider value={serverFigures}>
+    <ServerFiguresProvider value={figureContext}>
     <div className="min-h-screen bg-background-900 p-4 sm:p-6">
       {/* Header */}
       <div className="mb-4 sm:mb-5">
@@ -1727,10 +1794,10 @@ export function QuotationBuilderPage() {
                     <div className="mt-6">
                       <CategoryPricingPanel
                         serverCategoryTotals={{
-                          accessories: (existingQuotation as any)?.accessoriesFinalTotal,
-                          cabinets: (existingQuotation as any)?.cabinetsFinalTotal,
-                          doors: (existingQuotation as any)?.doorsFinalTotal,
-                          lighting: (existingQuotation as any)?.lightingFinalTotal,
+                          accessories: figureSource?.accessoriesFinalTotal,
+                          cabinets: figureSource?.cabinetsFinalTotal,
+                          doors: figureSource?.doorsFinalTotal,
+                          lighting: figureSource?.lightingFinalTotal,
                         }}
                         serverOtherExpenses={savedOtherExpenses}
                         accessories={formData.accessories || []}
@@ -1766,10 +1833,10 @@ export function QuotationBuilderPage() {
                     <div className="mt-6">
                       <CategoryTotals
                         serverCategoryTotals={{
-                          accessories: (existingQuotation as any)?.accessoriesFinalTotal,
-                          cabinets: (existingQuotation as any)?.cabinetsFinalTotal,
-                          doors: (existingQuotation as any)?.doorsFinalTotal,
-                          lighting: (existingQuotation as any)?.lightingFinalTotal,
+                          accessories: figureSource?.accessoriesFinalTotal,
+                          cabinets: figureSource?.cabinetsFinalTotal,
+                          doors: figureSource?.doorsFinalTotal,
+                          lighting: figureSource?.lightingFinalTotal,
                         }}
                         serverOtherExpenses={savedOtherExpenses}
                         accessories={formData.accessories || []}
@@ -1944,12 +2011,12 @@ export function QuotationBuilderPage() {
                       <CategoryPricingPanel
                         marginKind="mrp"
                         serverCategoryTotals={{
-                          accessories: (existingQuotation as any)?.accessoriesMrpTotal,
-                          cabinets: (existingQuotation as any)?.cabinetsMrpTotal,
-                          doors: (existingQuotation as any)?.doorsMrpTotal,
-                          lighting: (existingQuotation as any)?.lightingMrpTotal,
+                          accessories: figureSource?.accessoriesMrpTotal,
+                          cabinets: figureSource?.cabinetsMrpTotal,
+                          doors: figureSource?.doorsMrpTotal,
+                          lighting: figureSource?.lightingMrpTotal,
                         }}
-                        serverOtherExpenses={(existingQuotation as any)?.miscMrpTotal}
+                        serverOtherExpenses={figureSource?.miscMrpTotal}
                         accessories={acc}
                         cabinets={cab}
                         doors={dor}
@@ -1983,14 +2050,14 @@ export function QuotationBuilderPage() {
 
                 {/* Preview */}
                 <QuotationPreview
-                  serverGrandTotal={(existingQuotation as any)?.totalAmount}
-                  serverTaxAmount={(existingQuotation as any)?.taxAmount}
-                  serverMrpFinal={(existingQuotation as any)?.mrpFinal}
+                  serverGrandTotal={figureSource?.totalAmount}
+                  serverTaxAmount={figureSource?.taxAmount}
+                  serverMrpFinal={figureSource?.mrpFinal}
                   serverCategoryTotals={{
-                    accessories: (existingQuotation as any)?.accessoriesFinalTotal,
-                    cabinets: (existingQuotation as any)?.cabinetsFinalTotal,
-                    doors: (existingQuotation as any)?.doorsFinalTotal,
-                    lighting: (existingQuotation as any)?.lightingFinalTotal,
+                    accessories: figureSource?.accessoriesFinalTotal,
+                    cabinets: figureSource?.cabinetsFinalTotal,
+                    doors: figureSource?.doorsFinalTotal,
+                    lighting: figureSource?.lightingFinalTotal,
                   }}
                   customer={selectedCustomer}
                   accessories={formData.accessories || []}
@@ -2147,7 +2214,7 @@ export function QuotationBuilderPage() {
             ) : (
               // Show global products (backward compatibility)
               <SelectedProductsList
-                serverGrandTotal={(existingQuotation as any)?.totalAmount}
+                serverGrandTotal={figureSource?.totalAmount}
                 accessories={formData.accessories || []}
                 cabinets={formData.cabinets || []}
                 doors={formData.doors || []}

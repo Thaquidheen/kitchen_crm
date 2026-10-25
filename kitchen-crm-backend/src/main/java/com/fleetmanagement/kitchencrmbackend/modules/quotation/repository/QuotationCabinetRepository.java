@@ -14,13 +14,13 @@ public interface QuotationCabinetRepository extends JpaRepository<QuotationCabin
     @Query("SELECT qc FROM QuotationCabinet qc " +
            "LEFT JOIN FETCH qc.cabinetType " +
            "LEFT JOIN FETCH qc.linkedDoorType " +
-           "WHERE qc.quotation.id = :quotationId")
+           "WHERE qc.quotation.id = :quotationId ORDER BY qc.id")
     List<QuotationCabinet> findByQuotationId(@Param("quotationId") Long quotationId);
 
     @Query("SELECT qc FROM QuotationCabinet qc " +
            "LEFT JOIN FETCH qc.cabinetType " +
            "LEFT JOIN FETCH qc.linkedDoorType " +
-           "WHERE qc.kitchen.id = :kitchenId")
+           "WHERE qc.kitchen.id = :kitchenId ORDER BY qc.id")
     List<QuotationCabinet> findByKitchenId(@Param("kitchenId") Long kitchenId);
 
     void deleteByQuotationId(Long quotationId);

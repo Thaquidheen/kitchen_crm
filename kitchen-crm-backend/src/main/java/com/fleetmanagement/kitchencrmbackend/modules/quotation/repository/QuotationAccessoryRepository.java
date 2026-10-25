@@ -15,14 +15,14 @@ public interface QuotationAccessoryRepository extends JpaRepository<QuotationAcc
            "LEFT JOIN FETCH qa.accessory a " +
            "LEFT JOIN FETCH a.brand " +
            "LEFT JOIN FETCH a.category " +
-           "WHERE qa.quotation.id = :quotationId")
+           "WHERE qa.quotation.id = :quotationId ORDER BY qa.id")
     List<QuotationAccessory> findByQuotationId(@Param("quotationId") Long quotationId);
 
     @Query("SELECT qa FROM QuotationAccessory qa " +
            "LEFT JOIN FETCH qa.accessory a " +
            "LEFT JOIN FETCH a.brand " +
            "LEFT JOIN FETCH a.category " +
-           "WHERE qa.kitchen.id = :kitchenId")
+           "WHERE qa.kitchen.id = :kitchenId ORDER BY qa.id")
     List<QuotationAccessory> findByKitchenId(@Param("kitchenId") Long kitchenId);
 
     void deleteByQuotationId(Long quotationId);

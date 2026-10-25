@@ -11,8 +11,11 @@ import java.util.List;
 
 @Repository
 public interface QuotationLightingRepository extends JpaRepository<QuotationLighting, Long> {
-    List<QuotationLighting> findByQuotationId(Long quotationId);
-    List<QuotationLighting> findByKitchenId(Long kitchenId);
+    // In the order they were saved (the screen matches a priced answer by position).
+    @Query("SELECT l FROM QuotationLighting l WHERE l.quotation.id = :quotationId ORDER BY l.id")
+    List<QuotationLighting> findByQuotationId(@Param("quotationId") Long quotationId);
+    @Query("SELECT l FROM QuotationLighting l WHERE l.kitchen.id = :kitchenId ORDER BY l.id")
+    List<QuotationLighting> findByKitchenId(@Param("kitchenId") Long kitchenId);
     void deleteByQuotationId(Long quotationId);
 
     /**

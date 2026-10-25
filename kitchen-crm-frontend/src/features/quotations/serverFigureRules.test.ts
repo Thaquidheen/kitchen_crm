@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changedCodeCategories, otherExpensesFromServer, pricingSnapshot, taxInside } from './serverFigureRules';
+import { changedCodeCategories, formKey, otherExpensesFromServer, pricingSnapshot, roundAmounts, taxInside, withPricedFigures } from './serverFigureRules';
 
 describe('the other expenses, as the server worked them out', () => {
   it('is the total less the category totals', () => {
@@ -50,5 +50,85 @@ describe('lines priced with a code that has since been changed', () => {
   });
   it('are none for a new quotation', () => {
     expect(changedCodeCategories(null, { cabinetsMarginCode: 'R' })).toEqual([]);
+  });
+});
+
+describe('the figures the screen keeps in the form', () => {
+  const form = {
+    notes: 'a',
+    kitchens: [{
+      kitchenName: 'Main',
+      totalAmount: 1000,
+      cabinetsFinalTotal: 800,
+      cabinets: [{ cabinetTypeId: 5, quantity: 2, rateWithMargin: 400 }],
+    }],
+  };
+  it('are not what was entered: they change neither the price key nor "unsaved changes"', () => {
+    const repriced = {
+      ...form,
+      kitchens: [{ ...form.kitchens[0], totalAmount: 2000, cabinetsFinalTotal: 1600, cabinets: [{ cabinetTypeId: 5, quantity: 2, rateWithMargin: 800 }] }],
+    };
+    expect(pricingSnapshot(repriced)).toBe(pricingSnapshot(form));
+    expect(formKey(repriced)).toBe(formKey(form));
+    expect(formKey({ ...form, notes: 'b' })).not.toBe(formKey(form));
+  });
+});
+
+describe("the server's preview of the form", () => {
+  const priced = {
+    kitchens: [{
+      totalAmount: 5000, taxAmount: 700, cabinetsFinalTotal: 4000, accessoriesFinalTotal: 0, doorsFinalTotal: 0, lightingFinalTotal: 1000,
+      cabinets: [{ cabinetTypeId: 5, quantity: 2, rateWithMargin: 1500, amountWithMargin: 3000 }],
+      lighting: [{ itemId: -101, quantity: 1, rateWithMargin: 800, amountWithMargin: 800 }],
+      accessories: [], doors: [],
+    }],
+  };
+  const form = {
+    kitchens: [{
+      kitchenName: 'Main',
+      cabinets: [{ cabinetTypeId: 5, quantity: 2 }],
+      lighting: [{ id: -101, quantity: 1, rateWithMargin: 700 }],
+      accessories: [], doors: [],
+    }],
+  };
+  it('puts each kitchen\'s totals and each line\'s amount with margin in place', () => {
+    const out = withPricedFigures(form, priced) as typeof form & { kitchens: Array<Record<string, unknown>> };
+    const k = out.kitchens[0] as Record<string, any>;
+    expect(k.totalAmount).toBe(5000);
+    expect(k.taxAmount).toBe(700);
+    expect(k.cabinetsFinalTotal).toBe(4000);
+    expect(k.cabinets[0].rateWithMargin).toBe(1500);
+    expect(k.lighting[0].rateWithMargin).toBe(800);
+    expect(k.kitchenName).toBe('Main');
+  });
+  it('gives a line that does not match its counterpart no figures, and keeps the others', () => {
+    const changed = { kitchens: [{ ...form.kitchens[0], cabinets: [{ cabinetTypeId: 5, quantity: 3 }] }] };
+    const k = (withPricedFigures(changed, priced).kitchens as Array<Record<string, any>>)[0];
+    expect(k.cabinets[0].rateWithMargin).toBeUndefined();
+    expect(k.lighting[0].rateWithMargin).toBe(800);
+    const two = withPricedFigures(
+      { kitchens: [], accessories: [{ id: 9, quantity: 4 }, { id: 404, quantity: 1 }] },
+      { accessories: [{ accessoryId: 9, quantity: 4, rateWithMargin: 50 }, { accessoryId: null, quantity: 1, rateWithMargin: 70 }] },
+    ) as Record<string, any>;
+    expect(two.accessories[0].rateWithMargin).toBe(50);
+    expect(two.accessories[1].rateWithMargin).toBeUndefined();
+    const shorter = withPricedFigures({ kitchens: [], accessories: [{ id: 9, quantity: 4 }] }, { accessories: [] }) as Record<string, any>;
+    expect(shorter.accessories[0].rateWithMargin).toBeUndefined();
+  });
+
+  it('comes with its amounts to the paisa, as a save stores them; nothing else rounded', () => {
+    const r = roundAmounts({ totalAmount: 12345.679, kitchens: [{ lightingFinalTotal: 1.0049, lighting: [{ quantity: 2.555, amountWithMargin: 10.006, calculatedSqft: 10.8253 }] }] });
+    expect(r.totalAmount).toBe(12345.68);
+    expect(r.kitchens[0].lightingFinalTotal).toBe(1);
+    expect(r.kitchens[0].lighting[0].amountWithMargin).toBe(10.01);
+    expect(r.kitchens[0].lighting[0].quantity).toBe(2.555);
+    expect(r.kitchens[0].lighting[0].calculatedSqft).toBe(10.8253);
+  });
+  it('fills a quotation without kitchens the same way', () => {
+    const out = withPricedFigures(
+      { kitchens: [], accessories: [{ id: 9, quantity: 4 }] },
+      { accessories: [{ accessoryId: 9, quantity: 4, rateWithMargin: 50, amountWithMargin: 200 }] },
+    ) as Record<string, any>;
+    expect(out.accessories[0].amountWithMargin).toBe(200);
   });
 });

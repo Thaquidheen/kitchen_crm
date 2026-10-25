@@ -71,6 +71,11 @@ public class ActivityLogInterceptor implements HandlerInterceptor {
             if (SKIP_PATHS.contains(uri)) {
                 return;
             }
+            // A quotation's price preview (the staff builder asks one each time editing pauses)
+            // saves nothing: it is not activity, and would bury the real saves.
+            if (uri.startsWith("/api/v1/quotations") && uri.endsWith("/preview")) {
+                return;
+            }
             // The concealed reporting module leaves no trail, by explicit instruction. Checked by
             // URI as well as by module because the unlock endpoint is not itself in the finance
             // package — and a row reading "POST /api/v1/reporting-access/unlock" in a log the whole

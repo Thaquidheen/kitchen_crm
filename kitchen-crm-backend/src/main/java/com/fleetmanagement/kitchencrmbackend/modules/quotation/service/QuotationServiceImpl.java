@@ -298,7 +298,8 @@ public class QuotationServiceImpl implements QuotationService {
 
     @Override
     public ApiResponse<QuotationDto> updateQuotation(Long id, QuotationDto quotationDto, String updatedBy, String userRole) {
-        Quotation existingQuotation = quotationRepository.findById(id).orElse(null);
+        // Locked first: saves and previews of one quotation queue up (see findByIdForUpdate).
+        Quotation existingQuotation = quotationRepository.findByIdForUpdate(id).orElse(null);
         if (existingQuotation == null) {
             return ApiResponse.error("Quotation not found");
         }
@@ -1948,40 +1949,10 @@ public class QuotationServiceImpl implements QuotationService {
             }).toList());
             
             // Load products for this kitchen
-            Long kitchenQuotationId = kitchen.getQuotation().getId();
-            System.out.println("Loading products for kitchen ID: " + kitchen.getId() + " (Quotation ID: " + kitchenQuotationId + ")");
-            
-            // Check if products exist for the quotation but don't have kitchenId
-            List<QuotationAccessory> allAccessories = accessoryRepository.findByQuotationId(kitchenQuotationId);
-            List<QuotationCabinet> allCabinets = cabinetRepository.findByQuotationId(kitchenQuotationId);
-            List<QuotationDoor> allDoors = doorRepository.findByQuotationId(kitchenQuotationId);
-            List<QuotationLighting> allLighting = lightingRepository.findByQuotationId(kitchenQuotationId);
-            
-            System.out.println("Total accessories for quotation " + kitchenQuotationId + ": " + (allAccessories != null ? allAccessories.size() : 0));
-            System.out.println("Total cabinets for quotation " + kitchenQuotationId + ": " + (allCabinets != null ? allCabinets.size() : 0));
-            System.out.println("Total doors for quotation " + kitchenQuotationId + ": " + (allDoors != null ? allDoors.size() : 0));
-            System.out.println("Total lighting for quotation " + kitchenQuotationId + ": " + (allLighting != null ? allLighting.size() : 0));
-            
-            // Count products with kitchenId set
-            long accessoriesWithKitchen = allAccessories != null ? allAccessories.stream().filter(a -> a.getKitchen() != null).count() : 0;
-            long cabinetsWithKitchen = allCabinets != null ? allCabinets.stream().filter(c -> c.getKitchen() != null).count() : 0;
-            long doorsWithKitchen = allDoors != null ? allDoors.stream().filter(d -> d.getKitchen() != null).count() : 0;
-            long lightingWithKitchen = allLighting != null ? allLighting.stream().filter(l -> l.getKitchen() != null).count() : 0;
-            
-            System.out.println("Accessories with kitchenId set: " + accessoriesWithKitchen);
-            System.out.println("Cabinets with kitchenId set: " + cabinetsWithKitchen);
-            System.out.println("Doors with kitchenId set: " + doorsWithKitchen);
-            System.out.println("Lighting with kitchenId set: " + lightingWithKitchen);
-            
             List<QuotationAccessoryDto> accessories = loadAccessoriesForKitchen(kitchen.getId(), userRole);
             List<QuotationCabinetDto> cabinets = loadCabinetsForKitchen(kitchen.getId(), userRole);
             List<QuotationDoorDto> doors = loadDoorsForKitchen(kitchen.getId(), userRole);
             List<QuotationLightingDto> lighting = loadLightingForKitchen(kitchen.getId(), userRole);
-            
-            System.out.println("Loaded " + (accessories != null ? accessories.size() : 0) + " accessories for kitchen " + kitchen.getId());
-            System.out.println("Loaded " + (cabinets != null ? cabinets.size() : 0) + " cabinets for kitchen " + kitchen.getId());
-            System.out.println("Loaded " + (doors != null ? doors.size() : 0) + " doors for kitchen " + kitchen.getId());
-            System.out.println("Loaded " + (lighting != null ? lighting.size() : 0) + " lighting for kitchen " + kitchen.getId());
             
             dto.setAccessories(accessories);
             dto.setCabinets(cabinets);

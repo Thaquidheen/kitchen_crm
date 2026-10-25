@@ -12,6 +12,8 @@ interface ServerFiguresState {
   current: boolean;
   /** Categories whose margin code was changed since: their lines' amounts with margin are out of date. */
   changedCodes: MarginCodeCategory[];
+  /** The server is about to price the form as it is now (staff builder): the figures follow shortly. */
+  pending?: boolean;
 }
 
 const ServerFiguresContext = createContext<ServerFiguresState>({ current: true, changedCodes: [] });
@@ -21,6 +23,12 @@ export const ServerFiguresProvider = ServerFiguresContext.Provider;
 export function useServerFigure() {
   const { current } = useContext(ServerFiguresContext);
   return useCallback((v: number | null | undefined): number | null => (current && v !== null && v !== undefined ? Number(v) : null), [current]);
+}
+
+/** What a "—" in place of a figure means: it is on its way, or it comes with the save. */
+export function useFigureHint() {
+  const { pending } = useContext(ServerFiguresContext);
+  return pending ? 'Worked out when you pause editing.' : 'Shown once the quotation is saved.';
 }
 
 /** A line's amount with margin, unless its category's code was changed since it was priced. */

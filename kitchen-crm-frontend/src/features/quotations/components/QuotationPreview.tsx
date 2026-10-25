@@ -9,7 +9,7 @@ import { User, Package, DollarSign, Calculator, Home, Image as ImageIcon } from 
 import type { QuotationKitchenFormData, QuotationOtherExpense } from '@/features/quotations/types';
 import { getImageUrl } from '@/utils/imageUtils';
 import { useQuotationAccess } from '../useQuotationAccess';
-import { otherExpensesFromServer, useLineWithMargin, useServerFigure } from '../serverFigures';
+import { otherExpensesFromServer, useFigureHint, useLineWithMargin, useServerFigure } from '../serverFigures';
 import type { MarginCodeCategory } from '../marginCodeRules';
 
 /** An amount, or a dash for one not known yet (staff, before the quotation is saved). */
@@ -113,6 +113,7 @@ export function QuotationPreview({
   // A figure the server saved, or null once something on the screen changed it.
   const saved = useServerFigure();
   const lineWithMargin = useLineWithMargin();
+  const hint = useFigureHint();
   // Check if this is a multi-kitchen quotation
   const isMultiKitchen = kitchens && kitchens.length > 0;
   const calculations = useMemo(() => {
@@ -640,7 +641,7 @@ export function QuotationPreview({
                   </span>
                 </div>
                 {displayGrandTotal === null && (
-                  <p className="m-0 text-[11px] text-text-500 text-right">Shown once the quotation is saved.</p>
+                  <p className="m-0 text-[11px] text-text-500 text-right">{hint}</p>
                 )}
               </div>
             </div>
@@ -754,7 +755,7 @@ export function QuotationPreview({
                 </span>
               </div>
               {displayGrandTotal === null && (
-                <p className="m-0 text-[11px] text-text-500 text-right">Shown once the quotation is saved.</p>
+                <p className="m-0 text-[11px] text-text-500 text-right">{hint}</p>
               )}
             </div>
           </div>
