@@ -333,7 +333,7 @@ export function SelectedProductsList({
             {!access.seesRates && access.seesMarginCodes && (() => {
               const amount = lineWithMargin(item as any, category);
               return amount === undefined ? (
-                <span className="text-text-500 whitespace-nowrap" title="Priced when the quotation is saved">—</span>
+                <span className="text-text-500 whitespace-nowrap" title="Priced when you pause editing">—</span>
               ) : (
                 <span className="font-semibold whitespace-nowrap text-text-900 tabular-nums" title="With margin, before GST">
                   ₹{amount.toLocaleString('en-IN')}
@@ -501,7 +501,7 @@ export function SelectedProductsList({
           {displayGrandTotal === null ? '—' : `₹${displayGrandTotal.toLocaleString('en-IN')}`}
         </div>
         {displayGrandTotal === null && (
-          <div className="text-[11px] text-text-500 mt-0.5">Shown once the quotation is saved.</div>
+          <div className="text-[11px] text-text-500 mt-0.5">Worked out when you pause editing.</div>
         )}
       </Card>
     </div>

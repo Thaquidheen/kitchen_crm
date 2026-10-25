@@ -158,7 +158,7 @@ function CategorySection({
             </span>
           </div>
           {total.finalTotal == null && (
-            <p className="mt-1 mb-0 text-[11px] text-text-500">Shown once the quotation is saved.</p>
+            <p className="mt-1 mb-0 text-[11px] text-text-500">Worked out when you pause editing.</p>
           )}
         </div>
       </div>

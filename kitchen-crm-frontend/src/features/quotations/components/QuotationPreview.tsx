@@ -640,7 +640,7 @@ export function QuotationPreview({
                   </span>
                 </div>
                 {displayGrandTotal === null && (
-                  <p className="m-0 text-[11px] text-text-500 text-right">Shown once the quotation is saved.</p>
+                  <p className="m-0 text-[11px] text-text-500 text-right">Worked out when you pause editing.</p>
                 )}
               </div>
             </div>
@@ -754,7 +754,7 @@ export function QuotationPreview({
                 </span>
               </div>
               {displayGrandTotal === null && (
-                <p className="m-0 text-[11px] text-text-500 text-right">Shown once the quotation is saved.</p>
+                <p className="m-0 text-[11px] text-text-500 text-right">Worked out when you pause editing.</p>
               )}
             </div>
           </div>

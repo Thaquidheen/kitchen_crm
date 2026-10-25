@@ -78,6 +78,9 @@ public class PermissionInterceptor implements HandlerInterceptor {
             new Rule(Set.of("DELETE"), "/api/v1/quotations/*", Permission.QUOTATIONS_DELETE),
             new Rule(Set.of("PATCH"), "/api/v1/quotations/*/status", Permission.QUOTATIONS_CHANGE_STATUS),
             new Rule(READ, "/api/v1/quotations/*/pdf", Permission.QUOTATIONS_PDF),
+            // Pricing without saving (staff's figures while they edit): the permission of the save.
+            new Rule(Set.of("POST"), "/api/v1/quotations/preview", Permission.QUOTATIONS_CREATE),
+            new Rule(Set.of("POST"), "/api/v1/quotations/*/preview", Permission.QUOTATIONS_EDIT),
             new Rule(Set.of("POST"), "/api/v1/quotations", Permission.QUOTATIONS_CREATE),
             new Rule(Set.of("POST"), "/api/v1/quotations/*/duplicate", Permission.QUOTATIONS_CREATE),
             new Rule(Set.of("PUT"), "/api/v1/quotations/folders/*", Permission.QUOTATIONS_EDIT),
