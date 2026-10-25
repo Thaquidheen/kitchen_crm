@@ -13,12 +13,12 @@ public interface QuotationDoorRepository extends JpaRepository<QuotationDoor, Lo
 
     @Query("SELECT qd FROM QuotationDoor qd " +
            "LEFT JOIN FETCH qd.doorType " +
-           "WHERE qd.quotation.id = :quotationId")
+           "WHERE qd.quotation.id = :quotationId ORDER BY qd.id")
     List<QuotationDoor> findByQuotationId(@Param("quotationId") Long quotationId);
 
     @Query("SELECT qd FROM QuotationDoor qd " +
            "LEFT JOIN FETCH qd.doorType " +
-           "WHERE qd.kitchen.id = :kitchenId")
+           "WHERE qd.kitchen.id = :kitchenId ORDER BY qd.id")
     List<QuotationDoor> findByKitchenId(@Param("kitchenId") Long kitchenId);
 
     void deleteByQuotationId(Long quotationId);

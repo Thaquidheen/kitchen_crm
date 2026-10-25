@@ -57,6 +57,7 @@ import {
   formKey,
   otherExpensesFromServer,
   pricingSnapshot,
+  roundAmounts,
   withPricedFigures,
 } from '@/features/quotations/serverFigures';
 import { usePreviewNewQuotationMutation, usePreviewQuotationChangesMutation } from '@/features/quotations/quotationPreviewAPI';
@@ -1293,36 +1294,50 @@ export function QuotationBuilderPage() {
 
   // Staff cannot work their figures out on screen (they are not given the margins), so once they
   // change something that sets the price, the server prices the form as a save would — keeping
-  // nothing — and its figures are shown. Asked when the editing pauses; an answer for a form that
-  // has changed again since is dropped. A form the server will not price (a refused code, say)
-  // keeps its dashes until it is saved, where the reason is shown.
+  // nothing — and its figures are shown. Asked when the editing pauses, one at a time and never
+  // while a save is on its way; an answer for a form that has changed again since is dropped, and
+  // the form as it is then is asked next. A form the server will not price (a refused code, a
+  // closed quotation) keeps its dashes until it is saved, where the reason is shown.
   const [previewNew] = usePreviewNewQuotationMutation();
   const [previewChanges] = usePreviewQuotationChangesMutation();
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const [previewFailedFor, setPreviewFailedFor] = useState<string | null>(null);
   const latestPricing = useRef(currentPricing);
   latestPricing.current = currentPricing;
   const staffPrices = !access.computesTotals && (isEditMode ? access.edit : access.create);
+  const saving = isCreating || isUpdating;
+  const previewDue =
+    staffPrices && figures !== null && currentPricing !== figures.key && !!formData.customerId && previewFailedFor !== currentPricing;
   useEffect(() => {
-    if (!staffPrices || figures === null || currentPricing === figures.key || !formData.customerId) {return;}
+    if (!previewDue || previewBusy || saving) {return;}
     const key = currentPricing;
     const codes = pickCodes(formData);
     const timer = setTimeout(async () => {
+      setPreviewBusy(true);
       try {
         const body = convertFormDataToRequest(true) as unknown as Record<string, unknown>;
         const answer = isEditMode && id
           ? await previewChanges({ id: Number(id), ...body }).unwrap()
           : await previewNew(body).unwrap();
-        const priced = answer?.data as unknown as Record<string, unknown> | undefined;
+        const priced = answer?.data ? roundAmounts(answer.data as unknown as Record<string, unknown>) : undefined;
         if (!priced || latestPricing.current !== key) {return;}
         setFormData((prev) => withPricedFigures(prev as Record<string, unknown>, priced) as Partial<QuotationFormData>);
         setFigures({ key, quotation: priced, codes });
       } catch {
-        // Not priced (see above): the dashes stay.
+        // Not priced (see above): the dashes stay until the form changes again.
+        if (latestPricing.current === key) {
+          setPreviewFailedFor(key);
+        }
+      } finally {
+        setPreviewBusy(false);
       }
     }, 700);
     return () => clearTimeout(timer);
     // The request is built from formData, whose price-setting part currentPricing follows.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staffPrices, figures, currentPricing]);
+  }, [previewDue, previewBusy, saving, currentPricing]);
+  // What the figure displays are told: the server's figures, and whether new ones are on their way.
+  const figureContext = useMemo(() => ({ ...serverFigures, pending: previewDue }), [serverFigures, previewDue]);
 
   const handleStepClick = (stepId: string) => {
     const targetIndex = stepOrder.indexOf(stepId as BuilderStep);
@@ -1463,7 +1478,7 @@ export function QuotationBuilderPage() {
         setCode: (field, code) => setFormData((prev) => ({ ...prev, [field]: code })),
       }}
     >
-    <ServerFiguresProvider value={serverFigures}>
+    <ServerFiguresProvider value={figureContext}>
     <div className="min-h-screen bg-background-900 p-4 sm:p-6">
       {/* Header */}
       <div className="mb-4 sm:mb-5">

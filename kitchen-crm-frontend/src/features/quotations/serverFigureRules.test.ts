@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changedCodeCategories, formKey, otherExpensesFromServer, pricingSnapshot, taxInside, withPricedFigures } from './serverFigureRules';
+import { changedCodeCategories, formKey, otherExpensesFromServer, pricingSnapshot, roundAmounts, taxInside, withPricedFigures } from './serverFigureRules';
 
 describe('the other expenses, as the server worked them out', () => {
   it('is the total less the category totals', () => {
@@ -101,11 +101,28 @@ describe("the server's preview of the form", () => {
     expect(k.lighting[0].rateWithMargin).toBe(800);
     expect(k.kitchenName).toBe('Main');
   });
-  it('gives a list no line figures when it does not match line for line', () => {
+  it('gives a line that does not match its counterpart no figures, and keeps the others', () => {
     const changed = { kitchens: [{ ...form.kitchens[0], cabinets: [{ cabinetTypeId: 5, quantity: 3 }] }] };
     const k = (withPricedFigures(changed, priced).kitchens as Array<Record<string, any>>)[0];
     expect(k.cabinets[0].rateWithMargin).toBeUndefined();
     expect(k.lighting[0].rateWithMargin).toBe(800);
+    const two = withPricedFigures(
+      { kitchens: [], accessories: [{ id: 9, quantity: 4 }, { id: 404, quantity: 1 }] },
+      { accessories: [{ accessoryId: 9, quantity: 4, rateWithMargin: 50 }, { accessoryId: null, quantity: 1, rateWithMargin: 70 }] },
+    ) as Record<string, any>;
+    expect(two.accessories[0].rateWithMargin).toBe(50);
+    expect(two.accessories[1].rateWithMargin).toBeUndefined();
+    const shorter = withPricedFigures({ kitchens: [], accessories: [{ id: 9, quantity: 4 }] }, { accessories: [] }) as Record<string, any>;
+    expect(shorter.accessories[0].rateWithMargin).toBeUndefined();
+  });
+
+  it('comes with its amounts to the paisa, as a save stores them; nothing else rounded', () => {
+    const r = roundAmounts({ totalAmount: 12345.679, kitchens: [{ lightingFinalTotal: 1.0049, lighting: [{ quantity: 2.555, amountWithMargin: 10.006, calculatedSqft: 10.8253 }] }] });
+    expect(r.totalAmount).toBe(12345.68);
+    expect(r.kitchens[0].lightingFinalTotal).toBe(1);
+    expect(r.kitchens[0].lighting[0].amountWithMargin).toBe(10.01);
+    expect(r.kitchens[0].lighting[0].quantity).toBe(2.555);
+    expect(r.kitchens[0].lighting[0].calculatedSqft).toBe(10.8253);
   });
   it('fills a quotation without kitchens the same way', () => {
     const out = withPricedFigures(

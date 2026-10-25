@@ -10,7 +10,7 @@ import clsx from 'clsx';
 import type { QuotationOtherExpense } from '../types';
 import { useQuotationAccess } from '../useQuotationAccess';
 import { MarginCodeField, type MarginCodeCategory, type MarginKind } from '../marginCodes';
-import { useServerFigure } from '../serverFigures';
+import { useFigureHint, useServerFigure } from '../serverFigures';
 
 interface CategorySectionProps {
   label: string;
@@ -49,6 +49,7 @@ function CategorySection({
   codeCategory,
   marginKind,
 }: CategorySectionProps) {
+  const hint = useFigureHint();
   const [marginStr, setMarginStr] = useState(marginPercent ? String(marginPercent) : '');
   const [taxStr, setTaxStr] = useState(taxPercent ? String(taxPercent) : '');
 
@@ -158,7 +159,7 @@ function CategorySection({
             </span>
           </div>
           {total.finalTotal == null && (
-            <p className="mt-1 mb-0 text-[11px] text-text-500">Worked out when you pause editing.</p>
+            <p className="mt-1 mb-0 text-[11px] text-text-500">{hint}</p>
           )}
         </div>
       </div>

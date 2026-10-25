@@ -3,7 +3,9 @@ package com.fleetmanagement.kitchencrmbackend.modules.quotation.repository;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,6 +19,15 @@ import java.util.Optional;
 
 @Repository
 public interface QuotationRepository extends JpaRepository<Quotation, Long> {
+
+    /**
+     * The quotation, its row locked until the transaction ends. A save (or a price preview, which
+     * is a save rolled back) takes this lock first, so writers to one quotation queue up on it
+     * instead of deadlocking over the lines' foreign-key locks.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT q FROM Quotation q WHERE q.id = :id")
+    Optional<Quotation> findByIdForUpdate(@Param("id") Long id);
     Optional<Quotation> findByQuotationNumber(String quotationNumber);
     List<Quotation> findByCustomerId(Long customerId);
     List<Quotation> findByStatus(Quotation.QuotationStatus status);

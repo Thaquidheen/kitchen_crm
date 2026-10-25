@@ -182,6 +182,10 @@ public class QuotationController {
             @Valid @RequestBody QuotationDto quotationDto,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
+        ResponseEntity<ApiResponse<QuotationDto>> refused = previewRefused(currentUser);
+        if (refused != null) {
+            return refused;
+        }
         ApiResponse<QuotationDto> response = previewService.previewUpdate(
                 id, quotationDto, currentUser.getName(), pricingView(currentUser));
         return Boolean.TRUE.equals(response.getSuccess())
@@ -194,10 +198,28 @@ public class QuotationController {
             @Valid @RequestBody QuotationCreateDto quotationCreateDto,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
+        ResponseEntity<ApiResponse<QuotationDto>> refused = previewRefused(currentUser);
+        if (refused != null) {
+            return refused;
+        }
         ApiResponse<QuotationDto> response = previewService.previewCreate(
                 quotationCreateDto, currentUser.getName(), pricingView(currentUser));
         return Boolean.TRUE.equals(response.getSuccess())
                 ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    /**
+     * A preview answers with the whole quotation, so besides the permission of the save (the
+     * PermissionInterceptor's rule) it asks the one to view quotations.
+     */
+    private ResponseEntity<ApiResponse<QuotationDto>> previewRefused(UserPrincipal user) {
+        com.fleetmanagement.kitchencrmbackend.modules.permission.Permission needed =
+                com.fleetmanagement.kitchencrmbackend.modules.permission.Permission.QUOTATIONS_VIEW;
+        if (permissionService.can(user, needed)) {
+            return null;
+        }
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(
+                com.fleetmanagement.kitchencrmbackend.modules.permission.web.PermissionInterceptor.message(needed)));
     }
 
     @DeleteMapping("/{id}")

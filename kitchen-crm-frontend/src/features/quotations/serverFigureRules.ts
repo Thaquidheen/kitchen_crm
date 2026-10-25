@@ -93,18 +93,23 @@ const sameLine = (list: LineList, f: Row, s: Row | undefined) =>
 const pricedLines = (list: LineList, formLines: unknown, serverLines: unknown): unknown => {
   if (!Array.isArray(formLines)) {return formLines;}
   const server = Array.isArray(serverLines) ? (serverLines as Row[]) : [];
-  const match = server.length === formLines.length && (formLines as Row[]).every((f, i) => sameLine(list, f, server[i]));
-  return (formLines as Row[]).map((f, i) => ({
-    ...f,
-    rateWithMargin: match ? server[i].rateWithMargin ?? undefined : undefined,
-    amountWithMargin: match ? server[i].amountWithMargin ?? undefined : undefined,
-  }));
+  // Line for line: a list of another length matches nothing; else each line on its own.
+  const sameLength = server.length === formLines.length;
+  return (formLines as Row[]).map((f, i) => {
+    const match = sameLength && sameLine(list, f, server[i]);
+    return {
+      ...f,
+      rateWithMargin: match ? server[i].rateWithMargin ?? undefined : undefined,
+      amountWithMargin: match ? server[i].amountWithMargin ?? undefined : undefined,
+    };
+  });
 };
 
 /**
  * The form with the figures of the server's preview of it. The server answers the lines in the
- * order they were sent; a list that does not match line for line (product and quantity) gets no
- * line figures — its lines show "—" — rather than another line's. Kitchens are matched in order.
+ * order they were saved, which is the order they were sent; a line that does not match its
+ * counterpart (product and quantity) gets no figures — it shows "—" — rather than another line's.
+ * Kitchens are matched in order.
  */
 export const withPricedFigures = <F extends Row>(form: F, priced: Row): F => {
   const out: Row = { ...form };
@@ -128,6 +133,25 @@ export const withPricedFigures = <F extends Row>(form: F, priced: Row): F => {
     });
   }
   return out as F;
+};
+
+const MONEY = /(Amount|Total|Final|WithMargin)$/;
+
+/**
+ * The server's answer with its amounts to the paisa, as a save stores them (the database keeps two
+ * decimals; a preview's figures come straight from the calculation).
+ */
+export const roundAmounts = <T,>(value: T, key = ''): T => {
+  if (typeof value === 'number') {
+    return (MONEY.test(key) ? Math.round(value * 100) / 100 : value) as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map((v) => roundAmounts(v, key)) as T;
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value as Row).map(([k, v]) => [k, roundAmounts(v, k)])) as T;
+  }
+  return value;
 };
 
 const CATEGORIES: MarginCodeCategory[] = ['accessories', 'cabinets', 'doors', 'lighting', 'miscellaneous'];
