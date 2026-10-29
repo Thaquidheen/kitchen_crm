@@ -19,8 +19,10 @@ import java.util.Set;
  * next is following the customer up. The other direction of QuotationStageEffects (a customer's
  * stage carrying their quotations along).
  *
- * Only forward: a customer still before Follow Up (Lead, Potential, Design Stage, Quotation Stage)
- * moves; one in Follow Up or further (Negotiations, Confirmed, Lost) stays where they are. Whoever
+ * Only forward: a customer still before Follow Up (Lead, Potential, Quotation Stage) moves; one in
+ * Follow Up or further (Negotiations, Confirmed, Lost) stays where they are. Design Stage stays too:
+ * the design comes first — a customer there with a quotation is being redesigned, and the approved
+ * design takes them on to Quotation Stage, where the new design is priced. Whoever
  * completes the quotation causes it, whatever their own right to change stages — it is the
  * quotation's effect, as approving one is when a customer is confirmed.
  *
@@ -31,9 +33,9 @@ import java.util.Set;
 @Component
 public class QuotationCompletedEffects {
 
-    /** The stages a customer goes through before Follow Up. */
+    /** The stages before Follow Up that a completed quotation moves a customer on from (not Design Stage). */
     public static final Set<CustomerStatus> BEFORE_FOLLOW_UP = EnumSet.of(
-            CustomerStatus.LEAD, CustomerStatus.POTENTIAL, CustomerStatus.DESIGN_STAGE, CustomerStatus.QUOTE_GIVEN);
+            CustomerStatus.LEAD, CustomerStatus.POTENTIAL, CustomerStatus.QUOTE_GIVEN);
 
     @Autowired
     private CustomerRepository customerRepository;

@@ -104,7 +104,9 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
     }`;
 
   return (
-    <header className="h-[58px] bg-background-800 border-b border-background-600 flex items-center gap-3.5 px-3 sm:px-5 shrink-0">
+    // Above the page's own sticky bars (the quotation header is z-20), so the menus that open from
+    // here (account, notifications) are never covered by them.
+    <header className="relative z-30 h-[58px] bg-background-800 border-b border-background-600 flex items-center gap-3.5 px-3 sm:px-5 shrink-0">
       {showMenuButton && (
         <button
           onClick={onMenuClick}

@@ -301,8 +301,8 @@ const SummaryTable: React.FC<{ title: string; rows: SummaryRow[]; totalRow: Summ
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.name} className="border-t border-background-600">
+            {rows.map((r, i) => (
+              <tr key={i} className="border-t border-background-600">
                 <td className="px-3 py-2 text-[13px] text-text-900">{r.name}</td>
                 {cells(r, false)}
               </tr>
@@ -398,15 +398,22 @@ export const QuotationBreakdown: React.FC<Props> = ({ quotation, access }) => {
   // with its only kitchen, or on their own when there are several.
   const quotationExpenses: any[] = quotation?.otherExpenses ?? [];
   const kitchenHasExpenses = kitchens.some((k) => (k.otherExpenses ?? []).length > 0);
+  // The other expenses exactly as the server prices them (PricingServiceImpl): transportation and
+  // installation from the price fields, plus the expenses added by hand. The default rows only
+  // mirror the price fields, and quotations saved before the list existed have the fields alone.
+  const serverExpenses = (src: any): any[] => [
+    ...[
+      { name: 'Transportation', amount: Number(src?.transportationPrice ?? 0) },
+      { name: 'Installation', amount: Number(src?.installationPrice ?? 0) },
+    ].filter((e) => e.amount > 0),
+    ...(src?.otherExpenses ?? []).filter((e: any) => !e?.isDefault),
+  ];
   const priced = kitchens.length
     ? kitchens.map((k, i) => ({
         key: k.id ?? i,
         name: k.kitchenName || `Kitchen ${i + 1}`,
         cats: kitchenCategories(k, quotation),
-        exp: expenseBreakdown(
-          (k.otherExpenses ?? []).length ? k.otherExpenses : !kitchenHasExpenses && kitchens.length === 1 ? quotationExpenses : [],
-          miscPct,
-        ),
+        exp: expenseBreakdown(serverExpenses(k), miscPct),
         total: k.totalAmount === null || k.totalAmount === undefined ? undefined : Number(k.totalAmount),
       }))
     : [
@@ -414,7 +421,7 @@ export const QuotationBreakdown: React.FC<Props> = ({ quotation, access }) => {
           key: 'all',
           name: 'Line items',
           cats: kitchenCategories(quotation, quotation),
-          exp: expenseBreakdown(quotationExpenses, miscPct),
+          exp: expenseBreakdown(serverExpenses(quotation), miscPct),
           total: quotation?.totalAmount === null || quotation?.totalAmount === undefined ? undefined : Number(quotation.totalAmount),
         },
       ];
@@ -456,9 +463,7 @@ export const QuotationBreakdown: React.FC<Props> = ({ quotation, access }) => {
         </div>
       )}
       <QuotationSummaryCard
-        sections={looseExpenses && looseExpenses.rows.length > 0
-          ? [...sections, { name: 'Other expenses', cats: [], exp: looseExpenses, total: undefined }]
-          : sections}
+        sections={sections}
         transport={transport}
         quotationTotal={quotationTotal}
         miscCode={quotation?.miscellaneousMarginCode ?? null}
