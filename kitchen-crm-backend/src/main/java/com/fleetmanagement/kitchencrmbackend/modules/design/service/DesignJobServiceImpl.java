@@ -861,6 +861,12 @@ public class DesignJobServiceImpl implements DesignJobService {
                         : "The admin has asked for changes to this design and approves the new one");
             }
         }
+        // A newer design over an approved one, from anyone but the admin or Admin staff, waits for the
+        // admin's review: the approved design stays in force until then (the owner's rule, 2026-10-29).
+        boolean forReview = !admin && !coordinator && existing != null && APPROVED_STATES.contains(status(existing));
+        if (forReview && moveToQuotation) {
+            return ApiResponse.error("A newer design waits for the admin's approval. Move the customer once it is approved");
+        }
         // Valid — now write.
         LocalDateTime now = LocalDateTime.now();
         DesignPhase job;
@@ -897,6 +903,17 @@ public class DesignJobServiceImpl implements DesignJobService {
                 return ApiResponse.error(picked.size() == 1
                         ? stored.getMessage() : file.getOriginalFilename() + ": " + stored.getMessage());
             }
+        }
+        if (forReview) {
+            job.setDesignStatus(DesignStatus.PENDING_SUPERADMIN_APPROVAL);
+            job.setCompletedAt(now);
+            job.setCompletionSeenAt(null); // in the admin's bell, to review
+            jobRepository.save(job);
+            row.setCompletedAt(now);
+            versionRepository.save(row);
+            DesignJobDto pending = detail(job);
+            return ApiResponse.success("Design V" + version(job) + " sent to the admin for approval",
+                    isAssignedDesigner(job, callerId) ? pending : withoutConversation(pending));
         }
         job.setDesignStatus(DesignStatus.APPROVED_BY_ADMIN);
         if (job.getCompletedAt() == null || !open) {

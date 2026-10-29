@@ -68,10 +68,13 @@ export const UploadDesignModal: React.FC<Props> = ({ target, onClose }) => {
     try {
       const saved = await uploadDesign({ customerId: target.customerId, files, note: note.trim() || undefined }).unwrap();
       // An approved design ends the Design stage for a customer who was in it.
+      // A newer design from staff waits for the admin; the approved one stays in force until then.
       toast.success(
-        target.customerStatus === 'DESIGN_STAGE' && saved.customerStatus === 'QUOTE_GIVEN'
-          ? `Design ${savedAs} saved — customer moved to Quotation Stage`
-          : `Design ${savedAs} saved`,
+        saved.status === 'PENDING_SUPERADMIN_APPROVAL'
+          ? `Design ${savedAs} sent to the admin for approval`
+          : target.customerStatus === 'DESIGN_STAGE' && saved.customerStatus === 'QUOTE_GIVEN'
+            ? `Design ${savedAs} saved — customer moved to Quotation Stage`
+            : `Design ${savedAs} saved`,
       );
       onClose();
     } catch (e) {
