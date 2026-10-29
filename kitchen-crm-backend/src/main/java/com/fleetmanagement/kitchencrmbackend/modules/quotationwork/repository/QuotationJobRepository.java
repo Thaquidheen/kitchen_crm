@@ -22,10 +22,10 @@ public interface QuotationJobRepository extends JpaRepository<QuotationJob, Long
     List<QuotationJob> findByAssigneeAndStatuses(@Param("userId") Long userId,
                                                  @Param("statuses") Collection<String> statuses);
 
-    /** Completed work that is recent, or that the admin side has not looked at yet. */
+    /** Completed work that is recent, or that the admin side has not looked at yet (within `unseenSince`). */
     @Query("SELECT j FROM QuotationJob j JOIN FETCH j.customer WHERE j.status = 'COMPLETED' "
-            + "AND (j.completedAt >= :since OR j.adminSeenAt IS NULL OR j.coordinatorSeenAt IS NULL)")
-    List<QuotationJob> findCompletedSince(@Param("since") LocalDateTime since);
+            + "AND (j.completedAt >= :since OR ((j.adminSeenAt IS NULL OR j.coordinatorSeenAt IS NULL) AND j.completedAt >= :unseenSince))")
+    List<QuotationJob> findCompletedSince(@Param("since") LocalDateTime since, @Param("unseenSince") LocalDateTime unseenSince);
 
     @Query("SELECT j FROM QuotationJob j JOIN FETCH j.customer WHERE j.customer.id = :customerId AND j.status IN :statuses")
     List<QuotationJob> findByCustomerAndStatuses(@Param("customerId") Long customerId,
@@ -47,9 +47,12 @@ public interface QuotationJobRepository extends JpaRepository<QuotationJob, Long
             + "ORDER BY c.id DESC")
     List<Customer> findCustomersNotBeingQuoted(@Param("stage") Customer.CustomerStatus stage);
 
-    /** The last time anyone was given, or finished, quotation work for these customers: rows {customerId, assignedAt, completedAt}. */
+    /**
+     * The last time anyone was given, or finished, quotation work for these customers: rows {customerId,
+     * assignedAt, completedAt}. Work taken off the board made no quotation and does not count.
+     */
     @Query("SELECT j.customer.id, MAX(j.assignedAt), MAX(j.completedAt) FROM QuotationJob j "
-            + "WHERE j.customer.id IN :customerIds GROUP BY j.customer.id")
+            + "WHERE j.customer.id IN :customerIds AND j.status <> 'CANCELLED' GROUP BY j.customer.id")
     List<Object[]> findLastWorkOfCustomers(@Param("customerIds") Collection<Long> customerIds);
 
     /**

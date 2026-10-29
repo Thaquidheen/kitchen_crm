@@ -171,7 +171,8 @@ public class QuotationEditRequestService {
         row = repository.save(row);
         // Back on the board with whoever prepared it, and the customer back in Quotation Stage.
         String movedBack = reopenedNow ? reopenedEffects.reopened(quotation, adminId, adminName, row.getDecisionNote()) : null;
-        return ApiResponse.success(approve ? "Approved: the quotation is a draft again" + QuotationReopenedEffects.movedBack(movedBack) : "Refused",
+        return ApiResponse.success(approve ? "Approved: the quotation is a draft again" + QuotationReopenedEffects.movedBack(movedBack)
+                + (reopenedNow ? reopenedEffects.designFirst(quotation) : "") : "Refused",
                 toRow(row, quotation, adminId));
     }
 
@@ -290,6 +291,9 @@ public class QuotationEditRequestService {
         row.put("quotationStatus", q == null || q.getStatus() == null ? null : q.getStatus().name());
         row.put("customerId", q == null || q.getCustomer() == null ? null : q.getCustomer().getId());
         row.put("customerName", q == null || q.getCustomer() == null ? null : q.getCustomer().getName());
+        // So the admin sees, before answering, when the customer is being redesigned.
+        row.put("customerStatus", q == null || q.getCustomer() == null || q.getCustomer().getStatus() == null ? null
+                : q.getCustomer().getStatus().name());
         row.put("requestedByName", r.getRequestedByName());
         row.put("mine", viewerId != null && viewerId.equals(r.getRequestedByUserId()));
         row.put("reason", r.getReason());

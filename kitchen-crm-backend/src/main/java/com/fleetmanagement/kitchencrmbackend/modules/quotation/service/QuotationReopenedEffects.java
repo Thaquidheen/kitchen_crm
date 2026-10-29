@@ -78,8 +78,25 @@ public class QuotationReopenedEffects {
         if (quotation == null || quotation.getStatus() != QuotationStatus.DRAFT || quotation.getCustomer() == null) {
             return null;
         }
-        reopenWork(quotation, byUserId, by, note);
+        // In Design Stage the design is being redone: the new design is priced when it is approved
+        // (the customer then comes under To assign), not this quotation on the old one.
+        if (!inDesignStage(quotation)) {
+            reopenWork(quotation, byUserId, by, note);
+        }
         return moveBack(quotation, by);
+    }
+
+    /** The words added to a reply when the reopened quotation stays off the board because the design is being redone. */
+    public String designFirst(Quotation quotation) {
+        return inDesignStage(quotation)
+                ? "; " + quotation.getCustomer().getName() + " is in Design Stage: nothing goes on the board until the new design is approved"
+                : "";
+    }
+
+    private boolean inDesignStage(Quotation quotation) {
+        Customer customer = quotation == null || quotation.getCustomer() == null ? null
+                : customerRepository.findById(quotation.getCustomer().getId()).orElse(null);
+        return customer != null && customer.getStatus() == CustomerStatus.DESIGN_STAGE;
     }
 
     /**
@@ -189,6 +206,8 @@ public class QuotationReopenedEffects {
 
     private void reopenWork(Quotation quotation, Long byUserId, String by, String note) {
         Long customerId = quotation.getCustomer().getId();
+        // Taken in turn per customer, so work handed out at the same moment cannot make a second piece.
+        customerRepository.findByIdForUpdate(customerId);
         if (!jobRepository.findByCustomerAndStatuses(customerId, OPEN).isEmpty()) {
             return;
         }

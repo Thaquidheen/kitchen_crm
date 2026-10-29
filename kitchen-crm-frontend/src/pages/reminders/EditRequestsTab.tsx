@@ -39,6 +39,10 @@ export const EditRequestsTab: React.FC = () => {
       if (back) {
         toast.success(quotationStageNotice(back));
       }
+      const designFirst = res.message.split('; ').find((part) => part.includes('is in Design Stage'));
+      if (designFirst) {
+        toast(designFirst);
+      }
     } catch (e: any) {
       toast.error(e?.message || e?.data?.message || 'Failed to save the answer');
     }
@@ -70,6 +74,12 @@ export const EditRequestsTab: React.FC = () => {
                     <div className="text-[11.5px] text-text-600 mt-0.5">
                       Asked by {r.requestedByName ?? 'staff'} · {when(r.createdAt)}
                     </div>
+                    {r.customerStatus === 'DESIGN_STAGE' && (
+                      <div className="text-[11.5px] mt-1" style={{ color: 'var(--st-potential-fg)' }}>
+                        The customer is in Design Stage (being redesigned): approving makes it a draft, but nothing goes on the
+                        work board until the new design is approved.
+                      </div>
+                    )}
                     {r.reason && <p className="m-0 mt-1.5 text-[12.5px] text-text-800 whitespace-pre-wrap">{r.reason}</p>}
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">

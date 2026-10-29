@@ -17,6 +17,8 @@ export interface QuotationEditRequest {
   quotationStatus?: string | null;
   customerId?: number | null;
   customerName?: string | null;
+  /** The customer's stage: DESIGN_STAGE means they are being redesigned. */
+  customerStatus?: string | null;
   requestedByName?: string | null;
   /** Asked by the person looking at it. */
   mine: boolean;

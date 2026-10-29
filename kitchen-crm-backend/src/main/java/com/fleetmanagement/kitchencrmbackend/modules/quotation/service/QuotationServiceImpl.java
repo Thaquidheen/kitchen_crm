@@ -584,7 +584,7 @@ public class QuotationServiceImpl implements QuotationService {
         // One approval at a time: approving this one takes back an earlier approval of the customer.
         int takenBack = newStatus == Quotation.QuotationStatus.APPROVED ? approvals.takeBackExcept(customerId, id) : 0;
         return ApiResponse.success("Quotation status updated successfully" + QuotationCompletedEffects.moved(moved)
-                + QuotationReopenedEffects.movedBack(movedBack)
+                + QuotationReopenedEffects.movedBack(movedBack) + (reopenedNow ? reopenedEffects.designFirst(quotation) : "")
                 + (takenBack == 0 ? "" : takenBack == 1 ? "; the earlier approved quotation is Completed again"
                         : "; " + takenBack + " earlier approved quotations are Completed again"));
     }

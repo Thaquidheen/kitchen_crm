@@ -102,6 +102,8 @@ public class DesignJobServiceImpl implements DesignJobService {
 
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationApprovals quotationApprovals;
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.quotationwork.service.QuotationWorkStageEffects quotationWorkStageEffects;
 
     @Value("${app.business-timezone:Asia/Kolkata}")
     private String businessTimezone;
@@ -465,6 +467,7 @@ public class DesignJobServiceImpl implements DesignJobService {
         Customer customer = job.getCustomer();
         boolean moved = false;
         int reopened = 0;
+        int workRemoved = 0;
         if (customer != null && !REDESIGN_KEEPS_STAGE.contains(customer.getStatus())) {
             boolean wasConfirmed = customer.getStatus() == CustomerStatus.CONFIRMED;
             moved = moveCustomer(customer, CustomerStatus.DESIGN_STAGE, adminName,
@@ -473,12 +476,17 @@ public class DesignJobServiceImpl implements DesignJobService {
                 // Their approval was for the design being redone (the owner's rule, 2026-10-29).
                 reopened = quotationApprovals.takeBack(customer.getId());
             }
+            if (moved) {
+                // A quotation being prepared is for the design being redone (the owner's rule, 2026-10-29).
+                workRemoved = quotationWorkStageEffects.customerMoved(customer.getId(), CustomerStatus.DESIGN_STAGE);
+            }
         }
         return ApiResponse.success(moved
                 ? "Redesign requested — customer moved back to Design Stage"
                         + (reopened == 0 ? "" : reopened == 1
                                 ? "; the approved quotation is Completed again"
                                 : "; " + reopened + " approved quotations are Completed again")
+                        + com.fleetmanagement.kitchencrmbackend.modules.quotationwork.service.QuotationWorkStageEffects.removed(workRemoved)
                 : "Redesign requested", detail(job));
     }
 
