@@ -169,6 +169,8 @@ describe('defaultHandIn', () => {
       { id: 10, quotationNumber: 'Q-10', status: 'COMPLETE', folderId: 7 }, // an older version
     ];
     expect(defaultHandIn(quotations, 20)?.id).toBe(35);
+    // A newer version already Completed existed before the reopening: not the re-edit.
+    expect(defaultHandIn([{ id: 25, quotationNumber: 'Q-25', status: 'COMPLETE', folderId: 7 }, ...quotations.slice(3)], 20)?.id).toBe(20);
     // No folder known: the reopened one itself.
     expect(defaultHandIn(quotations.map((q) => ({ ...q, folderId: null })), 20)?.id).toBe(20);
   });

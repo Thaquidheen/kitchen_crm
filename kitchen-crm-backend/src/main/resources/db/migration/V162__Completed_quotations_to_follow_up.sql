@@ -6,9 +6,9 @@
 -- brings what came before in line once:
 --
 --  0. Reopenings that are over: an approved request to edit a quotation that is Completed or
---     Approved again, or whose re-edit was saved as a newer version that is ("Save as New", same
---     folder). Until now only "Mark completed" closed them; they are done, as the application now
---     marks them.
+--     Approved again, or whose re-edit was saved as a newer version, made after the approval, that
+--     is ("Save as New", same folder). Until now only "Mark completed" closed them; they are done, as
+--     the application now marks them.
 --  1. Customers still in Lead, Potential or Quotation Stage whose newest quotation (cancelled ones
 --     aside) is Completed move on to Follow Up. Not when somebody is preparing a quotation for them
 --     (open work on the board), a quotation of theirs is reopened for editing, or they moved into
@@ -42,7 +42,8 @@ WHERE r.status = 'APPROVED'
   AND (q.status IN ('COMPLETE', 'APPROVED')
        OR (q.status = 'DRAFT' AND q.folder_id IS NOT NULL
            AND EXISTS (SELECT 1 FROM quotations v
-                       WHERE v.folder_id = q.folder_id AND v.id > q.id AND v.status IN ('COMPLETE', 'APPROVED'))));
+                       WHERE v.folder_id = q.folder_id AND v.id > q.id AND v.status IN ('COMPLETE', 'APPROVED')
+                         AND UNIX_TIMESTAMP(v.created_at) >= TIMESTAMPDIFF(SECOND, '1970-01-01 05:30:00', r.decided_at))));
 
 UPDATE quotation_edit_requests r
 JOIN v162_answered a ON a.id = r.id

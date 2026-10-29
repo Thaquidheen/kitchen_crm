@@ -78,14 +78,17 @@ export const quotedText = (count: number, latestStatusLabel?: string | null): st
 
 /**
  * The quotation offered first when handing work in: for work reopened for a quotation, that one or
- * the newest version saved from it since ("Save as New" keeps the folder); otherwise the newest one
- * that is not cancelled.
+ * the newest draft version of it being made ("Save as New" keeps the folder; a version that is
+ * already Completed or Approved was not made from the reopening); otherwise the newest one that is
+ * not cancelled.
  */
 export const defaultHandIn = (quotations: QuotationRef[] | undefined, reopenedFor?: number | null): QuotationRef | null => {
   const usable = [...(quotations ?? [])].filter((q) => q.status !== 'CANCELLED').sort((a, b) => b.id - a.id);
   const base = reopenedFor ? (quotations ?? []).find((q) => q.id === reopenedFor) : undefined;
   if (base) {
-    const version = usable.find((q) => q.id === base.id || (!!base.folderId && q.folderId === base.folderId && q.id > base.id));
+    const version = usable.find(
+      (q) => q.id === base.id || (!!base.folderId && q.folderId === base.folderId && q.id > base.id && q.status === 'DRAFT'),
+    );
     if (version) {return version;}
   }
   return usable[0] ?? null;

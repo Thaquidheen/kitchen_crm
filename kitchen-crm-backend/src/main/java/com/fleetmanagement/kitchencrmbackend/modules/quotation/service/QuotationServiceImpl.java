@@ -546,6 +546,7 @@ public class QuotationServiceImpl implements QuotationService {
 
         boolean completedNow = newStatus == Quotation.QuotationStatus.COMPLETE
                 && quotation.getStatus() != Quotation.QuotationStatus.COMPLETE;
+        boolean fromDraft = quotation.getStatus() == null || quotation.getStatus() == Quotation.QuotationStatus.DRAFT;
         // Completed back to Draft is a reopening, as when a request to edit it is approved.
         boolean reopenedNow = newStatus == Quotation.QuotationStatus.DRAFT
                 && quotation.getStatus() == Quotation.QuotationStatus.COMPLETE;
@@ -563,7 +564,7 @@ public class QuotationServiceImpl implements QuotationService {
         // Draft reopens it (see QuotationReopenedEffects).
         String moved = completedNow ? completedEffects.completed(quotation, updatedBy) : null;
         if (newStatus == Quotation.QuotationStatus.COMPLETE || newStatus == Quotation.QuotationStatus.APPROVED) {
-            reopenedEffects.completedAgain(quotation, updatedByUserId, updatedBy);
+            reopenedEffects.completedAgain(quotation, updatedByUserId, updatedBy, fromDraft);
         } else if (newStatus == Quotation.QuotationStatus.CANCELLED) {
             reopenedEffects.dropped(quotation);
         }

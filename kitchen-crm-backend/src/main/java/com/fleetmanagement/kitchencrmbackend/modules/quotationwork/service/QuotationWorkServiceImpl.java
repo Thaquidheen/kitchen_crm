@@ -387,16 +387,17 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
         }
         // The quotation itself reads Completed in the list. Only a draft is touched: On Hold and
         // Approved were set by the admin on purpose.
-        if (quotation.getStatus() == null || quotation.getStatus() == QuotationStatus.DRAFT) {
+        boolean fromDraft = quotation.getStatus() == null || quotation.getStatus() == QuotationStatus.DRAFT;
+        if (fromDraft) {
             quotation.setStatus(QuotationStatus.COMPLETE);
             quotationRepository.save(quotation);
         }
         // Reopened to be edited, it is handed in again: the requests that reopened it are done. So are
-        // those of the version it was reopened for, when this is a newer version of it ("Save as New").
+        // those of an earlier version it is the re-edit of ("Save as New").
         if (quotation.getStatus() == QuotationStatus.COMPLETE) {
             editRequests.editsDone(quotation.getId());
         }
-        reopenedEffects.handedIn(reopenedFor, quotation);
+        reopenedEffects.handedIn(quotation, fromDraft);
         // A completed quotation moves the customer on to Follow Up (see QuotationCompletedEffects).
         String moved = completedEffects.completed(quotation, viewer.name());
         LocalDateTime now = LocalDateTime.now();

@@ -134,7 +134,7 @@ public class QuotationEditRequestService {
         // Completed moves the customer on to Follow Up, when they are not there or further yet,
         // and closes the work on the board that was reopened for it.
         String moved = completedEffects.completed(quotation, userName);
-        reopenedEffects.completedAgain(quotation, userId, userName);
+        reopenedEffects.completedAgain(quotation, userId, userName, true);
         editsDone(quotationId);
         return ApiResponse.success("Quotation completed" + QuotationCompletedEffects.moved(moved),
                 toRow(open.get(0), quotation, userId));

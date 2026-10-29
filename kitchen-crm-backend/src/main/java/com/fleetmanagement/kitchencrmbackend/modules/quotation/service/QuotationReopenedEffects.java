@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -83,18 +84,19 @@ public class QuotationReopenedEffects {
 
     /**
      * The quotation is Completed or Approved again, other than through its work on the board ("Mark
-     * completed", or by hand): the work reopened for it is done, handing it in. So is work reopened
-     * for an older version of it, re-edited as a new version ("Save as New"); that reopening is
-     * answered.
+     * completed", or by hand): the work reopened for it is done, handing it in. When it was a draft
+     * till now (`fromDraft`), it may be the re-edit of an earlier version reopened before it was made
+     * ("Save as New"): that work is done with it too, and that reopening is answered.
      */
-    public void completedAgain(Quotation quotation, Long byUserId, String by) {
+    public void completedAgain(Quotation quotation, Long byUserId, String by, boolean fromDraft) {
         if (quotation == null || quotation.getId() == null || quotation.getCustomer() == null) {
             return;
         }
+        Set<Long> reEdited = fromDraft ? reEditedBy(quotation) : Set.of();
         LocalDateTime now = LocalDateTime.now();
         for (QuotationJob job : jobRepository.findByCustomerAndStatuses(quotation.getCustomer().getId(), OPEN)) {
             Long reopenedFor = job.getQuotationId();
-            if (reopenedFor == null || !(reopenedFor.equals(quotation.getId()) || isOlderVersion(reopenedFor, quotation))) {
+            if (reopenedFor == null || !(reopenedFor.equals(quotation.getId()) || reEdited.contains(reopenedFor))) {
                 continue;
             }
             job.setStatus(QuotationJob.COMPLETED);
@@ -109,29 +111,39 @@ public class QuotationReopenedEffects {
                 job.setAssigneeSeenAt(now);
             }
             jobRepository.save(job);
-            if (!reopenedFor.equals(quotation.getId())) {
-                editsDone(reopenedFor);
-            }
+        }
+        reEdited.forEach(this::editsDone);
+    }
+
+    /**
+     * A quotation was handed in on the board. When it was a draft till now, it may be the re-edit of
+     * an earlier version reopened before it was made ("Save as New"): that reopening is answered.
+     */
+    public void handedIn(Quotation handedIn, boolean fromDraft) {
+        if (handedIn != null && fromDraft) {
+            reEditedBy(handedIn).forEach(this::editsDone);
         }
     }
 
     /**
-     * Work reopened for one quotation was handed in on the board with another. When that one is a
-     * newer version of it ("Save as New"), the reopening is answered.
+     * The quotation was cancelled (by hand, or with its customer marked Lost). Work reopened for it
+     * follows its re-edit when one is being made (a newer draft version of it); otherwise it leaves
+     * the board.
      */
-    public void handedIn(Long reopenedFor, Quotation handedIn) {
-        if (reopenedFor != null && handedIn != null && isOlderVersion(reopenedFor, handedIn)) {
-            editsDone(reopenedFor);
-        }
-    }
-
-    /** The quotation was cancelled (by hand, or with its customer marked Lost): the work reopened for it leaves the board. */
     public void dropped(Quotation quotation) {
         if (quotation == null || quotation.getId() == null) {
             return;
         }
+        Quotation reEdit = quotation.getFolder() == null ? null
+                : quotationRepository.findByFolderIdOrderByVersionNumberDesc(quotation.getFolder().getId()).stream()
+                        .filter(q -> q.getId() > quotation.getId() && q.getStatus() == QuotationStatus.DRAFT)
+                        .max(Comparator.comparing(Quotation::getId)).orElse(null);
         for (QuotationJob job : jobRepository.findByQuotationAndStatuses(quotation.getId(), OPEN)) {
-            job.setStatus(QuotationJob.CANCELLED);
+            if (reEdit != null) {
+                job.setQuotationId(reEdit.getId());
+            } else {
+                job.setStatus(QuotationJob.CANCELLED);
+            }
             jobRepository.save(job);
         }
     }
@@ -153,13 +165,26 @@ public class QuotationReopenedEffects {
         return customerName == null ? "" : "; " + customerName + " moved to Quotation Stage";
     }
 
-    /** `otherId` is an earlier version of `quotation`: the same folder, made before it. */
-    private boolean isOlderVersion(Long otherId, Quotation quotation) {
-        if (quotation.getFolder() == null || quotation.getId() == null || otherId >= quotation.getId()) {
-            return false;
+    /**
+     * The earlier versions this quotation is the re-edit of: drafts in its folder, older than it,
+     * that a request reopened before it was made. A version that existed before the reopening is not one.
+     */
+    private Set<Long> reEditedBy(Quotation quotation) {
+        Set<Long> out = new LinkedHashSet<>();
+        if (quotation.getFolder() == null || quotation.getCreatedAt() == null) {
+            return out;
         }
-        Quotation other = quotationRepository.findById(otherId).orElse(null);
-        return other != null && other.getFolder() != null && other.getFolder().getId().equals(quotation.getFolder().getId());
+        for (Quotation older : quotationRepository.findByFolderIdOrderByVersionNumberDesc(quotation.getFolder().getId())) {
+            if (older.getId() >= quotation.getId() || older.getStatus() != QuotationStatus.DRAFT) {
+                continue;
+            }
+            boolean reopenedBefore = editRequestRepository.findByQuotationIdAndStatus(older.getId(), QuotationEditRequest.APPROVED).stream()
+                    .anyMatch(r -> r.getDecidedAt() != null && !r.getDecidedAt().isAfter(quotation.getCreatedAt()));
+            if (reopenedBefore) {
+                out.add(older.getId());
+            }
+        }
+        return out;
     }
 
     private void reopenWork(Quotation quotation, Long byUserId, String by, String note) {

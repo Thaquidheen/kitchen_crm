@@ -43,6 +43,8 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
   const navigate = useNavigate();
   const access = useQuotationAccess();
   const [handIn, setHandIn] = useState<number | null>(null);
+  // Until the person picks one, the choice follows the list (a version saved meanwhile in another tab).
+  const [picked, setPicked] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [start, { isLoading: starting }] = useStartQuotationJobMutation();
   const [complete, { isLoading: completing }] = useCompleteQuotationJobMutation();
@@ -54,11 +56,17 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
   const quotations = job?.customerQuotations ?? [];
   const usable = quotations.filter((q) => q.status !== 'CANCELLED');
   useEffect(() => {
-    setHandIn(defaultHandIn(job?.customerQuotations, job?.quotation?.id)?.id ?? null);
+    setPicked(false);
     setConfirmRemove(false);
-    // Only when another job is opened; a background refresh must not move the choice.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.id]);
+  const quotationKey = (job?.customerQuotations ?? []).map((q) => `${q.id}:${q.status}`).join(',');
+  useEffect(() => {
+    if (!picked) {
+      setHandIn(defaultHandIn(job?.customerQuotations, job?.quotation?.id)?.id ?? null);
+    }
+    // A refresh moves the default only while the person has not chosen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job?.id, quotationKey, job?.quotation?.id, picked]);
 
   if (!job) {
     return <Modal isOpen={false} onClose={onClose} title="" size="md"><ModalBody>{null}</ModalBody></Modal>;
@@ -165,7 +173,10 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
                             type="radio"
                             name="hand-in"
                             checked={handIn === q.id}
-                            onChange={() => setHandIn(q.id)}
+                            onChange={() => {
+                              setHandIn(q.id);
+                              setPicked(true);
+                            }}
                             aria-label={`Hand in ${quotationLabel(q)}`}
                           />
                         )}
