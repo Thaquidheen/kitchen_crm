@@ -90,10 +90,14 @@ export function CustomersPage() {
     // One at a time: a designer's queue fills in order, and a customer the server refuses (no
     // design for Quotation Stage, say) must not stop or hide the others.
     const refused: number[] = [];
+    let requested = 0;
     let firstError = '';
     for (const id of ids) {
       try {
         const result = await changeStatus({ customerId: id, status, note, extras });
+        if (result.requested) {
+          requested += 1;
+        }
         if (result.warning) {
           toast.error(result.warning, { duration: 8000 });
         }
@@ -103,13 +107,18 @@ export function CustomersPage() {
       }
     }
     setIsSavingStatus(false);
-    const moved = ids.length - refused.length;
+    const moved = ids.length - refused.length - requested;
     const label = STATUS_PILL[status]?.label ?? status;
+    if (requested > 0) {
+      toast.success(`${requested} customer(s) need the admin's approval to move to ${label}: request sent`);
+    }
     if (refused.length === 0) {
-      toast.success(`${moved} customer(s) status updated to ${label}`);
+      if (moved > 0) {
+        toast.success(`${moved} customer(s) status updated to ${label}`);
+      }
       setSelectedCustomers([]);
       setBulkStatusChange(null);
-    } else if (moved === 0) {
+    } else if (moved === 0 && requested === 0) {
       // Nothing changed: leave the window open so the reason can be fixed and retried.
       toast.error(firstError);
     } else {

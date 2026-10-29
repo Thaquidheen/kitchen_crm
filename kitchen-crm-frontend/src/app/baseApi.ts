@@ -311,6 +311,7 @@ export const baseApi = createApi({
     'Designs',
     'QuotationWork',
     'QuotationEditRequests',
+    'CustomerStageRequests',
     'MarginCodes',
     'Permissions',
   ],

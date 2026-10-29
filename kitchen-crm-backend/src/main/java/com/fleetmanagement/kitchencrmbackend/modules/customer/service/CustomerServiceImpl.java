@@ -43,6 +43,8 @@ public class CustomerServiceImpl implements CustomerService {
     private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationApprovals quotationApprovals;
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.quotationwork.service.QuotationWorkStageEffects quotationWorkStageEffects;
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.customer.stagerequest.StageRequestCloser stageRequestCloser;
 
     @Autowired
     private ArchitectRepository architectRepository;
@@ -264,6 +266,13 @@ public class CustomerServiceImpl implements CustomerService {
             return ApiResponse.success("Already in " + stageLabel(newStatus));
         }
 
+        // Back from Follow Up to Design or Quotation Stage: staff ask the admin (the owner's rule,
+        // 2026-10-29). The screens send the request when they get this answer.
+        if (!changedByAdmin && com.fleetmanagement.kitchencrmbackend.modules.customer.stagerequest.CustomerStageRequestService
+                .needsApproval(customer.getStatus(), newStatus)) {
+            return ApiResponse.error(com.fleetmanagement.kitchencrmbackend.modules.customer.stagerequest.CustomerStageRequestService.NEEDS_APPROVAL);
+        }
+
         // Confirmed approves one completed quotation: a chosen one must be one of them.
         String choiceError = quotationStageEffects.checkChoice(id, newStatus, approveQuotationId);
         if (choiceError != null) {
@@ -313,6 +322,10 @@ public class CustomerServiceImpl implements CustomerService {
         // Confirmed / Lost carry the customer's quotations with them (see QuotationStageEffects).
         int quotationsChanged = stageChanges ? quotationStageEffects.apply(id, newStatus, approveQuotationId, changedBy) : 0;
         boolean designCancelled = designWith != null && designJobService.cancelOpenDesign(id);
+        // A request to move them, still waiting, is overtaken by this move.
+        if (stageChanges) {
+            stageRequestCloser.customerMoved(id, stageLabel(newStatus));
+        }
         // Back to Design, or Lost: quotation work for them leaves the board (see QuotationWorkStageEffects).
         int workRemoved = stageChanges ? quotationWorkStageEffects.customerMoved(id, newStatus) : 0;
 

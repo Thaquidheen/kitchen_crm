@@ -144,7 +144,11 @@ const CustomerDetailPage: React.FC = () => {
     setIsSavingStatus(true);
     try {
       const result = await changeStatus({ customerId, status: pendingStatus, note, extras });
-      toast.success(`Status updated to ${STATUS_PILL[pendingStatus]?.label ?? pendingStatus}`);
+      toast.success(
+        result.requested
+          ? `Sent to the admin: moving to ${STATUS_PILL[pendingStatus]?.label ?? pendingStatus} needs their approval`
+          : `Status updated to ${STATUS_PILL[pendingStatus]?.label ?? pendingStatus}`,
+      );
       if (result.warning) {
         toast.error(result.warning, { duration: 8000 });
       }

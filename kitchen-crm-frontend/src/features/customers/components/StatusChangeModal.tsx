@@ -42,6 +42,7 @@ import { quotationStatusLabel } from '../../quotations/components/QuotationStatu
 import { DesignerPicker, type DesignAssignment } from '../../design/components/DesignerPicker';
 import { DesignFilesBox } from '../../design/components/DesignFilesBox';
 import { PlanDocumentsField } from '../../design/components/PlanDocumentsField';
+import { asksAdmin } from '../stageRequestRules';
 import { useGetCustomerDesignJobQuery, useGetDesignMeQuery } from '../../design/designAPI';
 import {
   DESIGN_ACCEPT,
@@ -179,9 +180,14 @@ export function StatusChangeModal({
   }, [isOpen, currentDesignerId]);
 
   const trimmed = note.trim();
+  // Back from Follow Up to Design or Quotation Stage: staff send the admin a request instead (the
+  // note goes with it); the admin answers in Reminders.
+  const asksForApproval = !canAssign && asksAdmin(currentStatus, targetStatus);
   const needsDesigner = toDesign && canAssign && !design.designerId;
   // A single move to Quotation Stage is settled here; a bulk one is checked per customer by the server.
-  const quotationSingle = toQuotation && !isBulk && !!customerId;
+  const quotationSingle = toQuotation && !isBulk && !!customerId && !asksForApproval;
+  // Asked back to Quotation Stage: the customer's design must already be approved.
+  const askNeedsDesign = asksForApproval && toQuotation && !!customerId && !loadingDesign && gate !== 'READY';
   const designPending = quotationSingle && loadingDesign;
   // A design that is still open can be finished right here by whoever may do that.
   const settlesOpen =
@@ -197,10 +203,12 @@ export function StatusChangeModal({
   const handsOverPlans = toDesign && coordinates && !isBulk;
   const plansTooLarge = handsOverPlans ? uploadSizeProblem(planFiles) : null;
   // Staff cannot send a customer with an approved design back to Design: that is a redesign, the admin's.
-  const staffRedesign = toDesign && !canAssign && !isBulk && !!customerDesign && isApprovedDesign(customerDesign.status);
+  const staffRedesign =
+    toDesign && !canAssign && !isBulk && !asksForApproval && !!customerDesign && isApprovedDesign(customerDesign.status);
   const canSubmit =
     trimmed.length > 0 &&
     !staffRedesign &&
+    !askNeedsDesign &&
     !isSubmitting &&
     !needsDesigner &&
     !designPending &&
@@ -234,6 +242,8 @@ export function StatusChangeModal({
   const blockedReason =
     staffRedesign
       ? 'This customer has an approved design: ask the admin for a redesign'
+      : askNeedsDesign
+      ? 'The customer needs an approved design before Quotation Stage'
       : trimmed.length === 0
       ? 'Add a note to continue'
       : needsDesigner
@@ -365,6 +375,18 @@ export function StatusChangeModal({
         )}
 
         {/* Moving to Design: the admin assigns the design to a designer (required). */}
+        {asksForApproval && (
+          <p
+            className="m-0 mt-4 flex items-start gap-2 px-3 py-2.5 rounded-[10px] bg-background-900 border border-background-600 text-[12.5px] text-text-800"
+          >
+            <Info size={14} className="text-primary-600 shrink-0 mt-px" />
+            <span>
+              Moving a Follow Up customer back needs the admin&apos;s approval. Your note goes to the admin with the request;
+              the customer stays in Follow Up until they answer.
+              {askNeedsDesign ? ' This customer has no approved design yet, so Quotation Stage cannot be asked for.' : ''}
+            </span>
+          </p>
+        )}
         {staffRedesign && (
           <p className="m-0 mt-4 flex items-start gap-2 px-3 py-2.5 rounded-[10px] text-[12.5px]" style={{ background: 'var(--st-lost-bg)', color: 'var(--st-lost-fg)' }}>
             <Info size={14} className="shrink-0 mt-px" />
@@ -374,7 +396,7 @@ export function StatusChangeModal({
             </span>
           </p>
         )}
-        {toDesign && !canAssign && !staffRedesign && (
+        {toDesign && !canAssign && !staffRedesign && !asksForApproval && (
           <div className="mt-4 pt-4 border-t border-background-600 space-y-3">
             <p className="m-0 flex items-start gap-2 text-[12.5px] text-text-700">
               <Info size={14} className="text-primary-600 shrink-0 mt-px" />
@@ -417,7 +439,7 @@ export function StatusChangeModal({
         )}
 
         {/* Moving to Quotation Stage needs the customer's design. */}
-        {toQuotation && (
+        {toQuotation && !asksForApproval && (
           <div className="mt-4 pt-4 border-t border-background-600">
             {/* Kept mounted whatever is shown below, so a chosen file is never lost to a re-render. */}
             {quotationSingle && (
@@ -523,7 +545,7 @@ export function StatusChangeModal({
           title={blockedReason}
           className="btn-raised-accent inline-flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? 'Saving…' : 'Update status'}
+          {isSubmitting ? 'Saving…' : asksForApproval ? 'Send request to admin' : 'Update status'}
         </button>
       </ModalFooter>
     </Modal>

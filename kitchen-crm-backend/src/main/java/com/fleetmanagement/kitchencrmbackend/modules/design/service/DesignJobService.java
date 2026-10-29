@@ -65,6 +65,12 @@ public interface DesignJobService {
     /** The admin moved the customer out of Design Stage while the design was being made: it is cancelled. */
     boolean cancelOpenDesign(Long customerId);
 
+    /**
+     * A request to move the customer back to Design Stage was approved: an approved design continues
+     * as its next version, with no designer yet, so it waits under To assign for the admin to choose.
+     */
+    void reopenForRequest(Customer customer, String brief, Long byUserId);
+
     /** Customers at Quotation Stage or later with their design, or none when it was never uploaded. */
     ApiResponse<List<DesignLibraryRowDto>> library();
 

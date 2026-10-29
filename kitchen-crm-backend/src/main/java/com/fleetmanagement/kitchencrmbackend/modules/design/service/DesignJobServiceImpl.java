@@ -103,6 +103,8 @@ public class DesignJobServiceImpl implements DesignJobService {
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationApprovals quotationApprovals;
     @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.customer.stagerequest.StageRequestCloser stageRequestCloser;
+    @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.quotationwork.service.QuotationWorkStageEffects quotationWorkStageEffects;
 
     @Value("${app.business-timezone:Asia/Kolkata}")
@@ -352,6 +354,40 @@ public class DesignJobServiceImpl implements DesignJobService {
         job.setDesignerSeenAt(null);
         jobRepository.save(job);
         return true;
+    }
+
+    @Override
+    public void reopenForRequest(Customer customer, String brief, Long byUserId) {
+        DesignPhase job = latestJob(customer.getId());
+        if (job != null && newerWaitsOverApproved(job)) {
+            // A newer design from staff waits for review: it stays as it is, with nobody on it, so the
+            // admin decides it (or picks a designer) under To assign.
+            job.setStaffAssigned(null);
+            job.setQueuePosition(null);
+            jobRepository.save(job);
+            return;
+        }
+        // No design, or one being made or cancelled: To assign already covers it.
+        if (job == null || !APPROVED_STATES.contains(status(job))) {
+            return;
+        }
+        DesignPhaseVersion previous = currentVersionRow(job);
+        if (previous.getApprovedAt() == null) {
+            previous.setApprovedAt(job.getCompletedAt() != null ? job.getCompletedAt() : LocalDateTime.now());
+            versionRepository.save(previous);
+        }
+        job.setCurrentVersion(version(job) + 1);
+        // Nobody has it yet: the admin chooses the designer under To assign (the owner's rule, 2026-10-29).
+        job.setStaffAssigned(null);
+        job.setQueuePosition(null);
+        job.setDesignStatus(DesignStatus.PLANNING);
+        job.setStartedAt(null);
+        job.setCompletedAt(null);
+        job.setCompletionSeenAt(null);
+        job.setDueDate(null);
+        job.setDesignRequirements(brief == null || brief.isBlank() ? null : brief.trim());
+        jobRepository.save(job);
+        newVersionRow(job, DesignPhaseVersion.ORIGIN_DESIGNER, job.getDesignRequirements(), byUserId, userName(byUserId));
     }
 
     @Override
@@ -851,6 +887,11 @@ public class DesignJobServiceImpl implements DesignJobService {
             }
         }
         boolean hasNote = note != null && !note.isBlank();
+        // Back from Follow Up to Quotation Stage: staff ask the admin first (CustomerStageRequestService).
+        if (moveToQuotation && !admin && com.fleetmanagement.kitchencrmbackend.modules.customer.stagerequest.CustomerStageRequestService
+                .needsApproval(customer.getStatus(), CustomerStatus.QUOTE_GIVEN)) {
+            return ApiResponse.error(com.fleetmanagement.kitchencrmbackend.modules.customer.stagerequest.CustomerStageRequestService.NEEDS_APPROVAL);
+        }
         if (moveToQuotation && !hasNote) {
             return ApiResponse.error("Write a note for the status change");
         }
@@ -1132,11 +1173,6 @@ public class DesignJobServiceImpl implements DesignJobService {
     }
 
     /**
-     * The row of the job's current version. Designs made before V155 got theirs from the
-     * migration; one the previous jar created during a rollback has none, so it is built here
-     * from what the job itself knows.
-     */
-    /**
      * A newer version waits for the admin's review over an approved one (staff uploaded it): until the
      * admin decides, the approved version is the customer's design.
      */
@@ -1145,6 +1181,11 @@ public class DesignJobServiceImpl implements DesignJobService {
                 && versionRepository.findVersion(job.getId(), version(job) - 1).map(v -> v.getApprovedAt() != null).orElse(false);
     }
 
+    /**
+     * The row of the job's current version. Designs made before V155 got theirs from the
+     * migration; one the previous jar created during a rollback has none, so it is built here
+     * from what the job itself knows.
+     */
     private DesignPhaseVersion currentVersionRow(DesignPhase job) {
         return versionRepository.findVersion(job.getId(), version(job)).orElseGet(() -> {
             DesignPhaseVersion row = new DesignPhaseVersion();
@@ -1212,6 +1253,8 @@ public class DesignJobServiceImpl implements DesignJobService {
         String previous = customer.getStatus() != null ? customer.getStatus().name() : null;
         customer.setStatus(to);
         customerRepository.save(customer);
+        stageRequestCloser.customerMoved(customer.getId(), to == CustomerStatus.DESIGN_STAGE ? "Design Stage"
+                : to == CustomerStatus.QUOTE_GIVEN ? "Quotation Stage" : to.name());
         WorkflowHistory history = new WorkflowHistory();
         history.setCustomer(customer);
         history.setPreviousState(previous);
