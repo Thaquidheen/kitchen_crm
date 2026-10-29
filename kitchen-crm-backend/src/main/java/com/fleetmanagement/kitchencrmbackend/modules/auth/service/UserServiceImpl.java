@@ -49,6 +49,8 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private EmailTemplateService emailTemplateService;
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.design.service.StaffReleaseEffects staffReleaseEffects;
 
     @Value("${app.frontend.url:${FRONTEND_URL:http://localhost:5173}}")
     private String frontendUrl;
@@ -159,6 +161,9 @@ public class UserServiceImpl implements UserService {
                 user.setEmail(userUpdateDto.getEmail());
             }
 
+            boolean wasActive = !Boolean.FALSE.equals(user.getActive());
+            boolean wasDesigner = "DESIGNER".equals(user.getStaffType());
+
             // Update fields
             if (userUpdateDto.getName() != null) {
                 user.setName(userUpdateDto.getName());
@@ -182,7 +187,14 @@ public class UserServiceImpl implements UserService {
             }
 
             User updatedUser = userRepository.save(user);
-            return ApiResponse.success("Staff updated successfully", convertToDto(updatedUser));
+            // Deactivated, or no longer a designer: their open work goes back to be assigned again.
+            boolean nowActive = !Boolean.FALSE.equals(updatedUser.getActive());
+            int designs = (wasActive && !nowActive) || (wasDesigner && nowActive && !"DESIGNER".equals(updatedUser.getStaffType()))
+                    ? staffReleaseEffects.releaseDesigns(id) : 0;
+            int work = wasActive && !nowActive ? staffReleaseEffects.releaseQuotationWork(id) : 0;
+            return ApiResponse.success("Staff updated successfully"
+                    + com.fleetmanagement.kitchencrmbackend.modules.design.service.StaffReleaseEffects.released(designs, work),
+                    convertToDto(updatedUser));
         } catch (Exception e) {
             log.error("Error updating staff user: {}", id, e);
             return ApiResponse.error("Failed to update staff user: " + e.getMessage());
@@ -207,8 +219,12 @@ public class UserServiceImpl implements UserService {
             // Soft delete - set active to false
             user.setActive(false);
             userRepository.save(user);
+            // Their open work goes back to be assigned again.
+            int designs = staffReleaseEffects.releaseDesigns(id);
+            int work = staffReleaseEffects.releaseQuotationWork(id);
 
-            return ApiResponse.success("Staff deactivated successfully");
+            return ApiResponse.success("Staff deactivated successfully"
+                    + com.fleetmanagement.kitchencrmbackend.modules.design.service.StaffReleaseEffects.released(designs, work));
         } catch (Exception e) {
             log.error("Error deleting staff user: {}", id, e);
             return ApiResponse.error("Failed to delete staff user: " + e.getMessage());
