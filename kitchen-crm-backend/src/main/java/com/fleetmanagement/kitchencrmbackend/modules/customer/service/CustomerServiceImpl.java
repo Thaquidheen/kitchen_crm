@@ -256,6 +256,14 @@ public class CustomerServiceImpl implements CustomerService {
             return ApiResponse.error("Customer not found");
         }
 
+        // Saved again in the stage they are in: nothing happens and nothing is written — except the
+        // admin handing a design that waits for a designer to one (Design Stage, from To assign).
+        // A designer is changed in Designs, never by setting the stage again.
+        if (customer.getStatus() == newStatus && !(newStatus == Customer.CustomerStatus.DESIGN_STAGE && changedByAdmin
+                && designJobService.waitingForDesigner(id))) {
+            return ApiResponse.success("Already in " + stageLabel(newStatus));
+        }
+
         // Confirmed approves one completed quotation: a chosen one must be one of them.
         String choiceError = quotationStageEffects.checkChoice(id, newStatus, approveQuotationId);
         if (choiceError != null) {
@@ -282,6 +290,16 @@ public class CustomerServiceImpl implements CustomerService {
             }
         }
 
+        // Out of Design Stage while a designer is making the design: only the admin, and the design is
+        // then cancelled (the owner's rule, 2026-10-29). Staff wait for the admin's approval of it.
+        boolean leavesDesign = customer.getStatus() == Customer.CustomerStatus.DESIGN_STAGE
+                && newStatus != Customer.CustomerStatus.DESIGN_STAGE;
+        String designWith = leavesDesign ? designJobService.openDesignWith(id) : null;
+        if (designWith != null && !changedByAdmin) {
+            return ApiResponse.error("The design is still with " + designWith
+                    + ". The customer moves on when the admin approves it; ask the admin to move them otherwise");
+        }
+
         String previousStatus = customer.getStatus().name();
         boolean stageChanges = customer.getStatus() != newStatus;
         boolean leavesConfirmed = quotationStageEffects.leavesConfirmed(id, newStatus);
@@ -294,6 +312,7 @@ public class CustomerServiceImpl implements CustomerService {
 
         // Confirmed / Lost carry the customer's quotations with them (see QuotationStageEffects).
         int quotationsChanged = stageChanges ? quotationStageEffects.apply(id, newStatus, approveQuotationId, changedBy) : 0;
+        boolean designCancelled = designWith != null && designJobService.cancelOpenDesign(id);
         // Back to Design, or Lost: quotation work for them leaves the board (see QuotationWorkStageEffects).
         int workRemoved = stageChanges ? quotationWorkStageEffects.customerMoved(id, newStatus) : 0;
 
@@ -308,13 +327,27 @@ public class CustomerServiceImpl implements CustomerService {
         workflowHistoryRepository.save(history);
 
         String takenBack = com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationApprovals.takenBack(approvalsTakenBack)
-                + com.fleetmanagement.kitchencrmbackend.modules.quotationwork.service.QuotationWorkStageEffects.removed(workRemoved);
+                + com.fleetmanagement.kitchencrmbackend.modules.quotationwork.service.QuotationWorkStageEffects.removed(workRemoved)
+                + (designCancelled ? "; the design " + designWith + " was making is cancelled" : "");
         if (quotationsChanged > 0) {
             String what = newStatus == Customer.CustomerStatus.CONFIRMED ? "approved" : "cancelled";
             return ApiResponse.success("Customer status updated; " + quotationsChanged
                     + (quotationsChanged == 1 ? " quotation " : " quotations ") + what + takenBack);
         }
         return ApiResponse.success(takenBack.isEmpty() ? "Customer status updated successfully" : "Customer status updated" + takenBack);
+    }
+
+    private static String stageLabel(Customer.CustomerStatus s) {
+        return switch (s) {
+            case LEAD -> "Lead";
+            case POTENTIAL -> "Potential";
+            case DESIGN_STAGE -> "Design Stage";
+            case QUOTE_GIVEN -> "Quotation Stage";
+            case FOLLOW_UP -> "Follow Up";
+            case NEGOTIATIONS -> "Negotiations";
+            case CONFIRMED -> "Confirmed";
+            case LOST -> "Lost";
+        };
     }
 
     @Override

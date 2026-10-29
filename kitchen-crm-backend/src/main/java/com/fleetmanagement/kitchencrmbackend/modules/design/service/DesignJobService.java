@@ -56,6 +56,15 @@ public interface DesignJobService {
      */
     String requireDesignForQuotationStage(Customer customer);
 
+    /** Who has the customer's open design (being made), or null: no design, approved, cancelled, or nobody on it yet. */
+    String openDesignWith(Long customerId);
+
+    /** The customer's design waits for a designer: none yet, cancelled, or open with nobody on it. */
+    boolean waitingForDesigner(Long customerId);
+
+    /** The admin moved the customer out of Design Stage while the design was being made: it is cancelled. */
+    boolean cancelOpenDesign(Long customerId);
+
     /** Customers at Quotation Stage or later with their design, or none when it was never uploaded. */
     ApiResponse<List<DesignLibraryRowDto>> library();
 

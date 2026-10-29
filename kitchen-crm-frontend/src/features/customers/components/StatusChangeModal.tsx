@@ -196,8 +196,11 @@ export function StatusChangeModal({
   const designTooLarge = uploadsDesign ? uploadSizeProblem(designFiles) : null;
   const handsOverPlans = toDesign && coordinates && !isBulk;
   const plansTooLarge = handsOverPlans ? uploadSizeProblem(planFiles) : null;
+  // Staff cannot send a customer with an approved design back to Design: that is a redesign, the admin's.
+  const staffRedesign = toDesign && !canAssign && !isBulk && !!customerDesign && isApprovedDesign(customerDesign.status);
   const canSubmit =
     trimmed.length > 0 &&
+    !staffRedesign &&
     !isSubmitting &&
     !needsDesigner &&
     !designPending &&
@@ -229,7 +232,9 @@ export function StatusChangeModal({
   };
 
   const blockedReason =
-    trimmed.length === 0
+    staffRedesign
+      ? 'This customer has an approved design: ask the admin for a redesign'
+      : trimmed.length === 0
       ? 'Add a note to continue'
       : needsDesigner
         ? 'Choose a designer to continue'
@@ -360,7 +365,16 @@ export function StatusChangeModal({
         )}
 
         {/* Moving to Design: the admin assigns the design to a designer (required). */}
-        {toDesign && !canAssign && (
+        {staffRedesign && (
+          <p className="m-0 mt-4 flex items-start gap-2 px-3 py-2.5 rounded-[10px] text-[12.5px]" style={{ background: 'var(--st-lost-bg)', color: 'var(--st-lost-fg)' }}>
+            <Info size={14} className="shrink-0 mt-px" />
+            <span>
+              This customer has an approved design ({versionLabel(customerDesign?.version)}). Sending them back to Design is a
+              redesign: ask the admin.
+            </span>
+          </p>
+        )}
+        {toDesign && !canAssign && !staffRedesign && (
           <div className="mt-4 pt-4 border-t border-background-600 space-y-3">
             <p className="m-0 flex items-start gap-2 text-[12.5px] text-text-700">
               <Info size={14} className="text-primary-600 shrink-0 mt-px" />

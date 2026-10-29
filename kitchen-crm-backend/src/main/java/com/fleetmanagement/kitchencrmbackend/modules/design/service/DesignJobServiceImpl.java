@@ -328,6 +328,33 @@ public class DesignJobServiceImpl implements DesignJobService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public String openDesignWith(Long customerId) {
+        DesignPhase job = latestJob(customerId);
+        return job != null && OPEN.contains(status(job)) && job.getStaffAssigned() != null ? job.getStaffAssigned().getName() : null;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean waitingForDesigner(Long customerId) {
+        DesignPhase job = latestJob(customerId);
+        return job == null || status(job) == DesignStatus.CANCELLED || (OPEN.contains(status(job)) && job.getStaffAssigned() == null);
+    }
+
+    @Override
+    public boolean cancelOpenDesign(Long customerId) {
+        DesignPhase job = latestJob(customerId);
+        if (job == null || !OPEN.contains(status(job))) {
+            return false;
+        }
+        job.setDesignStatus(DesignStatus.CANCELLED);
+        // The designer is told: it leaves their list.
+        job.setDesignerSeenAt(null);
+        jobRepository.save(job);
+        return true;
+    }
+
+    @Override
     public ApiResponse<DesignJobDto> assign(DesignAssignRequest request, Long adminId) {
         Customer customer = customerRepository.findById(request.getCustomerId()).orElse(null);
         if (customer == null) {

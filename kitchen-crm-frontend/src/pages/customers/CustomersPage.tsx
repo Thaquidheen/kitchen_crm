@@ -11,6 +11,7 @@ import {
   useDeleteCustomerMutation,
   useGetCustomerStatisticsQuery,
   customersAPI,
+  useGetCustomersPageQuery,
 } from '@/features/customers/customersAPI';
 import { useCustomerStatusChange, type StatusChangeExtras } from '@/features/customers/useCustomerStatusChange';
 import { CustomerList, STATUS_PILL } from '@/features/customers/components/CustomerList';
@@ -58,6 +59,8 @@ export function CustomersPage() {
   const changeStatus = useCustomerStatusChange();
   const { can, ready: permissionsReady } = usePermissions();
   const { data: stats } = useGetCustomerStatisticsQuery();
+  // The rows the list shows (same request, shared): a single ticked row's stage tells the status window what changes.
+  const { data: pageData } = useGetCustomersPageQuery(filters);
 
   const total = stats?.total ?? 0;
 
@@ -298,6 +301,11 @@ export function CustomersPage() {
         isSubmitting={isSavingStatus}
         // With one row ticked this is an ordinary single change: the design PDF can be uploaded here.
         customerId={selectedCustomers.length === 1 ? selectedCustomers[0] : undefined}
+        currentStatus={
+          selectedCustomers.length === 1
+            ? pageData?.content?.find((c) => c.id === selectedCustomers[0])?.status
+            : undefined
+        }
       />
 
       {/* Customer Form Modal */}
