@@ -65,6 +65,8 @@ public class QuotationReopenedEffects {
     private QuotationEditRequestRepository editRequestRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.customer.stagerequest.StageRequestCloser stageRequestCloser;
 
     @Value("${app.business-timezone:Asia/Kolkata}")
     private String businessTimezone;
@@ -265,6 +267,7 @@ public class QuotationReopenedEffects {
         }
         customer.setStatus(CustomerStatus.QUOTE_GIVEN);
         customerRepository.save(customer);
+        stageRequestCloser.customerMoved(customer.getId(), "Quotation Stage");
 
         WorkflowHistory history = new WorkflowHistory();
         history.setCustomer(customer);

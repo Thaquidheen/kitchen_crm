@@ -103,6 +103,8 @@ public class DesignJobServiceImpl implements DesignJobService {
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationApprovals quotationApprovals;
     @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.customer.stagerequest.StageRequestCloser stageRequestCloser;
+    @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.quotationwork.service.QuotationWorkStageEffects quotationWorkStageEffects;
 
     @Value("${app.business-timezone:Asia/Kolkata}")
@@ -357,6 +359,14 @@ public class DesignJobServiceImpl implements DesignJobService {
     @Override
     public void reopenForRequest(Customer customer, String brief, Long byUserId) {
         DesignPhase job = latestJob(customer.getId());
+        if (job != null && newerWaitsOverApproved(job)) {
+            // A newer design from staff waits for review: it stays as it is, with nobody on it, so the
+            // admin decides it (or picks a designer) under To assign.
+            job.setStaffAssigned(null);
+            job.setQueuePosition(null);
+            jobRepository.save(job);
+            return;
+        }
         // No design, or one being made or cancelled: To assign already covers it.
         if (job == null || !APPROVED_STATES.contains(status(job))) {
             return;
@@ -1243,6 +1253,8 @@ public class DesignJobServiceImpl implements DesignJobService {
         String previous = customer.getStatus() != null ? customer.getStatus().name() : null;
         customer.setStatus(to);
         customerRepository.save(customer);
+        stageRequestCloser.customerMoved(customer.getId(), to == CustomerStatus.DESIGN_STAGE ? "Design Stage"
+                : to == CustomerStatus.QUOTE_GIVEN ? "Quotation Stage" : to.name());
         WorkflowHistory history = new WorkflowHistory();
         history.setCustomer(customer);
         history.setPreviousState(previous);

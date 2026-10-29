@@ -118,7 +118,7 @@ export function CustomersPage() {
       }
       setSelectedCustomers([]);
       setBulkStatusChange(null);
-    } else if (moved === 0) {
+    } else if (moved === 0 && requested === 0) {
       // Nothing changed: leave the window open so the reason can be fixed and retried.
       toast.error(firstError);
     } else {

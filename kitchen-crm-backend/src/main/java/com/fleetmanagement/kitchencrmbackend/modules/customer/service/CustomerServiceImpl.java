@@ -44,7 +44,7 @@ public class CustomerServiceImpl implements CustomerService {
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.quotationwork.service.QuotationWorkStageEffects quotationWorkStageEffects;
     @Autowired
-    private com.fleetmanagement.kitchencrmbackend.modules.customer.stagerequest.CustomerStageRequestRepository stageRequestRepository;
+    private com.fleetmanagement.kitchencrmbackend.modules.customer.stagerequest.StageRequestCloser stageRequestCloser;
 
     @Autowired
     private ArchitectRepository architectRepository;
@@ -324,15 +324,7 @@ public class CustomerServiceImpl implements CustomerService {
         boolean designCancelled = designWith != null && designJobService.cancelOpenDesign(id);
         // A request to move them, still waiting, is overtaken by this move.
         if (stageChanges) {
-            for (com.fleetmanagement.kitchencrmbackend.modules.customer.stagerequest.CustomerStageRequest r
-                    : stageRequestRepository.findByCustomerIdAndStatus(id,
-                            com.fleetmanagement.kitchencrmbackend.modules.customer.stagerequest.CustomerStageRequest.PENDING)) {
-                r.setStatus(com.fleetmanagement.kitchencrmbackend.modules.customer.stagerequest.CustomerStageRequest.CANCELLED);
-                r.setDecidedAt(LocalDateTime.now());
-                r.setDecisionNote("The customer was moved to " + stageLabel(newStatus) + " meanwhile");
-                r.setRequesterSeenAt(null);
-                stageRequestRepository.save(r);
-            }
+            stageRequestCloser.customerMoved(id, stageLabel(newStatus));
         }
         // Back to Design, or Lost: quotation work for them leaves the board (see QuotationWorkStageEffects).
         int workRemoved = stageChanges ? quotationWorkStageEffects.customerMoved(id, newStatus) : 0;
