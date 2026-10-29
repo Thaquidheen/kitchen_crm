@@ -18,7 +18,7 @@ public interface QuotationService {
     ApiResponse<QuotationDto> createQuotation(QuotationCreateDto quotationCreateDto, String createdBy, String userRole);
     ApiResponse<QuotationDto> updateQuotation(Long id, QuotationDto quotationDto, String updatedBy, String userRole);
     ApiResponse<String> deleteQuotation(Long id);
-    ApiResponse<String> updateQuotationStatus(Long id, Quotation.QuotationStatus newStatus, String updatedBy);
+    ApiResponse<String> updateQuotationStatus(Long id, Quotation.QuotationStatus newStatus, String updatedBy, Long updatedByUserId);
     ApiResponse<QuotationDto> duplicateQuotation(Long id, String createdBy, String userRole);
     ApiResponse<Map<String, Object>> getQuotationStatistics();
 

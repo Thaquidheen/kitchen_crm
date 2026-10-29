@@ -36,6 +36,8 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
             Map.of("LOW", "Low", "MEDIUM", "Medium", "HIGH", "High", "URGENT", "Urgent");
     /** Completed work stays on the board, and in the bell while unseen, for this long. */
     private static final int COMPLETED_DAYS = 14;
+    /** A completion nobody on one side has looked at stays news for this long, no longer. */
+    private static final int UNSEEN_DAYS = 60;
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH);
 
     /** Queue order: explicit position first (nulls last), then oldest assignment. */
@@ -56,6 +58,10 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
     private com.fleetmanagement.kitchencrmbackend.modules.customer.repository.WorkflowHistoryRepository workflowHistoryRepository;
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationCompletedEffects completedEffects;
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.quotation.editrequest.QuotationEditRequestService editRequests;
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationReopenedEffects reopenedEffects;
 
     @Value("${app.business-timezone:Asia/Kolkata}")
     private String businessTimezone;
@@ -96,7 +102,11 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
     @Transactional(readOnly = true)
     public ApiResponse<List<QuotationJobDto>> list(Viewer viewer) {
         List<QuotationJob> open = jobRepository.findByStatuses(OPEN);
-        List<QuotationJob> completed = recentlyCompleted();
+        // The Completed column: the last 14 days, and older completions this viewer has not looked at yet.
+        LocalDateTime since = LocalDateTime.now().minusDays(COMPLETED_DAYS);
+        List<QuotationJob> completed = recentlyCompleted().stream()
+                .filter(j -> (j.getCompletedAt() != null && !j.getCompletedAt().isBefore(since)) || unseenCompletion(j, viewer))
+                .toList();
         if (!viewer.manages()) {
             open = open.stream().filter(j -> isAssignee(j, viewer)).toList();
             completed = completed.stream().filter(j -> isAssignee(j, viewer)).toList();
@@ -146,7 +156,8 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
             row.put("quotationCount", statuses.size());
             row.put("latestQuotationStatus", statuses.isEmpty() ? null : statuses.get(0));
             // Waiting for somebody: no quotation yet, or moved (back) into Quotation Stage since the
-            // last quotation was made or worked on — the move is the request for a new one.
+            // last quotation was made or worked on (work removed from the board does not count) — the
+            // move is the request for a new one.
             LocalDateTime in = entered.get(c.getId());
             LocalDateTime done = lastDone.get(c.getId());
             boolean movedSince = in != null && (done == null || in.isAfter(done));
@@ -185,7 +196,9 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
 
     @Override
     public ApiResponse<QuotationJobDto> assign(QuotationJobAssignRequest request, Viewer viewer) {
-        Customer customer = customerRepository.findById(request.getCustomerId()).orElse(null);
+        // Locked, so two managers assigning the same customer at once cannot both get through the check below.
+        Customer customer = request.getCustomerId() == null ? null
+                : customerRepository.findByIdForUpdate(request.getCustomerId()).orElse(null);
         if (customer == null) {
             return ApiResponse.error("Customer not found");
         }
@@ -361,9 +374,12 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
             return ApiResponse.error("This quotation work is already closed");
         }
         Long customerId = job.getCustomer().getId();
+        // Work reopened for a quotation hands that one in, unless another is chosen.
+        Long reopenedFor = job.getQuotationId();
+        Long chosen = request != null && request.getQuotationId() != null ? request.getQuotationId() : reopenedFor;
         Quotation quotation;
-        if (request != null && request.getQuotationId() != null) {
-            quotation = quotationRepository.findById(request.getQuotationId()).orElse(null);
+        if (chosen != null) {
+            quotation = quotationRepository.findById(chosen).orElse(null);
             if (quotation == null || !quotation.getCustomer().getId().equals(customerId)) {
                 return ApiResponse.error("That quotation does not belong to this customer");
             }
@@ -380,10 +396,17 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
         }
         // The quotation itself reads Completed in the list. Only a draft is touched: On Hold and
         // Approved were set by the admin on purpose.
-        if (quotation.getStatus() == null || quotation.getStatus() == QuotationStatus.DRAFT) {
+        boolean fromDraft = quotation.getStatus() == null || quotation.getStatus() == QuotationStatus.DRAFT;
+        if (fromDraft) {
             quotation.setStatus(QuotationStatus.COMPLETE);
             quotationRepository.save(quotation);
         }
+        // Reopened to be edited, it is handed in again: the requests that reopened it are done. So are
+        // those of an earlier version it is the re-edit of ("Save as New").
+        if (quotation.getStatus() == QuotationStatus.COMPLETE) {
+            editRequests.editsDone(quotation.getId());
+        }
+        reopenedEffects.handedIn(quotation, fromDraft);
         // A completed quotation moves the customer on to Follow Up (see QuotationCompletedEffects).
         String moved = completedEffects.completed(quotation, viewer.name());
         LocalDateTime now = LocalDateTime.now();
@@ -483,7 +506,8 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
     // ------------------------------------------------------------------ helpers
 
     private List<QuotationJob> recentlyCompleted() {
-        return jobRepository.findCompletedSince(LocalDateTime.now().minusDays(COMPLETED_DAYS));
+        LocalDateTime now = LocalDateTime.now();
+        return jobRepository.findCompletedSince(now.minusDays(COMPLETED_DAYS), now.minusDays(UNSEEN_DAYS));
     }
 
     private static boolean isActive(User u) {
@@ -580,6 +604,7 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
             ref.setVersionNumber((Integer) row[4]);
             ref.setStatus(row[5] == null ? null : row[5].toString());
             ref.setCreatedAt((LocalDateTime) row[6]);
+            ref.setFolderId((Long) row[7]);
             quotationsByCustomer.computeIfAbsent((Long) row[0], k -> new ArrayList<>()).add(ref);
         }
 
@@ -609,7 +634,9 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
             dto.setCompletedByName(j.getCompletedByName());
             if (open) {
                 dto.setCustomerQuotations(quotations);
-            } else if (j.getQuotationId() != null) {
+            }
+            // Closed work: the quotation handed in. Open work: the quotation it was reopened for.
+            if (j.getQuotationId() != null) {
                 dto.setQuotation(quotations.stream().filter(q -> q.getId().equals(j.getQuotationId())).findFirst().orElse(null));
             }
             boolean mine = isAssignee(j, viewer);

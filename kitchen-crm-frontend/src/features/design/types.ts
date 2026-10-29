@@ -78,6 +78,8 @@ export interface DesignJob {
   designerId?: number | null;
   designerName?: string | null;
   status: DesignStatus;
+  /** An approved design is the customer's design now (also while a newer one waits for the admin's review). */
+  approvedInForce?: boolean | null;
   /** Version in work, or the last one approved. */
   version?: number | null;
   origin?: DesignOrigin | null;

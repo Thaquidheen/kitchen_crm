@@ -33,7 +33,7 @@ import {
   useMarkQuotationWorkSeenMutation,
   useReorderQuotationJobsMutation,
 } from '../quotationWorkAPI';
-import { queuesByAssignee, quotedText, splitToAssign } from '../quotationWorkRules';
+import { isReopenedJob, queuesByAssignee, quotedText, splitToAssign } from '../quotationWorkRules';
 import { fmtDayTime, JobStatusPill } from '../quotationWorkUi';
 import type { QuotationJob, QuotationWorkMe, UnassignedQuotationCustomer } from '../types';
 import { AssignQuotationModal, type AssignQuotationTarget } from './AssignQuotationModal';
@@ -53,7 +53,10 @@ interface RowProps {
   news?: string;
   /** Show who has it (lists that mix people). */
   showAssignee?: boolean;
-  /** Someone asked the admin to reopen the quotation handed in (completed rows). */
+  /**
+   * The request on the quotation the row names: asked to reopen the one handed in (completed rows),
+   * or the approval that reopened it (open rows back in a list).
+   */
   editRequest?: PendingEditRequest;
   onOpen: (id: number) => void;
 }
@@ -65,6 +68,7 @@ const JobRowView: React.FC<
   const fresh = news !== undefined;
   const due = dueText(job);
   const done = job.status === 'COMPLETED';
+  const reopened = isReopenedJob(job);
   return (
     <div
       ref={outerRef}
@@ -110,10 +114,13 @@ const JobRowView: React.FC<
             </span>
           )}
         </div>
-        {/* Where the quotation handed in stands now: reopened as a draft, approved, cancelled. */}
-        {done && (editRequest || (job.quotation?.status && job.quotation.status !== 'COMPLETE')) && (
+        {/* Completed rows: where the quotation handed in stands now (reopened as a draft, approved,
+            cancelled). Open rows: back in the list because that quotation was reopened for editing. */}
+        {(done ? editRequest || (job.quotation?.status && job.quotation.status !== 'COMPLETE') : reopened) && (
           <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-            {job.quotation?.status && job.quotation.status !== 'COMPLETE' && <QuotationStatusPill status={job.quotation.status} />}
+            {job.quotation?.status && job.quotation.status !== 'COMPLETE' && (done || job.quotation.status !== 'DRAFT') && (
+              <QuotationStatusPill status={job.quotation.status} />
+            )}
             {job.quotation?.status === 'DRAFT' && !editRequest && (
               <span className="text-[11.5px] text-text-600">Reopened for editing</span>
             )}
@@ -197,8 +204,9 @@ const PersonColumn: React.FC<{
   name: string;
   jobs: QuotationJob[];
   fresh: Map<number, string>;
+  pendingEdits?: PendingEditRequest[];
   onOpen: (id: number) => void;
-}> = ({ assigneeId, name, jobs, fresh, onOpen }) => {
+}> = ({ assigneeId, name, jobs, fresh, pendingEdits, onOpen }) => {
   const [order, setOrder] = useState<QuotationJob[]>(jobs);
   const [reorder] = useReorderQuotationJobsMutation();
   useEffect(() => setOrder(jobs), [jobs]);
@@ -239,7 +247,14 @@ const PersonColumn: React.FC<{
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={order.map((j) => j.id)} strategy={verticalListSortingStrategy}>
             {order.map((j, i) => (
-              <SortableJobRow key={j.id} job={j} position={i + 1} news={fresh.get(j.id)} onOpen={onOpen} />
+              <SortableJobRow
+                key={j.id}
+                job={j}
+                position={i + 1}
+                news={fresh.get(j.id)}
+                editRequest={pendingFor(pendingEdits, j.quotation?.id)}
+                onOpen={onOpen}
+              />
             ))}
           </SortableContext>
         </DndContext>
@@ -257,7 +272,8 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
   const { data: jobs = [], isLoading } = useGetQuotationJobsQuery(undefined, poll);
   const { data: unassigned = [] } = useGetUnassignedQuotationCustomersQuery(undefined, { ...poll, skip: !manages });
   const [markSeen] = useMarkQuotationWorkSeenMutation();
-  // Completed quotations somebody asked to reopen: the board says so until the admin answers.
+  // Completed quotations somebody asked to reopen: the board says so until the admin answers, and
+  // marks the work that is back in a list because the admin approved.
   const pendingEdits = usePendingEditRequests();
 
   const queues = useMemo(() => queuesByAssignee(jobs), [jobs]);
@@ -361,7 +377,15 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
           </section>
 
           {queues.map((q) => (
-            <PersonColumn key={q.assigneeId} assigneeId={q.assigneeId} name={q.name} jobs={q.jobs} fresh={fresh} onOpen={open} />
+            <PersonColumn
+              key={q.assigneeId}
+              assigneeId={q.assigneeId}
+              name={q.name}
+              jobs={q.jobs}
+              fresh={fresh}
+              pendingEdits={pendingEdits}
+              onOpen={open}
+            />
           ))}
 
           {completedColumn}
@@ -381,7 +405,16 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
               {mine.length === 0 ? (
                 <p className="m-0 py-4 text-center text-[12.5px] text-text-500">No quotation is assigned to you right now.</p>
               ) : (
-                mine.map((j, i) => <JobRowView key={j.id} job={j} position={i + 1} news={fresh.get(j.id)} onOpen={open} />)
+                mine.map((j, i) => (
+                  <JobRowView
+                    key={j.id}
+                    job={j}
+                    position={i + 1}
+                    news={fresh.get(j.id)}
+                    editRequest={pendingFor(pendingEdits, j.quotation?.id)}
+                    onOpen={open}
+                  />
+                ))
               )}
             </div>
           </section>

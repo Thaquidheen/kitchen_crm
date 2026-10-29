@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import { followUpNotice, movedToFollowUp } from '@/features/quotations/followUpMove';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { dueText, PriorityPill } from '@/features/design/designUi';
-import { QuotationStatusPill } from '@/features/quotations/components/QuotationStatusPill';
+import { QuotationStatusPill, quotationStatusLabel } from '@/features/quotations/components/QuotationStatusPill';
 import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
 import { usePendingEditRequests } from '@/features/quotations/usePendingEditRequests';
 import { EditRequestControl, EditRequestNotes } from '@/features/quotations/components/EditRequestControl';
@@ -22,7 +22,7 @@ import {
   useCompleteQuotationJobMutation,
   useStartQuotationJobMutation,
 } from '../quotationWorkAPI';
-import { defaultHandIn, isOpenJob, quotationLabel } from '../quotationWorkRules';
+import { defaultHandIn, isOpenJob, isReopenedJob, quotationLabel } from '../quotationWorkRules';
 import { fmtDay, fmtDayTime, JobStatusPill } from '../quotationWorkUi';
 import type { QuotationJob } from '../types';
 
@@ -43,27 +43,37 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
   const navigate = useNavigate();
   const access = useQuotationAccess();
   const [handIn, setHandIn] = useState<number | null>(null);
+  // Until the person picks one, the choice follows the list (a version saved meanwhile in another tab).
+  const [picked, setPicked] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [start, { isLoading: starting }] = useStartQuotationJobMutation();
   const [complete, { isLoading: completing }] = useCompleteQuotationJobMutation();
   const [cancel, { isLoading: removing }] = useCancelQuotationJobMutation();
-  // The quotation handed in is Completed; editing it again goes through the admin.
-  const pendingEdits = usePendingEditRequests(!job || job.status !== 'COMPLETED' || !access.view);
+  // The quotation handed in is Completed; editing it again goes through the admin. Work reopened
+  // that way shows what the admin asked to change.
+  const pendingEdits = usePendingEditRequests(!job || (job.status !== 'COMPLETED' && !isReopenedJob(job)) || !access.view);
 
   const quotations = job?.customerQuotations ?? [];
   const usable = quotations.filter((q) => q.status !== 'CANCELLED');
   useEffect(() => {
-    setHandIn(defaultHandIn(job?.customerQuotations)?.id ?? null);
+    setPicked(false);
     setConfirmRemove(false);
-    // Only when another job is opened; a background refresh must not move the choice.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.id]);
+  const quotationKey = (job?.customerQuotations ?? []).map((q) => `${q.id}:${q.status}`).join(',');
+  useEffect(() => {
+    if (!picked) {
+      setHandIn(defaultHandIn(job?.customerQuotations, job?.quotation?.id)?.id ?? null);
+    }
+    // A refresh moves the default only while the person has not chosen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job?.id, quotationKey, job?.quotation?.id, picked]);
 
   if (!job) {
     return <Modal isOpen={false} onClose={onClose} title="" size="md"><ModalBody>{null}</ModalBody></Modal>;
   }
 
   const open = isOpenJob(job.status);
+  const reopened = isReopenedJob(job);
   const canWork = open && (canManage || job.assigneeId === myId);
   const due = dueText(job);
   const fail = (e: any, fallback: string) => toast.error(e?.message || e?.data?.message || fallback);
@@ -132,6 +142,18 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
             </div>
           )}
 
+          {open && reopened && job.quotation && (
+            <div>
+              <div className={label}>Reopened for editing</div>
+              <p className="m-0 mt-1 text-[12.5px] text-text-700">
+                {job.quotation.status === 'DRAFT'
+                  ? `${quotationLabel(job.quotation)} was completed and is a draft again. Edit it, then mark this completed to hand it in again.`
+                  : `${quotationLabel(job.quotation)} was reopened for editing; it is ${quotationStatusLabel(job.quotation.status)} now.`}
+              </p>
+              <EditRequestNotes request={pendingFor(pendingEdits, job.quotation.id)} className="mt-2" />
+            </div>
+          )}
+
           {open ? (
             <div>
               <div className={label}>This customer&apos;s quotations ({quotations.length})</div>
@@ -151,7 +173,10 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
                             type="radio"
                             name="hand-in"
                             checked={handIn === q.id}
-                            onChange={() => setHandIn(q.id)}
+                            onChange={() => {
+                              setHandIn(q.id);
+                              setPicked(true);
+                            }}
                             aria-label={`Hand in ${quotationLabel(q)}`}
                           />
                         )}

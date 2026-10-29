@@ -13,6 +13,8 @@ export interface QuotationRef {
   versionNumber?: number | null;
   status?: string | null;
   createdAt?: string | null;
+  /** The folder holding its versions: a version saved from it ("Save as New") shares it. */
+  folderId?: number | null;
 }
 
 /** A customer's quotation handed to one person to prepare. */
@@ -36,7 +38,7 @@ export interface QuotationJob {
   startedAt?: string | null;
   completedAt?: string | null;
   completedByName?: string | null;
-  /** The quotation handed in (completed jobs). */
+  /** The quotation handed in (completed jobs), or the one the work was reopened for (open jobs). */
   quotation?: QuotationRef | null;
   /** The customer's quotations, newest first (open jobs). */
   customerQuotations?: QuotationRef[];

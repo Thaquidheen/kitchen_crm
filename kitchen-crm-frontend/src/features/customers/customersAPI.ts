@@ -29,7 +29,7 @@ export interface QuotationEffectRow {
 
 export interface QuotationEffects {
   /** Confirmed approves one completed quotation; Lost cancels every open one. */
-  action: 'APPROVE' | 'CANCEL' | null;
+  action: 'APPROVE' | 'CANCEL' | 'TAKE_BACK' | null;
   /** Newest first. */
   quotations: QuotationEffectRow[];
 }

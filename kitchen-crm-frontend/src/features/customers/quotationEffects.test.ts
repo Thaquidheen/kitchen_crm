@@ -88,3 +88,17 @@ describe('a bulk move', () => {
     expect(bulkEffectNote('QUOTE_GIVEN')).toBeNull();
   });
 });
+
+describe('leaving Confirmed', () => {
+  it('takes quotations along from Confirmed to any other stage', () => {
+    expect(stageMovesQuotations('FOLLOW_UP', 'CONFIRMED')).toBe(true);
+    expect(stageMovesQuotations('DESIGN_STAGE', 'CONFIRMED')).toBe(true);
+    expect(stageMovesQuotations('FOLLOW_UP', 'NEGOTIATIONS')).toBe(false);
+    expect(stageMovesQuotations(undefined, 'CONFIRMED')).toBe(false);
+  });
+  it('says the approval goes back to Completed', () => {
+    expect(effectSummary({ action: 'TAKE_BACK', quotations: [row(3)] })).toBe(
+      'The approved quotation “Kitchen · V1” goes back to Completed: the customer is no longer confirmed on it.',
+    );
+  });
+});

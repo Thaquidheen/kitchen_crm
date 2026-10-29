@@ -5,8 +5,12 @@
  */
 import type { QuotationEffectRow, QuotationEffects } from './customersAPI';
 
-/** The stages that take quotations along. */
-export const stageMovesQuotations = (status?: string | null) => status === 'CONFIRMED' || status === 'LOST';
+/**
+ * The stages that take quotations along. Leaving Confirmed (for anything but Lost) takes the
+ * approval back: the approved quotation is Completed again.
+ */
+export const stageMovesQuotations = (status?: string | null, currentStatus?: string | null) =>
+  status === 'CONFIRMED' || status === 'LOST' || (currentStatus === 'CONFIRMED' && !!status && status !== 'CONFIRMED');
 
 export const effectRowLabel = (q: QuotationEffectRow) => {
   const name = q.projectName?.trim() || q.quotationNumber || `Quotation ${q.id}`;
@@ -25,7 +29,15 @@ export const needsApproveChoice = (effects?: QuotationEffects | null) =>
 export const effectSummary = (effects?: QuotationEffects | null): string | null => {
   const n = effects?.quotations.length ?? 0;
   if (!effects?.action || n === 0) {return null;}
+  if (effects.action === 'TAKE_BACK') {
+    return n === 1
+      ? `The approved quotation “${effectRowLabel(effects.quotations[0])}” goes back to Completed: the customer is no longer confirmed on it.`
+      : `${n} approved quotations go back to Completed: the customer is no longer confirmed on them.`;
+  }
   if (effects.action === 'APPROVE') {
+    if (n === 1 && effects.quotations[0].status === 'APPROVED') {
+      return `“${effectRowLabel(effects.quotations[0])}” stays the approved quotation.`;
+    }
     return n === 1
       ? `The completed quotation “${effectRowLabel(effects.quotations[0])}” becomes Approved.`
       : `This customer has ${n} completed quotations. Choose the one that becomes Approved; the others stay Completed.`;

@@ -27,7 +27,7 @@ import { useQuotationAccess } from '../useQuotationAccess';
 import { usePendingEditRequests } from '../usePendingEditRequests';
 import { EditRequestControl } from './EditRequestControl';
 import { DeleteCancelledQuotations } from './DeleteCancelledQuotations';
-import { followUpNotice, movedToFollowUp } from '../followUpMove';
+import { followUpNotice, movedToFollowUp, movedToQuotationStage, quotationStageNotice } from '../followUpMove';
 import { LatestVersionTag } from './LatestVersionTag';
 import { isLatestOfFolder, isMarkedLatest } from '../latestVersion';
 
@@ -189,9 +189,14 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
       const res = await updateStatus({ id, status }).unwrap();
       toast.success(`Status changed to ${QSTATUS[status]?.label ?? status}`);
       // This endpoint answers with its words in "data" (ApiResponse<String>), not in "message".
-      const moved = movedToFollowUp(typeof res?.data === 'string' ? res.data : res?.message);
+      const words = typeof res?.data === 'string' ? res.data : res?.message;
+      const moved = movedToFollowUp(words);
       if (moved) {
         toast.success(followUpNotice(moved));
+      }
+      const back = movedToQuotationStage(words);
+      if (back) {
+        toast.success(quotationStageNotice(back));
       }
     } catch (e: any) {
       toast.error(e?.data?.message || 'Failed to update status');

@@ -22,14 +22,20 @@ public interface QuotationJobRepository extends JpaRepository<QuotationJob, Long
     List<QuotationJob> findByAssigneeAndStatuses(@Param("userId") Long userId,
                                                  @Param("statuses") Collection<String> statuses);
 
-    /** Completed work that is recent, or that the admin side has not looked at yet. */
+    /** Completed work that is recent, or that the admin side has not looked at yet (within `unseenSince`). */
     @Query("SELECT j FROM QuotationJob j JOIN FETCH j.customer WHERE j.status = 'COMPLETED' "
-            + "AND (j.completedAt >= :since OR j.adminSeenAt IS NULL OR j.coordinatorSeenAt IS NULL)")
-    List<QuotationJob> findCompletedSince(@Param("since") LocalDateTime since);
+            + "AND (j.completedAt >= :since OR ((j.adminSeenAt IS NULL OR j.coordinatorSeenAt IS NULL) AND j.completedAt >= :unseenSince))")
+    List<QuotationJob> findCompletedSince(@Param("since") LocalDateTime since, @Param("unseenSince") LocalDateTime unseenSince);
 
     @Query("SELECT j FROM QuotationJob j JOIN FETCH j.customer WHERE j.customer.id = :customerId AND j.status IN :statuses")
     List<QuotationJob> findByCustomerAndStatuses(@Param("customerId") Long customerId,
                                                  @Param("statuses") Collection<String> statuses);
+
+    /** The work that handed this quotation in (or was reopened for it), newest first. */
+    @Query("SELECT j FROM QuotationJob j JOIN FETCH j.customer WHERE j.quotationId = :quotationId AND j.status IN :statuses "
+            + "ORDER BY j.id DESC")
+    List<QuotationJob> findByQuotationAndStatuses(@Param("quotationId") Long quotationId,
+                                                  @Param("statuses") Collection<String> statuses);
 
     /**
      * Every customer at the given stage that nobody is preparing a quotation for right now, newest
@@ -41,17 +47,20 @@ public interface QuotationJobRepository extends JpaRepository<QuotationJob, Long
             + "ORDER BY c.id DESC")
     List<Customer> findCustomersNotBeingQuoted(@Param("stage") Customer.CustomerStatus stage);
 
-    /** The last time anyone was given, or finished, quotation work for these customers: rows {customerId, assignedAt, completedAt}. */
+    /**
+     * The last time anyone was given, or finished, quotation work for these customers: rows {customerId,
+     * assignedAt, completedAt}. Work taken off the board made no quotation and does not count.
+     */
     @Query("SELECT j.customer.id, MAX(j.assignedAt), MAX(j.completedAt) FROM QuotationJob j "
-            + "WHERE j.customer.id IN :customerIds GROUP BY j.customer.id")
+            + "WHERE j.customer.id IN :customerIds AND j.status <> 'CANCELLED' GROUP BY j.customer.id")
     List<Object[]> findLastWorkOfCustomers(@Param("customerIds") Collection<Long> customerIds);
 
     /**
      * The quotations of these customers, newest first — what a job can open or hand in. Rows are
-     * {customerId, id, quotationNumber, projectName, versionNumber, status, createdAt}; no prices.
+     * {customerId, id, quotationNumber, projectName, versionNumber, status, createdAt, folderId}; no prices.
      */
-    @Query("SELECT q.customer.id, q.id, q.quotationNumber, q.projectName, q.versionNumber, q.status, q.createdAt "
-            + "FROM Quotation q WHERE q.customer.id IN :customerIds ORDER BY q.id DESC")
+    @Query("SELECT q.customer.id, q.id, q.quotationNumber, q.projectName, q.versionNumber, q.status, q.createdAt, f.id "
+            + "FROM Quotation q LEFT JOIN q.folder f WHERE q.customer.id IN :customerIds ORDER BY q.id DESC")
     List<Object[]> findQuotationsOfCustomers(@Param("customerIds") Collection<Long> customerIds);
 
     /**

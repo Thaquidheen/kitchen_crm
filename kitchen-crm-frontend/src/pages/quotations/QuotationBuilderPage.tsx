@@ -1221,6 +1221,9 @@ export function QuotationBuilderPage() {
   // chosen. Once only, and never over a customer that is already picked.
   const [searchParams] = useSearchParams();
   const presetCustomerId = Number(searchParams.get('customerId') ?? 0) || 0;
+  // "Duplicate" opens the quotation as a copy: nothing is saved until Save as New makes it the next
+  // version (kitchens, expenses and margins included). Save Draft / Submit would change the original.
+  const copyMode = isEditMode && searchParams.get('copy') === '1';
   const presetApplied = useRef(false);
   useEffect(() => {
     if (isEditMode || presetApplied.current || !presetCustomerId || !customersData?.content) {return;}
@@ -1304,7 +1307,7 @@ export function QuotationBuilderPage() {
   const [previewFailedFor, setPreviewFailedFor] = useState<string | null>(null);
   const latestPricing = useRef(currentPricing);
   latestPricing.current = currentPricing;
-  const staffPrices = !access.computesTotals && (isEditMode ? access.edit : access.create);
+  const staffPrices = !access.computesTotals && (isEditMode && !copyMode ? access.edit : access.create);
   const saving = isCreating || isUpdating;
   const previewDue =
     staffPrices && figures !== null && currentPricing !== figures.key && !!formData.customerId && previewFailedFor !== currentPricing;
@@ -1316,9 +1319,11 @@ export function QuotationBuilderPage() {
       setPreviewBusy(true);
       try {
         const body = convertFormDataToRequest(true) as unknown as Record<string, unknown>;
-        const answer = isEditMode && id
-          ? await previewChanges({ id: Number(id), ...body }).unwrap()
-          : await previewNew(body).unwrap();
+        const answer = copyMode && id
+          ? await previewNew({ ...body, sourceQuotationId: Number(id) }).unwrap()
+          : isEditMode && id
+            ? await previewChanges({ id: Number(id), ...body }).unwrap()
+            : await previewNew(body).unwrap();
         const priced = answer?.data ? roundAmounts(answer.data as unknown as Record<string, unknown>) : undefined;
         if (!priced || latestPricing.current !== key) {return;}
         setFormData((prev) => withPricedFigures(prev as Record<string, unknown>, priced) as Partial<QuotationFormData>);
@@ -1435,7 +1440,11 @@ export function QuotationBuilderPage() {
   const handleBlockerSave = async () => {
     try {
       const requestData = convertFormDataToRequest(true);
-      if (isEditMode && id) {
+      if (copyMode && id) {
+        // A copy is never saved over the original: leaving with "save" makes it the next version.
+        await createQuotation({ ...requestData, sourceQuotationId: Number(id) }).unwrap();
+        toast.success('Copy saved as a new version');
+      } else if (isEditMode && id) {
         await updateQuotation({ id: parseInt(id), ...requestData }).unwrap();
         toast.success('Quotation draft saved');
       } else {
@@ -1493,10 +1502,14 @@ export function QuotationBuilderPage() {
             </button>
             <div className="min-w-0">
               <h1 className="text-[19px] sm:text-[21px] font-[650] tracking-[-0.01em] leading-tight text-text-900">
-                {isEditMode ? 'Edit Quotation' : 'New Quotation'}
+                {copyMode ? 'Copy Quotation' : isEditMode ? 'Edit Quotation' : 'New Quotation'}
               </h1>
               <p className="text-xs text-text-600 mt-0.5">
-                {isEditMode ? 'Update the existing quotation' : 'Create a new quotation'}
+                {copyMode
+                  ? 'Nothing is saved until you choose Save as New: the copy becomes the next version'
+                  : isEditMode
+                    ? 'Update the existing quotation'
+                    : 'Create a new quotation'}
               </p>
             </div>
           </div>
@@ -1509,15 +1522,19 @@ export function QuotationBuilderPage() {
                 <span className="sm:hidden">New</span>
               </Button>
             )}
-            <Button variant="secondary" size="sm" onClick={handleSaveDraft} disabled={isCreating || isUpdating} className="w-full sm:w-auto">
-              <Save className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">{isCreating || isUpdating ? 'Saving...' : 'Save Draft'}</span>
-              <span className="sm:hidden">Draft</span>
-            </Button>
-            <Button variant="primary" size="sm" onClick={handleSubmit} disabled={isCreating || isUpdating} className="w-full sm:w-auto btn-raised-accent">
-              <Send className="h-4 w-4 mr-2" />
-              {isCreating || isUpdating ? 'Saving...' : 'Submit'}
-            </Button>
+            {!copyMode && (
+              <>
+                <Button variant="secondary" size="sm" onClick={handleSaveDraft} disabled={isCreating || isUpdating} className="w-full sm:w-auto">
+                  <Save className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">{isCreating || isUpdating ? 'Saving...' : 'Save Draft'}</span>
+                  <span className="sm:hidden">Draft</span>
+                </Button>
+                <Button variant="primary" size="sm" onClick={handleSubmit} disabled={isCreating || isUpdating} className="w-full sm:w-auto btn-raised-accent">
+                  <Send className="h-4 w-4 mr-2" />
+                  {isCreating || isUpdating ? 'Saving...' : 'Submit'}
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -2106,24 +2123,28 @@ export function QuotationBuilderPage() {
                         Save as New
                       </Button>
                     )}
-                    <Button
-                      variant="secondary"
-                      onClick={handleSaveDraft}
-                      disabled={isCreating || isUpdating}
-                      className="w-full sm:w-auto"
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      {isCreating || isUpdating ? 'Saving...' : 'Save Draft'}
-                    </Button>
-                    <Button
-                      variant="primary"
-                      onClick={handleSubmit}
-                      disabled={isCreating || isUpdating}
-                      className="w-full sm:w-auto btn-raised-accent"
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      {isCreating || isUpdating ? 'Submitting...' : 'Submit Quotation'}
-                    </Button>
+                    {!copyMode && (
+                      <>
+                        <Button
+                          variant="secondary"
+                          onClick={handleSaveDraft}
+                          disabled={isCreating || isUpdating}
+                          className="w-full sm:w-auto"
+                        >
+                          <Save className="h-4 w-4 mr-2" />
+                          {isCreating || isUpdating ? 'Saving...' : 'Save Draft'}
+                        </Button>
+                        <Button
+                          variant="primary"
+                          onClick={handleSubmit}
+                          disabled={isCreating || isUpdating}
+                          className="w-full sm:w-auto btn-raised-accent"
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          {isCreating || isUpdating ? 'Submitting...' : 'Submit Quotation'}
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

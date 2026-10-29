@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   defaultHandIn,
   isOpenJob,
+  isReopenedJob,
   quotationLabel,
   quotationNewsText,
   heldByText,
@@ -145,6 +146,47 @@ describe('defaultHandIn', () => {
     expect(defaultHandIn([])).toBeNull();
     expect(defaultHandIn(undefined)).toBeNull();
     expect(defaultHandIn([{ id: 1, quotationNumber: 'Q-1', status: 'CANCELLED' }])).toBeNull();
+  });
+
+  it('offers the quotation the work was reopened for, even when a newer one exists', () => {
+    const quotations = [
+      { id: 30, quotationNumber: 'Q-30', status: 'DRAFT' },
+      { id: 20, quotationNumber: 'Q-20', status: 'DRAFT' },
+    ];
+    expect(defaultHandIn(quotations, 20)?.id).toBe(20);
+    // Gone from the list (deleted, or cancelled since): the newest usable one, as usual.
+    expect(defaultHandIn(quotations, 99)?.id).toBe(30);
+    expect(defaultHandIn([{ id: 20, quotationNumber: 'Q-20', status: 'CANCELLED' }, ...quotations.slice(0, 1)], 20)?.id).toBe(30);
+    expect(defaultHandIn(quotations, null)?.id).toBe(30);
+  });
+
+  it('offers the newest version saved from the reopened quotation, not another quotation of the customer', () => {
+    const quotations = [
+      { id: 40, quotationNumber: 'Q-40', status: 'DRAFT', folderId: 9 }, // another kitchen, made later
+      { id: 35, quotationNumber: 'Q-35', status: 'DRAFT', folderId: 7 }, // "Save as New" from Q-20
+      { id: 30, quotationNumber: 'Q-30', status: 'CANCELLED', folderId: 7 },
+      { id: 20, quotationNumber: 'Q-20', status: 'DRAFT', folderId: 7 },
+      { id: 10, quotationNumber: 'Q-10', status: 'COMPLETE', folderId: 7 }, // an older version
+    ];
+    expect(defaultHandIn(quotations, 20)?.id).toBe(35);
+    // A newer version already Completed existed before the reopening: not the re-edit.
+    expect(defaultHandIn([{ id: 25, quotationNumber: 'Q-25', status: 'COMPLETE', folderId: 7 }, ...quotations.slice(3)], 20)?.id).toBe(20);
+    // No folder known: the reopened one itself.
+    expect(defaultHandIn(quotations.map((q) => ({ ...q, folderId: null })), 20)?.id).toBe(20);
+  });
+});
+
+describe('isReopenedJob', () => {
+  const q = { id: 7, quotationNumber: 'Q-7', status: 'DRAFT' };
+  it('is open work that names a quotation', () => {
+    expect(isReopenedJob(job({ status: 'WAITING', quotation: q }))).toBe(true);
+    expect(isReopenedJob(job({ status: 'IN_PROGRESS', quotation: q }))).toBe(true);
+  });
+  it('is not new work, nor closed work', () => {
+    expect(isReopenedJob(job({ status: 'WAITING' }))).toBe(false);
+    expect(isReopenedJob(job({ status: 'WAITING', quotation: null }))).toBe(false);
+    expect(isReopenedJob(job({ status: 'COMPLETED', quotation: q }))).toBe(false);
+    expect(isReopenedJob(job({ status: 'CANCELLED', quotation: q }))).toBe(false);
   });
 });
 

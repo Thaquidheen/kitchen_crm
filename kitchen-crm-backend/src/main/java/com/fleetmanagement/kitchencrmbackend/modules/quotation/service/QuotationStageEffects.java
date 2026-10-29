@@ -36,6 +36,15 @@ public class QuotationStageEffects {
     private QuotationRepository quotationRepository;
     @Autowired
     private QuotationEditRequestService editRequests;
+    @Autowired
+    private QuotationReopenedEffects reopenedEffects;
+    @Autowired
+    private QuotationApprovals approvals;
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerRepository customerRepository;
+
+    /** Leaving Confirmed takes the approval back (not to Lost, which keeps approved quotations as they are). */
+    public static final String TAKE_BACK = "TAKE_BACK";
 
     /** The quotations a move to this stage would touch, newest first. Empty for other stages. */
     @Transactional(readOnly = true)
@@ -57,11 +66,36 @@ public class QuotationStageEffects {
         return out;
     }
 
+    /** The customer's approved quotations, newest first. */
+    private List<Quotation> approvedOf(Long customerId) {
+        return quotationRepository.findByCustomerId(customerId).stream()
+                .filter(q -> q.getStatus() == QuotationStatus.APPROVED)
+                .sorted(Comparator.comparing(Quotation::getId).reversed()).toList();
+    }
+
+    /**
+     * Whether moving the customer to this stage takes their approval back: they are Confirmed now and
+     * go anywhere but Confirmed or Lost.
+     */
+    @Transactional(readOnly = true)
+    public boolean leavesConfirmed(Long customerId, CustomerStatus newStatus) {
+        if (customerId == null || newStatus == CustomerStatus.CONFIRMED || newStatus == CustomerStatus.LOST) {
+            return false;
+        }
+        return customerRepository.findById(customerId).map(c -> c.getStatus() == CustomerStatus.CONFIRMED).orElse(false);
+    }
+
     /** For the status window: {action, quotations:[{id, quotationNumber, projectName, versionNumber, status}]}. */
     @Transactional(readOnly = true)
     public Map<String, Object> preview(Long customerId, CustomerStatus newStatus) {
         List<Map<String, Object>> rows = new ArrayList<>();
-        for (Quotation q : affected(customerId, newStatus)) {
+        boolean takeBack = leavesConfirmed(customerId, newStatus);
+        List<Quotation> touched = new ArrayList<>(takeBack || newStatus == CustomerStatus.CONFIRMED ? approvedOf(customerId) : List.of());
+        if (!takeBack) {
+            // Confirmed: an approval already there is offered first (and kept when nothing else is chosen).
+            touched.addAll(affected(customerId, newStatus));
+        }
+        for (Quotation q : touched) {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("id", q.getId());
             row.put("quotationNumber", q.getQuotationNumber());
@@ -71,7 +105,8 @@ public class QuotationStageEffects {
             rows.add(row);
         }
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("action", newStatus == CustomerStatus.CONFIRMED ? APPROVE : newStatus == CustomerStatus.LOST ? CANCEL : null);
+        out.put("action", takeBack ? TAKE_BACK
+                : newStatus == CustomerStatus.CONFIRMED ? APPROVE : newStatus == CustomerStatus.LOST ? CANCEL : null);
         out.put("quotations", rows);
         return out;
     }
@@ -82,12 +117,23 @@ public class QuotationStageEffects {
         if (approveQuotationId == null || newStatus != CustomerStatus.CONFIRMED) {
             return null;
         }
-        boolean found = affected(customerId, newStatus).stream().anyMatch(q -> q.getId().equals(approveQuotationId));
+        boolean found = affected(customerId, newStatus).stream().anyMatch(q -> q.getId().equals(approveQuotationId))
+                || approvedOf(customerId).stream().anyMatch(q -> q.getId().equals(approveQuotationId));
         return found ? null : "That quotation is not a completed quotation of this customer";
     }
 
     /** Applies the change. Returns how many quotations changed. */
     public int apply(Long customerId, CustomerStatus newStatus, Long approveQuotationId, String by) {
+        if (newStatus == CustomerStatus.CONFIRMED) {
+            // An approval already there (made by hand) stands, unless a completed quotation is chosen instead.
+            List<Quotation> approved = approvedOf(customerId);
+            Quotation keep = approveQuotationId == null ? approved.stream().findFirst().orElse(null)
+                    : approved.stream().filter(q -> q.getId().equals(approveQuotationId)).findFirst().orElse(null);
+            if (keep != null) {
+                approvals.takeBackExcept(customerId, keep.getId());
+                return 0;
+            }
+        }
         List<Quotation> hit = affected(customerId, newStatus);
         if (hit.isEmpty()) {
             return 0;
@@ -97,6 +143,8 @@ public class QuotationStageEffects {
             if (approveQuotationId != null) {
                 chosen = hit.stream().filter(q -> q.getId().equals(approveQuotationId)).findFirst().orElse(chosen);
             }
+            // One approval at a time: one left from before (approved by hand) is taken back.
+            approvals.takeBackExcept(customerId, chosen.getId());
             chosen.setStatus(QuotationStatus.APPROVED);
             chosen.setApprovedBy(by);
             chosen.setApprovedAt(LocalDate.now());
@@ -108,6 +156,8 @@ public class QuotationStageEffects {
             q.setStatus(QuotationStatus.CANCELLED);
             quotationRepository.save(q);
             editRequests.closeFor(q.getId(), "The quotation was cancelled when the customer was marked lost");
+            // Work reopened for it leaves the board with it.
+            reopenedEffects.dropped(q);
         }
         return hit.size();
     }

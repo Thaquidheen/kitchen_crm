@@ -33,7 +33,7 @@ public class QuotationJobDto {
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
     private String completedByName;
-    /** The quotation handed in (completed jobs). */
+    /** The quotation handed in (completed jobs), or the one the work was reopened for (open jobs). */
     private QuotationRefDto quotation;
     /** The customer's quotations, newest first (open jobs): what can be opened or handed in. */
     private List<QuotationRefDto> customerQuotations = new ArrayList<>();

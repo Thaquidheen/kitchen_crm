@@ -13,6 +13,11 @@ import java.util.Optional;
 
 @Repository
 public interface CustomerRepository extends JpaRepository<Customer, Long>, JpaSpecificationExecutor<Customer> {
+
+    /** The customer, locked until the transaction ends: work on one customer is handed out in turn. */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM Customer c WHERE c.id = :id")
+    Optional<Customer> findByIdForUpdate(@Param("id") Long id);
     Optional<Customer> findByEmail(String email);
     List<Customer> findByStatus(Customer.CustomerStatus status);
 
