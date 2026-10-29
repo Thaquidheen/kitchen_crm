@@ -43,6 +43,12 @@ import {
   type QuotationEditRequest,
 } from '../../features/quotations/editRequestsAPI';
 import { editRequestNewsText, editRequestTitle } from '../../features/quotations/editRequestRules';
+import {
+  useGetStageRequestFeedQuery,
+  useMarkStageAnswersSeenMutation,
+  type CustomerStageRequest,
+} from '../../features/customers/stageRequestsAPI';
+import { stageMoveText, stageRequestNewsText } from '../../features/customers/stageRequestRules';
 
 type SourceKey = '' | 'TODOS' | 'ASSIGNED' | 'TEAM' | 'DESIGNS' | 'QUOTES' | 'CUSTOMERS' | 'PRODUCTION' | 'APPLIANCE' | 'ARCHITECT';
 
@@ -141,6 +147,13 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     skip: !enabled,
   });
   const [markEditAnswersSeen] = useMarkEditAnswersSeenMutation();
+  // Requests to move a Follow Up customer back: the admin hears about each one waiting, whoever
+  // asked hears the answer.
+  const { data: stageFeed } = useGetStageRequestFeedQuery(undefined, {
+    pollingInterval: 30000,
+    skip: !enabled,
+  });
+  const [markStageAnswersSeen] = useMarkStageAnswersSeenMutation();
   const [markReminderDone] = useMarkReminderDoneMutation();
   const [markTodoComplete] = useMarkTodoCompleteMutation();
   const [markTaskComplete] = useMarkTaskCompleteMutation();
@@ -155,6 +168,7 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const quotes: QuotationJob[] = quoteFeed?.jobs ?? [];
   const managesQuotes = !!quoteMe?.canManage;
   const editRequests: QuotationEditRequest[] = editFeed?.items ?? [];
+  const stageRequests: CustomerStageRequest[] = stageFeed?.items ?? [];
   const badgeCount =
     (notifData?.count ?? 0) +
     (todoNotif?.count ?? 0) +
@@ -162,7 +176,8 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     (isSuperAdmin ? attentionNotif?.count ?? 0 : 0) +
     designs.length +
     quotes.length +
-    editRequests.length;
+    editRequests.length +
+    stageRequests.length;
 
   const counts = useMemo(() => {
     const c = { CUSTOMERS: 0, PRODUCTION: 0, APPLIANCE: 0, ARCHITECT: 0 };
@@ -181,7 +196,8 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
         attention.length +
         designs.length +
         quotes.length +
-        editRequests.length,
+        editRequests.length +
+        stageRequests.length,
     },
     { key: 'TODOS', label: 'To-dos', st: SOURCE_META.TODOS.st, count: todos.length },
     { key: 'ASSIGNED', label: 'Assigned to me', st: SOURCE_META.ASSIGNED.st, count: dueTasks.length },
@@ -192,7 +208,7 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     ...(managesQuotes || quotes.length + editRequests.length > 0
       ? [{ key: 'QUOTES', label: 'Quotations', st: SOURCE_META.QUOTES.st, count: quotes.length + editRequests.length }]
       : []),
-    { key: 'CUSTOMERS', label: 'Customers', st: SOURCE_META.CUSTOMERS.st, count: counts.CUSTOMERS },
+    { key: 'CUSTOMERS', label: 'Customers', st: SOURCE_META.CUSTOMERS.st, count: counts.CUSTOMERS + stageRequests.length },
     { key: 'PRODUCTION', label: 'Production', st: SOURCE_META.PRODUCTION.st, count: counts.PRODUCTION },
     { key: 'APPLIANCE', label: 'Appliance', st: SOURCE_META.APPLIANCE.st, count: counts.APPLIANCE },
     { key: 'ARCHITECT', label: 'Architects', st: SOURCE_META.ARCHITECT.st, count: counts.ARCHITECT },
@@ -208,6 +224,7 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const visibleDesigns = filter === '' || filter === 'DESIGNS' ? designs : [];
   const visibleQuotes = filter === '' || filter === 'QUOTES' ? quotes : [];
   const visibleEditRequests = filter === '' || filter === 'QUOTES' ? editRequests : [];
+  const visibleStageRequests = filter === '' || filter === 'CUSTOMERS' ? stageRequests : [];
 
   // Server-computed bucket: everything in this feed is today-or-earlier, so it is either
   // OVERDUE or TODAY. To-dos due before today count as overdue by their date string; assigned
@@ -234,7 +251,8 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     visibleTeam.length +
     visibleDesigns.length +
     visibleQuotes.length +
-    visibleEditRequests.length;
+    visibleEditRequests.length +
+    visibleStageRequests.length;
 
   const viewAll = () => {
     setOpen(false);
@@ -464,6 +482,36 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     </div>
   );
 
+  /** A request to move a Follow Up customer back: waiting for the admin, or answered for whoever asked. */
+  const StageRequestRow = ({ r }: { r: CustomerStageRequest }) => (
+    <div className="px-4 py-2.5 hover:bg-background-700 transition-colors">
+      <button
+        className="text-left w-full"
+        onClick={() => {
+          setOpen(false);
+          if (isSuperAdmin) {
+            navigate(`${ROUTES.REMINDERS}?tab=approvals`);
+            return;
+          }
+          // Opening the answer is what clears it from the bell.
+          markStageAnswersSeen()
+            .unwrap()
+            .catch(() => undefined);
+          navigate(`/customers/${r.customerId}`);
+        }}
+      >
+        <p className="text-[13px] text-text-900 font-medium flex items-center gap-1.5">
+          <span className="truncate">{r.customerName ?? 'Customer'}</span>
+          <span className="text-[11.5px] text-text-600 shrink-0">{stageMoveText(r)}</span>
+        </p>
+        <p className="text-[12.5px] text-text-900 mt-0.5 line-clamp-2 break-words">{stageRequestNewsText(r, isSuperAdmin)}</p>
+        <p className="text-[11.5px] text-text-600 mt-0.5">
+          {isSuperAdmin ? 'Stage move request · tap to answer' : 'Your request · tap to open the customer'}
+        </p>
+      </button>
+    </div>
+  );
+
   /** A request to reopen a completed quotation: waiting for the admin, or answered for whoever asked. */
   const EditRequestRow = ({ r }: { r: QuotationEditRequest }) => (
     <div className="px-4 py-2.5 hover:bg-background-700 transition-colors">
@@ -521,6 +569,7 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     return slice;
   };
   const shownDesigns = take(visibleDesigns);
+  const shownStageRequests = take(visibleStageRequests);
   const shownEditRequests = take(visibleEditRequests);
   const shownQuotes = take(visibleQuotes);
   const shownRepliedTeam = take(repliedTeam);
@@ -534,6 +583,7 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const shownTodayTodos = take(todayTodos);
   const shownTodayReminders = take(todayReminders);
   const shownCount =
+    shownStageRequests.length +
     shownDesigns.length +
     shownEditRequests.length +
     shownQuotes.length +
@@ -601,6 +651,16 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
                       <div className="divide-y divide-background-600">
                         {shownDesigns.map((j) => (
                           <DesignRow key={`d${j.id}`} job={j} />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {shownStageRequests.length > 0 && (
+                    <>
+                      <GroupHeader label="Stage moves" tone="nego" />
+                      <div className="divide-y divide-background-600">
+                        {shownStageRequests.map((r) => (
+                          <StageRequestRow key={`s${r.id}`} r={r} />
                         ))}
                       </div>
                     </>

@@ -17,6 +17,8 @@ import { MyTodosTab } from './MyTodosTab';
 import { TeamTasksTab } from './TeamTasksTab';
 import { DesignsTab } from './DesignsTab';
 import { EditRequestsTab } from './EditRequestsTab';
+import { StageRequestsSection } from './StageRequestsSection';
+import { useGetStageRequestFeedQuery } from '@/features/customers/stageRequestsAPI';
 import { useGetEditRequestFeedQuery } from '@/features/quotations/editRequestsAPI';
 import { useGetDesignMeQuery } from '@/features/design/designAPI';
 import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
@@ -270,6 +272,7 @@ export function RemindersPage() {
   const canSeeDesigns = isSuperAdmin || !!designMe?.designer;
   // Edit requests: staff ask to reopen a completed quotation; the admin answers here.
   const { data: editFeed } = useGetEditRequestFeedQuery(undefined, { skip: !isSuperAdmin, pollingInterval: 30000 });
+  const { data: stageFeed } = useGetStageRequestFeedQuery(undefined, { skip: !isSuperAdmin, pollingInterval: 30000 });
   const tab: 'reminders' | 'todos' | 'team' | 'designs' | 'approvals' =
     tabParam === 'todos'
       ? 'todos'
@@ -327,7 +330,7 @@ export function RemindersPage() {
             ...(isSuperAdmin ? [{ key: 'team', label: 'Team Tasks', icon: <Users size={14} /> }] : []),
             ...(canSeeDesigns ? [{ key: 'designs', label: 'Designs', icon: <Palette size={14} /> }] : []),
             ...(isSuperAdmin
-              ? [{ key: 'approvals', label: 'Edit requests', icon: <FileCheck2 size={14} />, count: editFeed?.count ?? 0 }]
+              ? [{ key: 'approvals', label: 'Requests', icon: <FileCheck2 size={14} />, count: (editFeed?.count ?? 0) + (stageFeed?.count ?? 0) }]
               : []),
           ] as { key: 'reminders' | 'todos' | 'team' | 'designs' | 'approvals'; label: string; icon: ReactNode; count?: number }[]
         ).map((t) => {
@@ -367,7 +370,10 @@ export function RemindersPage() {
       ) : tab === 'designs' ? (
         <DesignsTab viewer={isSuperAdmin ? 'admin' : 'designer'} />
       ) : tab === 'approvals' ? (
-        <EditRequestsTab />
+        <div className="space-y-4">
+          <StageRequestsSection />
+          <EditRequestsTab />
+        </div>
       ) : (
         <>
       {/* Whose reminders. Everyone sees only their own; a super admin sees all and can narrow
