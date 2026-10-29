@@ -37,6 +37,8 @@ export const doorFaceSqft = (widthMm?: number | null, heightMm?: number | null):
 
 export interface BreakdownLine {
   name: string;
+  /** What it is made of, in words: a cabinet's material, size and inner panel; a brand. No prices. */
+  detail?: string;
   qty: number;
   /** Rate before margin; undefined when this person is not shown rates. */
   rate?: number;
@@ -75,24 +77,46 @@ export interface StoredTotals {
   final?: unknown;
 }
 
+/**
+ * What a line is made of, in words, for everyone who sees the line: a cabinet's material (SS 304…),
+ * its size unless the name already gives it, and its inner panel; an accessory's or door's brand.
+ */
+export const lineDetail = (kind: LineKind, item: any, name = ''): string | undefined => {
+  const parts: string[] = [];
+  if (kind === 'cabinets') {
+    if (item?.materialName) {parts.push(String(item.materialName));}
+    const w = num(item?.widthMm);
+    const h = num(item?.heightMm);
+    const d = num(item?.depthMm);
+    if (w && h && !name.includes('×')) {parts.push(d ? `${w}×${h}×${d} mm` : `${w}×${h} mm`);}
+    const panels = num(item?.innerPanelQuantity);
+    if (item?.innerPanelTypeName && panels && panels > 0) {parts.push(`${item.innerPanelTypeName} ×${panels}`);}
+  } else if ((kind === 'accessories' || kind === 'doors') && item?.brandName) {
+    parts.push(String(item.brandName));
+  }
+  return parts.length > 0 ? parts.join(' · ') : undefined;
+};
+
 export const breakdownLine = (kind: LineKind, item: any, marginPct?: number): BreakdownLine => {
   const qty = num(item?.quantity) ?? 1;
   const name = NAME_KEYS[kind].map((k) => item?.[k]).find((v) => v) || 'Item';
+  const detail = lineDetail(kind, item, String(name));
+  const described = detail ? { name, detail } : { name };
   const rate = num(item?.unitPrice);
   if (rate === undefined) {
     // No rate for this person: the server's amount with margin, when it sent one.
     const withMargin = num(item?.amountWithMargin);
     const rateWithMargin = num(item?.rateWithMargin);
     return withMargin === undefined && rateWithMargin === undefined
-      ? { name, qty }
-      : { name, qty, withMargin, rateWithMargin, sqft: kind === 'doors' ? num(item?.calculatedSqft) : undefined };
+      ? { ...described, qty }
+      : { ...described, qty, withMargin, rateWithMargin, sqft: kind === 'doors' ? num(item?.calculatedSqft) : undefined };
   }
   // The face area the server priced the door with; worked out from the size only when it is missing.
   const sqft =
     kind === 'doors' ? num(item?.calculatedSqft) ?? doorFaceSqft(num(item?.widthMm), num(item?.heightMm)) : undefined;
   const base = rate * (sqft ?? 1) * qty;
   return {
-    name,
+    ...described,
     qty,
     rate,
     sqft,

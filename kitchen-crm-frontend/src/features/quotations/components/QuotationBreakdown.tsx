@@ -81,6 +81,7 @@ const CategoryTable: React.FC<{ c: CategoryBreakdown; access: Access }> = ({ c, 
               <tr key={i} className="border-t border-background-600">
                 <td className="px-3 py-2 text-[13px] text-text-900">
                   {l.name}
+                  {l.detail && <div className="text-[11.5px] text-text-500">{l.detail}</div>}
                   {rates && l.sqft !== undefined && l.rate !== undefined && (
                     <div className="text-[11.5px] text-text-500 tabular-nums">
                       {money(l.rate)} per sq ft × {l.sqft.toFixed(2)} sq ft

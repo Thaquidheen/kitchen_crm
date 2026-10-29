@@ -43,6 +43,19 @@ describe('a line before margin', () => {
     close(breakdownLine('lighting', { itemName: 'Profile', quantity: 2, unitPrice: 1200 }).base, 2400);
   });
 
+  it("says what a line is made of, for everyone: material, size, inner panel; a brand", () => {
+    const cab = breakdownLine('cabinets', {
+      description: 'Storage Base Cabinet', quantity: 1, materialName: 'SS 304', widthMm: 1130, heightMm: 600, depthMm: 890,
+      innerPanelTypeName: 'Middle Shelf', innerPanelQuantity: 1,
+    });
+    expect(cab.detail).toBe('SS 304 · 1130×600×890 mm · Middle Shelf ×1');
+    expect(cab.rate).toBeUndefined();
+    const named = breakdownLine('cabinets', { description: 'Corner Base Cabinet (900×600×890mm)', materialName: 'SS 304', widthMm: 900, heightMm: 600, depthMm: 890 });
+    expect(named.detail).toBe('SS 304');
+    expect(breakdownLine('accessories', { accessoryName: 'Tandem', brandName: 'BLUM', quantity: 2, unitPrice: 100 }).detail).toBe('BLUM');
+    expect(breakdownLine('lighting', { itemName: 'Profile', quantity: 2 }).detail).toBeUndefined();
+  });
+
   it('a rate this person is not sent stays unknown, never 0', () => {
     const l = breakdownLine('cabinets', { description: 'Cabinet', quantity: 2, totalPrice: 999 }, 45);
     expect(l).toEqual({ name: 'Cabinet', qty: 2 });
