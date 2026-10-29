@@ -262,7 +262,8 @@ const expenseRow = (name: string, e: ExpenseBreakdown): SummaryRow => ({
   base: e.base,
   margin: e.margin,
   pct: e.marginPct,
-  after: e.margin === undefined ? undefined : e.base + e.margin,
+  // Without the margin (staff): what is charged less GST.
+  after: e.margin !== undefined ? e.base + e.margin : known(e.final) && known(e.tax) ? e.final - e.tax : undefined,
   tax: e.tax,
   final: e.final,
 });
@@ -323,4 +324,35 @@ export const quotationSummary = (
     byCategory,
     total: known(quotationTotal) ? { ...totalRow, final: quotationTotal, after: totalRow.after ?? (known(totalRow.tax) ? quotationTotal - totalRow.tax : undefined) } : totalRow,
   };
+};
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * For someone not sent the miscellaneous margin (staff), other expenses cannot be priced on the
+ * screen. They are what the server priced them at: a kitchen's saved total less its categories,
+ * with the GST inside that; the transportation shared by all kitchens likewise is the quotation's
+ * total less the kitchens'. Figures already known are left as they are.
+ */
+export const fillServerExpenses = <S extends { cats: CategoryBreakdown[]; exp: ExpenseBreakdown; total?: number }>(
+  sections: S[],
+  transport: ExpenseBreakdown | null,
+  quotationTotal?: number,
+): { sections: S[]; transport: ExpenseBreakdown | null } => {
+  const fill = (e: ExpenseBreakdown, final?: number): ExpenseBreakdown => {
+    if (known(e.final) || !known(final) || e.rows.length === 0) {return e;}
+    const tax = known(e.taxPct) ? (final * e.taxPct) / (100 + e.taxPct) : undefined;
+    return { ...e, final: round2(final), tax: tax === undefined ? undefined : round2(tax) };
+  };
+  const filled = sections.map((s) => {
+    const finals = s.cats.map((c) => c.final);
+    const rest = known(s.total) && finals.every(known) ? s.total - finals.reduce((a: number, v) => a + (v as number), 0) : undefined;
+    return { ...s, exp: fill(s.exp, rest) };
+  });
+  const kitchenTotals = sections.map((s) => s.total);
+  const shared =
+    transport && known(quotationTotal) && kitchenTotals.every(known)
+      ? fill(transport, quotationTotal - kitchenTotals.reduce((a: number, v) => a + (v as number), 0))
+      : transport;
+  return { sections: filled, transport: shared };
 };

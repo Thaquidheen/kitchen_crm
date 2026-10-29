@@ -10,6 +10,7 @@ import {
   pctText,
   quotationSummary,
   shareOf,
+  fillServerExpenses,
 } from './quotationBreakdown';
 
 const close = (a: number | undefined, b: number) => expect(a).toBeCloseTo(b, 2);
@@ -229,5 +230,27 @@ describe('the quotation summary', () => {
     expect(s.total.margin).toBeUndefined();
     close(s.total.after, 1000);
     expect(s.total.final).toBe(1180);
+  });
+});
+
+describe("other expenses for someone not sent their margin (staff)", () => {
+  it("are the server's: the kitchen's total less its categories, with the GST inside", () => {
+    const cats = [categoryBreakdown('cabinets', [{ description: 'A', quantity: 1 }], { tax: 18 }, { tax: 180, final: 1180 })];
+    const exp = expenseBreakdown([{ name: 'Installation', amount: 1000 }], { tax: 18 });
+    expect(exp.final).toBeUndefined();
+    const transport = expenseBreakdown([{ name: 'Transportation (all kitchens)', amount: 500 }], { tax: 18 });
+    const { sections, transport: shared } = fillServerExpenses([{ name: 'K', cats, exp, total: 2360 }], transport, 2950);
+    close(sections[0].exp.final, 1180);
+    close(sections[0].exp.tax, 180);
+    close(shared?.final, 590);
+    close(shared?.tax, 90);
+    const s = quotationSummary(sections, shared, 2950);
+    close(s.total.after, 2500);
+    close(s.total.tax, 450);
+  });
+  it('leave known figures alone', () => {
+    const exp = expenseBreakdown([{ name: 'Installation', amount: 1000 }], { margin: 0, tax: 18 });
+    const { sections } = fillServerExpenses([{ name: 'K', cats: [], exp, total: 99999 }], null, 99999);
+    close(sections[0].exp.final, 1180);
   });
 });

@@ -11,6 +11,7 @@ import { codeLabel } from '../marginCodes';
 import {
   commonTransport,
   expenseBreakdown,
+  fillServerExpenses,
   kitchenCategories,
   money,
   pctText,
@@ -183,7 +184,12 @@ const Summary: React.FC<{ cats: CategoryBreakdown[]; exp: ExpenseBreakdown; tota
   const rows = [
     ...cats.map((c) => ({ name: c.title, code: c.marginCode, base: c.base, pct: c.marginPct, margin: c.margin, after: c.afterMargin, tax: c.tax, final: c.final })),
     ...(exp.rows.length
-      ? [{ name: 'Other expenses', code: miscCode, base: exp.base, pct: exp.marginPct, margin: exp.margin, after: exp.margin === undefined ? undefined : exp.base + exp.margin, tax: exp.tax, final: exp.final }]
+      ? [{
+          name: 'Other expenses', code: miscCode, base: exp.base, pct: exp.marginPct, margin: exp.margin,
+          // Without the margin (staff): what is charged less GST.
+          after: exp.margin !== undefined ? exp.base + exp.margin : exp.final !== undefined && exp.tax !== undefined ? exp.final - exp.tax : undefined,
+          tax: exp.tax, final: exp.final,
+        }]
       : []),
   ];
   const sum = (k: 'base' | 'margin' | 'after' | 'tax' | 'final') =>
@@ -392,7 +398,7 @@ export const QuotationBreakdown: React.FC<Props> = ({ quotation, access }) => {
   // with its only kitchen, or on their own when there are several.
   const quotationExpenses: any[] = quotation?.otherExpenses ?? [];
   const kitchenHasExpenses = kitchens.some((k) => (k.otherExpenses ?? []).length > 0);
-  const sections = kitchens.length
+  const priced = kitchens.length
     ? kitchens.map((k, i) => ({
         key: k.id ?? i,
         name: k.kitchenName || `Kitchen ${i + 1}`,
@@ -413,7 +419,9 @@ export const QuotationBreakdown: React.FC<Props> = ({ quotation, access }) => {
         },
       ];
   const looseExpenses = kitchens.length > 1 && !kitchenHasExpenses ? expenseBreakdown(quotationExpenses, miscPct) : null;
-  const transport = commonTransport(quotation);
+  const quotationTotal = quotation?.totalAmount === null || quotation?.totalAmount === undefined ? undefined : Number(quotation.totalAmount);
+  // Staff are not sent the miscellaneous margin: their other expenses are the server's figures.
+  const { sections, transport } = fillServerExpenses(priced, commonTransport(quotation), quotationTotal);
 
   return (
     <div className="space-y-4">
@@ -452,7 +460,7 @@ export const QuotationBreakdown: React.FC<Props> = ({ quotation, access }) => {
           ? [...sections, { name: 'Other expenses', cats: [], exp: looseExpenses, total: undefined }]
           : sections}
         transport={transport}
-        quotationTotal={quotation?.totalAmount === null || quotation?.totalAmount === undefined ? undefined : Number(quotation.totalAmount)}
+        quotationTotal={quotationTotal}
         miscCode={quotation?.miscellaneousMarginCode ?? null}
         access={access}
       />
