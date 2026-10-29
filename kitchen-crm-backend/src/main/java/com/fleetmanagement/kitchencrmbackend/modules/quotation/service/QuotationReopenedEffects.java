@@ -7,8 +7,11 @@ import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer.Cu
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.WorkflowHistory;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.WorkflowHistoryRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.quotation.editrequest.QuotationEditRequest;
+import com.fleetmanagement.kitchencrmbackend.modules.quotation.editrequest.QuotationEditRequestRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation.QuotationStatus;
+import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.QuotationRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.quotationwork.entity.QuotationJob;
 import com.fleetmanagement.kitchencrmbackend.modules.quotationwork.repository.QuotationJobRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +21,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -28,13 +32,16 @@ import java.util.Set;
  * <ul>
  *   <li>The customer goes back from Follow Up to Quotation Stage: their quotation is being prepared
  *       again. Only from Follow Up; any other stage stays.</li>
- *   <li>The work on the board that handed the quotation in is open again: back in that person's
- *       list, first, Waiting, with the news. Not when somebody already has open work for the
- *       customer (that person has it), nor when the person is no longer active (the customer then
- *       waits under To assign, as one who moved into Quotation Stage).</li>
+ *   <li>The quotation is back in a person's list on the work board, first, Waiting, with the news:
+ *       the work that handed it in, open again; for a quotation never handed in on the board, new
+ *       work for whoever last prepared a quotation for the customer there. Not when somebody already
+ *       has open work for the customer (that person has it), nor when that person is no longer
+ *       active, nor when nobody ever prepared one on the board: the customer then waits under To
+ *       assign, when the move to Quotation Stage put them there.</li>
  * </ul>
- * Completing the quotation again — on the board, with "Mark completed", or by hand — closes that
- * work and moves the customer on to Follow Up again.
+ * Completing the quotation again — on the board, with "Mark completed", by hand, or as a new version
+ * of it ("Save as New") — closes that work and moves the customer on to Follow Up again; approving it
+ * by hand closes the work too, cancelling it takes the work off the board.
  *
  * Repositories only, like QuotationCompletedEffects: the services involved depend on this module.
  */
@@ -52,6 +59,10 @@ public class QuotationReopenedEffects {
     @Autowired
     private QuotationJobRepository jobRepository;
     @Autowired
+    private QuotationRepository quotationRepository;
+    @Autowired
+    private QuotationEditRequestRepository editRequestRepository;
+    @Autowired
     private UserRepository userRepository;
 
     @Value("${app.business-timezone:Asia/Kolkata}")
@@ -66,24 +77,31 @@ public class QuotationReopenedEffects {
         if (quotation == null || quotation.getStatus() != QuotationStatus.DRAFT || quotation.getCustomer() == null) {
             return null;
         }
-        reopenWork(quotation, byUserId, note);
+        reopenWork(quotation, byUserId, by, note);
         return moveBack(quotation, by);
     }
 
     /**
-     * The reopened quotation is Completed again, other than through its work on the board ("Mark
-     * completed", or its status by hand): that work is done too.
+     * The quotation is Completed or Approved again, other than through its work on the board ("Mark
+     * completed", or by hand): the work reopened for it is done, handing it in. So is work reopened
+     * for an older version of it, re-edited as a new version ("Save as New"); that reopening is
+     * answered.
      */
     public void completedAgain(Quotation quotation, Long byUserId, String by) {
-        if (quotation == null || quotation.getId() == null) {
+        if (quotation == null || quotation.getId() == null || quotation.getCustomer() == null) {
             return;
         }
         LocalDateTime now = LocalDateTime.now();
-        for (QuotationJob job : jobRepository.findByQuotationAndStatuses(quotation.getId(), OPEN)) {
+        for (QuotationJob job : jobRepository.findByCustomerAndStatuses(quotation.getCustomer().getId(), OPEN)) {
+            Long reopenedFor = job.getQuotationId();
+            if (reopenedFor == null || !(reopenedFor.equals(quotation.getId()) || isOlderVersion(reopenedFor, quotation))) {
+                continue;
+            }
             job.setStatus(QuotationJob.COMPLETED);
             job.setCompletedAt(now);
             job.setCompletedByUserId(byUserId);
             job.setCompletedByName(by);
+            job.setQuotationId(quotation.getId());
             if (job.getStartedAt() == null) {
                 job.setStartedAt(now);
             }
@@ -91,6 +109,42 @@ public class QuotationReopenedEffects {
                 job.setAssigneeSeenAt(now);
             }
             jobRepository.save(job);
+            if (!reopenedFor.equals(quotation.getId())) {
+                editsDone(reopenedFor);
+            }
+        }
+    }
+
+    /**
+     * Work reopened for one quotation was handed in on the board with another. When that one is a
+     * newer version of it ("Save as New"), the reopening is answered.
+     */
+    public void handedIn(Long reopenedFor, Quotation handedIn) {
+        if (reopenedFor != null && handedIn != null && isOlderVersion(reopenedFor, handedIn)) {
+            editsDone(reopenedFor);
+        }
+    }
+
+    /** The quotation was cancelled (by hand, or with its customer marked Lost): the work reopened for it leaves the board. */
+    public void dropped(Quotation quotation) {
+        if (quotation == null || quotation.getId() == null) {
+            return;
+        }
+        for (QuotationJob job : jobRepository.findByQuotationAndStatuses(quotation.getId(), OPEN)) {
+            job.setStatus(QuotationJob.CANCELLED);
+            jobRepository.save(job);
+        }
+    }
+
+    /** The reopening of this quotation is over (it is Completed or Approved again): its approved requests are done. */
+    public void editsDone(Long quotationId) {
+        LocalDateTime now = LocalDateTime.now();
+        for (QuotationEditRequest r : editRequestRepository.findByQuotationIdAndStatus(quotationId, QuotationEditRequest.APPROVED)) {
+            r.setStatus(QuotationEditRequest.DONE);
+            if (r.getRequesterSeenAt() == null) {
+                r.setRequesterSeenAt(now);
+            }
+            editRequestRepository.save(r);
         }
     }
 
@@ -99,22 +153,47 @@ public class QuotationReopenedEffects {
         return customerName == null ? "" : "; " + customerName + " moved to Quotation Stage";
     }
 
-    private void reopenWork(Quotation quotation, Long byUserId, String note) {
-        List<QuotationJob> done = jobRepository.findByQuotationAndStatuses(quotation.getId(), Set.of(QuotationJob.COMPLETED));
-        if (done.isEmpty()) {
+    /** `otherId` is an earlier version of `quotation`: the same folder, made before it. */
+    private boolean isOlderVersion(Long otherId, Quotation quotation) {
+        if (quotation.getFolder() == null || quotation.getId() == null || otherId >= quotation.getId()) {
+            return false;
+        }
+        Quotation other = quotationRepository.findById(otherId).orElse(null);
+        return other != null && other.getFolder() != null && other.getFolder().getId().equals(quotation.getFolder().getId());
+    }
+
+    private void reopenWork(Quotation quotation, Long byUserId, String by, String note) {
+        Long customerId = quotation.getCustomer().getId();
+        if (!jobRepository.findByCustomerAndStatuses(customerId, OPEN).isEmpty()) {
             return;
         }
-        QuotationJob job = done.get(0);
-        if (!jobRepository.findByCustomerAndStatuses(job.getCustomer().getId(), OPEN).isEmpty()) {
+        List<QuotationJob> linked = jobRepository.findByQuotationAndStatuses(quotation.getId(), Set.of(QuotationJob.COMPLETED));
+        // Whoever handed it in; for one never handed in on the board, whoever last prepared one for the customer there.
+        QuotationJob job = !linked.isEmpty() ? linked.get(0)
+                : jobRepository.findByCustomerAndStatuses(customerId, Set.of(QuotationJob.COMPLETED)).stream()
+                        .max(Comparator.comparing(QuotationJob::getId)).orElse(null);
+        if (job == null) {
             return;
         }
         User assignee = userRepository.findById(job.getAssigneeUserId()).orElse(null);
         if (assignee == null || Boolean.FALSE.equals(assignee.getActive())) {
             return;
         }
-        // Counted before the job joins the queue again.
-        int first = jobRepository.findByAssigneeAndStatuses(job.getAssigneeUserId(), OPEN).stream()
+        // Counted before the work joins the list again.
+        int first = jobRepository.findByAssigneeAndStatuses(assignee.getId(), OPEN).stream()
                 .map(QuotationJob::getQueuePosition).filter(Objects::nonNull).min(Integer::compare).orElse(1) - 1;
+        if (linked.isEmpty()) {
+            QuotationJob fresh = new QuotationJob();
+            fresh.setCustomer(job.getCustomer());
+            fresh.setAssigneeUserId(assignee.getId());
+            fresh.setAssigneeName(assignee.getName());
+            fresh.setPriority("MEDIUM");
+            fresh.setQuotationId(quotation.getId());
+            fresh.setAssignedByUserId(byUserId);
+            fresh.setAssignedByName(by);
+            fresh.setAssignedAt(LocalDateTime.now());
+            job = fresh;
+        }
         LocalDate due = LocalDate.now(ZoneId.of(businessTimezone)).plusDays(DUE_DAYS);
         job.setStatus(QuotationJob.WAITING);
         job.setQueuePosition(first);
@@ -128,7 +207,7 @@ public class QuotationReopenedEffects {
         String news = "Reopened for editing" + (note == null || note.isBlank() ? "" : ": " + note.trim());
         job.setAssigneeNews(news.length() > 255 ? news.substring(0, 255) : news);
         // Reopening your own work is not news to you.
-        job.setAssigneeSeenAt(job.getAssigneeUserId().equals(byUserId) ? LocalDateTime.now() : null);
+        job.setAssigneeSeenAt(assignee.getId().equals(byUserId) ? LocalDateTime.now() : null);
         // When it is completed again, the admin side is told again.
         job.setAdminSeenAt(null);
         job.setCoordinatorSeenAt(null);

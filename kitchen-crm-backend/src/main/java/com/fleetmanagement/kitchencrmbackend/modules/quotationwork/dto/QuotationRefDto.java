@@ -17,4 +17,6 @@ public class QuotationRefDto {
     private Integer versionNumber;
     private String status;
     private LocalDateTime createdAt;
+    /** The folder holding its versions: a version saved from it ("Save as New") shares it. */
+    private Long folderId;
 }

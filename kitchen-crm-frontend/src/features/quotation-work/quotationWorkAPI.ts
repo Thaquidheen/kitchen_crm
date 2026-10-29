@@ -88,7 +88,8 @@ export const quotationWorkAPI = baseApi.injectEndpoints({
         throw new Error(r.message || 'Failed to complete');
       },
       // The quotation handed in now reads Completed in the list, and the customer may be in Follow Up.
-      invalidatesTags: ['QuotationWork', 'Quotations', 'Customers', 'Designs', 'Dashboard'],
+      // Handing in reopened work ends the reopening: the "Reopened for editing" marks go.
+      invalidatesTags: ['QuotationWork', 'Quotations', 'Customers', 'Designs', 'Dashboard', 'QuotationEditRequests'],
     }),
     markQuotationWorkSeen: builder.mutation<number, void>({
       query: () => ({ url: '/quotation-jobs/seen', method: 'PUT' }),

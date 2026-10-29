@@ -118,8 +118,10 @@ const JobRowView: React.FC<
             cancelled). Open rows: back in the list because that quotation was reopened for editing. */}
         {(done ? editRequest || (job.quotation?.status && job.quotation.status !== 'COMPLETE') : reopened) && (
           <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-            {done && job.quotation?.status && job.quotation.status !== 'COMPLETE' && <QuotationStatusPill status={job.quotation.status} />}
-            {(reopened || job.quotation?.status === 'DRAFT') && !editRequest && (
+            {job.quotation?.status && job.quotation.status !== 'COMPLETE' && (done || job.quotation.status !== 'DRAFT') && (
+              <QuotationStatusPill status={job.quotation.status} />
+            )}
+            {job.quotation?.status === 'DRAFT' && !editRequest && (
               <span className="text-[11.5px] text-text-600">Reopened for editing</span>
             )}
             {editRequest && job.quotation && (

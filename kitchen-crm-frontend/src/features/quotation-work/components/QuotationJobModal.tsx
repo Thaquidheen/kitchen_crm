@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import { followUpNotice, movedToFollowUp } from '@/features/quotations/followUpMove';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { dueText, PriorityPill } from '@/features/design/designUi';
-import { QuotationStatusPill } from '@/features/quotations/components/QuotationStatusPill';
+import { QuotationStatusPill, quotationStatusLabel } from '@/features/quotations/components/QuotationStatusPill';
 import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
 import { usePendingEditRequests } from '@/features/quotations/usePendingEditRequests';
 import { EditRequestControl, EditRequestNotes } from '@/features/quotations/components/EditRequestControl';
@@ -138,8 +138,9 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
             <div>
               <div className={label}>Reopened for editing</div>
               <p className="m-0 mt-1 text-[12.5px] text-text-700">
-                {quotationLabel(job.quotation)} was completed and is a draft again. Edit it, then mark this completed to hand it
-                in again.
+                {job.quotation.status === 'DRAFT'
+                  ? `${quotationLabel(job.quotation)} was completed and is a draft again. Edit it, then mark this completed to hand it in again.`
+                  : `${quotationLabel(job.quotation)} was reopened for editing; it is ${quotationStatusLabel(job.quotation.status)} now.`}
               </p>
               <EditRequestNotes request={pendingFor(pendingEdits, job.quotation.id)} className="mt-2" />
             </div>

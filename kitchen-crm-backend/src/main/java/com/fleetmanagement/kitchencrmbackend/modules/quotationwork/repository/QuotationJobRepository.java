@@ -54,10 +54,10 @@ public interface QuotationJobRepository extends JpaRepository<QuotationJob, Long
 
     /**
      * The quotations of these customers, newest first — what a job can open or hand in. Rows are
-     * {customerId, id, quotationNumber, projectName, versionNumber, status, createdAt}; no prices.
+     * {customerId, id, quotationNumber, projectName, versionNumber, status, createdAt, folderId}; no prices.
      */
-    @Query("SELECT q.customer.id, q.id, q.quotationNumber, q.projectName, q.versionNumber, q.status, q.createdAt "
-            + "FROM Quotation q WHERE q.customer.id IN :customerIds ORDER BY q.id DESC")
+    @Query("SELECT q.customer.id, q.id, q.quotationNumber, q.projectName, q.versionNumber, q.status, q.createdAt, f.id "
+            + "FROM Quotation q LEFT JOIN q.folder f WHERE q.customer.id IN :customerIds ORDER BY q.id DESC")
     List<Object[]> findQuotationsOfCustomers(@Param("customerIds") Collection<Long> customerIds);
 
     /**

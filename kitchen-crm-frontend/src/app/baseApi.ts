@@ -413,7 +413,8 @@ export const baseApi = createApi({
         url: `/quotations/${id}/status?status=${encodeURIComponent(status)}`,
         method: 'PATCH',
       }),
-      // Completed can move the customer on to Follow Up: their stage shows on these too.
+      // Completed can move the customer on to Follow Up, back to Draft back to Quotation Stage: their
+      // stage shows on these too. Either way a reopening starts or ends ("Reopened for editing" marks).
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'Quotations', id },
         'Quotations',
@@ -421,6 +422,7 @@ export const baseApi = createApi({
         'Customers',
         'Designs',
         'Dashboard',
+        'QuotationEditRequests',
       ],
     }),
 

@@ -199,20 +199,13 @@ public class QuotationEditRequestService {
      * the requests that reopened it are done.
      */
     public void editsDone(Long quotationId) {
-        LocalDateTime now = LocalDateTime.now();
-        for (QuotationEditRequest r : repository.findByQuotationIdAndStatus(quotationId, QuotationEditRequest.APPROVED)) {
-            r.setStatus(QuotationEditRequest.DONE);
-            if (r.getRequesterSeenAt() == null) {
-                r.setRequesterSeenAt(now);
-            }
-            repository.save(r);
-        }
+        reopenedEffects.editsDone(quotationId);
     }
 
     /**
      * Someone with the "Change status" permission set the quotation's status by hand. Putting it
-     * back to Draft is what a waiting request asked for; Completed again ends a reopening; any other
-     * status leaves nothing to ask for.
+     * back to Draft is what a waiting request asked for; Completed or Approved ends a reopening; any
+     * other status leaves nothing to ask for.
      */
     public void statusSetByHand(Long quotationId, QuotationStatus newStatus, String by) {
         if (newStatus == QuotationStatus.COMPLETE) {
@@ -220,6 +213,9 @@ public class QuotationEditRequestService {
             return;
         }
         if (newStatus != QuotationStatus.DRAFT) {
+            if (newStatus == QuotationStatus.APPROVED) {
+                editsDone(quotationId);
+            }
             closeFor(quotationId, "The quotation's status was changed");
             return;
         }

@@ -13,6 +13,8 @@ export interface QuotationRef {
   versionNumber?: number | null;
   status?: string | null;
   createdAt?: string | null;
+  /** The folder holding its versions: a version saved from it ("Save as New") shares it. */
+  folderId?: number | null;
 }
 
 /** A customer's quotation handed to one person to prepare. */

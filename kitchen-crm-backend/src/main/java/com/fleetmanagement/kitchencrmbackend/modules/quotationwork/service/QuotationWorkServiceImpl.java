@@ -58,6 +58,8 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
     private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationCompletedEffects completedEffects;
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.quotation.editrequest.QuotationEditRequestService editRequests;
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationReopenedEffects reopenedEffects;
 
     @Value("${app.business-timezone:Asia/Kolkata}")
     private String businessTimezone;
@@ -364,7 +366,8 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
         }
         Long customerId = job.getCustomer().getId();
         // Work reopened for a quotation hands that one in, unless another is chosen.
-        Long chosen = request != null && request.getQuotationId() != null ? request.getQuotationId() : job.getQuotationId();
+        Long reopenedFor = job.getQuotationId();
+        Long chosen = request != null && request.getQuotationId() != null ? request.getQuotationId() : reopenedFor;
         Quotation quotation;
         if (chosen != null) {
             quotation = quotationRepository.findById(chosen).orElse(null);
@@ -388,10 +391,12 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
             quotation.setStatus(QuotationStatus.COMPLETE);
             quotationRepository.save(quotation);
         }
-        // Reopened to be edited, it is handed in again: the requests that reopened it are done.
+        // Reopened to be edited, it is handed in again: the requests that reopened it are done. So are
+        // those of the version it was reopened for, when this is a newer version of it ("Save as New").
         if (quotation.getStatus() == QuotationStatus.COMPLETE) {
             editRequests.editsDone(quotation.getId());
         }
+        reopenedEffects.handedIn(reopenedFor, quotation);
         // A completed quotation moves the customer on to Follow Up (see QuotationCompletedEffects).
         String moved = completedEffects.completed(quotation, viewer.name());
         LocalDateTime now = LocalDateTime.now();
@@ -588,6 +593,7 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
             ref.setVersionNumber((Integer) row[4]);
             ref.setStatus(row[5] == null ? null : row[5].toString());
             ref.setCreatedAt((LocalDateTime) row[6]);
+            ref.setFolderId((Long) row[7]);
             quotationsByCustomer.computeIfAbsent((Long) row[0], k -> new ArrayList<>()).add(ref);
         }
 

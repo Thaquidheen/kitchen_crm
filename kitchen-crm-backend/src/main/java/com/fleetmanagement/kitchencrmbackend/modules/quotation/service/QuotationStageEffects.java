@@ -36,6 +36,8 @@ public class QuotationStageEffects {
     private QuotationRepository quotationRepository;
     @Autowired
     private QuotationEditRequestService editRequests;
+    @Autowired
+    private QuotationReopenedEffects reopenedEffects;
 
     /** The quotations a move to this stage would touch, newest first. Empty for other stages. */
     @Transactional(readOnly = true)
@@ -108,6 +110,8 @@ public class QuotationStageEffects {
             q.setStatus(QuotationStatus.CANCELLED);
             quotationRepository.save(q);
             editRequests.closeFor(q.getId(), "The quotation was cancelled when the customer was marked lost");
+            // Work reopened for it leaves the board with it.
+            reopenedEffects.dropped(q);
         }
         return hit.size();
     }

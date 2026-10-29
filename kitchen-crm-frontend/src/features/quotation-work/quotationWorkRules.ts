@@ -13,8 +13,8 @@ export const PRIORITY_TEXT: Record<QuotationWorkPriority, string> = {
 export const isOpenJob = (s: QuotationJobStatus) => s === 'WAITING' || s === 'IN_PROGRESS';
 
 /**
- * Work back in someone's list because the quotation it handed in was reopened for editing: open
- * work names a quotation only then (new work has none until it is completed).
+ * Work back in someone's list because a completed quotation was reopened for editing: open work
+ * names a quotation only then (new work has none until it is completed).
  */
 export const isReopenedJob = (job: Pick<QuotationJob, 'status' | 'quotation'>) => isOpenJob(job.status) && !!job.quotation;
 
@@ -77,12 +77,18 @@ export const quotedText = (count: number, latestStatusLabel?: string | null): st
 };
 
 /**
- * The quotation offered first when handing work in: the one the work was reopened for, else the
- * newest one that is not cancelled.
+ * The quotation offered first when handing work in: for work reopened for a quotation, that one or
+ * the newest version saved from it since ("Save as New" keeps the folder); otherwise the newest one
+ * that is not cancelled.
  */
 export const defaultHandIn = (quotations: QuotationRef[] | undefined, reopenedFor?: number | null): QuotationRef | null => {
-  const usable = [...(quotations ?? [])].filter((q) => q.status !== 'CANCELLED');
-  return usable.find((q) => q.id === reopenedFor) ?? usable.sort((a, b) => b.id - a.id)[0] ?? null;
+  const usable = [...(quotations ?? [])].filter((q) => q.status !== 'CANCELLED').sort((a, b) => b.id - a.id);
+  const base = reopenedFor ? (quotations ?? []).find((q) => q.id === reopenedFor) : undefined;
+  if (base) {
+    const version = usable.find((q) => q.id === base.id || (!!base.folderId && q.folderId === base.folderId && q.id > base.id));
+    if (version) {return version;}
+  }
+  return usable[0] ?? null;
 };
 
 /** What a job's row in the bell says. `manages` = the reader is the admin or Admin staff. */

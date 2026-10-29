@@ -558,12 +558,14 @@ public class QuotationServiceImpl implements QuotationService {
         quotationRepository.save(quotation);
         // A request to reopen it that was still waiting is answered by this.
         editRequests.statusSetByHand(id, newStatus, updatedBy);
-        // Completed moves the customer on to Follow Up (see QuotationCompletedEffects) and closes the
-        // work reopened for it; back to Draft reopens that work (see QuotationReopenedEffects).
-        String moved = null;
-        if (completedNow) {
-            moved = completedEffects.completed(quotation, updatedBy);
+        // Completed moves the customer on to Follow Up (see QuotationCompletedEffects). Completed or
+        // Approved closes the work reopened for it, Cancelled takes that work off the board; back to
+        // Draft reopens it (see QuotationReopenedEffects).
+        String moved = completedNow ? completedEffects.completed(quotation, updatedBy) : null;
+        if (newStatus == Quotation.QuotationStatus.COMPLETE || newStatus == Quotation.QuotationStatus.APPROVED) {
             reopenedEffects.completedAgain(quotation, updatedByUserId, updatedBy);
+        } else if (newStatus == Quotation.QuotationStatus.CANCELLED) {
+            reopenedEffects.dropped(quotation);
         }
         String movedBack = reopenedNow ? reopenedEffects.reopened(quotation, updatedByUserId, updatedBy, null) : null;
         return ApiResponse.success("Quotation status updated successfully" + QuotationCompletedEffects.moved(moved)

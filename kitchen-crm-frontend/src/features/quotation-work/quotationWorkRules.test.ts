@@ -159,6 +159,19 @@ describe('defaultHandIn', () => {
     expect(defaultHandIn([{ id: 20, quotationNumber: 'Q-20', status: 'CANCELLED' }, ...quotations.slice(0, 1)], 20)?.id).toBe(30);
     expect(defaultHandIn(quotations, null)?.id).toBe(30);
   });
+
+  it('offers the newest version saved from the reopened quotation, not another quotation of the customer', () => {
+    const quotations = [
+      { id: 40, quotationNumber: 'Q-40', status: 'DRAFT', folderId: 9 }, // another kitchen, made later
+      { id: 35, quotationNumber: 'Q-35', status: 'DRAFT', folderId: 7 }, // "Save as New" from Q-20
+      { id: 30, quotationNumber: 'Q-30', status: 'CANCELLED', folderId: 7 },
+      { id: 20, quotationNumber: 'Q-20', status: 'DRAFT', folderId: 7 },
+      { id: 10, quotationNumber: 'Q-10', status: 'COMPLETE', folderId: 7 }, // an older version
+    ];
+    expect(defaultHandIn(quotations, 20)?.id).toBe(35);
+    // No folder known: the reopened one itself.
+    expect(defaultHandIn(quotations.map((q) => ({ ...q, folderId: null })), 20)?.id).toBe(20);
+  });
 });
 
 describe('isReopenedJob', () => {
