@@ -145,7 +145,7 @@ describe('redesign', () => {
     expect(redesignKeepsStage('QUOTE_GIVEN')).toBe(false);
     expect(redesignKeepsStage('FOLLOW_UP')).toBe(false);
     expect(redesignKeepsStage('NEGOTIATIONS')).toBe(false);
-    expect(redesignKeepsStage('CONFIRMED')).toBe(true);
+    expect(redesignKeepsStage('CONFIRMED')).toBe(false);
     expect(redesignKeepsStage('LOST')).toBe(true);
     expect(redesignKeepsStage('DESIGN_STAGE')).toBe(true);
   });

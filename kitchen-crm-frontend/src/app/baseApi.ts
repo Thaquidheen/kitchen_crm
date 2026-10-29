@@ -413,9 +413,14 @@ export const baseApi = createApi({
         url: `/quotations/${id}/status?status=${encodeURIComponent(status)}`,
         method: 'PATCH',
       }),
+      // Completed can move the customer on to Follow Up: their stage shows on these too.
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'Quotations', id },
         'Quotations',
+        'QuotationWork',
+        'Customers',
+        'Designs',
+        'Dashboard',
       ],
     }),
 

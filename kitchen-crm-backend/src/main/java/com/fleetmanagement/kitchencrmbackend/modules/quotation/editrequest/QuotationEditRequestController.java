@@ -92,7 +92,7 @@ public class QuotationEditRequestController {
         }
         Object qid = body == null ? null : body.get("quotationId");
         Long quotationId = qid instanceof Number ? Long.valueOf(((Number) qid).longValue()) : null;
-        return respond(service.finish(quotationId, id(user)));
+        return respond(service.finish(quotationId, id(user), user.getName()));
     }
 
     @PutMapping("/{id}/decide")

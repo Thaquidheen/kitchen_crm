@@ -54,6 +54,8 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
     private QuotationRepository quotationRepository;
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.customer.repository.WorkflowHistoryRepository workflowHistoryRepository;
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationCompletedEffects completedEffects;
 
     @Value("${app.business-timezone:Asia/Kolkata}")
     private String businessTimezone;
@@ -382,6 +384,8 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
             quotation.setStatus(QuotationStatus.COMPLETE);
             quotationRepository.save(quotation);
         }
+        // A completed quotation moves the customer on to Follow Up (see QuotationCompletedEffects).
+        String moved = completedEffects.completed(quotation, viewer.name());
         LocalDateTime now = LocalDateTime.now();
         job.setStatus(QuotationJob.COMPLETED);
         job.setCompletedAt(now);
@@ -401,7 +405,9 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
             job.setCoordinatorSeenAt(now);
         }
         job = jobRepository.save(job);
-        return ApiResponse.success("Quotation completed", toDto(job, viewer));
+        return ApiResponse.success("Quotation completed"
+                + com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationCompletedEffects.moved(moved),
+                toDto(job, viewer));
     }
 
     // ------------------------------------------------------------------ bell

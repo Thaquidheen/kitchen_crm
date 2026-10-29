@@ -105,9 +105,12 @@ export const quotationGate = (job: Pick<DesignJob, 'status'> | null | undefined)
   return 'NEEDS_DESIGN';
 };
 
-/** A redesign pulls the customer back into Design — except from these stages, where only the design reopens. */
+/**
+ * A redesign pulls the customer back into Design — except from these stages, where only the design
+ * reopens. Confirmed customers move back too (the server's REDESIGN_KEEPS_STAGE).
+ */
 export const redesignKeepsStage = (customerStatus?: string | null) =>
-  customerStatus === 'DESIGN_STAGE' || customerStatus === 'CONFIRMED' || customerStatus === 'LOST';
+  customerStatus === 'DESIGN_STAGE' || customerStatus === 'LOST';
 
 export const DesignStatusPill: React.FC<{ status: DesignStatus }> = ({ status }) => {
   const m = DESIGN_STATUS[status] ?? { label: status, st: 'draft' };

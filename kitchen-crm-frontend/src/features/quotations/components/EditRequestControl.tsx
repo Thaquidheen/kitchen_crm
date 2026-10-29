@@ -7,6 +7,7 @@
  */
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
+import { followUpNotice, movedToFollowUp } from '../followUpMove';
 import { CheckCircle2, Clock, PencilLine } from 'lucide-react';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import {
@@ -43,8 +44,12 @@ export const EditRequestControl: React.FC<Props> = ({ quotationId, status, pendi
     const markCompleted = async (e: React.MouseEvent) => {
       e.stopPropagation();
       try {
-        await finish({ quotationId }).unwrap();
+        const res = await finish({ quotationId }).unwrap();
         toast.success('Quotation completed');
+        const moved = movedToFollowUp(res.message);
+        if (moved) {
+          toast.success(followUpNotice(moved));
+        }
       } catch (err) {
         toast.error(errMsg(err, 'Failed to mark the quotation completed'));
       }

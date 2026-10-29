@@ -31,6 +31,8 @@ public class QuotationEditRequestService {
     private QuotationEditRequestRepository repository;
     @Autowired
     private QuotationRepository quotationRepository;
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationCompletedEffects completedEffects;
 
     public ApiResponse<Map<String, Object>> request(Long quotationId, String reason, Long userId, String userName) {
         Quotation quotation = quotationId == null ? null : quotationRepository.findById(quotationId).orElse(null);
@@ -111,7 +113,7 @@ public class QuotationEditRequestService {
      * The quotation was reopened through a request and has been edited: it is Completed again.
      * This is how staff without the "Change status" permission hand it back.
      */
-    public ApiResponse<Map<String, Object>> finish(Long quotationId, Long userId) {
+    public ApiResponse<Map<String, Object>> finish(Long quotationId, Long userId, String userName) {
         Quotation quotation = quotationId == null ? null : quotationRepository.findById(quotationId).orElse(null);
         if (quotation == null) {
             return ApiResponse.error("Quotation not found");
@@ -125,6 +127,8 @@ public class QuotationEditRequestService {
         }
         quotation.setStatus(QuotationStatus.COMPLETE);
         quotationRepository.save(quotation);
+        // Completed moves the customer on to Follow Up, when they are not there or further yet.
+        String moved = completedEffects.completed(quotation, userName);
         LocalDateTime now = LocalDateTime.now();
         for (QuotationEditRequest r : open) {
             r.setStatus(QuotationEditRequest.DONE);
@@ -133,7 +137,9 @@ public class QuotationEditRequestService {
             }
             repository.save(r);
         }
-        return ApiResponse.success("Quotation completed", toRow(open.get(0), quotation, userId));
+        return ApiResponse.success("Quotation completed"
+                + com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationCompletedEffects.moved(moved),
+                toRow(open.get(0), quotation, userId));
     }
 
     public ApiResponse<Map<String, Object>> decide(Long id, boolean approve, String note, Long adminId, String adminName) {

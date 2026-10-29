@@ -27,6 +27,7 @@ import { useQuotationAccess } from '../useQuotationAccess';
 import { usePendingEditRequests } from '../usePendingEditRequests';
 import { EditRequestControl } from './EditRequestControl';
 import { DeleteCancelledQuotations } from './DeleteCancelledQuotations';
+import { followUpNotice, movedToFollowUp } from '../followUpMove';
 import { LatestVersionTag } from './LatestVersionTag';
 import { isLatestOfFolder, isMarkedLatest } from '../latestVersion';
 
@@ -185,8 +186,12 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
   const changeStatus = async (id: number, status: string) => {
     setStatusMenu(null);
     try {
-      await updateStatus({ id, status }).unwrap();
+      const res = await updateStatus({ id, status }).unwrap();
       toast.success(`Status changed to ${QSTATUS[status]?.label ?? status}`);
+      const moved = movedToFollowUp(res?.message);
+      if (moved) {
+        toast.success(followUpNotice(moved));
+      }
     } catch (e: any) {
       toast.error(e?.data?.message || 'Failed to update status');
     }

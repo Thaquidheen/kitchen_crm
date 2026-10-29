@@ -73,9 +73,13 @@ public class DesignJobServiceImpl implements DesignJobService {
     /** Stages whose customers are listed with their design in the Designs module. */
     private static final List<CustomerStatus> PAST_DESIGN = List.of(
             CustomerStatus.QUOTE_GIVEN, CustomerStatus.FOLLOW_UP, CustomerStatus.NEGOTIATIONS, CustomerStatus.CONFIRMED);
-    /** A redesign pulls the customer back into Design — except from these, where only the design reopens. */
+    /**
+     * A redesign pulls the customer back into Design — except from these, where only the design
+     * reopens. A Confirmed customer moves back too: the new design is priced again from Quotation
+     * Stage (the owner's rule since 2026-10-29); a Lost one stays lost.
+     */
     private static final Set<CustomerStatus> REDESIGN_KEEPS_STAGE = EnumSet.of(
-            CustomerStatus.DESIGN_STAGE, CustomerStatus.CONFIRMED, CustomerStatus.LOST);
+            CustomerStatus.DESIGN_STAGE, CustomerStatus.LOST);
 
     @Autowired
     private DesignJobRepository jobRepository;
