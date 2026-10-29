@@ -188,7 +188,8 @@ export function QuotationList({ filters, onFiltersChange, onResetFilters }: Quot
     try {
       const res = await updateStatus({ id, status }).unwrap();
       toast.success(`Status changed to ${QSTATUS[status]?.label ?? status}`);
-      const moved = movedToFollowUp(res?.message);
+      // This endpoint answers with its words in "data" (ApiResponse<String>), not in "message".
+      const moved = movedToFollowUp(typeof res?.data === 'string' ? res.data : res?.message);
       if (moved) {
         toast.success(followUpNotice(moved));
       }
