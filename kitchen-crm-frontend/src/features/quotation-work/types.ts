@@ -36,7 +36,7 @@ export interface QuotationJob {
   startedAt?: string | null;
   completedAt?: string | null;
   completedByName?: string | null;
-  /** The quotation handed in (completed jobs). */
+  /** The quotation handed in (completed jobs), or the one the work was reopened for (open jobs). */
   quotation?: QuotationRef | null;
   /** The customer's quotations, newest first (open jobs). */
   customerQuotations?: QuotationRef[];

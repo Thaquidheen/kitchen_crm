@@ -22,7 +22,7 @@ import {
   useCompleteQuotationJobMutation,
   useStartQuotationJobMutation,
 } from '../quotationWorkAPI';
-import { defaultHandIn, isOpenJob, quotationLabel } from '../quotationWorkRules';
+import { defaultHandIn, isOpenJob, isReopenedJob, quotationLabel } from '../quotationWorkRules';
 import { fmtDay, fmtDayTime, JobStatusPill } from '../quotationWorkUi';
 import type { QuotationJob } from '../types';
 
@@ -47,13 +47,14 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
   const [start, { isLoading: starting }] = useStartQuotationJobMutation();
   const [complete, { isLoading: completing }] = useCompleteQuotationJobMutation();
   const [cancel, { isLoading: removing }] = useCancelQuotationJobMutation();
-  // The quotation handed in is Completed; editing it again goes through the admin.
-  const pendingEdits = usePendingEditRequests(!job || job.status !== 'COMPLETED' || !access.view);
+  // The quotation handed in is Completed; editing it again goes through the admin. Work reopened
+  // that way shows what the admin asked to change.
+  const pendingEdits = usePendingEditRequests(!job || (job.status !== 'COMPLETED' && !isReopenedJob(job)) || !access.view);
 
   const quotations = job?.customerQuotations ?? [];
   const usable = quotations.filter((q) => q.status !== 'CANCELLED');
   useEffect(() => {
-    setHandIn(defaultHandIn(job?.customerQuotations)?.id ?? null);
+    setHandIn(defaultHandIn(job?.customerQuotations, job?.quotation?.id)?.id ?? null);
     setConfirmRemove(false);
     // Only when another job is opened; a background refresh must not move the choice.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -64,6 +65,7 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
   }
 
   const open = isOpenJob(job.status);
+  const reopened = isReopenedJob(job);
   const canWork = open && (canManage || job.assigneeId === myId);
   const due = dueText(job);
   const fail = (e: any, fallback: string) => toast.error(e?.message || e?.data?.message || fallback);
@@ -129,6 +131,17 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
             <div>
               <div className={label}>Note from the admin</div>
               <p className="m-0 mt-1 text-[13px] text-text-900 whitespace-pre-wrap break-words">{job.note}</p>
+            </div>
+          )}
+
+          {open && reopened && job.quotation && (
+            <div>
+              <div className={label}>Reopened for editing</div>
+              <p className="m-0 mt-1 text-[12.5px] text-text-700">
+                {quotationLabel(job.quotation)} was completed and is a draft again. Edit it, then mark this completed to hand it
+                in again.
+              </p>
+              <EditRequestNotes request={pendingFor(pendingEdits, job.quotation.id)} className="mt-2" />
             </div>
           )}
 

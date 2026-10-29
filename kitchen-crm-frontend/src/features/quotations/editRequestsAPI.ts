@@ -77,11 +77,19 @@ export const editRequestsAPI = baseApi.injectEndpoints({
       transformResponse: unwrap<QuotationEditRequest>('Failed to send the request'),
       invalidatesTags: ['QuotationEditRequests'],
     }),
-    decideEditRequest: builder.mutation<QuotationEditRequest, { id: number; approve: boolean; note?: string }>({
+    // An approved request turns the quotation back into a draft, puts the work that handed it in
+    // back on the board and can move the customer back to Quotation Stage: the answer keeps the
+    // server's words, which say so.
+    decideEditRequest: builder.mutation<
+      { request: QuotationEditRequest; message: string },
+      { id: number; approve: boolean; note?: string }
+    >({
       query: ({ id, ...body }) => ({ url: `/quotation-edit-requests/${id}/decide`, method: 'PUT', body }),
-      transformResponse: unwrap<QuotationEditRequest>('Failed to save the answer'),
-      // An approved request turns the quotation back into a draft.
-      invalidatesTags: ['QuotationEditRequests', 'Quotations', 'QuotationWork'],
+      transformResponse: (r: ApiResponse<QuotationEditRequest>) => {
+        if (r.success) {return { request: r.data as QuotationEditRequest, message: r.message ?? '' };}
+        throw new Error(r.message || 'Failed to save the answer');
+      },
+      invalidatesTags: ['QuotationEditRequests', 'Quotations', 'QuotationWork', 'Customers', 'Designs', 'Dashboard'],
     }),
     // A reopened quotation, edited, is handed back as Completed.
     // The answer keeps the server's words: they say when the customer moved on to Follow Up.

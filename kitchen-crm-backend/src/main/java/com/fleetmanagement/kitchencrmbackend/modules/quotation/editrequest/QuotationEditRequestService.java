@@ -4,6 +4,8 @@ import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation.QuotationStatus;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.QuotationRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationCompletedEffects;
+import com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationReopenedEffects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +34,9 @@ public class QuotationEditRequestService {
     @Autowired
     private QuotationRepository quotationRepository;
     @Autowired
-    private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationCompletedEffects completedEffects;
+    private QuotationCompletedEffects completedEffects;
+    @Autowired
+    private QuotationReopenedEffects reopenedEffects;
 
     public ApiResponse<Map<String, Object>> request(Long quotationId, String reason, Long userId, String userName) {
         Quotation quotation = quotationId == null ? null : quotationRepository.findById(quotationId).orElse(null);
@@ -127,18 +131,12 @@ public class QuotationEditRequestService {
         }
         quotation.setStatus(QuotationStatus.COMPLETE);
         quotationRepository.save(quotation);
-        // Completed moves the customer on to Follow Up, when they are not there or further yet.
+        // Completed moves the customer on to Follow Up, when they are not there or further yet,
+        // and closes the work on the board that was reopened for it.
         String moved = completedEffects.completed(quotation, userName);
-        LocalDateTime now = LocalDateTime.now();
-        for (QuotationEditRequest r : open) {
-            r.setStatus(QuotationEditRequest.DONE);
-            if (r.getRequesterSeenAt() == null) {
-                r.setRequesterSeenAt(now);
-            }
-            repository.save(r);
-        }
-        return ApiResponse.success("Quotation completed"
-                + com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationCompletedEffects.moved(moved),
+        reopenedEffects.completedAgain(quotation, userId, userName);
+        editsDone(quotationId);
+        return ApiResponse.success("Quotation completed" + QuotationCompletedEffects.moved(moved),
                 toRow(open.get(0), quotation, userId));
     }
 
@@ -151,6 +149,7 @@ public class QuotationEditRequestService {
             return ApiResponse.error("This request has already been answered");
         }
         Quotation quotation = quotationRepository.findById(row.getQuotationId()).orElse(null);
+        boolean reopenedNow = false;
         if (approve) {
             if (quotation == null) {
                 return ApiResponse.error("That quotation no longer exists. Refuse the request to clear it");
@@ -158,6 +157,7 @@ public class QuotationEditRequestService {
             if (quotation.getStatus() == QuotationStatus.COMPLETE) {
                 quotation.setStatus(QuotationStatus.DRAFT);
                 quotationRepository.save(quotation);
+                reopenedNow = true;
             } else if (quotation.getStatus() != QuotationStatus.DRAFT) {
                 return ApiResponse.error("That quotation is no longer Completed. Refuse the request, or change its status first");
             }
@@ -169,7 +169,9 @@ public class QuotationEditRequestService {
         row.setDecisionNote(cut(note));
         row.setRequesterSeenAt(null);
         row = repository.save(row);
-        return ApiResponse.success(approve ? "Approved: the quotation is a draft again" : "Refused",
+        // Back on the board with whoever prepared it, and the customer back in Quotation Stage.
+        String movedBack = reopenedNow ? reopenedEffects.reopened(quotation, adminId, adminName, row.getDecisionNote()) : null;
+        return ApiResponse.success(approve ? "Approved: the quotation is a draft again" + QuotationReopenedEffects.movedBack(movedBack) : "Refused",
                 toRow(row, quotation, adminId));
     }
 
@@ -193,12 +195,28 @@ public class QuotationEditRequestService {
     }
 
     /**
+     * The reopened quotation is Completed again (with "Mark completed", on the board, or by hand):
+     * the requests that reopened it are done.
+     */
+    public void editsDone(Long quotationId) {
+        LocalDateTime now = LocalDateTime.now();
+        for (QuotationEditRequest r : repository.findByQuotationIdAndStatus(quotationId, QuotationEditRequest.APPROVED)) {
+            r.setStatus(QuotationEditRequest.DONE);
+            if (r.getRequesterSeenAt() == null) {
+                r.setRequesterSeenAt(now);
+            }
+            repository.save(r);
+        }
+    }
+
+    /**
      * Someone with the "Change status" permission set the quotation's status by hand. Putting it
-     * back to Draft is what a waiting request asked for; any other status than Completed leaves
-     * nothing to ask for.
+     * back to Draft is what a waiting request asked for; Completed again ends a reopening; any other
+     * status leaves nothing to ask for.
      */
     public void statusSetByHand(Long quotationId, QuotationStatus newStatus, String by) {
         if (newStatus == QuotationStatus.COMPLETE) {
+            editsDone(quotationId);
             return;
         }
         if (newStatus != QuotationStatus.DRAFT) {

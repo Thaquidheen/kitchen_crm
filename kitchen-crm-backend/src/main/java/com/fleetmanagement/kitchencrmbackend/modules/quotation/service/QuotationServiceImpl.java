@@ -49,6 +49,8 @@ public class QuotationServiceImpl implements QuotationService {
 
     @Autowired
     private QuotationCompletedEffects completedEffects;
+    @Autowired
+    private QuotationReopenedEffects reopenedEffects;
 
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.quotationwork.repository.QuotationJobRepository quotationJobRepository;
@@ -536,7 +538,7 @@ public class QuotationServiceImpl implements QuotationService {
     }
 
     @Override
-    public ApiResponse<String> updateQuotationStatus(Long id, Quotation.QuotationStatus newStatus, String updatedBy) {
+    public ApiResponse<String> updateQuotationStatus(Long id, Quotation.QuotationStatus newStatus, String updatedBy, Long updatedByUserId) {
         Quotation quotation = quotationRepository.findById(id).orElse(null);
         if (quotation == null) {
             return ApiResponse.error("Quotation not found");
@@ -544,6 +546,9 @@ public class QuotationServiceImpl implements QuotationService {
 
         boolean completedNow = newStatus == Quotation.QuotationStatus.COMPLETE
                 && quotation.getStatus() != Quotation.QuotationStatus.COMPLETE;
+        // Completed back to Draft is a reopening, as when a request to edit it is approved.
+        boolean reopenedNow = newStatus == Quotation.QuotationStatus.DRAFT
+                && quotation.getStatus() == Quotation.QuotationStatus.COMPLETE;
         quotation.setStatus(newStatus);
         if (newStatus == Quotation.QuotationStatus.APPROVED) {
             quotation.setApprovedBy(updatedBy);
@@ -553,9 +558,16 @@ public class QuotationServiceImpl implements QuotationService {
         quotationRepository.save(quotation);
         // A request to reopen it that was still waiting is answered by this.
         editRequests.statusSetByHand(id, newStatus, updatedBy);
-        // Completed moves the customer on to Follow Up (see QuotationCompletedEffects).
-        String moved = completedNow ? completedEffects.completed(quotation, updatedBy) : null;
-        return ApiResponse.success("Quotation status updated successfully" + QuotationCompletedEffects.moved(moved));
+        // Completed moves the customer on to Follow Up (see QuotationCompletedEffects) and closes the
+        // work reopened for it; back to Draft reopens that work (see QuotationReopenedEffects).
+        String moved = null;
+        if (completedNow) {
+            moved = completedEffects.completed(quotation, updatedBy);
+            reopenedEffects.completedAgain(quotation, updatedByUserId, updatedBy);
+        }
+        String movedBack = reopenedNow ? reopenedEffects.reopened(quotation, updatedByUserId, updatedBy, null) : null;
+        return ApiResponse.success("Quotation status updated successfully" + QuotationCompletedEffects.moved(moved)
+                + QuotationReopenedEffects.movedBack(movedBack));
     }
 
     @Override

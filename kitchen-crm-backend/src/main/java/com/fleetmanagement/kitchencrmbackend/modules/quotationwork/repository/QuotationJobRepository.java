@@ -31,6 +31,12 @@ public interface QuotationJobRepository extends JpaRepository<QuotationJob, Long
     List<QuotationJob> findByCustomerAndStatuses(@Param("customerId") Long customerId,
                                                  @Param("statuses") Collection<String> statuses);
 
+    /** The work that handed this quotation in (or was reopened for it), newest first. */
+    @Query("SELECT j FROM QuotationJob j JOIN FETCH j.customer WHERE j.quotationId = :quotationId AND j.status IN :statuses "
+            + "ORDER BY j.id DESC")
+    List<QuotationJob> findByQuotationAndStatuses(@Param("quotationId") Long quotationId,
+                                                  @Param("statuses") Collection<String> statuses);
+
     /**
      * Every customer at the given stage that nobody is preparing a quotation for right now, newest
      * first. Whether they already have a quotation is not asked here: the board lists them all and

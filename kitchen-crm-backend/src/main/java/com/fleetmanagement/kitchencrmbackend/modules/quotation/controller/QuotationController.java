@@ -256,7 +256,7 @@ public class QuotationController {
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         return ResponseEntity.ok(quotationService.updateQuotationStatus(
-                id, status, currentUser.getName()));
+                id, status, currentUser.getName(), currentUser.getId()));
     }
 
     @PostMapping("/{id}/duplicate")

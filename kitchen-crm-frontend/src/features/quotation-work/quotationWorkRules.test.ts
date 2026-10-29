@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   defaultHandIn,
   isOpenJob,
+  isReopenedJob,
   quotationLabel,
   quotationNewsText,
   heldByText,
@@ -145,6 +146,32 @@ describe('defaultHandIn', () => {
     expect(defaultHandIn([])).toBeNull();
     expect(defaultHandIn(undefined)).toBeNull();
     expect(defaultHandIn([{ id: 1, quotationNumber: 'Q-1', status: 'CANCELLED' }])).toBeNull();
+  });
+
+  it('offers the quotation the work was reopened for, even when a newer one exists', () => {
+    const quotations = [
+      { id: 30, quotationNumber: 'Q-30', status: 'DRAFT' },
+      { id: 20, quotationNumber: 'Q-20', status: 'DRAFT' },
+    ];
+    expect(defaultHandIn(quotations, 20)?.id).toBe(20);
+    // Gone from the list (deleted, or cancelled since): the newest usable one, as usual.
+    expect(defaultHandIn(quotations, 99)?.id).toBe(30);
+    expect(defaultHandIn([{ id: 20, quotationNumber: 'Q-20', status: 'CANCELLED' }, ...quotations.slice(0, 1)], 20)?.id).toBe(30);
+    expect(defaultHandIn(quotations, null)?.id).toBe(30);
+  });
+});
+
+describe('isReopenedJob', () => {
+  const q = { id: 7, quotationNumber: 'Q-7', status: 'DRAFT' };
+  it('is open work that names a quotation', () => {
+    expect(isReopenedJob(job({ status: 'WAITING', quotation: q }))).toBe(true);
+    expect(isReopenedJob(job({ status: 'IN_PROGRESS', quotation: q }))).toBe(true);
+  });
+  it('is not new work, nor closed work', () => {
+    expect(isReopenedJob(job({ status: 'WAITING' }))).toBe(false);
+    expect(isReopenedJob(job({ status: 'WAITING', quotation: null }))).toBe(false);
+    expect(isReopenedJob(job({ status: 'COMPLETED', quotation: q }))).toBe(false);
+    expect(isReopenedJob(job({ status: 'CANCELLED', quotation: q }))).toBe(false);
   });
 });
 

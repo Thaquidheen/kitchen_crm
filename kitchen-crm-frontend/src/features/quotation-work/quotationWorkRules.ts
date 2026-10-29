@@ -12,6 +12,12 @@ export const PRIORITY_TEXT: Record<QuotationWorkPriority, string> = {
 
 export const isOpenJob = (s: QuotationJobStatus) => s === 'WAITING' || s === 'IN_PROGRESS';
 
+/**
+ * Work back in someone's list because the quotation it handed in was reopened for editing: open
+ * work names a quotation only then (new work has none until it is completed).
+ */
+export const isReopenedJob = (job: Pick<QuotationJob, 'status' | 'quotation'>) => isOpenJob(job.status) && !!job.quotation;
+
 const dayLabel = (iso: string) =>
   new Date(iso.length > 10 ? iso : iso + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 
@@ -70,9 +76,14 @@ export const quotedText = (count: number, latestStatusLabel?: string | null): st
   return count === 1 ? `${n} · ${latestStatusLabel}` : `${n} · newest ${latestStatusLabel}`;
 };
 
-/** The quotation offered first when handing work in: the newest one that is not cancelled. */
-export const defaultHandIn = (quotations: QuotationRef[] | undefined): QuotationRef | null =>
-  [...(quotations ?? [])].filter((q) => q.status !== 'CANCELLED').sort((a, b) => b.id - a.id)[0] ?? null;
+/**
+ * The quotation offered first when handing work in: the one the work was reopened for, else the
+ * newest one that is not cancelled.
+ */
+export const defaultHandIn = (quotations: QuotationRef[] | undefined, reopenedFor?: number | null): QuotationRef | null => {
+  const usable = [...(quotations ?? [])].filter((q) => q.status !== 'CANCELLED');
+  return usable.find((q) => q.id === reopenedFor) ?? usable.sort((a, b) => b.id - a.id)[0] ?? null;
+};
 
 /** What a job's row in the bell says. `manages` = the reader is the admin or Admin staff. */
 export const quotationNewsText = (job: QuotationJob, manages: boolean): string => {
