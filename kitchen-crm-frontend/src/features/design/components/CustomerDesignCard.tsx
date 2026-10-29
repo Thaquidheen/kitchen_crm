@@ -11,18 +11,16 @@ import toast from 'react-hot-toast';
 import { useGetCustomerDesignJobQuery, useGetDesignMeQuery, useUploadCustomerPlanDocumentsMutation } from '../designAPI';
 import { PLAN_ACCEPT, addPickedFiles, designFilesHeading, isPlanFileName, uploadSizeProblem } from '../designFiles';
 import {
+  DesignFileLink,
   DesignStatusPill,
-  FileKindIcon,
   ORIGIN_LABEL,
   canSettleOpenDesign,
-  fileLinkProps,
   isApprovedDesign,
   isOpenDesign,
   versionLabel,
 } from '../designUi';
 import { RedesignModal } from './RedesignModal';
 import { UploadDesignModal } from './UploadDesignModal';
-import type { DesignFile } from '../types';
 
 interface Props {
   customerId: number;
@@ -40,16 +38,6 @@ const smallBtn =
 
 const fmtDate = (iso?: string | null) =>
   iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-
-const FileLink: React.FC<{ file: DesignFile }> = ({ file }) => (
-  <a
-    {...fileLinkProps(file)}
-    className="flex items-center gap-2 px-2.5 py-1.5 rounded-[9px] border border-background-600 hover:bg-background-700 transition-colors"
-  >
-    <FileKindIcon name={file.originalFileName} />
-    <span className="min-w-0 flex-1 truncate text-[12.5px] text-text-900">{file.originalFileName}</span>
-  </a>
-);
 
 /** Stages where a customer is expected to have a design to be quoted on. */
 const PAST_DESIGN = new Set(['QUOTE_GIVEN', 'FOLLOW_UP', 'NEGOTIATIONS', 'CONFIRMED']);
@@ -179,7 +167,7 @@ export const CustomerDesignCard: React.FC<Props> = ({
               <div className="text-[11.5px] font-medium text-text-600 mb-1">{designFilesHeading(files.length, approved)}</div>
               <div className="flex flex-col gap-1.5">
                 {files.map((f) => (
-                  <FileLink key={f.id} file={f} />
+                  <DesignFileLink key={f.id} file={f} />
                 ))}
               </div>
             </div>
@@ -194,7 +182,7 @@ export const CustomerDesignCard: React.FC<Props> = ({
               <div className="text-[11.5px] font-medium text-text-600 mb-1">Plan documents ({planDocuments.length})</div>
               <div className="flex flex-col gap-1.5">
                 {planDocuments.map((f) => (
-                  <FileLink key={f.id} file={f} />
+                  <DesignFileLink key={f.id} file={f} />
                 ))}
               </div>
             </div>
@@ -238,7 +226,7 @@ export const CustomerDesignCard: React.FC<Props> = ({
                         {v.approvedAt ? ` · ${fmtDate(v.approvedAt)}` : ' · not approved'}
                       </div>
                       {v.files.map((f) => (
-                        <FileLink key={f.id} file={f} />
+                        <DesignFileLink key={f.id} file={f} />
                       ))}
                     </div>
                   ))}

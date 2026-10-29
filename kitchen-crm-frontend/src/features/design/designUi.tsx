@@ -3,7 +3,7 @@ import React from 'react';
 import { DraftingCompass, FileText, Image as ImageIcon, Paperclip } from 'lucide-react';
 import { fileUrl } from '@/utils/fileUrl';
 import { fileKind, opensInBrowser } from './designFiles';
-import type { DesignJob, DesignOrigin, DesignPriority, DesignStatus, DesignerStatus, StaffType } from './types';
+import type { DesignFile, DesignJob, DesignOrigin, DesignPriority, DesignStatus, DesignerStatus, StaffType } from './types';
 
 export const STAFF_TYPE_LABEL: Record<StaffType, string> = {
   SALES: 'Sales',
@@ -92,6 +92,17 @@ export const fileLinkProps = (file: { fileUrl: string; originalFileName: string 
   opensInBrowser(file.originalFileName)
     ? { href: fileUrl(file.fileUrl), target: '_blank', rel: 'noreferrer' }
     : { href: fileUrl(file.fileUrl), download: file.originalFileName };
+
+/** A stored design file as a small link line: its kind's icon and name, opened as fileLinkProps says. */
+export const DesignFileLink: React.FC<{ file: DesignFile }> = ({ file }) => (
+  <a
+    {...fileLinkProps(file)}
+    className="flex items-center gap-2 px-2.5 py-1.5 rounded-[9px] border border-background-600 hover:bg-background-700 transition-colors"
+  >
+    <FileKindIcon name={file.originalFileName} />
+    <span className="min-w-0 flex-1 truncate text-[12.5px] text-text-900">{file.originalFileName}</span>
+  </a>
+);
 
 /**
  * What moving a customer to Quotation Stage needs, given their design (null = none saved).

@@ -4,16 +4,31 @@
  * was never saved show as "Not uploaded" so it can be added; an approved design can be sent back
  * for a redesign from here. Finished designs that belong to no such customer (cancelled, or the
  * customer is in another stage) sit under their own filter, so no design is unreachable.
+ * The search finds a customer by name or place; "More Filters" narrows by stage, design and who
+ * made it, within the quick filter chosen.
  *
  * The table scrolls inside its card with the header pinned: the page itself stays one screen tall.
  */
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { RotateCcw, Search, Upload } from 'lucide-react';
+import { RotateCcw, Upload } from 'lucide-react';
 import { STATUS_PILL } from '@/features/customers/components/CustomerList';
 import { useGetDesignLibraryQuery } from '../designAPI';
 import { fileKindLabel } from '../designFiles';
-import { DesignStatusPill, FileKindIcon, ORIGIN_LABEL, fileLinkProps, isApprovedDesign, versionLabel } from '../designUi';
+import {
+  NO_LIBRARY_FILTER,
+  designStateOptions,
+  isLibraryFiltered,
+  libraryPanelCount,
+  libraryRowMatches,
+  madeByOptions,
+  normalizeText,
+  stageOptions,
+  type DesignStateKey,
+  type LibraryFilter,
+} from '../designFilters';
+import { DESIGN_STATUS, DesignStatusPill, FileKindIcon, ORIGIN_LABEL, fileLinkProps, isApprovedDesign, versionLabel } from '../designUi';
+import { FilterSelect, FilterSummary, FiltersToggle, NoMatch, SearchBox, type ActiveFilter } from './DesignFilterControls';
 import { RedesignModal } from './RedesignModal';
 import { UploadDesignModal, type UploadDesignTarget } from './UploadDesignModal';
 import type { DesignJob } from '../types';
@@ -46,6 +61,11 @@ const ghostBtn =
 const fmtDate = (iso?: string | null) =>
   iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
+/** Customer stages in pipeline order, as the stage pills name them. */
+const STAGE_ORDER = Object.keys(STATUS_PILL);
+const stageLabel = (s: string) => STATUS_PILL[s]?.label ?? s;
+const designStateLabel = (k: DesignStateKey) => (k === 'NONE' ? 'Not uploaded' : DESIGN_STATUS[k]?.label ?? k);
+
 const StagePill: React.FC<{ status?: string | null }> = ({ status }) => {
   if (!status) {return <span className="text-[12px] text-text-500">—</span>;}
   const meta = STATUS_PILL[status] ?? { st: 'draft', label: status };
@@ -66,7 +86,8 @@ export const DesignLibrary: React.FC<Props> = ({ onOpen, otherFinished, canRedes
     refetchOnMountOrArgChange: true,
   });
   const [filter, setFilter] = useState<Filter>('ALL');
-  const [search, setSearch] = useState('');
+  const [narrow, setNarrow] = useState<LibraryFilter>(NO_LIBRARY_FILTER);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [uploadFor, setUploadFor] = useState<UploadDesignTarget | null>(null);
   const [redesign, setRedesign] = useState<DesignJob | null>(null);
 
@@ -96,14 +117,37 @@ export const DesignLibrary: React.FC<Props> = ({ onOpen, otherFinished, canRedes
   );
   const missing = useMemo(() => libraryRows.filter((r) => !r.design).length, [libraryRows]);
 
-  const rows = useMemo(() => {
-    const base = filter === 'OTHER' ? otherRows : filter === 'MISSING' ? libraryRows.filter((r) => !r.design) : libraryRows;
-    const q = search.trim().toLowerCase();
-    if (!q) {return base;}
-    return base.filter(
-      (r) => r.customerName.toLowerCase().includes(q) || (r.customerPlace ?? '').toLowerCase().includes(q),
-    );
-  }, [filter, search, libraryRows, otherRows]);
+  // The quick filter picks the rows; the search and "More Filters" narrow them down.
+  const baseRows = useMemo(
+    () => (filter === 'OTHER' ? otherRows : filter === 'MISSING' ? libraryRows.filter((r) => !r.design) : libraryRows),
+    [filter, libraryRows, otherRows],
+  );
+  const allRows = useMemo(() => [...libraryRows, ...otherRows], [libraryRows, otherRows]);
+  const filtering = isLibraryFiltered(narrow);
+  const rows = useMemo(
+    () => (filtering ? baseRows.filter((r) => libraryRowMatches(r, narrow)) : baseRows),
+    [filtering, baseRows, narrow],
+  );
+  const stages = useMemo(() => stageOptions(baseRows, STAGE_ORDER, narrow.stage), [baseRows, narrow.stage]);
+  const designStates = useMemo(() => designStateOptions(baseRows, narrow.design), [baseRows, narrow.design]);
+  const makers = useMemo(() => madeByOptions(baseRows, narrow.madeBy, allRows), [baseRows, narrow.madeBy, allRows]);
+
+  const set = (patch: Partial<LibraryFilter>) => setNarrow((prev) => ({ ...prev, ...patch }));
+  const clearFilters = () => setNarrow(NO_LIBRARY_FILTER);
+  const active: ActiveFilter[] = [];
+  if (normalizeText(narrow.search)) {
+    active.push({ key: 'search', label: `“${narrow.search.trim()}”`, onRemove: () => set({ search: '' }) });
+  }
+  if (narrow.stage) {
+    active.push({ key: 'stage', label: `Stage: ${stageLabel(narrow.stage)}`, onRemove: () => set({ stage: '' }) });
+  }
+  if (narrow.design) {
+    active.push({ key: 'design', label: `Design: ${designStateLabel(narrow.design)}`, onRemove: () => set({ design: '' }) });
+  }
+  if (narrow.madeBy) {
+    const who = makers.find((m) => m.value === narrow.madeBy)?.label ?? narrow.madeBy;
+    active.push({ key: 'madeBy', label: `Made by: ${who}`, onRemove: () => set({ madeBy: '' }) });
+  }
 
   const chip = (key: Filter, label: string, count: number) => {
     const active = filter === key;
@@ -138,17 +182,47 @@ export const DesignLibrary: React.FC<Props> = ({ onOpen, otherFinished, canRedes
         {chip('MISSING', 'Design not uploaded', missing)}
         {otherRows.length > 0 && chip('OTHER', 'Other finished', otherRows.length)}
         <span className="flex-1" />
-        <label className="relative">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-500" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search customer"
-            aria-label="Search customer"
-            className="h-8 w-[190px] pl-8 pr-2.5 rounded-[9px] border border-background-600 bg-background-900 text-[12.5px] text-text-900 outline-none focus:border-primary-600 placeholder:text-text-500"
-          />
-        </label>
+        <SearchBox
+          value={narrow.search}
+          onChange={(search) => set({ search })}
+          placeholder="Search customer or place"
+          className="flex-1 min-w-[160px] sm:flex-none sm:w-[230px]"
+        />
+        <FiltersToggle open={filtersOpen} count={libraryPanelCount(narrow)} onToggle={() => setFiltersOpen((o) => !o)} />
       </div>
+
+      {/* More Filters: they apply as they are chosen, within the quick filter above */}
+      {filtersOpen && (
+        <div className="flex flex-wrap items-end gap-2.5 px-3.5 py-2.5 border-b border-background-600">
+          <FilterSelect
+            label="Stage"
+            value={narrow.stage}
+            onChange={(stage) => set({ stage })}
+            allLabel="All stages"
+            options={stages.map((s) => ({ value: s, label: stageLabel(s) }))}
+          />
+          <FilterSelect
+            label="Design"
+            value={narrow.design}
+            onChange={(design) => set({ design: design as DesignStateKey | '' })}
+            allLabel="Any design"
+            options={designStates.map((k) => ({ value: k, label: designStateLabel(k) }))}
+          />
+          <FilterSelect
+            label="Made by"
+            value={narrow.madeBy}
+            onChange={(madeBy) => set({ madeBy })}
+            allLabel="Anyone"
+            options={makers}
+          />
+        </div>
+      )}
+
+      {filtering && (
+        <div className="px-3.5 py-2 border-b border-background-600">
+          <FilterSummary shown={rows.length} total={baseRows.length} noun="customers" active={active} onClear={clearFilters} />
+        </div>
+      )}
 
       {/* Table: scrolls in place, header pinned */}
       <div className="flex-1 min-h-0 overflow-auto">
@@ -157,13 +231,11 @@ export const DesignLibrary: React.FC<Props> = ({ onOpen, otherFinished, canRedes
             <div className="h-5 w-1/3 bg-background-700 rounded mb-3" />
             <div className="h-24 bg-background-700 rounded" />
           </div>
+        ) : rows.length === 0 && filtering && baseRows.length > 0 ? (
+          <NoMatch message="No customer here matches the search and filters." onClear={clearFilters} />
         ) : rows.length === 0 ? (
           <p className="m-0 py-10 text-center text-[12.5px] text-text-500">
-            {search
-              ? 'No customer matches.'
-              : filter === 'MISSING'
-                ? 'Every customer here has a design saved.'
-                : 'No customers here yet.'}
+            {filter === 'MISSING' ? 'Every customer here has a design saved.' : 'No customers here yet.'}
           </p>
         ) : (
           <table className="w-full min-w-[820px] border-collapse">
