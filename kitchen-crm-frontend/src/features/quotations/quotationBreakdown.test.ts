@@ -248,6 +248,13 @@ describe("other expenses for someone not sent their margin (staff)", () => {
     close(s.total.after, 2500);
     close(s.total.tax, 450);
   });
+  it('are not worked out from category totals that were never priced (a duplicated quotation)', () => {
+    const cats = [categoryBreakdown('cabinets', [{ description: 'A', quantity: 1 }], { tax: 18 }, { tax: 0, final: 0 })];
+    const exp = expenseBreakdown([{ name: 'Transportation', amount: 6000 }], { tax: 18 });
+    const { sections } = fillServerExpenses([{ name: 'K', cats, exp, total: 180851.52 }], null, 180851.52);
+    expect(sections[0].exp.final).toBeUndefined();
+  });
+
   it('leave known figures alone', () => {
     const exp = expenseBreakdown([{ name: 'Installation', amount: 1000 }], { margin: 0, tax: 18 });
     const { sections } = fillServerExpenses([{ name: 'K', cats: [], exp, total: 99999 }], null, 99999);

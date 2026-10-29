@@ -344,10 +344,16 @@ export const fillServerExpenses = <S extends { cats: CategoryBreakdown[]; exp: E
     const tax = known(e.taxPct) ? (final * e.taxPct) / (100 + e.taxPct) : undefined;
     return { ...e, final: round2(final), tax: tax === undefined ? undefined : round2(tax) };
   };
+  // Only from totals the server really priced: a category with lines but a 0 total was never priced
+  // (a duplicated quotation is saved with its category totals at 0) and leaves nothing to work from.
+  const priced = (c: CategoryBreakdown) => c.lines.length === 0 || (known(c.final) && c.final > 0);
   const filled = sections.map((s) => {
     const finals = s.cats.map((c) => c.final);
-    const rest = known(s.total) && finals.every(known) ? s.total - finals.reduce((a: number, v) => a + (v as number), 0) : undefined;
-    return { ...s, exp: fill(s.exp, rest) };
+    const rest =
+      known(s.total) && finals.every(known) && s.cats.every(priced)
+        ? s.total - finals.reduce((a: number, v) => a + (v as number), 0)
+        : undefined;
+    return { ...s, exp: fill(s.exp, rest !== undefined && rest >= 0 ? rest : undefined) };
   });
   const kitchenTotals = sections.map((s) => s.total);
   const shared =

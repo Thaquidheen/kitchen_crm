@@ -48,6 +48,10 @@ export const boardPanelCount = (f: BoardFilter): number =>
 export const isBoardFiltered = (f: BoardFilter): boolean =>
   normalizeText(f.search) !== '' || f.overdueOnly || boardPanelCount(f) > 0;
 
+/** Only one designer is picked: that designer's column is shown whole, so it can still be reordered. */
+export const onlyDesignerFilter = (f: BoardFilter): boolean =>
+  f.designerId !== null && normalizeText(f.search) === '' && !f.overdueOnly && boardPanelCount(f) === 1;
+
 /** Only the search narrows the board (the reorder hint then says "Clear the search"). */
 export const onlyBoardSearch = (f: BoardFilter): boolean =>
   normalizeText(f.search) !== '' && !f.overdueOnly && boardPanelCount(f) === 0;

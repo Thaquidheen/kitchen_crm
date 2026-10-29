@@ -63,6 +63,7 @@ import {
   boardPanelCount,
   boardStatusOptions,
   isBoardFiltered,
+  onlyDesignerFilter,
   normalizeText,
   onlyBoardSearch,
   recentlyCompleted,
@@ -564,11 +565,25 @@ const DesignsPage: React.FC = () => {
   const missing = useMemo(() => library.filter((r) => !r.design).length, [library]);
   // The board's Completed column: designs approved lately, newest first (the closed designs are
   // loaded for whoever manages, as above).
-  const completed = useMemo(() => (manages ? recentlyCompleted(closed, new Date()) : []), [manages, closed]);
+  // Re-checked every hour too: a board left open drops a design once its 14 days are over.
+  const [hourTick, setHourTick] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setHourTick((n) => n + 1), 60 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const completed = useMemo(
+    () => (manages ? recentlyCompleted(closed, new Date()) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [manages, closed, hourTick],
+  );
 
   // Search and filters: they narrow the cards this person already sees, never add to them.
   const [filter, setFilter] = useState<BoardFilter>(NO_BOARD_FILTER);
   const filtering = isBoardFiltered(filter);
+  // Following a designer link (sidebar) shows the whole board at that designer's column.
+  useEffect(() => {
+    if (focusDesigner) {setFilter(NO_BOARD_FILTER);}
+  }, [focusDesigner]);
   const keepJob = useCallback((j: DesignJob) => boardJobMatches(j, filter), [filter]);
   const matches = filtering ? keepJob : undefined;
   const reorderHint = onlyBoardSearch(filter) ? 'Clear the search to reorder' : 'Clear the filters to reorder';
@@ -802,7 +817,7 @@ const DesignsPage: React.FC = () => {
                     jobs={queues[i]}
                     onOpen={openJob}
                     readOnly={!isAdmin}
-                    matches={matches}
+                    matches={onlyDesignerFilter(filter) && filter.designerId === d.id ? undefined : matches}
                     reorderHint={reorderHint}
                   />
                 ))}

@@ -5,7 +5,7 @@
  * preserved: Edit, Download PDF, Duplicate, approval details, signature management.
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   useGetQuotationByIdQuery,
@@ -72,6 +72,25 @@ export function QuotationDetailPage() {
   const [duplicateQuotation, { isLoading: isDuplicating }] = useDuplicateQuotationMutation();
   const [downloadQuotationPDF, { isLoading: isDownloading }] = useDownloadQuotationPDFMutation();
   const [activeTab, setActiveTab] = useState('Overview');
+  // While the header is pinned, what gets focus (or is scrolled into view) lands below it, not under it.
+  const stickyRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const main = document.getElementById('dashboard-main');
+    const el = stickyRef.current;
+    if (!main || !el) {return undefined;}
+    const update = () => {
+      main.style.scrollPaddingTop = getComputedStyle(el).position === 'sticky' ? `${el.offsetHeight}px` : '';
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener('resize', update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', update);
+      main.style.scrollPaddingTop = '';
+    };
+  });
 
   const folderId: number | undefined = (data as any)?.folderId ?? undefined;
   const { data: versions = [] } = useGetFolderVersionsQuery(folderId!, { skip: !folderId });
@@ -162,10 +181,13 @@ export function QuotationDetailPage() {
 
   return (
     <div className="w-full">
-      {/* The header and the tabs stay in view while the page scrolls (from tablet width up: on a
-          phone the wrapped header would take too much of the screen). The negative margins reach
-          the edges of the page's padding (AppLayout) so nothing shows around it. */}
-      <div className="md:sticky md:top-0 z-20 md:-mx-6 md:-mt-6 md:px-6 md:pt-6 bg-background-900">
+      {/* The header and the tabs stay in view while the page scrolls — on screens wide and tall
+          enough (on a phone, a landscape phone or a zoomed-in laptop the header would take too much
+          of the screen). The negative margins reach the edges of the page's padding (AppLayout). */}
+      <div
+        ref={stickyRef}
+        className="[@media(min-width:768px)_and_(min-height:640px)]:sticky top-0 z-20 md:-mx-6 md:-mt-6 md:px-6 md:pt-6 bg-background-900"
+      >
       {/* Compact header */}
       <div className="flex items-center gap-3 flex-wrap mb-4">
         <button
@@ -250,7 +272,11 @@ export function QuotationDetailPage() {
           return (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => {
+                setActiveTab(tab);
+                // From the pinned tab bar deep in a page: the new tab starts at its top.
+                document.getElementById('dashboard-main')?.scrollTo({ top: 0 });
+              }}
               className={`px-3.5 py-2.5 text-[13px] whitespace-nowrap border-b-2 -mb-px transition-colors ${
                 active
                   ? 'border-primary-600 text-primary-600 font-semibold'

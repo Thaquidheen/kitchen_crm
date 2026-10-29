@@ -162,6 +162,7 @@ const ExpensesTable: React.FC<{ e: ExpenseBreakdown; access: Access }> = ({ e, a
         <div className="border-t border-background-600 bg-background-700/40 py-1.5">
           <SumRow name="Expenses" value={e.base} />
           {margins && <SumRow name={`Margin ${pctText(e.marginPct)}`} value={e.margin} tone="margin" />}
+          {!margins && e.final !== undefined && e.tax !== undefined && <SumRow name="With margin" value={e.final - e.tax} />}
           <SumRow name={`GST ${pctText(e.taxPct)}`} value={e.tax} />
           <SumRow name="Other expenses total" value={e.final} strong />
         </div>
