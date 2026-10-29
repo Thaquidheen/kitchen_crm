@@ -865,6 +865,12 @@ public class DesignJobServiceImpl implements DesignJobService {
                         : "The admin has asked for changes to this design and approves the new one");
             }
         }
+        // What waits for the admin's decision (handed in, sent for review, or changes asked) is decided
+        // by the admin, not settled by another upload from staff.
+        if (!admin && !coordinator && open && (status(existing) == DesignStatus.PENDING_SUPERADMIN_APPROVAL
+                || status(existing) == DesignStatus.REVISION_REQUIRED || existing.getCompletedAt() != null)) {
+            return ApiResponse.error("This design is waiting for the admin's decision");
+        }
         // A newer design over an approved one, from anyone but the admin or Admin staff, waits for the
         // admin's review: the approved design stays in force until then (the owner's rule, 2026-10-29).
         boolean forReview = !admin && !coordinator && existing != null && APPROVED_STATES.contains(status(existing));

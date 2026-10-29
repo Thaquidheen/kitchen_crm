@@ -1307,7 +1307,7 @@ export function QuotationBuilderPage() {
   const [previewFailedFor, setPreviewFailedFor] = useState<string | null>(null);
   const latestPricing = useRef(currentPricing);
   latestPricing.current = currentPricing;
-  const staffPrices = !access.computesTotals && (isEditMode ? access.edit : access.create);
+  const staffPrices = !access.computesTotals && (isEditMode && !copyMode ? access.edit : access.create);
   const saving = isCreating || isUpdating;
   const previewDue =
     staffPrices && figures !== null && currentPricing !== figures.key && !!formData.customerId && previewFailedFor !== currentPricing;
@@ -1319,9 +1319,11 @@ export function QuotationBuilderPage() {
       setPreviewBusy(true);
       try {
         const body = convertFormDataToRequest(true) as unknown as Record<string, unknown>;
-        const answer = isEditMode && id
-          ? await previewChanges({ id: Number(id), ...body }).unwrap()
-          : await previewNew(body).unwrap();
+        const answer = copyMode && id
+          ? await previewNew({ ...body, sourceQuotationId: Number(id) }).unwrap()
+          : isEditMode && id
+            ? await previewChanges({ id: Number(id), ...body }).unwrap()
+            : await previewNew(body).unwrap();
         const priced = answer?.data ? roundAmounts(answer.data as unknown as Record<string, unknown>) : undefined;
         if (!priced || latestPricing.current !== key) {return;}
         setFormData((prev) => withPricedFigures(prev as Record<string, unknown>, priced) as Partial<QuotationFormData>);
