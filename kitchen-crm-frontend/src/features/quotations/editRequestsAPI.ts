@@ -84,10 +84,14 @@ export const editRequestsAPI = baseApi.injectEndpoints({
       invalidatesTags: ['QuotationEditRequests', 'Quotations', 'QuotationWork'],
     }),
     // A reopened quotation, edited, is handed back as Completed.
-    finishQuotationEdit: builder.mutation<QuotationEditRequest, { quotationId: number }>({
+    // The answer keeps the server's words: they say when the customer moved on to Follow Up.
+    finishQuotationEdit: builder.mutation<{ request: QuotationEditRequest; message: string }, { quotationId: number }>({
       query: (body) => ({ url: '/quotation-edit-requests/finish', method: 'POST', body }),
-      transformResponse: unwrap<QuotationEditRequest>('Failed to mark the quotation completed'),
-      invalidatesTags: ['QuotationEditRequests', 'Quotations', 'QuotationWork'],
+      transformResponse: (r: ApiResponse<QuotationEditRequest>) => {
+        if (r.success) {return { request: r.data as QuotationEditRequest, message: r.message ?? '' };}
+        throw new Error(r.message || 'Failed to mark the quotation completed');
+      },
+      invalidatesTags: ['QuotationEditRequests', 'Quotations', 'QuotationWork', 'Customers', 'Designs', 'Dashboard'],
     }),
     markEditAnswersSeen: builder.mutation<number, void>({
       query: () => ({ url: '/quotation-edit-requests/seen', method: 'PUT' }),

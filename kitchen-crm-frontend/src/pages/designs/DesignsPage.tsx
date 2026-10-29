@@ -2,19 +2,22 @@
  * DesignsPage — customer designs assigned to designers.
  *
  * Admin: two views that each fit one screen.
- *  - Work board: columns side by side — designs to review, customers to assign, then one column
- *    per designer (admin-set status, workload, drag to set which design is done first). Each
- *    column scrolls on its own, so the page does not.
+ *  - Work board: columns side by side — designs to review, customers to assign, one column per
+ *    designer (admin-set status, workload, drag to set which design is done first), then the
+ *    designs approved in the last 14 days with their files. Each column scrolls on its own, so
+ *    the page does not.
  *  - Customer designs: the design every customer at Quotation Stage or later is quoted on, as a
  *    table that scrolls in place.
  * Admin staff see the same two views to follow the work and attach plan documents; assigning a
  * designer, reviewing, redesigning, ordering the queue and setting a designer's status stay with
  * the admin.
  * Designer: only their own designs, in the order the admin set.
+ * Above the board (and a designer's own lists) a search and filters narrow the cards on show; they
+ * only narrow what the page already holds for this person.
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle2, GripVertical, MessageCircle, Paperclip, Palette, UserPlus } from 'lucide-react';
+import { CheckCircle2, Clock, GripVertical, MessageCircle, Paperclip, Palette, UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   DndContext,
@@ -40,21 +43,57 @@ import {
   useSetDesignerStatusMutation,
   useUploadPlanDocumentsMutation,
 } from '@/features/design/designAPI';
-import { defaultDueDate, DESIGNER_STATUS, DesignerStatusDot, DesignStatusPill, dueText, isDesignerWork, PriorityPill, versionLabel } from '@/features/design/designUi';
+import {
+  defaultDueDate,
+  DESIGN_STATUS,
+  DESIGNER_STATUS,
+  DesignerStatusDot,
+  DesignStatusPill,
+  dueText,
+  isDesignerWork,
+  PRIORITY_LABEL,
+  PriorityPill,
+  versionLabel,
+} from '@/features/design/designUi';
+import {
+  COMPLETED_DAYS,
+  NO_BOARD_FILTER,
+  boardCustomerMatches,
+  boardJobMatches,
+  boardPanelCount,
+  boardStatusOptions,
+  isBoardFiltered,
+  onlyDesignerFilter,
+  normalizeText,
+  onlyBoardSearch,
+  recentlyCompleted,
+  type BoardFilter,
+} from '@/features/design/designFilters';
+import { CompletedDesignCard } from '@/features/design/components/CompletedDesignCard';
 import { DesignJobDrawer } from '@/features/design/components/DesignJobDrawer';
+import {
+  FilterSelect,
+  FilterSummary,
+  FiltersToggle,
+  NoMatch,
+  SearchBox,
+  ToggleFilter,
+  type ActiveFilter,
+} from '@/features/design/components/DesignFilterControls';
 import { DesignerPicker, type DesignAssignment } from '@/features/design/components/DesignerPicker';
 import { DesignLibrary } from '@/features/design/components/DesignLibrary';
 import { PlanDocumentsField } from '@/features/design/components/PlanDocumentsField';
-import type { DesignJob, DesignerStatus, UnassignedDesignCustomer } from '@/features/design/types';
+import type { DesignJob, DesignPriority, DesignStatus, DesignerStatus, DesignerSummary, UnassignedDesignCustomer } from '@/features/design/types';
 
 const card = 'bg-background-800 border border-background-600 rounded-[14px]';
 const sectionTitle = 'text-[13px] font-semibold text-text-900';
 const countBadge = 'text-[11px] font-[650] px-1.5 py-px rounded-full bg-background-700 border border-background-600 text-text-700 tabular-nums';
 /**
- * A board column is as tall as its content, up to the space left under the page header; past
- * that its list scrolls. 196px = app header + page padding + this page's own title row.
+ * A board column is as tall as its content, up to the space left under the page header and the
+ * search bar; past that its list scrolls. --board-top is 196px (app header + page padding + this
+ * page's own title row) plus the search bar's measured height, set where the columns are laid out.
  */
-const columnShell = `${card} flex flex-col min-w-0 min-h-0 lg:max-h-[calc(100dvh-196px)]`;
+const columnShell = `${card} flex flex-col min-w-0 min-h-0 lg:max-h-[calc(100dvh-var(--board-top,196px))]`;
 const columnBody = 'flex-1 min-h-0 overflow-y-auto px-3 pb-3 flex flex-col gap-1.5';
 
 type AdminView = 'work' | 'designs';
@@ -168,6 +207,9 @@ const SortableJobRow: React.FC<RowProps> = (props) => {
 /**
  * A designer's column: status (admin sets it), workload, and the queue to drag into order.
  * `readOnly` (Admin staff) shows the same queue without the status menu or the drag handles.
+ * While the board is searched or filtered (`matches`), the column shows the designs that match
+ * at their place in the queue, says "x of y", and cannot be reordered: a drag among some of the
+ * designs would move the hidden ones too. A column with nothing that matches is left out.
  */
 const DesignerColumn: React.FC<{
   designerId: number;
@@ -178,7 +220,10 @@ const DesignerColumn: React.FC<{
   jobs: DesignJob[];
   onOpen: (id: number) => void;
   readOnly?: boolean;
-}> = ({ designerId, name, status, activeCount, overdue, jobs, onOpen, readOnly = false }) => {
+  matches?: (job: DesignJob) => boolean;
+  /** What the hint says while filtered: how to get the drag handles back. */
+  reorderHint?: string;
+}> = ({ designerId, name, status, activeCount, overdue, jobs, onOpen, readOnly = false, matches, reorderHint }) => {
   const [order, setOrder] = useState<DesignJob[]>(jobs);
   const [reorder] = useReorderDesignJobsMutation();
   const [setStatus] = useSetDesignerStatusMutation();
@@ -211,13 +256,20 @@ const DesignerColumn: React.FC<{
     }
   };
 
+  const filtering = matches !== undefined;
+  // Each design keeps its place in the queue (#7 stays #7) when others are filtered out.
+  const shown = order.map((job, i) => ({ job, position: i + 1 })).filter(({ job }) => !matches || matches(job));
+  if (filtering && shown.length === 0) {
+    return null;
+  }
+
   return (
     <section id={`designer-${designerId}`} className={columnShell} aria-label={`${name}'s designs`}>
       <div className="px-3 pt-3 pb-2">
         <div className="flex items-center gap-2">
           <DesignerStatusDot status={status} size={10} />
           <span className="text-[13.5px] font-semibold text-text-900 truncate">{name}</span>
-          <span className={countBadge}>{activeCount}</span>
+          <span className={countBadge}>{filtering ? `${shown.length} of ${order.length}` : activeCount}</span>
           <span className="flex-1" />
           {readOnly ? (
             <span className="text-[12px] text-text-600">{status ? DESIGNER_STATUS[status].label : 'Status not set'}</span>
@@ -240,14 +292,18 @@ const DesignerColumn: React.FC<{
         </div>
         <div className="mt-1 text-[11.5px] text-text-600">
           {overdue > 0 && <span style={{ color: 'var(--st-lost-fg)' }}>{overdue} overdue · </span>}
-          {!readOnly && order.length > 1 ? 'Drag to set which comes first' : 'Designs in the order to do them'}
+          {!readOnly && order.length > 1
+            ? filtering
+              ? reorderHint ?? 'Clear the filters to reorder'
+              : 'Drag to set which comes first'
+            : 'Designs in the order to do them'}
         </div>
       </div>
       <div className={columnBody}>
         {order.length === 0 ? (
           <p className="m-0 py-4 text-center text-[12px] text-text-500">No designs in the queue.</p>
-        ) : readOnly ? (
-          order.map((j, i) => <JobRow key={j.id} job={j} position={i + 1} viewer="admin" onOpen={onOpen} />)
+        ) : readOnly || filtering ? (
+          shown.map(({ job, position }) => <JobRow key={job.id} job={job} position={position} viewer="admin" onOpen={onOpen} />)
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <SortableContext items={order.map((j) => j.id)} strategy={verticalListSortingStrategy}>
@@ -259,6 +315,114 @@ const DesignerColumn: React.FC<{
         )}
       </div>
     </section>
+  );
+};
+
+/** An element's height, kept current as it wraps or opens (0 while it is not on screen). */
+const useHeight = (el: HTMLElement | null): number => {
+  const [height, setHeight] = useState(0);
+  useEffect(() => {
+    if (!el) {
+      setHeight(0);
+      return undefined;
+    }
+    const measure = () => setHeight(el.offsetHeight);
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      return undefined;
+    }
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [el]);
+  return height;
+};
+
+const PRIORITY_OPTIONS = (Object.keys(PRIORITY_LABEL) as DesignPriority[]).map((p) => ({ value: p, label: PRIORITY_LABEL[p] }));
+
+/**
+ * The search and filters above the board, and above a designer's own lists. `designers` (the
+ * people who see every designer's column) adds the designer filter.
+ */
+const BoardSearchBar: React.FC<{
+  filter: BoardFilter;
+  onChange: (next: BoardFilter) => void;
+  statuses: DesignStatus[];
+  designers?: DesignerSummary[];
+  shown: number;
+  total: number;
+  barRef: (el: HTMLDivElement | null) => void;
+}> = ({ filter, onChange, statuses, designers, shown, total, barRef }) => {
+  const [open, setOpen] = useState(false);
+  const set = (patch: Partial<BoardFilter>) => onChange({ ...filter, ...patch });
+  const active: ActiveFilter[] = [];
+  if (normalizeText(filter.search)) {
+    active.push({ key: 'search', label: `“${filter.search.trim()}”`, onRemove: () => set({ search: '' }) });
+  }
+  if (filter.overdueOnly) {
+    active.push({ key: 'overdue', label: 'Overdue only', onRemove: () => set({ overdueOnly: false }) });
+  }
+  if (filter.status) {
+    active.push({ key: 'status', label: `Status: ${DESIGN_STATUS[filter.status]?.label ?? filter.status}`, onRemove: () => set({ status: '' }) });
+  }
+  if (filter.priority) {
+    active.push({ key: 'priority', label: `Priority: ${PRIORITY_LABEL[filter.priority]}`, onRemove: () => set({ priority: '' }) });
+  }
+  if (filter.designerId !== null) {
+    const name = designers?.find((d) => d.id === filter.designerId)?.name ?? 'Designer';
+    active.push({ key: 'designer', label: `Designer: ${name}`, onRemove: () => set({ designerId: null }) });
+  }
+  return (
+    <div ref={barRef} className={`${card} mb-3`}>
+      <div className="flex items-center gap-2 flex-wrap px-3.5 py-2.5">
+        <SearchBox
+          value={filter.search}
+          onChange={(search) => set({ search })}
+          placeholder="Search customer or place"
+          className="w-full sm:w-[260px]"
+        />
+        <ToggleFilter
+          pressed={filter.overdueOnly}
+          onToggle={() => set({ overdueOnly: !filter.overdueOnly })}
+          icon={<Clock size={13} style={filter.overdueOnly ? { color: 'var(--st-lost-fg)' } : undefined} />}
+          label="Overdue only"
+          title="Show only designs past their due date"
+        />
+        <FiltersToggle open={open} count={boardPanelCount(filter)} onToggle={() => setOpen((o) => !o)} />
+      </div>
+      {open && (
+        <div className="flex flex-wrap items-end gap-2.5 px-3.5 py-2.5 border-t border-background-600">
+          <FilterSelect
+            label="Status"
+            value={filter.status}
+            onChange={(status) => set({ status: status as DesignStatus | '' })}
+            allLabel="All statuses"
+            options={statuses.map((s) => ({ value: s, label: DESIGN_STATUS[s]?.label ?? s }))}
+          />
+          <FilterSelect
+            label="Priority"
+            value={filter.priority}
+            onChange={(priority) => set({ priority: priority as DesignPriority | '' })}
+            allLabel="All priorities"
+            options={PRIORITY_OPTIONS}
+          />
+          {designers && (
+            <FilterSelect
+              label="Designer"
+              value={filter.designerId === null ? '' : String(filter.designerId)}
+              onChange={(id) => set({ designerId: id ? Number(id) : null })}
+              allLabel="All designers"
+              options={designers.map((d) => ({ value: String(d.id), label: d.name }))}
+            />
+          )}
+        </div>
+      )}
+      {isBoardFiltered(filter) && (
+        <div className="px-3.5 py-2 border-t border-background-600">
+          <FilterSummary shown={shown} total={total} active={active} onClear={() => onChange(NO_BOARD_FILTER)} />
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -399,6 +563,73 @@ const DesignsPage: React.FC = () => {
     return closed.filter((j) => !listed.has(j.customerId));
   }, [closed, library]);
   const missing = useMemo(() => library.filter((r) => !r.design).length, [library]);
+  // The board's Completed column: designs approved lately, newest first (the closed designs are
+  // loaded for whoever manages, as above).
+  // Re-checked every hour too: a board left open drops a design once its 14 days are over.
+  const [hourTick, setHourTick] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setHourTick((n) => n + 1), 60 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const completed = useMemo(
+    () => (manages ? recentlyCompleted(closed, new Date()) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [manages, closed, hourTick],
+  );
+
+  // Search and filters: they narrow the cards this person already sees, never add to them.
+  const [filter, setFilter] = useState<BoardFilter>(NO_BOARD_FILTER);
+  const filtering = isBoardFiltered(filter);
+  // Following a designer link (sidebar) shows the whole board at that designer's column.
+  useEffect(() => {
+    if (focusDesigner) {setFilter(NO_BOARD_FILTER);}
+  }, [focusDesigner]);
+  const keepJob = useCallback((j: DesignJob) => boardJobMatches(j, filter), [filter]);
+  const matches = filtering ? keepJob : undefined;
+  const reorderHint = onlyBoardSearch(filter) ? 'Clear the search to reorder' : 'Clear the filters to reorder';
+  /** A column's count: "x of y" while filtered. */
+  const countText = (shown: number, total: number) => (filtering ? `${shown} of ${total}` : total);
+  const pick = <T,>(list: T[], keep: (item: T) => boolean): T[] => (filtering ? list.filter(keep) : list);
+  const reviewShown = pick(review, keepJob);
+  const unassignedShown = pick(unassigned, (c) => boardCustomerMatches(c, filter));
+  const completedShown = pick(completed, keepJob);
+  const closedShown = pick(closed, keepJob);
+  // A designer's own queue keeps each design's place (#3 stays #3) when others are filtered out.
+  const workShown = work.map((job, i) => ({ job, position: i + 1 })).filter(({ job }) => !filtering || keepJob(job));
+  const queues = designers.map((d) => byDesigner.get(d.id) ?? []);
+  // How many cards the board (or a designer's lists) holds, and how many pass the filters.
+  const boardTotal = manages
+    ? review.length + unassigned.length + completed.length + queues.reduce((n, q) => n + q.length, 0)
+    : work.length + review.length + (showClosed ? closed.length : 0);
+  const boardShown = !filtering
+    ? boardTotal
+    : manages
+      ? reviewShown.length + unassignedShown.length + completedShown.length + queues.reduce((n, q) => n + q.filter(keepJob).length, 0)
+      : workShown.length + reviewShown.length + (showClosed ? closedShown.length : 0);
+  const statusChoices = useMemo(
+    () => boardStatusOptions(manages ? [...review, ...work, ...completed] : [...work, ...review, ...(showClosed ? closed : [])], filter.status),
+    [manages, review, work, completed, closed, showClosed, filter.status],
+  );
+  const [barEl, setBarEl] = useState<HTMLDivElement | null>(null);
+  const barHeight = useHeight(barEl);
+  // The columns end at the bottom of the screen under the search bar (its margin is 12px).
+  const boardTop = { '--board-top': `${196 + (barHeight > 0 ? barHeight + 12 : 0)}px` } as React.CSSProperties;
+  const searchBar = (
+    <BoardSearchBar
+      filter={filter}
+      onChange={setFilter}
+      statuses={statusChoices}
+      designers={manages ? designers : undefined}
+      shown={boardShown}
+      total={boardTotal}
+      barRef={setBarEl}
+    />
+  );
+  const noMatch = (
+    <div className={card}>
+      <NoMatch message="No design or customer here matches the search and filters." onClear={() => setFilter(NO_BOARD_FILTER)} />
+    </div>
+  );
   // What waits for this person: an admin also reviews, Admin staff only assign.
   const needsAdmin = (isAdmin ? review.length : 0) + unassigned.length;
 
@@ -492,151 +723,194 @@ const DesignsPage: React.FC = () => {
       ) : manages ? (
         view === 'designs' ? (
           <DesignLibrary onOpen={openJob} otherFinished={otherFinished} canRedesign={isAdmin} />
-        ) : designers.length === 0 && unassigned.length === 0 && review.length === 0 ? (
+        ) : designers.length === 0 && unassigned.length === 0 && review.length === 0 && completed.length === 0 ? (
           <div className={`${card} px-6 py-12 text-center`}>
             <Palette size={26} className="mx-auto text-text-500" />
             <div className="text-[14px] font-semibold text-text-900 mt-3">No designers yet</div>
             <div className="text-[12.5px] text-text-700 mt-1">In Staff, set a staff member&apos;s type to Designer.</div>
           </div>
         ) : (
-          // The board: what needs the admin first, then one column per designer. On a wide
-          // screen the columns sit in one row and each scrolls on its own.
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-none lg:grid-flow-col lg:auto-cols-[minmax(248px,440px)] gap-3 items-start lg:overflow-x-auto pb-1">
-            {review.length > 0 && (
-              <section
-                className={columnShell}
-                style={isAdmin ? { borderColor: 'var(--st-potential-fg)' } : undefined}
-                aria-label={isAdmin ? 'Designs to review' : 'Designs in review'}
+          <>
+            {searchBar}
+            {filtering && boardShown === 0 ? (
+              noMatch
+            ) : (
+              // The board: what needs the admin first, then one column per designer, then what was
+              // completed lately. On a wide screen the columns sit in one row and each scrolls on
+              // its own. While filtered, a column with nothing that matches is left out, so what
+              // matches is in view.
+              <div
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-none lg:grid-flow-col lg:auto-cols-[minmax(248px,440px)] gap-3 items-start lg:overflow-x-auto pb-1"
+                style={boardTop}
               >
-                <div className="px-3 pt-3 pb-2">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 size={15} style={{ color: 'var(--st-potential-fg)' }} />
-                    <span className={sectionTitle}>{isAdmin ? 'To review' : 'In review'}</span>
-                    <span className={countBadge}>{review.length}</span>
-                  </div>
-                  <div className="mt-1 text-[11.5px] text-text-600">
-                    {isAdmin
-                      ? 'Completed by the designer. Approve or ask for changes.'
-                      : 'Completed by the designer. Waiting for the admin.'}
-                  </div>
-                </div>
-                <div className={columnBody}>
-                  {review.map((j) => (
-                    <JobRow key={j.id} job={j} viewer="admin" onOpen={openJob} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {unassigned.length > 0 && (
-              <section className={columnShell} aria-label="Customers to assign">
-                <div className="px-3 pt-3 pb-2">
-                  <div className="flex items-center gap-2">
-                    <UserPlus size={15} className="text-primary-600" />
-                    <span className={sectionTitle}>To assign</span>
-                    <span className={countBadge}>{unassigned.length}</span>
-                  </div>
-                  <div className="mt-1 text-[11.5px] text-text-600">
-                    {isAdmin ? 'In Design Stage without a designer.' : 'In Design Stage, waiting for the admin to assign a designer.'}
-                  </div>
-                </div>
-                <div className={columnBody}>
-                  {unassigned.map((c) => (
-                    <div
-                      key={c.customerId}
-                      className="flex items-center gap-2 pl-2.5 pr-1.5 py-1.5 rounded-[11px] border border-background-600 bg-background-900"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[13px] font-semibold text-text-900 truncate">{c.customerName}</div>
-                        {c.customerPlace && <div className="text-[11.5px] text-text-500 truncate">{c.customerPlace}</div>}
+                {reviewShown.length > 0 && (
+                  <section
+                    className={columnShell}
+                    style={isAdmin ? { borderColor: 'var(--st-potential-fg)' } : undefined}
+                    aria-label={isAdmin ? 'Designs to review' : 'Designs in review'}
+                  >
+                    <div className="px-3 pt-3 pb-2">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 size={15} style={{ color: 'var(--st-potential-fg)' }} />
+                        <span className={sectionTitle}>{isAdmin ? 'To review' : 'In review'}</span>
+                        <span className={countBadge}>{countText(reviewShown.length, review.length)}</span>
                       </div>
-                      {isAdmin && (
-                        <button
-                          type="button"
-                          onClick={() => setAssignFor(c)}
-                          className="btn-raised-accent shrink-0 h-7 px-2.5 rounded-[8px] text-[12px] font-semibold"
-                        >
-                          Assign
-                        </button>
-                      )}
+                      <div className="mt-1 text-[11.5px] text-text-600">
+                        {isAdmin
+                          ? 'Completed by the designer. Approve or ask for changes.'
+                          : 'Completed by the designer. Waiting for the admin.'}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </section>
-            )}
+                    <div className={columnBody}>
+                      {reviewShown.map((j) => (
+                        <JobRow key={j.id} job={j} viewer="admin" onOpen={openJob} />
+                      ))}
+                    </div>
+                  </section>
+                )}
 
-            {designers.map((d) => (
-              <DesignerColumn
-                key={d.id}
-                designerId={d.id}
-                name={d.name}
-                status={d.designerStatus}
-                activeCount={d.activeCount}
-                overdue={d.overdue}
-                jobs={byDesigner.get(d.id) ?? []}
-                onOpen={openJob}
-                readOnly={!isAdmin}
-              />
-            ))}
+                {unassignedShown.length > 0 && (
+                  <section className={columnShell} aria-label="Customers to assign">
+                    <div className="px-3 pt-3 pb-2">
+                      <div className="flex items-center gap-2">
+                        <UserPlus size={15} className="text-primary-600" />
+                        <span className={sectionTitle}>To assign</span>
+                        <span className={countBadge}>{countText(unassignedShown.length, unassigned.length)}</span>
+                      </div>
+                      <div className="mt-1 text-[11.5px] text-text-600">
+                        {isAdmin ? 'In Design Stage without a designer.' : 'In Design Stage, waiting for the admin to assign a designer.'}
+                      </div>
+                    </div>
+                    <div className={columnBody}>
+                      {unassignedShown.map((c) => (
+                        <div
+                          key={c.customerId}
+                          className="flex items-center gap-2 pl-2.5 pr-1.5 py-1.5 rounded-[11px] border border-background-600 bg-background-900"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[13px] font-semibold text-text-900 truncate">{c.customerName}</div>
+                            {c.customerPlace && <div className="text-[11.5px] text-text-500 truncate">{c.customerPlace}</div>}
+                          </div>
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => setAssignFor(c)}
+                              className="btn-raised-accent shrink-0 h-7 px-2.5 rounded-[8px] text-[12px] font-semibold"
+                            >
+                              Assign
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
 
-            {designers.length === 0 && (
-              <section className={`${columnShell} px-4 py-8 text-center`}>
-                <Palette size={24} className="mx-auto text-text-500" />
-                <div className="text-[13.5px] font-semibold text-text-900 mt-2.5">No designers yet</div>
-                <div className="text-[12px] text-text-700 mt-1">In Staff, set a staff member&apos;s type to Designer.</div>
-              </section>
+                {designers.map((d, i) => (
+                  <DesignerColumn
+                    key={d.id}
+                    designerId={d.id}
+                    name={d.name}
+                    status={d.designerStatus}
+                    activeCount={d.activeCount}
+                    overdue={d.overdue}
+                    jobs={queues[i]}
+                    onOpen={openJob}
+                    readOnly={!isAdmin}
+                    matches={onlyDesignerFilter(filter) && filter.designerId === d.id ? undefined : matches}
+                    reorderHint={reorderHint}
+                  />
+                ))}
+
+                {designers.length === 0 && !filtering && (
+                  <section className={`${columnShell} px-4 py-8 text-center`}>
+                    <Palette size={24} className="mx-auto text-text-500" />
+                    <div className="text-[13.5px] font-semibold text-text-900 mt-2.5">No designers yet</div>
+                    <div className="text-[12px] text-text-700 mt-1">In Staff, set a staff member&apos;s type to Designer.</div>
+                  </section>
+                )}
+
+                {completedShown.length > 0 && (
+                  <section className={columnShell} aria-label="Completed designs">
+                    <div className="px-3 pt-3 pb-2">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 size={15} style={{ color: 'var(--st-confirmed-fg)' }} />
+                        <span className={sectionTitle}>Completed</span>
+                        <span className={countBadge}>{countText(completedShown.length, completed.length)}</span>
+                      </div>
+                      <div className="mt-1 text-[11.5px] text-text-600">Approved in the last {COMPLETED_DAYS} days, newest first.</div>
+                    </div>
+                    <div className={columnBody}>
+                      {completedShown.map((j) => (
+                        <CompletedDesignCard key={j.id} job={j} onOpen={openJob} />
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
             )}
-          </div>
+          </>
         )
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
-          <section className={columnShell} aria-label="Designs to do">
-            <div className="px-3 pt-3 pb-2 flex items-center gap-2">
-              <Palette size={15} className="text-primary-600" />
-              <span className={sectionTitle}>To do — in order</span>
-              <span className={countBadge}>{work.length}</span>
-            </div>
-            <div className={columnBody}>
-              {work.length === 0 ? (
-                <p className="m-0 py-4 text-center text-[12.5px] text-text-500">Nothing assigned to you right now.</p>
-              ) : (
-                work.map((j, i) => <JobRow key={j.id} job={j} position={i + 1} viewer="designer" onOpen={openJob} />)
-              )}
-            </div>
-          </section>
+        <>
+          {searchBar}
+          {filtering && boardShown === 0 ? (
+            noMatch
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start" style={boardTop}>
+              <section className={columnShell} aria-label="Designs to do">
+                <div className="px-3 pt-3 pb-2 flex items-center gap-2">
+                  <Palette size={15} className="text-primary-600" />
+                  <span className={sectionTitle}>To do — in order</span>
+                  <span className={countBadge}>{countText(workShown.length, work.length)}</span>
+                </div>
+                <div className={columnBody}>
+                  {work.length === 0 ? (
+                    <p className="m-0 py-4 text-center text-[12.5px] text-text-500">Nothing assigned to you right now.</p>
+                  ) : workShown.length === 0 ? (
+                    <p className="m-0 py-4 text-center text-[12.5px] text-text-500">Nothing here matches the search and filters.</p>
+                  ) : (
+                    workShown.map(({ job, position }) => (
+                      <JobRow key={job.id} job={job} position={position} viewer="designer" onOpen={openJob} />
+                    ))
+                  )}
+                </div>
+              </section>
 
-          {(review.length > 0 || (showClosed && closed.length > 0)) && (
-            <div className="flex flex-col gap-3 min-w-0">
-              {review.length > 0 && (
-                <section className={columnShell} style={{ borderColor: 'var(--st-potential-fg)' }} aria-label="Sent for review">
-                  <div className="px-3 pt-3 pb-2 flex items-center gap-2">
-                    <CheckCircle2 size={15} style={{ color: 'var(--st-potential-fg)' }} />
-                    <span className={sectionTitle}>Sent for review</span>
-                    <span className={countBadge}>{review.length}</span>
-                  </div>
-                  <div className={columnBody}>
-                    {review.map((j) => (
-                      <JobRow key={j.id} job={j} viewer="designer" onOpen={openJob} />
-                    ))}
-                  </div>
-                </section>
-              )}
-              {showClosed && closed.length > 0 && (
-                <section className={columnShell} aria-label="Finished designs">
-                  <div className="px-3 pt-3 pb-2 flex items-center gap-2">
-                    <span className={sectionTitle}>Finished</span>
-                    <span className={countBadge}>{closed.length}</span>
-                  </div>
-                  <div className={columnBody}>
-                    {closed.map((j) => (
-                      <JobRow key={j.id} job={j} viewer="designer" onOpen={openJob} />
-                    ))}
-                  </div>
-                </section>
+              {(reviewShown.length > 0 || (showClosed && closedShown.length > 0)) && (
+                <div className="flex flex-col gap-3 min-w-0">
+                  {reviewShown.length > 0 && (
+                    <section className={columnShell} style={{ borderColor: 'var(--st-potential-fg)' }} aria-label="Sent for review">
+                      <div className="px-3 pt-3 pb-2 flex items-center gap-2">
+                        <CheckCircle2 size={15} style={{ color: 'var(--st-potential-fg)' }} />
+                        <span className={sectionTitle}>Sent for review</span>
+                        <span className={countBadge}>{countText(reviewShown.length, review.length)}</span>
+                      </div>
+                      <div className={columnBody}>
+                        {reviewShown.map((j) => (
+                          <JobRow key={j.id} job={j} viewer="designer" onOpen={openJob} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                  {showClosed && closedShown.length > 0 && (
+                    <section className={columnShell} aria-label="Finished designs">
+                      <div className="px-3 pt-3 pb-2 flex items-center gap-2">
+                        <span className={sectionTitle}>Finished</span>
+                        <span className={countBadge}>{countText(closedShown.length, closed.length)}</span>
+                      </div>
+                      <div className={columnBody}>
+                        {closedShown.map((j) => (
+                          <JobRow key={j.id} job={j} viewer="designer" onOpen={openJob} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </div>
               )}
             </div>
           )}
-        </div>
+        </>
       )}
 
       <DesignJobDrawer jobId={openJobId} viewer={viewer} onClose={closeJob} />

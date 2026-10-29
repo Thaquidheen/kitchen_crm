@@ -8,6 +8,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CheckCircle2, FilePlus2, FileText, Pencil, Play, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { followUpNotice, movedToFollowUp } from '@/features/quotations/followUpMove';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { dueText, PriorityPill } from '@/features/design/designUi';
 import { QuotationStatusPill } from '@/features/quotations/components/QuotationStatusPill';
@@ -77,8 +78,12 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
   const onComplete = async () => {
     if (!handIn) {return;}
     try {
-      await complete({ id: job.id, quotationId: handIn }).unwrap();
+      const res = await complete({ id: job.id, quotationId: handIn }).unwrap();
       toast.success('Quotation completed — the admin has been told');
+      const moved = movedToFollowUp(res.message);
+      if (moved) {
+        toast.success(followUpNotice(moved));
+      }
       onClose();
     } catch (e) {
       fail(e, 'Failed to complete');

@@ -141,11 +141,11 @@ describe('bringing in the finished design while a designer has it', () => {
 });
 
 describe('redesign', () => {
-  it('pulls the customer back into Design except from Confirmed, Lost or Design itself', () => {
+  it('pulls the customer back into Design (Confirmed too) except from Lost or Design itself', () => {
     expect(redesignKeepsStage('QUOTE_GIVEN')).toBe(false);
     expect(redesignKeepsStage('FOLLOW_UP')).toBe(false);
     expect(redesignKeepsStage('NEGOTIATIONS')).toBe(false);
-    expect(redesignKeepsStage('CONFIRMED')).toBe(true);
+    expect(redesignKeepsStage('CONFIRMED')).toBe(false);
     expect(redesignKeepsStage('LOST')).toBe(true);
     expect(redesignKeepsStage('DESIGN_STAGE')).toBe(true);
   });

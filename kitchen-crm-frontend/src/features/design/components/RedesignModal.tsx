@@ -1,7 +1,8 @@
 /**
  * RedesignModal — send an approved design back for another version: what has to change, which
  * designer does it, by when, and any new plan documents. The customer returns to Design Stage
- * (unless they are already Confirmed or Lost) and the design becomes the next version.
+ * (unless they are already there, or Lost) and the design becomes the next version; a Confirmed
+ * customer's approved quotation is Completed again (the server does it).
  */
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';

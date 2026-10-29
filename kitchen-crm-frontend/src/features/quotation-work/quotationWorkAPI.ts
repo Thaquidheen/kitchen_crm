@@ -80,11 +80,15 @@ export const quotationWorkAPI = baseApi.injectEndpoints({
       transformResponse: unwrap<QuotationJob>('Failed to start'),
       invalidatesTags: ['QuotationWork'],
     }),
-    completeQuotationJob: builder.mutation<QuotationJob, { id: number; quotationId?: number }>({
+    // The answer keeps the server's words: they say when the customer moved on to Follow Up.
+    completeQuotationJob: builder.mutation<{ job: QuotationJob; message: string }, { id: number; quotationId?: number }>({
       query: ({ id, quotationId }) => ({ url: `/quotation-jobs/${id}/complete`, method: 'PUT', body: { quotationId } }),
-      transformResponse: unwrap<QuotationJob>('Failed to complete'),
-      // The quotation handed in now reads Completed in the list.
-      invalidatesTags: ['QuotationWork', 'Quotations'],
+      transformResponse: (r: ApiResponse<QuotationJob>) => {
+        if (r.success) {return { job: r.data as QuotationJob, message: r.message ?? '' };}
+        throw new Error(r.message || 'Failed to complete');
+      },
+      // The quotation handed in now reads Completed in the list, and the customer may be in Follow Up.
+      invalidatesTags: ['QuotationWork', 'Quotations', 'Customers', 'Designs', 'Dashboard'],
     }),
     markQuotationWorkSeen: builder.mutation<number, void>({
       query: () => ({ url: '/quotation-jobs/seen', method: 'PUT' }),

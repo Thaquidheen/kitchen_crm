@@ -73,9 +73,13 @@ public class DesignJobServiceImpl implements DesignJobService {
     /** Stages whose customers are listed with their design in the Designs module. */
     private static final List<CustomerStatus> PAST_DESIGN = List.of(
             CustomerStatus.QUOTE_GIVEN, CustomerStatus.FOLLOW_UP, CustomerStatus.NEGOTIATIONS, CustomerStatus.CONFIRMED);
-    /** A redesign pulls the customer back into Design — except from these, where only the design reopens. */
+    /**
+     * A redesign pulls the customer back into Design — except from these, where only the design
+     * reopens. A Confirmed customer moves back too: the new design is priced again from Quotation
+     * Stage (the owner's rule since 2026-10-29); a Lost one stays lost.
+     */
     private static final Set<CustomerStatus> REDESIGN_KEEPS_STAGE = EnumSet.of(
-            CustomerStatus.DESIGN_STAGE, CustomerStatus.CONFIRMED, CustomerStatus.LOST);
+            CustomerStatus.DESIGN_STAGE, CustomerStatus.LOST);
 
     @Autowired
     private DesignJobRepository jobRepository;
@@ -91,6 +95,8 @@ public class DesignJobServiceImpl implements DesignJobService {
     private CustomerRepository customerRepository;
     @Autowired
     private WorkflowHistoryRepository workflowHistoryRepository;
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.QuotationRepository quotationRepository;
     @Autowired
     private DesignPhaseFileService fileService;
 
@@ -455,12 +461,20 @@ public class DesignJobServiceImpl implements DesignJobService {
 
         Customer customer = job.getCustomer();
         boolean moved = false;
+        int reopened = 0;
         if (customer != null && !REDESIGN_KEEPS_STAGE.contains(customer.getStatus())) {
+            boolean wasConfirmed = customer.getStatus() == CustomerStatus.CONFIRMED;
             moved = moveCustomer(customer, CustomerStatus.DESIGN_STAGE, adminName,
                     "Redesign requested (V" + version(job) + "): " + note);
+            if (moved && wasConfirmed) {
+                reopened = reopenApprovedQuotations(customer);
+            }
         }
         return ApiResponse.success(moved
                 ? "Redesign requested — customer moved back to Design Stage"
+                        + (reopened == 0 ? "" : reopened == 1
+                                ? "; the approved quotation is Completed again"
+                                : "; " + reopened + " approved quotations are Completed again")
                 : "Redesign requested", detail(job));
     }
 
@@ -1119,6 +1133,27 @@ public class DesignJobServiceImpl implements DesignJobService {
         history.setTimestamp(LocalDateTime.now());
         workflowHistoryRepository.save(history);
         return true;
+    }
+
+    /**
+     * A Confirmed customer sent back for a redesign: their approval was for the design being redone,
+     * so an approved quotation is Completed again (the owner's rule, 2026-10-29). Nothing is deleted;
+     * confirming the customer again approves the quotation chosen then, so only one stays approved.
+     * The customer stays in Design Stage (no Follow Up effect: the design comes first).
+     */
+    private int reopenApprovedQuotations(Customer customer) {
+        int reopened = 0;
+        for (com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation q
+                : quotationRepository.findByCustomerId(customer.getId())) {
+            if (q.getStatus() == com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation.QuotationStatus.APPROVED) {
+                q.setStatus(com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation.QuotationStatus.COMPLETE);
+                q.setApprovedBy(null);
+                q.setApprovedAt(null);
+                quotationRepository.save(q);
+                reopened++;
+            }
+        }
+        return reopened;
     }
 
     /** An approved design ends the Design stage: the customer goes on to Quotation Stage. */

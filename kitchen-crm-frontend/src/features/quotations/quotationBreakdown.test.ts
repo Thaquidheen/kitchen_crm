@@ -8,6 +8,9 @@ import {
   kitchenCategories,
   money,
   pctText,
+  quotationSummary,
+  shareOf,
+  fillServerExpenses,
 } from './quotationBreakdown';
 
 const close = (a: number | undefined, b: number) => expect(a).toBeCloseTo(b, 2);
@@ -41,6 +44,19 @@ describe('a line before margin', () => {
   it('accessory and lighting: rate × qty', () => {
     close(breakdownLine('accessories', { accessoryName: 'Tandem', quantity: 4, unitPrice: 2500 }).base, 10000);
     close(breakdownLine('lighting', { itemName: 'Profile', quantity: 2, unitPrice: 1200 }).base, 2400);
+  });
+
+  it("says what a line is made of, for everyone: material, size, inner panel; a brand", () => {
+    const cab = breakdownLine('cabinets', {
+      description: 'Storage Base Cabinet', quantity: 1, materialName: 'SS 304', widthMm: 1130, heightMm: 600, depthMm: 890,
+      innerPanelTypeName: 'Middle Shelf', innerPanelQuantity: 1,
+    });
+    expect(cab.detail).toBe('SS 304 · 1130×600×890 mm · Middle Shelf ×1');
+    expect(cab.rate).toBeUndefined();
+    const named = breakdownLine('cabinets', { description: 'Corner Base Cabinet (900×600×890mm)', materialName: 'SS 304', widthMm: 900, heightMm: 600, depthMm: 890 });
+    expect(named.detail).toBe('SS 304');
+    expect(breakdownLine('accessories', { accessoryName: 'Tandem', brandName: 'BLUM', quantity: 2, unitPrice: 100 }).detail).toBe('BLUM');
+    expect(breakdownLine('lighting', { itemName: 'Profile', quantity: 2 }).detail).toBeUndefined();
   });
 
   it('a rate this person is not sent stays unknown, never 0', () => {
@@ -152,5 +168,96 @@ describe('staff shown margin codes', () => {
     expect(c.marginCode).toBe('R');
     expect(c.marginPct).toBeUndefined();
     close(c.afterMargin, 352870.75);
+  });
+});
+
+describe('the quotation summary', () => {
+  // Two kitchens; margins are the quotation's, so the same % in both.
+  const k1 = {
+    name: 'Main kitchen',
+    cats: [
+      categoryBreakdown('cabinets', [{ description: 'A', quantity: 1, unitPrice: 1000 }], { margin: 40, tax: 18 }),
+      categoryBreakdown('accessories', [{ description: 'B', quantity: 2, unitPrice: 100 }], { margin: 15, tax: 18 }),
+    ],
+    exp: expenseBreakdown([{ name: 'Installation', amount: 500 }], { margin: 10, tax: 18 }),
+  };
+  const k2 = {
+    name: 'Work kitchen',
+    cats: [categoryBreakdown('cabinets', [{ description: 'C', quantity: 1, unitPrice: 2000 }], { margin: 40, tax: 18 })],
+    exp: expenseBreakdown([], { margin: 10, tax: 18 }),
+  };
+  const transport = expenseBreakdown([{ name: 'Transportation (all kitchens)', amount: 1000 }], { margin: 10, tax: 18 });
+
+  it('has a row per kitchen and the shared transportation', () => {
+    const s = quotationSummary([k1, k2], transport);
+    expect(s.byKitchen.map((r) => r.name)).toEqual(['Main kitchen', 'Work kitchen', 'Transportation (all kitchens)']);
+    close(s.byKitchen[0].base, 1700);
+    close(s.byKitchen[0].margin, 400 + 30 + 50);
+    close(s.byKitchen[1].final, 2000 * 1.4 * 1.18);
+  });
+
+  it('adds each category up over the kitchens, with its margin %', () => {
+    const s = quotationSummary([k1, k2], transport);
+    expect(s.byCategory.map((r) => r.name)).toEqual(['Cabinets', 'Accessories', 'Other expenses']);
+    close(s.byCategory[0].base, 3000);
+    close(s.byCategory[0].margin, 1200);
+    expect(s.byCategory[0].pct).toBe(40);
+    close(s.byCategory[2].base, 1500);
+    expect(s.byCategory[2].pct).toBe(10);
+  });
+
+  it('totals everything; the stored quotation total wins', () => {
+    const s = quotationSummary([k1, k2], transport, 99999);
+    close(s.total.base, 4700);
+    close(s.total.margin, 1200 + 30 + 150);
+    expect(s.total.final).toBe(99999);
+    close(shareOf(s.total.margin, s.total.base), (1380 / 4700) * 100);
+    close(shareOf(40, 140), 28.5714);
+  });
+
+  it('has no kitchen rows for a single kitchen', () => {
+    expect(quotationSummary([k1], null).byKitchen).toEqual([]);
+  });
+
+  it('leaves unknown what this person is not sent, never a smaller figure', () => {
+    const staff = {
+      name: 'Main kitchen',
+      cats: [categoryBreakdown('cabinets', [{ description: 'A', quantity: 1 }], { tax: 18 }, { tax: 180, final: 1180 })],
+      exp: expenseBreakdown([], { tax: 18 }),
+    };
+    const s = quotationSummary([staff], null, 1180);
+    expect(s.total.base).toBeUndefined();
+    expect(s.total.margin).toBeUndefined();
+    close(s.total.after, 1000);
+    expect(s.total.final).toBe(1180);
+  });
+});
+
+describe("other expenses for someone not sent their margin (staff)", () => {
+  it("are the server's: the kitchen's total less its categories, with the GST inside", () => {
+    const cats = [categoryBreakdown('cabinets', [{ description: 'A', quantity: 1 }], { tax: 18 }, { tax: 180, final: 1180 })];
+    const exp = expenseBreakdown([{ name: 'Installation', amount: 1000 }], { tax: 18 });
+    expect(exp.final).toBeUndefined();
+    const transport = expenseBreakdown([{ name: 'Transportation (all kitchens)', amount: 500 }], { tax: 18 });
+    const { sections, transport: shared } = fillServerExpenses([{ name: 'K', cats, exp, total: 2360 }], transport, 2950);
+    close(sections[0].exp.final, 1180);
+    close(sections[0].exp.tax, 180);
+    close(shared?.final, 590);
+    close(shared?.tax, 90);
+    const s = quotationSummary(sections, shared, 2950);
+    close(s.total.after, 2500);
+    close(s.total.tax, 450);
+  });
+  it('are not worked out from category totals that were never priced (a duplicated quotation)', () => {
+    const cats = [categoryBreakdown('cabinets', [{ description: 'A', quantity: 1 }], { tax: 18 }, { tax: 0, final: 0 })];
+    const exp = expenseBreakdown([{ name: 'Transportation', amount: 6000 }], { tax: 18 });
+    const { sections } = fillServerExpenses([{ name: 'K', cats, exp, total: 180851.52 }], null, 180851.52);
+    expect(sections[0].exp.final).toBeUndefined();
+  });
+
+  it('leave known figures alone', () => {
+    const exp = expenseBreakdown([{ name: 'Installation', amount: 1000 }], { margin: 0, tax: 18 });
+    const { sections } = fillServerExpenses([{ name: 'K', cats: [], exp, total: 99999 }], null, 99999);
+    close(sections[0].exp.final, 1180);
   });
 });

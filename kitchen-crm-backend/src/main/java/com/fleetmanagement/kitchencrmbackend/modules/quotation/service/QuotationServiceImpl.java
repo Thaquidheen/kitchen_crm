@@ -48,6 +48,9 @@ public class QuotationServiceImpl implements QuotationService {
     private com.fleetmanagement.kitchencrmbackend.modules.quotation.editrequest.QuotationEditRequestService editRequests;
 
     @Autowired
+    private QuotationCompletedEffects completedEffects;
+
+    @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.quotationwork.repository.QuotationJobRepository quotationJobRepository;
 
     @Autowired
@@ -539,6 +542,8 @@ public class QuotationServiceImpl implements QuotationService {
             return ApiResponse.error("Quotation not found");
         }
 
+        boolean completedNow = newStatus == Quotation.QuotationStatus.COMPLETE
+                && quotation.getStatus() != Quotation.QuotationStatus.COMPLETE;
         quotation.setStatus(newStatus);
         if (newStatus == Quotation.QuotationStatus.APPROVED) {
             quotation.setApprovedBy(updatedBy);
@@ -548,7 +553,9 @@ public class QuotationServiceImpl implements QuotationService {
         quotationRepository.save(quotation);
         // A request to reopen it that was still waiting is answered by this.
         editRequests.statusSetByHand(id, newStatus, updatedBy);
-        return ApiResponse.success("Quotation status updated successfully");
+        // Completed moves the customer on to Follow Up (see QuotationCompletedEffects).
+        String moved = completedNow ? completedEffects.completed(quotation, updatedBy) : null;
+        return ApiResponse.success("Quotation status updated successfully" + QuotationCompletedEffects.moved(moved));
     }
 
     @Override
