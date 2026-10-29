@@ -39,6 +39,8 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationStageEffects quotationStageEffects;
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationApprovals quotationApprovals;
 
     @Autowired
     private ArchitectRepository architectRepository;
@@ -280,8 +282,13 @@ public class CustomerServiceImpl implements CustomerService {
 
         String previousStatus = customer.getStatus().name();
         boolean stageChanges = customer.getStatus() != newStatus;
+        boolean leavesConfirmed = quotationStageEffects.leavesConfirmed(id, newStatus);
         customer.setStatus(newStatus);
         customerRepository.save(customer);
+
+        // Out of Confirmed (but not to Lost): the approval was theirs as a confirmed customer, so it is
+        // taken back — confirming them again approves one quotation, never a second one.
+        int approvalsTakenBack = leavesConfirmed ? quotationApprovals.takeBack(id) : 0;
 
         // Confirmed / Lost carry the customer's quotations with them (see QuotationStageEffects).
         int quotationsChanged = stageChanges ? quotationStageEffects.apply(id, newStatus, approveQuotationId, changedBy) : 0;
@@ -296,12 +303,13 @@ public class CustomerServiceImpl implements CustomerService {
         history.setTimestamp(LocalDateTime.now());
         workflowHistoryRepository.save(history);
 
+        String takenBack = com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationApprovals.takenBack(approvalsTakenBack);
         if (quotationsChanged > 0) {
             String what = newStatus == Customer.CustomerStatus.CONFIRMED ? "approved" : "cancelled";
             return ApiResponse.success("Customer status updated; " + quotationsChanged
-                    + (quotationsChanged == 1 ? " quotation " : " quotations ") + what);
+                    + (quotationsChanged == 1 ? " quotation " : " quotations ") + what + takenBack);
         }
-        return ApiResponse.success("Customer status updated successfully");
+        return ApiResponse.success(takenBack.isEmpty() ? "Customer status updated successfully" : "Customer status updated" + takenBack);
     }
 
     @Override

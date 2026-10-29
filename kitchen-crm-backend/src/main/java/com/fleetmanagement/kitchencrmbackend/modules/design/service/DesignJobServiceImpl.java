@@ -100,6 +100,9 @@ public class DesignJobServiceImpl implements DesignJobService {
     @Autowired
     private DesignPhaseFileService fileService;
 
+    @Autowired
+    private com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationApprovals quotationApprovals;
+
     @Value("${app.business-timezone:Asia/Kolkata}")
     private String businessTimezone;
 
@@ -467,7 +470,8 @@ public class DesignJobServiceImpl implements DesignJobService {
             moved = moveCustomer(customer, CustomerStatus.DESIGN_STAGE, adminName,
                     "Redesign requested (V" + version(job) + "): " + note);
             if (moved && wasConfirmed) {
-                reopened = reopenApprovedQuotations(customer);
+                // Their approval was for the design being redone (the owner's rule, 2026-10-29).
+                reopened = quotationApprovals.takeBack(customer.getId());
             }
         }
         return ApiResponse.success(moved
@@ -1133,27 +1137,6 @@ public class DesignJobServiceImpl implements DesignJobService {
         history.setTimestamp(LocalDateTime.now());
         workflowHistoryRepository.save(history);
         return true;
-    }
-
-    /**
-     * A Confirmed customer sent back for a redesign: their approval was for the design being redone,
-     * so an approved quotation is Completed again (the owner's rule, 2026-10-29). Nothing is deleted;
-     * confirming the customer again approves the quotation chosen then, so only one stays approved.
-     * The customer stays in Design Stage (no Follow Up effect: the design comes first).
-     */
-    private int reopenApprovedQuotations(Customer customer) {
-        int reopened = 0;
-        for (com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation q
-                : quotationRepository.findByCustomerId(customer.getId())) {
-            if (q.getStatus() == com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation.QuotationStatus.APPROVED) {
-                q.setStatus(com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation.QuotationStatus.COMPLETE);
-                q.setApprovedBy(null);
-                q.setApprovedAt(null);
-                quotationRepository.save(q);
-                reopened++;
-            }
-        }
-        return reopened;
     }
 
     /** An approved design ends the Design stage: the customer goes on to Quotation Stage. */

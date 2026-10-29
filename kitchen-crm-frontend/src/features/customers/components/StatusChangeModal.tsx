@@ -147,7 +147,7 @@ export function StatusChangeModal({
   const gate = quotationGate(customerDesign);
 
   // Confirmed / Lost take the customer's quotations along: ask the server which ones.
-  const movesQuotations = stageMovesQuotations(targetStatus) && targetStatus !== currentStatus;
+  const movesQuotations = stageMovesQuotations(targetStatus, currentStatus) && targetStatus !== currentStatus;
   const watchEffects = isOpen && !isBulk && !!customerId && movesQuotations;
   const { currentData: effects, isFetching: loadingEffects } = useGetQuotationEffectsQuery(
     { customerId: customerId ?? 0, status: targetStatus ?? '' },

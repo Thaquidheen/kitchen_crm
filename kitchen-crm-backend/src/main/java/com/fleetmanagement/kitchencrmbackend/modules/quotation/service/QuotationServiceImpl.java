@@ -51,6 +51,8 @@ public class QuotationServiceImpl implements QuotationService {
     private QuotationCompletedEffects completedEffects;
     @Autowired
     private QuotationReopenedEffects reopenedEffects;
+    @Autowired
+    private QuotationApprovals approvals;
 
     @Autowired
     private com.fleetmanagement.kitchencrmbackend.modules.quotationwork.repository.QuotationJobRepository quotationJobRepository;
@@ -544,6 +546,16 @@ public class QuotationServiceImpl implements QuotationService {
             return ApiResponse.error("Quotation not found");
         }
 
+        Long customerId = quotation.getCustomer() == null ? null : quotation.getCustomer().getId();
+        // A Confirmed customer is confirmed on their approved quotation: it is not set to anything else
+        // while it is their only approval (approve another one, or move the customer out of Confirmed).
+        if (quotation.getStatus() == Quotation.QuotationStatus.APPROVED && newStatus != Quotation.QuotationStatus.APPROVED
+                && quotation.getCustomer() != null
+                && quotation.getCustomer().getStatus() == com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer.CustomerStatus.CONFIRMED
+                && !approvals.otherApproved(customerId, id)) {
+            return ApiResponse.error("This customer is Confirmed on this quotation. Approve another quotation of theirs, "
+                    + "or move the customer out of Confirmed first");
+        }
         boolean completedNow = newStatus == Quotation.QuotationStatus.COMPLETE
                 && quotation.getStatus() != Quotation.QuotationStatus.COMPLETE;
         boolean fromDraft = quotation.getStatus() == null || quotation.getStatus() == Quotation.QuotationStatus.DRAFT;
@@ -569,8 +581,12 @@ public class QuotationServiceImpl implements QuotationService {
             reopenedEffects.dropped(quotation);
         }
         String movedBack = reopenedNow ? reopenedEffects.reopened(quotation, updatedByUserId, updatedBy, null) : null;
+        // One approval at a time: approving this one takes back an earlier approval of the customer.
+        int takenBack = newStatus == Quotation.QuotationStatus.APPROVED ? approvals.takeBackExcept(customerId, id) : 0;
         return ApiResponse.success("Quotation status updated successfully" + QuotationCompletedEffects.moved(moved)
-                + QuotationReopenedEffects.movedBack(movedBack));
+                + QuotationReopenedEffects.movedBack(movedBack)
+                + (takenBack == 0 ? "" : takenBack == 1 ? "; the earlier approved quotation is Completed again"
+                        : "; " + takenBack + " earlier approved quotations are Completed again"));
     }
 
     @Override
