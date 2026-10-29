@@ -1,8 +1,9 @@
 /**
  * QuotationBreakdown — the Line Items tab of a quotation: every line with its rate and amount
  * before margin, the margin, GST and what the customer pays, per category, then the kitchen's
- * summary. Rates show only with "See rates", margins only with "See margins" (the administrator
- * sees both); the server does not even send what a person may not see.
+ * summary, and at the bottom the whole quotation: per kitchen, per category over all kitchens, and
+ * the key figures. Rates show only with "See rates", margins only with "See margins" (the
+ * administrator sees both); the server does not even send what a person may not see.
  */
 import React from 'react';
 import { FileText } from 'lucide-react';
@@ -13,8 +14,11 @@ import {
   kitchenCategories,
   money,
   pctText,
+  quotationSummary,
+  shareOf,
   type CategoryBreakdown,
   type ExpenseBreakdown,
+  type SummaryRow,
 } from '../quotationBreakdown';
 
 interface Access {
@@ -242,6 +246,139 @@ const Summary: React.FC<{ cats: CategoryBreakdown[]; exp: ExpenseBreakdown; tota
   );
 };
 
+/** A table of summary rows: before margin, margin, after margin, GST, total — what this person may see. */
+const SummaryTable: React.FC<{ title: string; rows: SummaryRow[]; totalRow: SummaryRow; access: Access; showCodes?: boolean }> = ({
+  title,
+  rows,
+  totalRow,
+  access,
+  showCodes = false,
+}) => {
+  const rates = access.seesRates;
+  const margins = access.seesMargins;
+  const codes = !margins && !!access.seesMarginCodes;
+  const cells = (r: SummaryRow, strong: boolean) => {
+    const w = strong ? 'font-[650]' : '';
+    // A category has its margin %; a kitchen (or the total) the share its margin is of its cost.
+    const pct = r.pct ?? shareOf(r.margin, r.base);
+    return (
+      <>
+        {rates && <td className={`${td} text-right text-text-700 ${w}`}>{money(r.base)}</td>}
+        {margins && <td className={`${td} text-right text-text-700 ${w}`}>{pctText(pct)}</td>}
+        {margins && (
+          <td className={`${td} text-right ${w}`} style={{ color: 'var(--st-confirmed-fg)' }}>
+            {money(r.margin)}
+          </td>
+        )}
+        {codes && showCodes && <td className={`${td} text-right text-text-700 ${w}`}>{strong ? '' : codeLabel(r.code)}</td>}
+        {(margins || codes) && <td className={`${td} text-right text-text-700 ${w}`}>{money(r.after)}</td>}
+        <td className={`${td} text-right text-text-700 ${w}`}>{money(r.tax)}</td>
+        <td className={`${td} text-right text-text-900 ${strong ? 'font-[650]' : 'font-semibold'}`}>{money(r.final)}</td>
+      </>
+    );
+  };
+  return (
+    <div>
+      <div className={`${label} mb-1.5`}>{title}</div>
+      <div className="overflow-x-auto rounded-[10px] border border-background-600">
+        <table className="w-full min-w-[560px]">
+          <thead>
+            <tr className="bg-background-700">
+              <th className={`${th} text-left`}>{title.startsWith('By kitchen') ? 'Kitchen' : 'Category'}</th>
+              {rates && <th className={`${th} text-right`}>Before margin</th>}
+              {margins && <th className={`${th} text-right`}>Margin %</th>}
+              {margins && <th className={`${th} text-right`}>Margin</th>}
+              {codes && showCodes && <th className={`${th} text-right`}>Margin code</th>}
+              {(margins || codes) && <th className={`${th} text-right`}>{margins ? 'After margin' : 'With margin'}</th>}
+              <th className={`${th} text-right`}>GST</th>
+              <th className={`${th} text-right`}>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.name} className="border-t border-background-600">
+                <td className="px-3 py-2 text-[13px] text-text-900">{r.name}</td>
+                {cells(r, false)}
+              </tr>
+            ))}
+            <tr className="border-t border-background-600 bg-background-700/50">
+              <td className="px-3 py-2 text-[12.5px] font-[650] text-text-900 uppercase tracking-wide">Total</td>
+              {cells(totalRow, true)}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+/** One figure of the key figures strip. */
+const Figure: React.FC<{ name: string; value: string; hint?: string; tone?: 'margin' | 'total' }> = ({ name, value, hint, tone }) => (
+  <div className="min-w-[132px] flex-1 rounded-[10px] border border-background-600 bg-background-700/40 px-3 py-2.5">
+    <div className="text-[10.5px] font-semibold tracking-[0.07em] uppercase text-text-500">{name}</div>
+    <div
+      className={`mt-0.5 tabular-nums ${tone === 'total' ? 'text-[16px] font-bold text-primary-600' : 'text-[14px] font-[650] text-text-900'}`}
+      style={tone === 'margin' ? { color: 'var(--st-confirmed-fg)' } : undefined}
+    >
+      {value}
+    </div>
+    {hint && <div className="text-[11px] text-text-500 mt-0.5">{hint}</div>}
+  </div>
+);
+
+/**
+ * The whole quotation at the bottom: per kitchen (with two or more), per category over all
+ * kitchens, and the key figures — the margin both as a markup on the cost and as a share of the
+ * price (40% on the cost is 28.6% of the price), to weigh a discount against.
+ */
+const QuotationSummaryCard: React.FC<{
+  sections: Array<{ name: string; cats: CategoryBreakdown[]; exp: ExpenseBreakdown; total?: number }>;
+  transport: ExpenseBreakdown | null;
+  quotationTotal?: number;
+  miscCode?: string | null;
+  access: Access;
+}> = ({ sections, transport, quotationTotal, miscCode, access }) => {
+  const s = quotationSummary(sections, transport, quotationTotal, miscCode);
+  if (s.byCategory.length === 0) {return null;}
+  const t = s.total;
+  const margins = access.seesMargins;
+  return (
+    <div className={`${card} p-4 space-y-4`}>
+      <div className="flex items-center gap-2">
+        <FileText size={15} className="text-primary-600" />
+        <span className="text-[14px] font-[650] text-text-900">Quotation summary</span>
+        <span className="text-[12px] text-text-500">
+          {sections.length > 1 ? `${sections.length} kitchens together` : 'all line items together'}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-2.5">
+        {access.seesRates && <Figure name="Before margin" value={money(t.base)} />}
+        {margins && <Figure name="Margin" value={money(t.margin)} tone="margin" />}
+        {margins && (
+          <Figure
+            name="Margin on cost"
+            value={pctText(shareOf(t.margin, t.base))}
+            hint={`${pctText(shareOf(t.margin, t.after))} of the price before GST`}
+          />
+        )}
+        {(margins || access.seesMarginCodes) && <Figure name={margins ? 'After margin' : 'With margin'} value={money(t.after)} />}
+        <Figure name="GST" value={money(t.tax)} />
+        <Figure name="Quotation total" value={money(t.final)} tone="total" />
+      </div>
+      {s.byKitchen.length > 0 && (
+        <SummaryTable title="By kitchen" rows={s.byKitchen} totalRow={t} access={access} />
+      )}
+      <SummaryTable
+        title={sections.length > 1 ? 'By category, all kitchens' : 'By category'}
+        rows={s.byCategory}
+        totalRow={t}
+        access={access}
+        showCodes
+      />
+    </div>
+  );
+};
+
 interface Props {
   /** The quotation as the server sent it. */
   quotation: any;
@@ -303,12 +440,6 @@ export const QuotationBreakdown: React.FC<Props> = ({ quotation, access }) => {
       {transport && (
         <div className={`${card} p-4`}>
           <ExpensesTable e={transport} access={access} />
-          <div className="flex items-center justify-end gap-6 px-3 pt-2 text-[13px] font-[650] text-text-900">
-            <span className="uppercase tracking-wide text-[12px]">Quotation total</span>
-            <span className="w-36 text-right tabular-nums">
-              {money(quotation?.totalAmount === null || quotation?.totalAmount === undefined ? undefined : Number(quotation.totalAmount))}
-            </span>
-          </div>
         </div>
       )}
       {looseExpenses && looseExpenses.rows.length > 0 && (
@@ -316,6 +447,15 @@ export const QuotationBreakdown: React.FC<Props> = ({ quotation, access }) => {
           <ExpensesTable e={looseExpenses} access={access} />
         </div>
       )}
+      <QuotationSummaryCard
+        sections={looseExpenses && looseExpenses.rows.length > 0
+          ? [...sections, { name: 'Other expenses', cats: [], exp: looseExpenses, total: undefined }]
+          : sections}
+        transport={transport}
+        quotationTotal={quotation?.totalAmount === null || quotation?.totalAmount === undefined ? undefined : Number(quotation.totalAmount)}
+        miscCode={quotation?.miscellaneousMarginCode ?? null}
+        access={access}
+      />
     </div>
   );
 };

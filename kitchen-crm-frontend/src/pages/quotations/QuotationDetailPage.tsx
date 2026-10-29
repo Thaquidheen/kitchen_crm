@@ -162,6 +162,10 @@ export function QuotationDetailPage() {
 
   return (
     <div className="w-full">
+      {/* The header and the tabs stay in view while the page scrolls (from tablet width up: on a
+          phone the wrapped header would take too much of the screen). The negative margins reach
+          the edges of the page's padding (AppLayout) so nothing shows around it. */}
+      <div className="md:sticky md:top-0 z-20 md:-mx-6 md:-mt-6 md:px-6 md:pt-6 bg-background-900">
       {/* Compact header */}
       <div className="flex items-center gap-3 flex-wrap mb-4">
         <button
@@ -239,11 +243,8 @@ export function QuotationDetailPage() {
         </div>
       </div>
 
-      {/* A reopened quotation: what the admin asked to change */}
-      <EditRequestNotes request={pendingFor(pendingEdits, data.id)} className="mb-4" />
-
       {/* Tab bar */}
-      <div className="flex gap-1 border-b border-background-600 mb-4 overflow-x-auto">
+      <div className="flex gap-1 border-b border-background-600 overflow-x-auto">
         {TABS.map((tab) => {
           const active = activeTab === tab;
           return (
@@ -261,6 +262,11 @@ export function QuotationDetailPage() {
           );
         })}
       </div>
+      </div>
+      <div className="mb-4" />
+
+      {/* A reopened quotation: what the admin asked to change */}
+      <EditRequestNotes request={pendingFor(pendingEdits, data.id)} className="mb-4" />
 
       {/* ===== Overview ===== */}
       {activeTab === 'Overview' && (

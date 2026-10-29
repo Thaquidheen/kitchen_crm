@@ -222,3 +222,105 @@ export const money = (n?: number | null): string =>
     : `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export const pctText = (n?: number): string => (n === undefined ? '—' : `${Number(n.toFixed(2))}%`);
+
+/** One row of the quotation summary: what was priced, the margin on it, and what the customer pays. */
+export interface SummaryRow {
+  name: string;
+  /** Before margin. */
+  base?: number;
+  margin?: number;
+  /** The category's margin % (the same in every kitchen), or the share worked out from the amounts. */
+  pct?: number;
+  /** The administrator's code for that margin (staff shown codes). */
+  code?: string | null;
+  /** Before margin + margin: what is charged before GST. */
+  after?: number;
+  tax?: number;
+  final?: number;
+}
+
+const known = (v: number | undefined): v is number => v !== undefined && Number.isFinite(v);
+/** A sum that is unknown as soon as one part is (better a dash than a figure that is quietly short). */
+const total = (parts: Array<number | undefined>): number | undefined =>
+  parts.every(known) ? parts.reduce((s: number, v) => s + (v as number), 0) : undefined;
+
+/** A row from parts: summed, with "after" = before + margin, or what is paid less GST when only that is known. */
+const rowOf = (name: string, parts: SummaryRow[], extra: Partial<SummaryRow> = {}): SummaryRow => {
+  const base = total(parts.map((p) => p.base));
+  const margin = total(parts.map((p) => p.margin));
+  const tax = total(parts.map((p) => p.tax));
+  const final = total(parts.map((p) => p.final));
+  const after = known(base) && known(margin) ? base + margin : total(parts.map((p) => p.after)) ?? (known(final) && known(tax) ? final - tax : undefined);
+  return { name, base, margin, after, tax, final, ...extra };
+};
+
+const categoryRow = (c: CategoryBreakdown): SummaryRow => ({
+  name: c.title, base: c.base, margin: c.margin, pct: c.marginPct, code: c.marginCode, after: c.afterMargin, tax: c.tax, final: c.final,
+});
+const expenseRow = (name: string, e: ExpenseBreakdown): SummaryRow => ({
+  name,
+  base: e.base,
+  margin: e.margin,
+  pct: e.marginPct,
+  after: e.margin === undefined ? undefined : e.base + e.margin,
+  tax: e.tax,
+  final: e.final,
+});
+
+/** The share a margin is of an amount, in %: the markup on the cost (÷ before margin) or of the price (÷ after margin). */
+export const shareOf = (part?: number, whole?: number): number | undefined =>
+  known(part) && known(whole) && whole !== 0 ? (part / whole) * 100 : undefined;
+
+export interface QuotationSummary {
+  /** One row per kitchen, then the transportation shared by all kitchens (none when there is one kitchen). */
+  byKitchen: SummaryRow[];
+  /** Every category over all kitchens, then the other expenses (including the shared transportation). */
+  byCategory: SummaryRow[];
+  total: SummaryRow;
+}
+
+/**
+ * The whole quotation at a glance, from its kitchens' breakdowns: per kitchen and per category, what
+ * was priced, the margin and what the customer pays. The stored quotation total wins for the total.
+ */
+export const quotationSummary = (
+  sections: Array<{ name: string; cats: CategoryBreakdown[]; exp: ExpenseBreakdown; total?: number }>,
+  transport: ExpenseBreakdown | null,
+  quotationTotal?: number,
+  miscCode?: string | null,
+): QuotationSummary => {
+  const kitchenRows = sections.map((s) => {
+    const parts = [...s.cats.map(categoryRow), ...(s.exp.rows.length ? [expenseRow('Other expenses', s.exp)] : [])];
+    const row = rowOf(s.name, parts);
+    return known(s.total) ? { ...row, final: s.total, after: row.after ?? (known(row.tax) ? s.total - row.tax : undefined) } : row;
+  });
+  const transportRow = transport ? expenseRow('Transportation (all kitchens)', transport) : null;
+  const byKitchen = sections.length > 1 ? [...kitchenRows, ...(transportRow ? [transportRow] : [])] : [];
+
+  const kinds = Array.from(new Set(sections.flatMap((s) => s.cats.map((c) => c.kind))));
+  const order: LineKind[] = ['cabinets', 'doors', 'accessories', 'lighting'];
+  const byCategory: SummaryRow[] = order
+    .filter((k) => kinds.includes(k))
+    .map((k) => {
+      const cats = sections.flatMap((s) => s.cats.filter((c) => c.kind === k));
+      const pcts = Array.from(new Set(cats.map((c) => c.marginPct)));
+      const row = rowOf(CATEGORY_TITLE[k], cats.map(categoryRow), { code: cats[0]?.marginCode });
+      return { ...row, pct: pcts.length === 1 && known(pcts[0]) ? pcts[0] : shareOf(row.margin, row.base) };
+    });
+  const expenseParts = [
+    ...sections.filter((s) => s.exp.rows.length > 0).map((s) => expenseRow('Other expenses', s.exp)),
+    ...(transportRow ? [transportRow] : []),
+  ];
+  if (expenseParts.length > 0) {
+    const row = rowOf('Other expenses', expenseParts, { code: miscCode ?? null });
+    const pct = sections.map((s) => s.exp.marginPct).find(known) ?? transport?.marginPct;
+    byCategory.push({ ...row, pct: known(pct) ? pct : shareOf(row.margin, row.base) });
+  }
+
+  const totalRow = rowOf('Total', byCategory);
+  return {
+    byKitchen,
+    byCategory,
+    total: known(quotationTotal) ? { ...totalRow, final: quotationTotal, after: totalRow.after ?? (known(totalRow.tax) ? quotationTotal - totalRow.tax : undefined) } : totalRow,
+  };
+};

@@ -8,6 +8,8 @@ import {
   kitchenCategories,
   money,
   pctText,
+  quotationSummary,
+  shareOf,
 } from './quotationBreakdown';
 
 const close = (a: number | undefined, b: number) => expect(a).toBeCloseTo(b, 2);
@@ -165,5 +167,67 @@ describe('staff shown margin codes', () => {
     expect(c.marginCode).toBe('R');
     expect(c.marginPct).toBeUndefined();
     close(c.afterMargin, 352870.75);
+  });
+});
+
+describe('the quotation summary', () => {
+  // Two kitchens; margins are the quotation's, so the same % in both.
+  const k1 = {
+    name: 'Main kitchen',
+    cats: [
+      categoryBreakdown('cabinets', [{ description: 'A', quantity: 1, unitPrice: 1000 }], { margin: 40, tax: 18 }),
+      categoryBreakdown('accessories', [{ description: 'B', quantity: 2, unitPrice: 100 }], { margin: 15, tax: 18 }),
+    ],
+    exp: expenseBreakdown([{ name: 'Installation', amount: 500 }], { margin: 10, tax: 18 }),
+  };
+  const k2 = {
+    name: 'Work kitchen',
+    cats: [categoryBreakdown('cabinets', [{ description: 'C', quantity: 1, unitPrice: 2000 }], { margin: 40, tax: 18 })],
+    exp: expenseBreakdown([], { margin: 10, tax: 18 }),
+  };
+  const transport = expenseBreakdown([{ name: 'Transportation (all kitchens)', amount: 1000 }], { margin: 10, tax: 18 });
+
+  it('has a row per kitchen and the shared transportation', () => {
+    const s = quotationSummary([k1, k2], transport);
+    expect(s.byKitchen.map((r) => r.name)).toEqual(['Main kitchen', 'Work kitchen', 'Transportation (all kitchens)']);
+    close(s.byKitchen[0].base, 1700);
+    close(s.byKitchen[0].margin, 400 + 30 + 50);
+    close(s.byKitchen[1].final, 2000 * 1.4 * 1.18);
+  });
+
+  it('adds each category up over the kitchens, with its margin %', () => {
+    const s = quotationSummary([k1, k2], transport);
+    expect(s.byCategory.map((r) => r.name)).toEqual(['Cabinets', 'Accessories', 'Other expenses']);
+    close(s.byCategory[0].base, 3000);
+    close(s.byCategory[0].margin, 1200);
+    expect(s.byCategory[0].pct).toBe(40);
+    close(s.byCategory[2].base, 1500);
+    expect(s.byCategory[2].pct).toBe(10);
+  });
+
+  it('totals everything; the stored quotation total wins', () => {
+    const s = quotationSummary([k1, k2], transport, 99999);
+    close(s.total.base, 4700);
+    close(s.total.margin, 1200 + 30 + 150);
+    expect(s.total.final).toBe(99999);
+    close(shareOf(s.total.margin, s.total.base), (1380 / 4700) * 100);
+    close(shareOf(40, 140), 28.5714);
+  });
+
+  it('has no kitchen rows for a single kitchen', () => {
+    expect(quotationSummary([k1], null).byKitchen).toEqual([]);
+  });
+
+  it('leaves unknown what this person is not sent, never a smaller figure', () => {
+    const staff = {
+      name: 'Main kitchen',
+      cats: [categoryBreakdown('cabinets', [{ description: 'A', quantity: 1 }], { tax: 18 }, { tax: 180, final: 1180 })],
+      exp: expenseBreakdown([], { tax: 18 }),
+    };
+    const s = quotationSummary([staff], null, 1180);
+    expect(s.total.base).toBeUndefined();
+    expect(s.total.margin).toBeUndefined();
+    close(s.total.after, 1000);
+    expect(s.total.final).toBe(1180);
   });
 });
