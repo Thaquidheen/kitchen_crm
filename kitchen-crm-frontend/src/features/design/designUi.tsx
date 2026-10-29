@@ -109,9 +109,10 @@ export const DesignFileLink: React.FC<{ file: DesignFile }> = ({ file }) => (
  * Mirrors the server rule so the status window can ask for the design before the request is made.
  */
 export type QuotationGate = 'READY' | 'NEEDS_DESIGN' | 'WITH_DESIGNER';
-export const quotationGate = (job: Pick<DesignJob, 'status'> | null | undefined): QuotationGate => {
+export const quotationGate = (job: Pick<DesignJob, 'status' | 'approvedInForce'> | null | undefined): QuotationGate => {
   if (!job) {return 'NEEDS_DESIGN';}
-  if (isApprovedDesign(job.status)) {return 'READY';}
+  // A newer design waiting for the admin's review leaves the approved one in force.
+  if (isApprovedDesign(job.status) || job.approvedInForce) {return 'READY';}
   if (isOpenDesign(job.status)) {return 'WITH_DESIGNER';}
   return 'NEEDS_DESIGN';
 };

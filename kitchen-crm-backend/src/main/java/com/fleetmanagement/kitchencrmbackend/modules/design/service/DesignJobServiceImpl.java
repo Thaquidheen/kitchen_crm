@@ -250,7 +250,7 @@ public class DesignJobServiceImpl implements DesignJobService {
             // Not theirs to choose: whatever was sent is ignored, and the customer waits under
             // "To assign". An approved design is not reopened this way — that customer would sit
             // in Design with nobody told, so the redesign has to come from the admin.
-            if (existing != null && APPROVED_STATES.contains(status(existing))) {
+            if (existing != null && (APPROVED_STATES.contains(status(existing)) || newerWaitsOverApproved(existing))) {
                 return "This customer already has an approved design. Ask the admin to request a redesign";
             }
             return null;
@@ -317,7 +317,7 @@ public class DesignJobServiceImpl implements DesignJobService {
     @Transactional(readOnly = true)
     public String requireDesignForQuotationStage(Customer customer) {
         DesignPhase job = latestJob(customer.getId());
-        if (job != null && APPROVED_STATES.contains(status(job))) {
+        if (job != null && (APPROVED_STATES.contains(status(job)) || newerWaitsOverApproved(job))) {
             return null;
         }
         if (job != null && OPEN.contains(status(job)) && job.getStaffAssigned() != null) {
@@ -604,6 +604,12 @@ public class DesignJobServiceImpl implements DesignJobService {
             // Same version, another round: it is not approved yet.
             job.setDesignStatus(DesignStatus.REVISION_REQUIRED);
             job.setRevisionCount(nz(job.getRevisionCount()) + 1);
+            User was = job.getStaffAssigned();
+            if (was != null && (Boolean.FALSE.equals(was.getActive()) || !STAFF_TYPE_DESIGNER.equals(was.getStaffType()))) {
+                // Nobody would see it in a list: it waits under To assign for another designer.
+                job.setStaffAssigned(null);
+                job.setQueuePosition(null);
+            }
         }
         job.setCompletionSeenAt(now);
         job.setDesignerSeenAt(null); // news for the designer either way
@@ -945,8 +951,14 @@ public class DesignJobServiceImpl implements DesignJobService {
 
         String message = "Design saved";
         if (moveToQuotation) {
+            boolean wasConfirmed = customer.getStatus() == CustomerStatus.CONFIRMED;
             if (moveCustomer(customer, CustomerStatus.QUOTE_GIVEN, callerName, note.trim())) {
                 message = "Design saved — customer moved to Quotation Stage";
+                if (wasConfirmed) {
+                    // Leaving Confirmed takes the approval back, whichever way they leave.
+                    message += com.fleetmanagement.kitchencrmbackend.modules.quotation.service.QuotationApprovals
+                            .takenBack(quotationApprovals.takeBack(customerId));
+                }
             }
         } else if (moveToQuotationIfInDesign(customer, callerName, "Design V" + version(job) + " uploaded")) {
             message = "Design saved — customer moved to Quotation Stage";
@@ -1124,6 +1136,15 @@ public class DesignJobServiceImpl implements DesignJobService {
      * migration; one the previous jar created during a rollback has none, so it is built here
      * from what the job itself knows.
      */
+    /**
+     * A newer version waits for the admin's review over an approved one (staff uploaded it): until the
+     * admin decides, the approved version is the customer's design.
+     */
+    private boolean newerWaitsOverApproved(DesignPhase job) {
+        return status(job) == DesignStatus.PENDING_SUPERADMIN_APPROVAL && version(job) > 1
+                && versionRepository.findVersion(job.getId(), version(job) - 1).map(v -> v.getApprovedAt() != null).orElse(false);
+    }
+
     private DesignPhaseVersion currentVersionRow(DesignPhase job) {
         return versionRepository.findVersion(job.getId(), version(job)).orElseGet(() -> {
             DesignPhaseVersion row = new DesignPhaseVersion();
@@ -1420,6 +1441,8 @@ public class DesignJobServiceImpl implements DesignJobService {
         }
         dto.setStatus(s.name());
         dto.setVersion(version);
+        dto.setApprovedInForce(APPROVED_STATES.contains(s) || (s == DesignStatus.PENDING_SUPERADMIN_APPROVAL && version > 1
+                && versions.stream().anyMatch(v -> v.getVersionNo() != null && v.getVersionNo() == version - 1 && v.getApprovedAt() != null)));
         DesignPhaseVersion current = versions.stream()
                 .filter(v -> v.getVersionNo() != null && v.getVersionNo() == version).findFirst().orElse(null);
         dto.setOrigin(current != null ? current.getOrigin() : DesignPhaseVersion.ORIGIN_DESIGNER);

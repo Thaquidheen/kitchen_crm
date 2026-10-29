@@ -35,6 +35,9 @@ export const effectSummary = (effects?: QuotationEffects | null): string | null 
       : `${n} approved quotations go back to Completed: the customer is no longer confirmed on them.`;
   }
   if (effects.action === 'APPROVE') {
+    if (n === 1 && effects.quotations[0].status === 'APPROVED') {
+      return `“${effectRowLabel(effects.quotations[0])}” stays the approved quotation.`;
+    }
     return n === 1
       ? `The completed quotation “${effectRowLabel(effects.quotations[0])}” becomes Approved.`
       : `This customer has ${n} completed quotations. Choose the one that becomes Approved; the others stay Completed.`;

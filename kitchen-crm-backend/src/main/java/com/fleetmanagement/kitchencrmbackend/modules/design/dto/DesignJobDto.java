@@ -23,6 +23,8 @@ public class DesignJobDto {
     private String designerName;
     /** DesignStatus name. */
     private String status;
+    /** An approved design is the customer's design now (also while a newer one waits for the admin's review). */
+    private Boolean approvedInForce;
     /** Version in work, or the last one approved. 1 for a first design. */
     private Integer version;
     /** How the current version came to be: DESIGNER or UPLOADED. */
