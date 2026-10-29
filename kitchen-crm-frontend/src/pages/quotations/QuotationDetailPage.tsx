@@ -9,7 +9,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   useGetQuotationByIdQuery,
-  useDuplicateQuotationMutation,
   useDownloadQuotationPDFMutation,
   useGetFolderVersionsQuery,
 } from '@/app/baseApi';
@@ -69,7 +68,6 @@ export function QuotationDetailPage() {
   const navigate = useNavigate();
   const quotationId = Number(id);
   const { data, isLoading, error } = useGetQuotationByIdQuery(quotationId, { skip: isNaN(quotationId) });
-  const [duplicateQuotation, { isLoading: isDuplicating }] = useDuplicateQuotationMutation();
   const [downloadQuotationPDF, { isLoading: isDownloading }] = useDownloadQuotationPDFMutation();
   const [activeTab, setActiveTab] = useState('Overview');
   // While the header is pinned, what gets focus (or is scrolled into view) lands below it, not under it.
@@ -95,16 +93,8 @@ export function QuotationDetailPage() {
   const folderId: number | undefined = (data as any)?.folderId ?? undefined;
   const { data: versions = [] } = useGetFolderVersionsQuery(folderId!, { skip: !folderId });
 
-  const handleDuplicate = async () => {
-    try {
-      const result = await duplicateQuotation(quotationId).unwrap();
-      toast.success('Quotation duplicated successfully');
-      navigate(`/quotations/${result.id}/edit`);
-    } catch (error: any) {
-      console.error('Error duplicating quotation:', error);
-      toast.error(error?.data?.message || 'Failed to duplicate quotation');
-    }
-  };
+  // A duplicate is made in the editor (as "Save as New"), so kitchens, expenses and margins come along.
+  const handleDuplicate = () => navigate(`/quotations/${quotationId}/edit?copy=1`);
 
   const handleEdit = () => navigate(`/quotations/${quotationId}/edit`);
   // A completed quotation is reopened by the admin; staff who may not change its status ask here.
@@ -250,9 +240,9 @@ export function QuotationDetailPage() {
             <Edit size={13} className="text-text-700" />
             Edit
           </button>
-          <button onClick={handleDuplicate} disabled={isDuplicating || !access.create} className={ghostBtn}>
+          <button onClick={handleDuplicate} disabled={!access.create} className={ghostBtn}>
             <Copy size={13} className="text-text-700" />
-            {isDuplicating ? 'Duplicating…' : 'Duplicate'}
+            Duplicate
           </button>
           <button
             onClick={handleDownloadPDF}

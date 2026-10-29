@@ -103,7 +103,8 @@ export const designAPI = baseApi.injectEndpoints({
       query: ({ id, ...body }) => ({ url: `/design-jobs/${id}/review`, method: 'PUT', body }),
       transformResponse: unwrap<DesignJob>('Failed to review design'),
       // Approving moves a customer in Design on to Quotation Stage.
-      invalidatesTags: ['Designs', 'Customers'],
+      // An approved design moves the customer on to Quotation Stage (board To assign, dashboard).
+      invalidatesTags: ['Designs', 'Customers', 'QuotationWork', 'Dashboard'],
     }),
     requestRedesign: builder.mutation<
       DesignJob,
@@ -112,7 +113,8 @@ export const designAPI = baseApi.injectEndpoints({
       query: ({ id, ...body }) => ({ url: `/design-jobs/${id}/redesign`, method: 'POST', body }),
       transformResponse: unwrap<DesignJob>('Failed to request the redesign'),
       // A redesign brings the customer back into Design.
-      invalidatesTags: ['Designs', 'Customers'],
+      // A redesign can take a Confirmed customer's approval back and take quotation work off the board.
+      invalidatesTags: ['Designs', 'Customers', 'Quotations', 'QuotationWork', 'QuotationEditRequests', 'Dashboard'],
     }),
     getDesignLibrary: builder.query<DesignLibraryRow[], void>({
       query: () => '/design-jobs/library',
