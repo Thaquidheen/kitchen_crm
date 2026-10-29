@@ -693,6 +693,7 @@ public class DesignJobServiceImpl implements DesignJobService {
             return ApiResponse.error("This design is waiting for the admin's approval");
         }
         ApiResponse<DesignPhaseFileDto> stored = store(job, file, DesignPhaseFile.FileCategory.DESIGN, description, callerName);
+        markUploader(stored, callerId);
         if (!Boolean.TRUE.equals(stored.getSuccess())) {
             return ApiResponse.error(stored.getMessage());
         }
@@ -779,7 +780,10 @@ public class DesignJobServiceImpl implements DesignJobService {
             // A design file can be taken back only while its version is still being worked on: by
             // the admin, the designer who has it, or admin staff for a file they brought in
             // themselves — not the designer's work.
-            if (!admin && !own && (callerName == null || !callerName.equals(file.getUploadedBy()))) {
+            boolean broughtIn = file.getUploadedByUserId() != null
+                    ? file.getUploadedByUserId().equals(callerId)
+                    : callerName != null && callerName.equals(file.getUploadedBy());
+            if (!admin && !own && !broughtIn) {
                 return ApiResponse.error("Only the designer or the admin can remove this file");
             }
             boolean workedOn = versionOf(file) == version(job) && OPEN.contains(status(job));
@@ -898,6 +902,7 @@ public class DesignJobServiceImpl implements DesignJobService {
         }
         for (MultipartFile file : picked) {
             ApiResponse<DesignPhaseFileDto> stored = store(job, file, DesignPhaseFile.FileCategory.DESIGN, null, callerName);
+            markUploader(stored, callerId);
             if (!Boolean.TRUE.equals(stored.getSuccess())) {
                 TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
                 return ApiResponse.error(picked.size() == 1
@@ -1205,6 +1210,18 @@ public class DesignJobServiceImpl implements DesignJobService {
         request.setDescription(description);
         request.setVersionNo(version(job));
         return fileService.uploadDesignFile(file, request, uploadedBy);
+    }
+
+    /** Records who brought the file in, by account (deleting it later is decided on that, not the name). */
+    private void markUploader(ApiResponse<DesignPhaseFileDto> stored, Long callerId) {
+        if (callerId == null || stored == null || !Boolean.TRUE.equals(stored.getSuccess()) || stored.getData() == null
+                || stored.getData().getId() == null) {
+            return;
+        }
+        fileRepository.findById(stored.getData().getId()).ifPresent(f -> {
+            f.setUploadedByUserId(callerId);
+            fileRepository.save(f);
+        });
     }
 
     private static String validateDesigner(User designer) {

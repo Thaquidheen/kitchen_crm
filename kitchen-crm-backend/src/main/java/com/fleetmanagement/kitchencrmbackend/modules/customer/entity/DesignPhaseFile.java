@@ -48,6 +48,10 @@ public class DesignPhaseFile extends Auditable {
     @Column(name = "uploaded_by")
     private String uploadedBy;
 
+    /** The account that brought the file in (V163). Null on older files: uploadedBy (a name) is all there is. */
+    @Column(name = "uploaded_by_user_id")
+    private Long uploadedByUserId;
+
     /** Design version this file belongs to (V155). Null on older files = 1. */
     @Column(name = "version_no")
     private Integer versionNo;
