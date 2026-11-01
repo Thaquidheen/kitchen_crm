@@ -74,6 +74,14 @@ export interface VendorTotal {
   balanceCashInAccount: number;
   expenseCount: number;
   releaseCount: number;
+  /**
+   * Set by the server when one side was paid beyond its share while the other is still owed:
+   * the side paid from, the amount counted against the other share (not extra), and anything
+   * beyond the vendor's total. Absent when there is no shift. See vendorBuckets.
+   */
+  shiftFrom?: PaymentMode | null;
+  shiftAmount?: number | null;
+  shiftBeyondTotal?: number | null;
 }
 
 export interface FinanceSummary {
@@ -103,8 +111,9 @@ export interface FinanceSummary {
   releasedCashInHand: number;
   releasedCashInAccount: number;
   /**
-   * Clamped per bucket then summed, NOT expenseTotal − releasedTotal: paying a cash expense from
-   * the bank leaves you outstanding in one bucket and over in the other at the same time.
+   * Worked out per vendor then summed, NOT expenseTotal − releasedTotal, so one vendor's
+   * overpayment is never hidden by another's pending amount. Within a vendor they follow its
+   * total: cash paid towards its bank share is a shift (see vendorBuckets), not extra.
    * Reconciles as outstandingTotal − extraTotal === expenseTotal − releasedTotal.
    */
   outstandingTotal: number;
@@ -127,6 +136,47 @@ export interface FinanceSummary {
   expenses: FinanceExpense[];
   releases: FinanceRelease[];
   vendorTotals: VendorTotal[];
+}
+
+/** One row of an uploaded sheet, as the server read it. */
+export interface FinanceImportRow {
+  rowNumber: number;
+  type?: 'PAYMENT' | 'EXPENSE' | 'RELEASE' | null;
+  date?: string | null;
+  expenseName?: string | null;
+  vendorName?: string | null;
+  amount?: number | null;
+  mode?: PaymentMode | null;
+  cashInHandAmount?: number | null;
+  cashInAccountAmount?: number | null;
+  quotationNumber?: string | null;
+  note?: string | null;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface FinanceImportTotals {
+  receivedTotal: number;
+  expenseTotal: number;
+  releasedTotal: number;
+  outstandingTotal: number;
+  extraTotal: number;
+  totalMargin: number;
+  netMargin: number;
+}
+
+/** A check (imported=false) or an import of a sheet. Nothing is saved unless every row is valid. */
+export interface FinanceImportResult {
+  imported: boolean;
+  payments: number;
+  expenses: number;
+  releases: number;
+  errorCount: number;
+  warningCount: number;
+  fileNotes: string[];
+  rows: FinanceImportRow[];
+  before: FinanceImportTotals;
+  after?: FinanceImportTotals | null;
 }
 
 export interface FinanceListRow {

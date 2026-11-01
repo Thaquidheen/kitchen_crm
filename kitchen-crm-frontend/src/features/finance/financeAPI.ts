@@ -7,6 +7,7 @@ import { baseApi } from '../../app/baseApi';
 import type {
   EligibleCustomer,
   ExpenseRequest,
+  FinanceImportResult,
   FinanceListRow,
   FinanceSummary,
   PaymentRequest,
@@ -144,9 +145,51 @@ export const financeAPI = baseApi.injectEndpoints({
           url: `/customer-finance/${owner}/${ownerId}/receipts${kindParam}`,
           method: 'POST',
           body: form,
+          headers: { 'X-Skip-Json-Content-Type': 'true' },
         };
       },
       invalidatesTags: (r) => summaryTags(r?.data),
+    }),
+
+    /** Checks (save: false) or imports (save: true) an Excel / CSV sheet into one customer's finance. */
+    importFinanceSheet: builder.mutation<
+      ApiEnvelope<FinanceImportResult>,
+      { financeId: number; file: File; save: boolean }
+    >({
+      query: ({ financeId, file, save }) => {
+        const form = new FormData();
+        form.append('file', file);
+        return {
+          url: `/customer-finance/${financeId}/import?save=${save}`,
+          method: 'POST',
+          body: form,
+          // Let the browser send multipart with its boundary; baseApi forces JSON otherwise.
+          headers: { 'X-Skip-Json-Content-Type': 'true' },
+        };
+      },
+      // Only a real import changes anything; a check rolls itself back on the server.
+      invalidatesTags: (r, _e, arg) =>
+        r?.data?.imported ? [{ type: 'Finance' as const, id: arg.financeId }, 'Finance' as const, 'Dashboard' as const] : [],
+    }),
+
+    /** Downloads the Excel template (it carries the active vendors, so it is built by the server). */
+    downloadFinanceImportTemplate: builder.mutation<null, void>({
+      query: () => ({
+        url: '/customer-finance/import-template',
+        responseHandler: async (response) => {
+          if (!response.ok) return response.json();
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'income-expenses-import.xlsx';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          return null;
+        },
+      }),
     }),
 
     deleteFinanceReceipt: builder.mutation<ApiEnvelope<FinanceSummary>, number>({
@@ -174,5 +217,7 @@ export const {
   useUpdateFinanceReleaseMutation,
   useDeleteFinanceReleaseMutation,
   useUploadFinanceReceiptsMutation,
+  useImportFinanceSheetMutation,
+  useDownloadFinanceImportTemplateMutation,
   useDeleteFinanceReceiptMutation,
 } = financeAPI;

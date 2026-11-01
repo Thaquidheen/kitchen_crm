@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useDeleteFinanceExpenseMutation, useDeleteFinanceReleaseMutation } from '../financeAPI';
 import type { FinanceExpense, FinanceRelease, FinanceSummary } from '../types';
 import { MODE_LABEL, MODE_ST, fmtDate, inr } from '../constants';
+import { bucketShift, bucketShiftShort } from '../vendorBuckets';
 import { ExpenseFormModal } from './ExpenseFormModal';
 import { ReleaseFormModal } from './ReleaseFormModal';
 import { ReceiptsCell } from './ReceiptsCell';
@@ -372,6 +373,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ summary }) => {
                       : 0;
                 const over = v.balance < 0;
                 const cleared = v.balance === 0 && v.totalExpensed > 0;
+                const shift = bucketShift(v);
                 return (
                   <div
                     key={v.vendorId}
@@ -448,6 +450,13 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ summary }) => {
                         </div>
                       ))}
                     </div>
+                    {/* One side over while the other is still owed: a cash/bank shift, not extra
+                        money. Said in words so the "over" above is not read as an overpayment. */}
+                    {shift && (
+                      <div className="mt-1.5 text-[10.5px] leading-[1.45]" style={{ color: 'var(--st-potential-fg)' }}>
+                        {bucketShiftShort(shift)}
+                      </div>
+                    )}
                   </div>
                 );
               })}

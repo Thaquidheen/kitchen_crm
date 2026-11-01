@@ -19,6 +19,7 @@ import VendorFormModal from '@/features/vendors/components/VendorFormModal';
 import { useAddFinanceReleaseMutation, useUpdateFinanceReleaseMutation } from '../financeAPI';
 import type { FinanceExpense, FinanceRelease, PaymentMode, VendorTotal } from '../types';
 import { MODE_LABEL, MODE_ST, inr, todayIso } from '../constants';
+import { dueIn } from '../vendorBuckets';
 
 interface ReleaseFormModalProps {
   isOpen: boolean;
@@ -93,11 +94,11 @@ export const ReleaseFormModal: React.FC<ReleaseFormModalProps> = ({
 
   const selectedBucket = useMemo(() => bucketOf(vendorTotal, mode), [vendorTotal, mode]);
 
-  // Prefill what is actually outstanding in the bucket being paid from, so the default is the
-  // amount that clears THIS bucket rather than a combined figure that clears neither.
+  // Prefill what is actually due from the bucket being paid from: that bucket's balance, capped
+  // at the vendor's total balance, so money already paid from the other bucket is not paid twice.
   const prefill = (vt: VendorTotal | undefined, m: PaymentMode) => {
-    const b = bucketOf(vt, m);
-    setAmount(b && b.balance > 0 ? String(b.balance) : '');
+    const due = dueIn(vt, m);
+    setAmount(due > 0 ? String(due) : '');
   };
 
   const pickVendor = (id: string) => {
@@ -150,15 +151,17 @@ export const ReleaseFormModal: React.FC<ReleaseFormModalProps> = ({
     }
     // Measured against the SELECTED bucket: releasing from cash when only the bank side is
     // outstanding is exactly the mistake worth flagging, and a combined balance never catches it.
-    if (selectedBucket) {
+    // The bucket is capped at the vendor's total balance, as in dueIn().
+    if (selectedBucket && vendorTotal) {
       const sameMode = release && release.mode === mode ? selfAllowance : 0;
-      const room = selectedBucket.balance + sameMode;
+      // Never below the release's own stored amount, so resaving it unchanged (or lower) is quiet.
+      const room = Math.max(sameMode, Math.min(selectedBucket.balance + sameMode, (vendorTotal.balance ?? 0) + selfAllowance));
       if (amt > room) {
-        return `${inr(amt - room)} more than is outstanding for this vendor in ${MODE_LABEL[mode]}`;
+        return `${inr(amt - room)} more than is due to this vendor in ${MODE_LABEL[mode]}`;
       }
     }
     return null;
-  }, [amount, selectedBucket, mode, expenseId, expenses, release, vendorId]);
+  }, [amount, selectedBucket, vendorTotal, mode, expenseId, expenses, release, vendorId]);
 
   const handleSave = async () => {
     if (!vendorId) {
@@ -270,6 +273,9 @@ export const ReleaseFormModal: React.FC<ReleaseFormModalProps> = ({
                   <div className="mt-2 pt-2 border-t border-background-600 grid grid-cols-2 gap-2">
                     {(['CASH_IN_HAND', 'CASH_IN_ACCOUNT'] as PaymentMode[]).map((m) => {
                       const b = bucketOf(vendorTotal, m)!;
+                      // What is really due here: less than the bucket's own balance when the
+                      // other bucket was already paid beyond its share.
+                      const due = dueIn(vendorTotal, m);
                       const active = mode === m;
                       return (
                         <button
@@ -300,11 +306,17 @@ export const ReleaseFormModal: React.FC<ReleaseFormModalProps> = ({
                             }}
                           >
                             {b.balance > 0
-                              ? `${inr(b.balance)} due`
+                              ? `${inr(due)} due`
                               : b.balance === 0
                                 ? 'Settled'
                                 : `${inr(-b.balance)} over`}
                           </div>
+                          {b.balance > due && (
+                            <div className="text-[10.5px] text-text-600 tabular-nums mt-0.5">
+                              {inr(b.balance - due)} already paid in{' '}
+                              {MODE_LABEL[m === 'CASH_IN_HAND' ? 'CASH_IN_ACCOUNT' : 'CASH_IN_HAND']}
+                            </div>
+                          )}
                           <div className="text-[10.5px] text-text-600 tabular-nums mt-0.5">
                             {inr(b.released)} of {inr(b.expensed)}
                           </div>

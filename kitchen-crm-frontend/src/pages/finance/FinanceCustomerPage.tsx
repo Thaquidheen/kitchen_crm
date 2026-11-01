@@ -10,7 +10,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, Pencil } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Pencil, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -19,7 +19,9 @@ import { TextArea } from '@/components/ui/TextArea';
 import { useGetFinanceSummaryQuery, useUpdateFinanceHeaderMutation } from '@/features/finance/financeAPI';
 import { IncomeTab } from '@/features/finance/components/IncomeTab';
 import { ExpensesTab } from '@/features/finance/components/ExpensesTab';
+import { FinanceImportModal } from '@/features/finance/components/FinanceImportModal';
 import { inr } from '@/features/finance/constants';
+import { bucketShift, bucketShiftAdvice } from '@/features/finance/vendorBuckets';
 import { ROUTES } from '@/routes/routes.config';
 
 const initialsOf = (name?: string) =>
@@ -41,6 +43,7 @@ export function FinanceCustomerPage() {
 
   const [tab, setTab] = useState<'income' | 'expenses'>('income');
   const [headerOpen, setHeaderOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [totalAmount, setTotalAmount] = useState('');
   const [committedCH, setCommittedCH] = useState('');
   const [committedCA, setCommittedCA] = useState('');
@@ -199,6 +202,13 @@ export function FinanceCustomerPage() {
           </div>
           <div className="flex-1" />
           <button
+            onClick={() => setImportOpen(true)}
+            className="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-[10px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Import Excel / CSV
+          </button>
+          <button
             onClick={() => setHeaderOpen(true)}
             className="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-[10px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors"
           >
@@ -294,6 +304,22 @@ export function FinanceCustomerPage() {
             </span>
           </div>
         )}
+
+        {/* A vendor paid from the wrong bucket shows "over" on one side of its card. Extra
+            Expenses rightly stays at zero for it, so say here what happened and how to fix it. */}
+        {summary.vendorTotals.map((v) => {
+          const shift = bucketShift(v);
+          return shift ? (
+            <div
+              key={v.vendorId}
+              className="flex items-start gap-2 px-4 py-2.5 border-t border-background-600 text-[11.5px] leading-[1.5]"
+              style={{ background: 'var(--st-potential-bg)', color: 'var(--st-potential-fg)' }}
+            >
+              <AlertTriangle size={14} className="mt-[1px] shrink-0" />
+              <span>{bucketShiftAdvice(v.vendorName, shift)}</span>
+            </div>
+          ) : null;
+        })}
       </div>
 
       {/* Tabs */}
@@ -368,6 +394,13 @@ export function FinanceCustomerPage() {
           </Button>
         </ModalFooter>
       </Modal>
+
+      <FinanceImportModal
+        isOpen={importOpen}
+        onClose={() => setImportOpen(false)}
+        financeId={summary.financeId}
+        customerName={summary.customerName}
+      />
     </div>
   );
 }
