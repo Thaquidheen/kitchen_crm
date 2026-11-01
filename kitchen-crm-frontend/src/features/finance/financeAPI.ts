@@ -145,6 +145,7 @@ export const financeAPI = baseApi.injectEndpoints({
           url: `/customer-finance/${owner}/${ownerId}/receipts${kindParam}`,
           method: 'POST',
           body: form,
+          headers: { 'X-Skip-Json-Content-Type': 'true' },
         };
       },
       invalidatesTags: (r) => summaryTags(r?.data),
@@ -158,7 +159,13 @@ export const financeAPI = baseApi.injectEndpoints({
       query: ({ financeId, file, save }) => {
         const form = new FormData();
         form.append('file', file);
-        return { url: `/customer-finance/${financeId}/import?save=${save}`, method: 'POST', body: form };
+        return {
+          url: `/customer-finance/${financeId}/import?save=${save}`,
+          method: 'POST',
+          body: form,
+          // Let the browser send multipart with its boundary; baseApi forces JSON otherwise.
+          headers: { 'X-Skip-Json-Content-Type': 'true' },
+        };
       },
       // Only a real import changes anything; a check rolls itself back on the server.
       invalidatesTags: (r, _e, arg) =>

@@ -36,7 +36,7 @@ export function bucketShiftShort(s: BucketShift): string {
 export function bucketShiftAdvice(vendorName: string, s: BucketShift): string {
   const beyond =
     s.beyondTotal > 0
-      ? ` A further ${inr(s.beyondTotal)} is more than all of its expense lines together, and counts as extra.`
+      ? ` A further ${inr(s.beyondTotal)} is more than all of its own expense lines together.`
       : '';
   return (
     `${vendorName}: ${inr(s.amount)} paid in ${MODE_LABEL[s.from]} beyond its ${MODE_LABEL[s.from]} share is counted ` +

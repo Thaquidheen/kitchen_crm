@@ -46,7 +46,7 @@ describe('bucketShift', () => {
     // 10,000 cash + 4,000 bank expensed; 20,000 paid in cash: 4,000 moved across, 6,000 is extra.
     const s = bucketShift(vendor(-10000, 4000, { shiftFrom: 'CASH_IN_HAND', shiftAmount: 4000, shiftBeyondTotal: 6000 }))!;
     expect(bucketShiftAdvice('V', s)).toContain('V: ₹4,000 paid in Cash in Hand');
-    expect(bucketShiftAdvice('V', s)).toContain('A further ₹6,000 is more than all of its expense lines together, and counts as extra.');
+    expect(bucketShiftAdvice('V', s)).toContain('A further ₹6,000 is more than all of its own expense lines together.');
   });
 });
 

@@ -586,11 +586,19 @@ public class FinanceServiceImpl implements FinanceService {
             Long lineId = null;
             if (r.expenseName != null) {
                 String name = FinanceImportColumns.squash(r.expenseName);
-                List<FinanceExpense> lines = fileLines.containsKey(name) ? fileLines.get(name)
-                        : linesByName.getOrDefault(name, List.of());
-                List<FinanceExpense> vendors = lines.stream()
-                        .filter(e -> e.getVendor() != null && e.getVendor().getId().equals(r.vendor.getId())).toList();
-                List<FinanceExpense> pick = lines.size() > 1 && !vendors.isEmpty() ? vendors : lines;
+                List<FinanceExpense> inFile = fileLines.getOrDefault(name, List.of());
+                List<FinanceExpense> all = linesByName.getOrDefault(name, List.of());
+                java.util.function.Predicate<FinanceExpense> sameVendor =
+                        e -> e.getVendor() != null && e.getVendor().getId().equals(r.vendor.getId());
+                // The release's own vendor's line first (in this file, then saved), then any line
+                // of that name (in this file, then saved).
+                List<FinanceExpense> pick = inFile.stream().filter(sameVendor).toList();
+                if (pick.isEmpty()) {
+                    pick = all.stream().filter(sameVendor).toList();
+                }
+                if (pick.isEmpty()) {
+                    pick = !inFile.isEmpty() ? inFile : all;
+                }
                 if (pick.isEmpty()) {
                     r.row.getErrors().add("No expense line called \"" + r.expenseName
                             + "\" for this customer, saved or in this file. Leave Expense Name empty to release without linking a line");
@@ -601,7 +609,12 @@ public class FinanceServiceImpl implements FinanceService {
                             + "\". Leave Expense Name empty, or give the lines different names");
                     continue;
                 }
-                lineId = pick.get(0).getId();
+                FinanceExpense line = pick.get(0);
+                if (line.getVendor() != null && !line.getVendor().getId().equals(r.vendor.getId())) {
+                    r.row.getWarnings().add("Expense line \"" + r.expenseName + "\" is "
+                            + line.getVendor().getVendorName() + "'s, not " + r.vendor.getVendorName() + "'s");
+                }
+                lineId = line.getId();
             }
             ReleaseRequestDto dto = new ReleaseRequestDto(r.vendor.getId(), r.amount, r.mode, r.date, lineId, r.note);
             FinanceVendorRelease release = new FinanceVendorRelease();
@@ -721,6 +734,8 @@ public class FinanceServiceImpl implements FinanceService {
             errors.add("Amount cannot be negative");
         } else if (amount.signum() == 0 && kind != null && kind != Kind.EXPENSE) {
             errors.add("Amount must be more than zero");
+        } else if (amount.compareTo(new BigDecimal("1000000000000")) >= 0) {
+            errors.add("Amount \"" + amountText + "\" is too large");
         }
         if (amount != null) {
             amount = amount.setScale(2, RoundingMode.HALF_UP);
@@ -741,7 +756,8 @@ public class FinanceServiceImpl implements FinanceService {
         String vendorText = cell.apply(FinanceImportColumns.VENDOR);
         Vendor vendor = null;
         if (!vendorText.isEmpty() && kind != Kind.PAYMENT) {
-            List<Vendor> found = vendorsByName.get(FinanceImportColumns.squash(vendorText));
+            String vendorKey = FinanceImportColumns.squash(vendorText);
+            List<Vendor> found = vendorKey.isEmpty() ? null : vendorsByName.get(vendorKey);
             if (found == null) {
                 errors.add("No active vendor called \"" + vendorText + "\"" + vendorHint(vendorText, vendorsByName));
             } else if (found.size() > 1) {
@@ -764,6 +780,9 @@ public class FinanceServiceImpl implements FinanceService {
 
         String note = cell.apply(FinanceImportColumns.NOTE);
         String comment = cell.apply(FinanceImportColumns.COMMENT);
+        if (note.length() > 500) {
+            errors.add("Note is longer than 500 characters");
+        }
         row.setNote(note.isEmpty() ? null : note);
         if (!comment.isEmpty() && kind != Kind.PAYMENT && kind != null) {
             row.getWarnings().add("Comment is only kept for payments received; put it in Note instead");
@@ -831,6 +850,10 @@ public class FinanceServiceImpl implements FinanceService {
             BigDecimal value = pct ? FinanceImportColumns.pctOf(text) : FinanceImportColumns.amountOf(text);
             if (value == null || value.signum() < 0) {
                 errors.add(read[0] + " \"" + text + "\" is not " + (pct ? "a percentage" : "an amount"));
+                return;
+            }
+            if (!pct && value.compareTo(new BigDecimal("1000000000000")) >= 0) {
+                errors.add(read[0] + " \"" + text + "\" is too large");
                 return;
             }
             if (pct && value.compareTo(BigDecimal.valueOf(100)) > 0) {
@@ -1292,7 +1315,7 @@ public class FinanceServiceImpl implements FinanceService {
             untagged[2] = untagged[2].add(split[2]);
             untagged[3] = untagged[3].add(split[3]);
             CustomerFinanceSummaryDto.VendorTotalDto vt = vendorMap.get(owed.getKey());
-            if (vt != null) {
+            if (vt != null && sameAsCard(vt, o)) {
                 markShift(vt, o);
             }
         }
@@ -1376,6 +1399,17 @@ public class FinanceServiceImpl implements FinanceService {
             vt.setShiftAmount(moved);
             vt.setShiftBeyondTotal(ch.add(ca).negate().max(BigDecimal.ZERO));
         }
+    }
+
+    /**
+     * Whether a vendor's card (releases by the vendor paid) shows the same money as its group for
+     * outstanding and extra (releases by the line they pay). They differ only when a release to
+     * one vendor is linked to another vendor's line; the card then has no shift line, so the
+     * notice can never contradict the card it sits above.
+     */
+    private static boolean sameAsCard(CustomerFinanceSummaryDto.VendorTotalDto vt, BigDecimal[] o) {
+        return vt.getExpensedCashInHand().compareTo(o[0]) == 0 && vt.getExpensedCashInAccount().compareTo(o[1]) == 0
+                && vt.getReleasedCashInHand().compareTo(o[2]) == 0 && vt.getReleasedCashInAccount().compareTo(o[3]) == 0;
     }
 
     /** Adds to one slot of a vendor's {expensed C/H, expensed C/A, released C/H, released C/A}. */

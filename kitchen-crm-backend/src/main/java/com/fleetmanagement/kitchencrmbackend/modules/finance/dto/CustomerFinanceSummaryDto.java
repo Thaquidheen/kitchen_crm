@@ -186,8 +186,9 @@ public class CustomerFinanceSummaryDto {
         /**
          * Set when one side was paid beyond its share while the other is still owed: the side
          * paid from, the amount counted against the other side's share (not extra money), and
-         * anything paid beyond the vendor's total. Null when there is no such shift. Releases
-         * linked to a line count for that line's vendor here, as in outstanding and extra.
+         * anything paid beyond the vendor's own expense lines (which lines with no vendor may
+         * still absorb, so it is not necessarily extra). Null when there is no such shift, and
+         * left out when a release to one vendor is linked to another vendor's line.
          */
         private FinanceIncomePayment.PaymentMode shiftFrom;
         private BigDecimal shiftAmount;

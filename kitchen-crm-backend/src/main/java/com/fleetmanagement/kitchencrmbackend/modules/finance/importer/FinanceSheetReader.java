@@ -32,6 +32,8 @@ import java.util.Map;
 public final class FinanceSheetReader {
 
     public static final long MAX_BYTES = 5L * 1024 * 1024;
+    /** An .xlsx is a zip; what it unpacks to is what POI holds in memory. */
+    private static final long MAX_UNZIPPED_BYTES = 60L * 1024 * 1024;
     public static final int MAX_ROWS = 2000;
     /** The template's data sheet; any other workbook is read from its first sheet. */
     public static final String ENTRIES_SHEET = "Entries";
@@ -74,6 +76,7 @@ public final class FinanceSheetReader {
     // ------------------------------------------------------------------ Excel
 
     private static List<List<String>> readWorkbook(byte[] bytes) {
+        checkUnzippedSize(bytes);
         try (Workbook wb = WorkbookFactory.create(new ByteArrayInputStream(bytes))) {
             Sheet sheet = wb.getSheet(ENTRIES_SHEET);
             if (sheet == null) {
@@ -85,6 +88,7 @@ public final class FinanceSheetReader {
             DataFormatter formatter = new DataFormatter(Locale.ENGLISH);
             List<List<String>> lines = new ArrayList<>();
             int last = sheet.getLastRowNum();
+            int filled = 0;
             for (int r = 0; r <= last; r++) {
                 Row row = sheet.getRow(r);
                 List<String> cells = new ArrayList<>();
@@ -93,8 +97,10 @@ public final class FinanceSheetReader {
                         cells.add(cellText(row.getCell(c), formatter));
                     }
                 }
+                // Blank lines are kept (row numbers stay right) but only filled ones count
+                // towards the stop, so blank rows can never push real rows past it unseen.
                 lines.add(cells);
-                if (lines.size() > MAX_ROWS + 50) {
+                if (!blank(cells) && ++filled > MAX_ROWS + 1) {
                     break;
                 }
             }
@@ -109,29 +115,61 @@ public final class FinanceSheetReader {
     }
 
     /**
-     * Text of one cell. Dates become yyyy-MM-dd and numbers their plain value, whatever the cell's
+     * Text of one cell. Dates become yyyy-MM-dd and numbers their plain value whatever the
      * display format, so "₹1,00,000" formatting or a dd/MM display never changes what is read.
+     * The exception is a percent format: Excel stores 40% as 0.4, so it is given back as "40%".
+     * A formula error, or a formula Excel never calculated, comes back as text that no number
+     * or date reader accepts, so the row is flagged instead of read as empty.
      */
     private static String cellText(Cell cell, DataFormatter formatter) {
         if (cell == null) {
             return "";
         }
-        CellType type = cell.getCellType() == CellType.FORMULA ? cell.getCachedFormulaResultType() : cell.getCellType();
+        boolean formula = cell.getCellType() == CellType.FORMULA;
+        CellType type = formula ? cell.getCachedFormulaResultType() : cell.getCellType();
         switch (type) {
             case NUMERIC:
                 if (DateUtil.isCellDateFormatted(cell)) {
                     return cell.getLocalDateTimeCellValue().toLocalDate().toString();
                 }
-                return BigDecimal.valueOf(cell.getNumericCellValue()).stripTrailingZeros().toPlainString();
+                BigDecimal value = BigDecimal.valueOf(cell.getNumericCellValue());
+                String format = cell.getCellStyle() == null ? null : cell.getCellStyle().getDataFormatString();
+                if (format != null && format.replaceAll("\"[^\"]*\"|\\\\.", "").contains("%")) {
+                    return value.movePointRight(2).stripTrailingZeros().toPlainString() + "%";
+                }
+                return value.stripTrailingZeros().toPlainString();
             case STRING:
                 return cell.getStringCellValue().trim();
             case BOOLEAN:
                 return String.valueOf(cell.getBooleanCellValue());
-            case BLANK:
             case ERROR:
-                return "";
+                return formula ? "(formula error: " + cell.getCellFormula() + ")" : "(error cell)";
+            case BLANK:
+                return formula ? "(formula with no value: " + cell.getCellFormula() + ")" : "";
             default:
                 return formatter.formatCellValue(cell).trim();
+        }
+    }
+
+    /** Refuses an .xlsx that unpacks to far more than any finance sheet could need (a zip bomb). */
+    private static void checkUnzippedSize(byte[] bytes) {
+        if (bytes.length < 4 || bytes[0] != 'P' || bytes[1] != 'K') {
+            return; // not a zip: an .xls, or not a workbook at all (POI says so below)
+        }
+        long total = 0;
+        byte[] buf = new byte[64 * 1024];
+        try (java.util.zip.ZipInputStream zip = new java.util.zip.ZipInputStream(new ByteArrayInputStream(bytes))) {
+            while (zip.getNextEntry() != null) {
+                int n;
+                while ((n = zip.read(buf)) > 0) {
+                    total += n;
+                    if (total > MAX_UNZIPPED_BYTES) {
+                        throw new ReadProblem("The Excel file is too large once opened. Keep only the entries sheet and retry");
+                    }
+                }
+            }
+        } catch (IOException e) {
+            throw new ReadProblem("The Excel file could not be read. Save it again as .xlsx and retry");
         }
     }
 
@@ -158,6 +196,7 @@ public final class FinanceSheetReader {
         List<String> cells = new ArrayList<>();
         StringBuilder cell = new StringBuilder();
         boolean quoted = false;
+        int filled = 0;
         for (int i = 0; i < text.length(); i++) {
             char ch = text.charAt(i);
             if (quoted) {
@@ -184,10 +223,10 @@ public final class FinanceSheetReader {
                 cells.add(cell.toString().trim());
                 cell.setLength(0);
                 lines.add(cells);
-                cells = new ArrayList<>();
-                if (lines.size() > MAX_ROWS + 50) {
+                if (!blank(cells) && ++filled > MAX_ROWS + 1) {
                     return lines;
                 }
+                cells = new ArrayList<>();
             } else {
                 cell.append(ch);
             }
@@ -251,7 +290,8 @@ public final class FinanceSheetReader {
                 if (header.isEmpty()) {
                     continue;
                 }
-                cells.put(header, c < line.size() && line.get(c) != null ? line.get(c).trim() : "");
+                // A repeated header keeps its FIRST column, as the file notes say.
+                cells.putIfAbsent(header, c < line.size() && line.get(c) != null ? line.get(c).trim() : "");
             }
             rows.add(new RawRow(i + 1, cells));
         }

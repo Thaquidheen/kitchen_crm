@@ -99,9 +99,16 @@ public final class FinanceImportColumns {
     private FinanceImportColumns() {
     }
 
-    /** Lower case letters and digits only: "Cash in Hand %" and "cash-in-hand" both become "cashinhand". */
+    /**
+     * Lower case letters and digits only, in any script: "Cash in Hand %" and "cash-in-hand" both
+     * become "cashinhand", and a Malayalam name keeps its letters.
+     */
     public static String squash(String s) {
-        return s == null ? "" : s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
+        if (s == null) {
+            return "";
+        }
+        return java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFKC)
+                .toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]", "");
     }
 
     /**

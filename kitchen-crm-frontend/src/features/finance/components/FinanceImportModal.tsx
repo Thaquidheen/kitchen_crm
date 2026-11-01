@@ -44,8 +44,12 @@ export const FinanceImportModal: React.FC<FinanceImportModalProps> = ({ isOpen, 
   const [runImport, { isLoading: busy }] = useImportFinanceSheetMutation();
   const [downloadTemplate, { isLoading: downloading }] = useDownloadFinanceImportTemplateMutation();
   const [saving, setSaving] = useState(false);
+  // Which request is current: a check that finishes after another file was chosen, or after the
+  // window was closed, must not show its result.
+  const seq = useRef(0);
 
   const reset = () => {
+    seq.current++;
     setFile(null);
     setResult(null);
     setFileError(null);
@@ -59,20 +63,23 @@ export const FinanceImportModal: React.FC<FinanceImportModalProps> = ({ isOpen, 
   };
 
   const check = async (f: File) => {
+    const id = ++seq.current;
     setFile(f);
     setResult(null);
     setFileError(null);
     try {
       const r = await runImport({ financeId, file: f, save: false }).unwrap();
+      if (id !== seq.current) return;
       setResult(r.data ?? null);
       setOnlyProblems((r.data?.errorCount ?? 0) > 0);
     } catch (e) {
+      if (id !== seq.current) return;
       setFileError(errorText(e));
     }
   };
 
   const save = async () => {
-    if (!file) return;
+    if (!file || saving) return;
     setSaving(true);
     try {
       const r = await runImport({ financeId, file, save: true }).unwrap();
@@ -185,7 +192,11 @@ export const FinanceImportModal: React.FC<FinanceImportModalProps> = ({ isOpen, 
               type="file"
               accept=".xlsx,.xls,.csv"
               className="hidden"
-              onChange={(e) => pick(e.target.files)}
+              onChange={(e) => {
+                pick(e.target.files);
+                // Cleared so choosing the same (corrected) file again is noticed.
+                e.target.value = '';
+              }}
             />
           </div>
 

@@ -154,7 +154,8 @@ export const ReleaseFormModal: React.FC<ReleaseFormModalProps> = ({
     // The bucket is capped at the vendor's total balance, as in dueIn().
     if (selectedBucket && vendorTotal) {
       const sameMode = release && release.mode === mode ? selfAllowance : 0;
-      const room = Math.max(0, Math.min(selectedBucket.balance + sameMode, (vendorTotal.balance ?? 0) + selfAllowance));
+      // Never below the release's own stored amount, so resaving it unchanged (or lower) is quiet.
+      const room = Math.max(sameMode, Math.min(selectedBucket.balance + sameMode, (vendorTotal.balance ?? 0) + selfAllowance));
       if (amt > room) {
         return `${inr(amt - room)} more than is due to this vendor in ${MODE_LABEL[mode]}`;
       }

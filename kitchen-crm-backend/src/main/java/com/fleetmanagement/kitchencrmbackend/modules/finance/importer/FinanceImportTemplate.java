@@ -41,8 +41,11 @@ public final class FinanceImportTemplate {
             head.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
             head.setFillPattern(FillPatternType.SOLID_FOREGROUND);
             head.setBorderBottom(BorderStyle.THIN);
+            // Text, not a date format: Excel would re-read a typed 05-10-2026 with the PC's locale
+            // (month first on many PCs) before the import ever saw it. As text it reaches the
+            // import as typed, and the import reads it day first.
             CellStyle date = wb.createCellStyle();
-            date.setDataFormat(wb.createDataFormat().getFormat("dd-mm-yyyy"));
+            date.setDataFormat(wb.createDataFormat().getFormat("@"));
             CellStyle money = wb.createCellStyle();
             money.setDataFormat(wb.createDataFormat().getFormat("#,##0.00"));
             CellStyle wrap = wb.createCellStyle();
