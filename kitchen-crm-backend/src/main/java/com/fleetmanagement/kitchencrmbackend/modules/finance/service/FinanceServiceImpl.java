@@ -5,6 +5,9 @@ import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerRepository;
 import com.fleetmanagement.kitchencrmbackend.modules.finance.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.finance.entity.*;
+import com.fleetmanagement.kitchencrmbackend.modules.finance.importer.FinanceImportColumns;
+import com.fleetmanagement.kitchencrmbackend.modules.finance.importer.FinanceImportColumns.Kind;
+import com.fleetmanagement.kitchencrmbackend.modules.finance.importer.FinanceSheetReader;
 import com.fleetmanagement.kitchencrmbackend.modules.finance.repository.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.QuotationRepository;
@@ -18,6 +21,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,6 +33,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -442,6 +447,468 @@ public class FinanceServiceImpl implements FinanceService {
         release.setReleaseDate(dto.getReleaseDate());
         release.setNote(dto.getNote());
         return null;
+    }
+
+    // ------------------------------------------------------------------ import from a spreadsheet
+
+    /**
+     * Reads an uploaded sheet of payments, expense lines and vendor releases into this customer's
+     * finance. Every row goes through the same checks as the forms (applyPayment / applyExpense /
+     * applyRelease) inside this transaction, and the transaction is rolled back unless every row
+     * is valid AND {@code save} is set. So a check shows exactly what an import would do, and an
+     * import is all or nothing: a half-imported file can never happen.
+     */
+    @Override
+    public ApiResponse<FinanceImportResultDto> importSheet(Long financeId, String fileName, byte[] bytes,
+                                                           boolean save, String createdBy) {
+        CustomerFinance finance = financeRepository.findById(financeId).orElse(null);
+        if (finance == null) {
+            return ApiResponse.error("Finance record not found");
+        }
+        FinanceSheetReader.Table table;
+        try {
+            table = FinanceSheetReader.read(fileName, bytes);
+        } catch (FinanceSheetReader.ReadProblem e) {
+            return ApiResponse.error(e.getMessage());
+        }
+
+        FinanceImportResultDto result = new FinanceImportResultDto();
+        Map<String, String> headerOf = new LinkedHashMap<>();
+        for (String h : table.headers()) {
+            if (h == null || h.isBlank()) {
+                continue;
+            }
+            String column = FinanceImportColumns.columnOf(h);
+            if (column == null) {
+                result.getFileNotes().add("Column \"" + h.trim() + "\" is not read");
+            } else if (headerOf.containsKey(column)) {
+                result.getFileNotes().add("Column \"" + h.trim() + "\" is not read: \"" + headerOf.get(column)
+                        + "\" already gives the " + column);
+            } else {
+                headerOf.put(column, h.trim());
+            }
+        }
+        if (!headerOf.containsKey(FinanceImportColumns.TYPE) || !headerOf.containsKey(FinanceImportColumns.AMOUNT)) {
+            return ApiResponse.error("The first row must be the column names, with at least \"Type\" and \"Amount\". "
+                    + "Download the template to see them all");
+        }
+        if (table.rows().isEmpty()) {
+            return ApiResponse.error("The file has column names but no rows under them");
+        }
+        result.setBefore(totalsOf(buildSummary(finance)));
+
+        Map<String, List<Vendor>> vendorsByName = new HashMap<>();
+        for (Vendor v : vendorRepository.findByActiveTrue()) {
+            vendorsByName.computeIfAbsent(FinanceImportColumns.squash(v.getVendorName()), k -> new ArrayList<>()).add(v);
+        }
+        Map<String, Quotation> quotationsByNumber = new HashMap<>();
+        for (Quotation q : quotationRepository.findByCustomerId(finance.getCustomer().getId())) {
+            if (q.getQuotationNumber() != null) {
+                quotationsByNumber.put(FinanceImportColumns.squash(q.getQuotationNumber()), q);
+            }
+        }
+        // What is already saved, to flag a row that looks like it was imported before.
+        Set<String> saved = new HashSet<>();
+        for (FinanceIncomePayment p : paymentRepository.findByFinanceIdOrderByPaymentDateAscIdAsc(financeId)) {
+            saved.add(paymentKey(p.getPaymentDate(), p.getAmount(), p.getMode()));
+        }
+        for (FinanceExpense e : expenseRepository.findByFinanceIdOrderByIdAsc(financeId)) {
+            saved.add(expenseKey(e.getTitle(), e.getAmount()));
+        }
+        for (FinanceVendorRelease r : releaseRepository.findByFinanceIdOrderByReleaseDateAscIdAsc(financeId)) {
+            saved.add(releaseKey(r.getVendor().getId(), r.getReleaseDate(), r.getAmount(), r.getMode()));
+        }
+        Map<String, Integer> firstRowWith = new HashMap<>();
+
+        List<ImportRow> ready = new ArrayList<>();
+        for (FinanceSheetReader.RawRow raw : table.rows()) {
+            FinanceImportResultDto.Row row = new FinanceImportResultDto.Row();
+            row.setRowNumber(raw.rowNumber());
+            result.getRows().add(row);
+            ImportRow parsed = parseImportRow(raw, headerOf, row, vendorsByName, quotationsByNumber);
+            if (parsed == null) {
+                continue;
+            }
+            String key = switch (parsed.kind) {
+                case PAYMENT -> paymentKey(parsed.date, parsed.amount, parsed.mode);
+                case EXPENSE -> expenseKey(parsed.expenseName, parsed.amount);
+                case RELEASE -> releaseKey(parsed.vendor.getId(), parsed.date, parsed.amount, parsed.mode);
+            };
+            if (saved.contains(key)) {
+                row.getWarnings().add("Looks like one already saved for this customer (same "
+                        + (parsed.kind == Kind.EXPENSE ? "name and amount" : "date, amount and mode") + ")");
+            }
+            Integer first = firstRowWith.putIfAbsent(key, raw.rowNumber());
+            if (first != null) {
+                row.getWarnings().add("Same as row " + first + " of this file");
+            }
+            ready.add(parsed);
+        }
+
+        // Payments and expense lines first, then releases, so a release can name a line that is
+        // further down the same file. A release naming a line looks in this file first, then at
+        // the saved lines, so importing a file twice does not make its own names ambiguous.
+        Map<String, List<FinanceExpense>> fileLines = new HashMap<>();
+        for (ImportRow r : ready) {
+            if (r.kind == Kind.PAYMENT) {
+                PaymentRequestDto dto = new PaymentRequestDto(r.amount, r.mode, r.date, r.note, r.comment);
+                FinanceIncomePayment payment = new FinanceIncomePayment();
+                payment.setFinance(finance);
+                applyPayment(payment, dto);
+                payment.setCreatedBy(createdBy);
+                paymentRepository.save(payment);
+            } else if (r.kind == Kind.EXPENSE) {
+                FinanceExpense expense = new FinanceExpense();
+                expense.setFinance(finance);
+                String error = applyExpense(expense, r.expenseDto, finance);
+                if (error != null) {
+                    r.row.getErrors().add(error);
+                    continue;
+                }
+                expense.setCreatedBy(createdBy);
+                expenseRepository.save(expense);
+                fileLines.computeIfAbsent(FinanceImportColumns.squash(expense.getTitle()), k -> new ArrayList<>()).add(expense);
+                BigDecimal ch = expense.getCashInHandAmount() != null ? expense.getCashInHandAmount()
+                        : nz(expense.getAmount()).multiply(nz(expense.getCashInHandPct()))
+                                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                r.row.setCashInHandAmount(ch);
+                r.row.setCashInAccountAmount(nz(expense.getAmount()).subtract(ch));
+            }
+        }
+        Map<String, List<FinanceExpense>> linesByName = new HashMap<>();
+        for (FinanceExpense e : expenseRepository.findByFinanceIdOrderByIdAsc(financeId)) {
+            linesByName.computeIfAbsent(FinanceImportColumns.squash(e.getTitle()), k -> new ArrayList<>()).add(e);
+        }
+        for (ImportRow r : ready) {
+            if (r.kind != Kind.RELEASE) {
+                continue;
+            }
+            Long lineId = null;
+            if (r.expenseName != null) {
+                String name = FinanceImportColumns.squash(r.expenseName);
+                List<FinanceExpense> lines = fileLines.containsKey(name) ? fileLines.get(name)
+                        : linesByName.getOrDefault(name, List.of());
+                List<FinanceExpense> vendors = lines.stream()
+                        .filter(e -> e.getVendor() != null && e.getVendor().getId().equals(r.vendor.getId())).toList();
+                List<FinanceExpense> pick = lines.size() > 1 && !vendors.isEmpty() ? vendors : lines;
+                if (pick.isEmpty()) {
+                    r.row.getErrors().add("No expense line called \"" + r.expenseName
+                            + "\" for this customer, saved or in this file. Leave Expense Name empty to release without linking a line");
+                    continue;
+                }
+                if (pick.size() > 1) {
+                    r.row.getErrors().add("More than one expense line is called \"" + r.expenseName
+                            + "\". Leave Expense Name empty, or give the lines different names");
+                    continue;
+                }
+                lineId = pick.get(0).getId();
+            }
+            ReleaseRequestDto dto = new ReleaseRequestDto(r.vendor.getId(), r.amount, r.mode, r.date, lineId, r.note);
+            FinanceVendorRelease release = new FinanceVendorRelease();
+            release.setFinance(finance);
+            String error = applyRelease(release, dto, finance);
+            if (error != null) {
+                r.row.getErrors().add(error);
+                continue;
+            }
+            release.setCreatedBy(createdBy);
+            releaseRepository.save(release);
+        }
+
+        int errors = 0;
+        int warnings = 0;
+        for (FinanceImportResultDto.Row row : result.getRows()) {
+            errors += row.getErrors().size();
+            warnings += row.getWarnings().size();
+            if (row.getErrors().isEmpty() && row.getType() != null) {
+                switch (Kind.valueOf(row.getType())) {
+                    case PAYMENT -> result.setPayments(result.getPayments() + 1);
+                    case EXPENSE -> result.setExpenses(result.getExpenses() + 1);
+                    case RELEASE -> result.setReleases(result.getReleases() + 1);
+                }
+            }
+        }
+        result.setErrorCount(errors);
+        result.setWarningCount(warnings);
+        if (errors == 0) {
+            result.setAfter(totalsOf(buildSummary(finance)));
+        }
+        boolean keep = save && errors == 0;
+        if (!keep) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+        }
+        result.setImported(keep);
+        int rows = result.getRows().size();
+        String message = errors > 0
+                ? (errors == 1 ? "1 problem to fix" : errors + " problems to fix") + " before anything can be imported"
+                : keep ? (rows == 1 ? "1 row imported" : rows + " rows imported")
+                : (rows == 1 ? "1 row ready to import" : rows + " rows ready to import");
+        if (keep) {
+            log.info("Finance {}: imported {} payments, {} expense lines, {} releases from {}",
+                    financeId, result.getPayments(), result.getExpenses(), result.getReleases(), fileName);
+        }
+        return ApiResponse.success(message, result);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] importTemplate() {
+        List<String> names = vendorRepository.findByActiveTrue().stream()
+                .map(Vendor::getVendorName).filter(Objects::nonNull).sorted(String.CASE_INSENSITIVE_ORDER).toList();
+        return com.fleetmanagement.kitchencrmbackend.modules.finance.importer.FinanceImportTemplate.build(names);
+    }
+
+    /** One readable row of an import, before it is saved. */
+    private static class ImportRow {
+        FinanceImportResultDto.Row row;
+        Kind kind;
+        LocalDate date;
+        BigDecimal amount;
+        FinanceIncomePayment.PaymentMode mode;
+        Vendor vendor;
+        String expenseName;
+        String note;
+        String comment;
+        ExpenseRequestDto expenseDto;
+    }
+
+    /**
+     * Reads one row into {@code row} (what the screen shows) and returns it ready to save, or null
+     * when it has errors (they are on {@code row}). Only checks that need the sheet itself happen
+     * here; the forms' own checks run when it is applied.
+     */
+    private ImportRow parseImportRow(FinanceSheetReader.RawRow raw, Map<String, String> headerOf,
+                                     FinanceImportResultDto.Row row, Map<String, List<Vendor>> vendorsByName,
+                                     Map<String, Quotation> quotationsByNumber) {
+        java.util.function.Function<String, String> cell = column -> {
+            String header = headerOf.get(column);
+            String value = header == null ? null : raw.cells().get(header);
+            return value == null ? "" : value.trim();
+        };
+        List<String> errors = row.getErrors();
+
+        String typeText = cell.apply(FinanceImportColumns.TYPE);
+        Kind kind = FinanceImportColumns.kindOf(typeText);
+        if (typeText.isEmpty()) {
+            errors.add("Type is empty: write " + FinanceImportColumns.PAYMENT_WORD + ", "
+                    + FinanceImportColumns.EXPENSE_WORD + " or " + FinanceImportColumns.RELEASE_WORD);
+        } else if (kind == null) {
+            errors.add("Type \"" + typeText + "\" is not " + FinanceImportColumns.PAYMENT_WORD + ", "
+                    + FinanceImportColumns.EXPENSE_WORD + " or " + FinanceImportColumns.RELEASE_WORD);
+        } else {
+            row.setType(kind.name());
+        }
+        String what = kind == Kind.PAYMENT ? "a payment" : kind == Kind.RELEASE ? "a vendor release" : "this row";
+
+        String dateText = cell.apply(FinanceImportColumns.DATE);
+        LocalDate date = FinanceImportColumns.dateOf(dateText);
+        if (!dateText.isEmpty() && date == null) {
+            errors.add("Date \"" + dateText + "\" is not a date. Write it like 05-10-2026");
+        } else if (date == null && kind != null && kind != Kind.EXPENSE) {
+            errors.add("Date is needed for " + what);
+        }
+        row.setDate(date);
+
+        String amountText = cell.apply(FinanceImportColumns.AMOUNT);
+        BigDecimal amount = FinanceImportColumns.amountOf(amountText);
+        if (amountText.isEmpty()) {
+            if (kind != null && kind != Kind.EXPENSE) {
+                errors.add("Amount is needed for " + what);
+            }
+        } else if (amount == null) {
+            errors.add("Amount \"" + amountText + "\" is not a number");
+        } else if (amount.signum() < 0) {
+            errors.add("Amount cannot be negative");
+        } else if (amount.signum() == 0 && kind != null && kind != Kind.EXPENSE) {
+            errors.add("Amount must be more than zero");
+        }
+        if (amount != null) {
+            amount = amount.setScale(2, RoundingMode.HALF_UP);
+        }
+        row.setAmount(amount);
+
+        String modeText = cell.apply(FinanceImportColumns.MODE);
+        FinanceIncomePayment.PaymentMode mode = FinanceImportColumns.modeOf(modeText);
+        if (!modeText.isEmpty() && mode == null) {
+            errors.add("Mode \"" + modeText + "\" is not " + FinanceImportColumns.CH_WORD + " or " + FinanceImportColumns.CA_WORD);
+        } else if (mode == null && kind != null && kind != Kind.EXPENSE) {
+            errors.add("Mode is needed for " + what + ": " + FinanceImportColumns.CH_WORD + " or " + FinanceImportColumns.CA_WORD);
+        }
+        if (kind != Kind.EXPENSE && mode != null) {
+            row.setMode(mode.name());
+        }
+
+        String vendorText = cell.apply(FinanceImportColumns.VENDOR);
+        Vendor vendor = null;
+        if (!vendorText.isEmpty() && kind != Kind.PAYMENT) {
+            List<Vendor> found = vendorsByName.get(FinanceImportColumns.squash(vendorText));
+            if (found == null) {
+                errors.add("No active vendor called \"" + vendorText + "\"" + vendorHint(vendorText, vendorsByName));
+            } else if (found.size() > 1) {
+                errors.add("More than one active vendor is called \"" + vendorText + "\"");
+            } else {
+                vendor = found.get(0);
+            }
+        } else if (vendorText.isEmpty() && kind == Kind.RELEASE) {
+            errors.add("Vendor is needed for a vendor release");
+        }
+        row.setVendorName(vendor != null ? vendor.getVendorName() : vendorText.isEmpty() ? null : vendorText);
+
+        String expenseName = cell.apply(FinanceImportColumns.EXPENSE);
+        if (expenseName.isEmpty() && kind == Kind.EXPENSE) {
+            errors.add("Expense Name is needed for an expense");
+        } else if (expenseName.length() > 200) {
+            errors.add("Expense Name is longer than 200 characters");
+        }
+        row.setExpenseName(expenseName.isEmpty() || kind == Kind.PAYMENT ? null : expenseName);
+
+        String note = cell.apply(FinanceImportColumns.NOTE);
+        String comment = cell.apply(FinanceImportColumns.COMMENT);
+        row.setNote(note.isEmpty() ? null : note);
+        if (!comment.isEmpty() && kind != Kind.PAYMENT && kind != null) {
+            row.getWarnings().add("Comment is only kept for payments received; put it in Note instead");
+        }
+
+        ExpenseRequestDto expenseDto = null;
+        if (kind == Kind.EXPENSE) {
+            expenseDto = new ExpenseRequestDto();
+            expenseDto.setTitle(expenseName);
+            expenseDto.setAmount(amount);
+            expenseDto.setVendorId(vendor != null ? vendor.getId() : null);
+            expenseDto.setExpenseDate(date);
+            expenseDto.setNote(row.getNote());
+            String quotationText = cell.apply(FinanceImportColumns.QUOTATION);
+            if (!quotationText.isEmpty()) {
+                Quotation q = quotationsByNumber.get(FinanceImportColumns.squash(quotationText));
+                if (q == null) {
+                    errors.add("Quotation \"" + quotationText + "\" is not one of this customer's quotations");
+                } else {
+                    expenseDto.setQuotationId(q.getId());
+                    row.setQuotationNumber(q.getQuotationNumber());
+                }
+            }
+            splitInto(expenseDto, amount, mode, cell, errors);
+        }
+
+        if (!errors.isEmpty()) {
+            return null;
+        }
+        ImportRow r = new ImportRow();
+        r.row = row;
+        r.kind = kind;
+        r.date = date;
+        r.amount = amount;
+        r.mode = mode;
+        r.vendor = vendor;
+        r.expenseName = expenseName.isEmpty() ? null : expenseName;
+        r.note = row.getNote();
+        r.comment = comment.isEmpty() ? null : comment;
+        r.expenseDto = expenseDto;
+        return r;
+    }
+
+    /**
+     * The cash in hand / cash in account split of an imported expense line, from whichever the
+     * sheet gives: rupees in hand, rupees in account, a percentage, or only a Mode (all of the
+     * line in that bucket). With none of them the line is all cash in hand, as in the form.
+     */
+    private void splitInto(ExpenseRequestDto dto, BigDecimal amount, FinanceIncomePayment.PaymentMode mode,
+                           java.util.function.Function<String, String> cell, List<String> errors) {
+        BigDecimal chAmount = null;
+        BigDecimal caAmount = null;
+        BigDecimal chPct = null;
+        BigDecimal caPct = null;
+        String[][] reads = {
+                {FinanceImportColumns.CH_AMOUNT, "ch-rs"}, {FinanceImportColumns.CA_AMOUNT, "ca-rs"},
+                {FinanceImportColumns.CH_PCT, "ch-%"}, {FinanceImportColumns.CA_PCT, "ca-%"},
+                {FinanceImportColumns.CH_EITHER, "ch-?"}, {FinanceImportColumns.CA_EITHER, "ca-?"}};
+        for (String[] read : reads) {
+            String text = cell.apply(read[0]);
+            if (text.isEmpty()) {
+                continue;
+            }
+            boolean pct = read[1].endsWith("%") || (read[1].endsWith("?") && text.endsWith("%"));
+            BigDecimal value = pct ? FinanceImportColumns.pctOf(text) : FinanceImportColumns.amountOf(text);
+            if (value == null || value.signum() < 0) {
+                errors.add(read[0] + " \"" + text + "\" is not " + (pct ? "a percentage" : "an amount"));
+                return;
+            }
+            if (pct && value.compareTo(BigDecimal.valueOf(100)) > 0) {
+                errors.add(read[0] + " cannot be more than 100%");
+                return;
+            }
+            boolean ch = read[1].startsWith("ch");
+            if (pct) {
+                if (ch && chPct == null) chPct = value;
+                else if (!ch && caPct == null) caPct = value;
+            } else {
+                if (ch && chAmount == null) chAmount = value;
+                else if (!ch && caAmount == null) caAmount = value;
+            }
+        }
+        BigDecimal total = amount == null ? BigDecimal.ZERO : amount;
+        if (chAmount != null) {
+            if (caAmount != null && chAmount.add(caAmount).compareTo(total) != 0) {
+                errors.add("Cash in hand " + chAmount.toPlainString() + " + cash in account " + caAmount.toPlainString()
+                        + " does not add up to the amount " + total.toPlainString());
+                return;
+            }
+            dto.setCashInHandAmount(chAmount);
+        } else if (caAmount != null) {
+            if (caAmount.compareTo(total) > 0) {
+                errors.add("Cash in account cannot be more than the expense amount");
+                return;
+            }
+            dto.setCashInHandAmount(total.subtract(caAmount));
+        } else if (chPct != null || caPct != null) {
+            BigDecimal hand = chPct != null ? chPct : BigDecimal.valueOf(100).subtract(caPct);
+            dto.setCashInHandPct(hand);
+            dto.setCashInAccountPct(caPct != null && chPct != null ? caPct : BigDecimal.valueOf(100).subtract(hand));
+        } else if (mode == FinanceIncomePayment.PaymentMode.CASH_IN_ACCOUNT) {
+            dto.setCashInHandPct(BigDecimal.ZERO);
+            dto.setCashInAccountPct(BigDecimal.valueOf(100));
+        }
+    }
+
+    /** ". Did you mean X?" when exactly one active vendor's name contains (or is contained in) it. */
+    private static String vendorHint(String typed, Map<String, List<Vendor>> vendorsByName) {
+        String key = FinanceImportColumns.squash(typed);
+        if (key.length() < 3) {
+            return ". Add the vendor first, or check the spelling";
+        }
+        List<Vendor> close = vendorsByName.entrySet().stream()
+                .filter(e -> e.getKey().contains(key) || key.contains(e.getKey()))
+                .flatMap(e -> e.getValue().stream()).limit(2).toList();
+        return close.size() == 1 ? ". Did you mean \"" + close.get(0).getVendorName() + "\"?"
+                : ". Add the vendor first, or check the spelling";
+    }
+
+    private static String paymentKey(LocalDate date, BigDecimal amount, FinanceIncomePayment.PaymentMode mode) {
+        return "P|" + date + "|" + money(amount) + "|" + mode;
+    }
+
+    private static String expenseKey(String title, BigDecimal amount) {
+        return "E|" + FinanceImportColumns.squash(title) + "|" + money(amount);
+    }
+
+    private static String releaseKey(Long vendorId, LocalDate date, BigDecimal amount, FinanceIncomePayment.PaymentMode mode) {
+        return "R|" + vendorId + "|" + date + "|" + money(amount) + "|" + mode;
+    }
+
+    private static String money(BigDecimal v) {
+        return v == null ? "0" : v.stripTrailingZeros().toPlainString();
+    }
+
+    private static FinanceImportResultDto.Totals totalsOf(CustomerFinanceSummaryDto s) {
+        FinanceImportResultDto.Totals t = new FinanceImportResultDto.Totals();
+        t.setReceivedTotal(s.getReceivedTotal());
+        t.setExpenseTotal(s.getExpenseTotal());
+        t.setReleasedTotal(s.getReleasedTotal());
+        t.setOutstandingTotal(s.getOutstandingTotal());
+        t.setExtraTotal(s.getExtraTotal());
+        t.setTotalMargin(s.getTotalMargin());
+        t.setNetMargin(s.getNetMargin());
+        return t;
     }
 
     // ------------------------------------------------------------------ receipts

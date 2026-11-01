@@ -50,4 +50,10 @@ public interface FinanceService {
     ApiResponse<CustomerFinanceSummaryDto> uploadReleaseReceipts(Long releaseId, MultipartFile[] files);
 
     ApiResponse<CustomerFinanceSummaryDto> deleteReceipt(Long fileId);
+
+    /** Checks (save=false) or imports (save=true) a sheet of payments, expense lines and releases. */
+    /** The Excel template for importSheet, with the active vendors in its Vendor drop-down. */
+    byte[] importTemplate();
+
+    ApiResponse<FinanceImportResultDto> importSheet(Long financeId, String fileName, byte[] bytes, boolean save, String createdBy);
 }

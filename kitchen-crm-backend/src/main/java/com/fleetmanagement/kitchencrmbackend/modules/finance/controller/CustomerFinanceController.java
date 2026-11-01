@@ -193,6 +193,34 @@ public class CustomerFinanceController {
         return respond(service.deleteReceipt(fileId));
     }
 
+    // ---------------------------------------------------------------- import from Excel / CSV
+
+    /**
+     * Checks (save=false) or imports (save=true) a sheet of payments received, expense lines and
+     * vendor releases. Answers 200 with the row-by-row result either way, so the screen can show
+     * what needs fixing; only a file that cannot be read at all is a 400.
+     */
+    @PostMapping(value = "/{id}/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<FinanceImportResultDto>> importSheet(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(defaultValue = "false") boolean save,
+            @AuthenticationPrincipal UserPrincipal currentUser) throws java.io.IOException {
+        return respond(service.importSheet(id, file.getOriginalFilename(), file.getBytes(), save,
+                currentUser != null ? currentUser.getName() : null));
+    }
+
+    @GetMapping("/import-template")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<byte[]> importTemplate() {
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"income-expenses-import.xlsx\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(service.importTemplate());
+    }
+
     private <T> ResponseEntity<ApiResponse<T>> respond(ApiResponse<T> response) {
         return Boolean.TRUE.equals(response.getSuccess())
                 ? ResponseEntity.ok(response)
