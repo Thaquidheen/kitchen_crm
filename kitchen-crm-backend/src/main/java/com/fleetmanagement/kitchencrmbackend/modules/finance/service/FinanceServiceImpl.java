@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
  * Income & Expenses per customer. Every balance and margin is derived here, never stored:
  * received sums come from finance_income_payments, released sums from finance_vendor_releases,
  * totalMargin = totalAmount - SUM(expenses), collectedMargin = SUM(payments) - SUM(releases),
- * netMargin = totalMargin - extraTotal (extra = released beyond expensed, clamped per bucket).
+ * netMargin = totalMargin - extraTotal (extra = released beyond expensed, per vendor).
  * Over-collection is allowed and flagged, not blocked, so real money can always be recorded.
  */
 @Slf4j
@@ -702,6 +702,10 @@ public class FinanceServiceImpl implements FinanceService {
         // figures reconcile with the per-line ones and with the top-level totals by construction.
         // A vendor with only expense lines and one with only releases must both still appear.
         Map<Long, CustomerFinanceSummaryDto.VendorTotalDto> vendorMap = new LinkedHashMap<>();
+        // Who each rupee is owed by / paid to, for outstanding and extra: {expensed C/H, expensed
+        // C/A, released C/H, released C/A} per vendor. Lines with no vendor share the null key, and
+        // so does a release explicitly linked to one of them, since that release pays that line.
+        Map<Long, BigDecimal[]> owedByVendor = new HashMap<>();
 
         for (FinanceIncomePayment p : payments) {
             CustomerFinanceSummaryDto.PaymentDto pd = new CustomerFinanceSummaryDto.PaymentDto();
@@ -735,6 +739,8 @@ public class FinanceServiceImpl implements FinanceService {
             ed.setCashInAccountAmount(caAmount);
             expenseCH = expenseCH.add(chAmount);
             expenseCA = expenseCA.add(caAmount);
+            addOwed(owedByVendor, e.getVendor() != null ? e.getVendor().getId() : null, 0, chAmount);
+            addOwed(owedByVendor, e.getVendor() != null ? e.getVendor().getId() : null, 1, caAmount);
             if (e.getVendor() != null) {
                 ed.setVendorId(e.getVendor().getId());
                 ed.setVendorName(e.getVendor().getVendorName());
@@ -787,24 +793,41 @@ public class FinanceServiceImpl implements FinanceService {
                 vt.setReleasedCashInAccount(vt.getReleasedCashInAccount().add(amount));
             }
             vt.setReleaseCount(vt.getReleaseCount() + 1);
+            Long payee = r.getExpense() != null && r.getExpense().getVendor() == null ? null : r.getVendor().getId();
+            addOwed(owedByVendor, payee,
+                    r.getMode() == FinanceIncomePayment.PaymentMode.CASH_IN_HAND ? 2 : 3, amount);
         }
 
         // Cash split of the expense side, and the two figures that hang off it. Outstanding and
-        // extra are clamped PER BUCKET before being summed — settling a 100%-cash expense from the
-        // bank leaves you outstanding in C/H and over in C/A simultaneously, which a single net
-        // figure would hide. The pair still reconciles with the net:
+        // extra are worked out PER VENDOR and then summed, so one vendor's overpayment is never
+        // hidden by another vendor's pending amount. Within a vendor they follow the vendor's
+        // total, not each bucket: paying part of a vendor's bank share in cash leaves the cash
+        // side "over" and the bank side pending, but nothing extra has left the business (the
+        // vendor cards show that cash/bank shift). The pair still reconciles with the net:
         //   outstandingTotal - extraTotal == expenseTotal - releasedTotal
         dto.setExpenseCashInHand(expenseCH);
         dto.setExpenseCashInAccount(expenseCA);
 
-        BigDecimal outstandingCH = expenseCH.subtract(releasedCH).max(BigDecimal.ZERO);
-        BigDecimal outstandingCA = expenseCA.subtract(releasedCA).max(BigDecimal.ZERO);
+        BigDecimal outstandingCH = BigDecimal.ZERO;
+        BigDecimal outstandingCA = BigDecimal.ZERO;
+        BigDecimal extraCH = BigDecimal.ZERO;
+        BigDecimal extraCA = BigDecimal.ZERO;
+        for (BigDecimal[] o : owedByVendor.values()) {
+            BigDecimal net = o[0].add(o[1]).subtract(o[2]).subtract(o[3]);
+            BigDecimal owed = net.max(BigDecimal.ZERO);
+            BigDecimal over = net.negate().max(BigDecimal.ZERO);
+            // Only a bucket that is itself owed (or over) can carry the vendor's owed (or over)
+            // amount. When both buckets lean the same way the vendor total is their sum, so each
+            // keeps its own figure; when they disagree only the larger side survives, capped.
+            outstandingCH = outstandingCH.add(o[0].subtract(o[2]).max(BigDecimal.ZERO).min(owed));
+            outstandingCA = outstandingCA.add(o[1].subtract(o[3]).max(BigDecimal.ZERO).min(owed));
+            extraCH = extraCH.add(o[2].subtract(o[0]).max(BigDecimal.ZERO).min(over));
+            extraCA = extraCA.add(o[3].subtract(o[1]).max(BigDecimal.ZERO).min(over));
+        }
         dto.setOutstandingCashInHand(outstandingCH);
         dto.setOutstandingCashInAccount(outstandingCA);
         dto.setOutstandingTotal(outstandingCH.add(outstandingCA));
 
-        BigDecimal extraCH = releasedCH.subtract(expenseCH).max(BigDecimal.ZERO);
-        BigDecimal extraCA = releasedCA.subtract(expenseCA).max(BigDecimal.ZERO);
         dto.setExtraCashInHand(extraCH);
         dto.setExtraCashInAccount(extraCA);
         dto.setExtraTotal(extraCH.add(extraCA));
@@ -818,8 +841,8 @@ public class FinanceServiceImpl implements FinanceService {
 
         // Net margin: total margin minus anything released BEYOND what was expensed. Total margin
         // assumes vendors are paid exactly what was expensed; an over-release is real money gone,
-        // so it comes off. Per bucket this is committed - max(expensed, released). extraCH/CA are
-        // already clamped at zero above, so a bucket that is merely outstanding is untouched.
+        // so it comes off. extraCH/CA are already clamped at zero above, so a vendor that is
+        // merely outstanding leaves its buckets untouched.
         dto.setNetMarginCashInHand(dto.getTotalMarginCashInHand().subtract(extraCH));
         dto.setNetMarginCashInAccount(dto.getTotalMarginCashInAccount().subtract(extraCA));
         dto.setNetMargin(dto.getTotalMargin().subtract(dto.getExtraTotal()));
@@ -833,6 +856,13 @@ public class FinanceServiceImpl implements FinanceService {
         }
 
         return dto;
+    }
+
+    /** Adds to one slot of a vendor's {expensed C/H, expensed C/A, released C/H, released C/A}. */
+    private void addOwed(Map<Long, BigDecimal[]> owedByVendor, Long vendorId, int slot, BigDecimal amount) {
+        BigDecimal[] o = owedByVendor.computeIfAbsent(vendorId,
+                id -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO});
+        o[slot] = o[slot].add(nz(amount));
     }
 
     /**

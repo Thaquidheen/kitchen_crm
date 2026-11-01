@@ -103,8 +103,9 @@ export interface FinanceSummary {
   releasedCashInHand: number;
   releasedCashInAccount: number;
   /**
-   * Clamped per bucket then summed, NOT expenseTotal − releasedTotal: paying a cash expense from
-   * the bank leaves you outstanding in one bucket and over in the other at the same time.
+   * Worked out per vendor then summed, NOT expenseTotal − releasedTotal, so one vendor's
+   * overpayment is never hidden by another's pending amount. Within a vendor they follow its
+   * total: cash paid towards its bank share is a shift (see vendorBuckets), not extra.
    * Reconciles as outstandingTotal − extraTotal === expenseTotal − releasedTotal.
    */
   outstandingTotal: number;

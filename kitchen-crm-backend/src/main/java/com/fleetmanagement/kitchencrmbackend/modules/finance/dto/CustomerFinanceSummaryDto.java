@@ -61,10 +61,11 @@ public class CustomerFinanceSummaryDto {
     private BigDecimal releasedCashInAccount;
 
     /**
-     * Still owed / over-paid, clamped PER BUCKET and then summed — deliberately not
-     * expenseTotal - releasedTotal. Settling a 100%-cash expense from the bank leaves you
-     * outstanding in C/H and over in C/A at the same time; one net figure hides that, two clamped
-     * figures name it. They still reconcile: outstandingTotal - extraTotal == expenseTotal - releasedTotal.
+     * Still owed / over-paid, worked out PER VENDOR and then summed — deliberately not
+     * expenseTotal - releasedTotal, so one vendor's overpayment is never hidden by another
+     * vendor's pending amount. Within a vendor they follow its total: cash paid towards its bank
+     * share is a cash/bank shift (shown on the vendor card), not extra money.
+     * They still reconcile: outstandingTotal - extraTotal == expenseTotal - releasedTotal.
      */
     private BigDecimal outstandingTotal;
     private BigDecimal outstandingCashInHand;
@@ -84,7 +85,7 @@ public class CustomerFinanceSummaryDto {
      * totalMargin minus extraTotal: the margin after every rupee that has gone or will go to
      * vendors — what was expensed PLUS anything released beyond it. totalMargin assumes vendors
      * are paid exactly what was expensed; an over-release is real money out, so it comes off here.
-     * Per bucket this is committed - max(expensed, released). Like totalMargin, the buckets only
+     * Like totalMargin, the buckets only
      * re-sum to the total when committedSplitMismatch is false.
      */
     private BigDecimal netMargin;

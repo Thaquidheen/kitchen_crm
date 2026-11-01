@@ -20,6 +20,7 @@ import { useGetFinanceSummaryQuery, useUpdateFinanceHeaderMutation } from '@/fea
 import { IncomeTab } from '@/features/finance/components/IncomeTab';
 import { ExpensesTab } from '@/features/finance/components/ExpensesTab';
 import { inr } from '@/features/finance/constants';
+import { bucketShift, bucketShiftAdvice } from '@/features/finance/vendorBuckets';
 import { ROUTES } from '@/routes/routes.config';
 
 const initialsOf = (name?: string) =>
@@ -294,6 +295,22 @@ export function FinanceCustomerPage() {
             </span>
           </div>
         )}
+
+        {/* A vendor paid from the wrong bucket shows "over" on one side of its card. Extra
+            Expenses rightly stays at zero for it, so say here what happened and how to fix it. */}
+        {summary.vendorTotals.map((v) => {
+          const shift = bucketShift(v);
+          return shift ? (
+            <div
+              key={v.vendorId}
+              className="flex items-start gap-2 px-4 py-2.5 border-t border-background-600 text-[11.5px] leading-[1.5]"
+              style={{ background: 'var(--st-potential-bg)', color: 'var(--st-potential-fg)' }}
+            >
+              <AlertTriangle size={14} className="mt-[1px] shrink-0" />
+              <span>{bucketShiftAdvice(v.vendorName, shift)}</span>
+            </div>
+          ) : null;
+        })}
       </div>
 
       {/* Tabs */}
