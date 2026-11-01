@@ -74,6 +74,14 @@ export interface VendorTotal {
   balanceCashInAccount: number;
   expenseCount: number;
   releaseCount: number;
+  /**
+   * Set by the server when one side was paid beyond its share while the other is still owed:
+   * the side paid from, the amount counted against the other share (not extra), and anything
+   * beyond the vendor's total. Absent when there is no shift. See vendorBuckets.
+   */
+  shiftFrom?: PaymentMode | null;
+  shiftAmount?: number | null;
+  shiftBeyondTotal?: number | null;
 }
 
 export interface FinanceSummary {

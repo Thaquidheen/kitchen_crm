@@ -183,5 +183,14 @@ public class CustomerFinanceSummaryDto {
         private BigDecimal balanceCashInAccount;
         private Long expenseCount;
         private Long releaseCount;
+        /**
+         * Set when one side was paid beyond its share while the other is still owed: the side
+         * paid from, the amount counted against the other side's share (not extra money), and
+         * anything paid beyond the vendor's total. Null when there is no such shift. Releases
+         * linked to a line count for that line's vendor here, as in outstanding and extra.
+         */
+        private FinanceIncomePayment.PaymentMode shiftFrom;
+        private BigDecimal shiftAmount;
+        private BigDecimal shiftBeyondTotal;
     }
 }

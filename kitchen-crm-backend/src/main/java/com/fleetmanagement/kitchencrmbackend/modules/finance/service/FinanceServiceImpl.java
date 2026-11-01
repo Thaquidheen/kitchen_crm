@@ -703,8 +703,8 @@ public class FinanceServiceImpl implements FinanceService {
         // A vendor with only expense lines and one with only releases must both still appear.
         Map<Long, CustomerFinanceSummaryDto.VendorTotalDto> vendorMap = new LinkedHashMap<>();
         // Who each rupee is owed by / paid to, for outstanding and extra: {expensed C/H, expensed
-        // C/A, released C/H, released C/A} per vendor. Lines with no vendor share the null key, and
-        // so does a release explicitly linked to one of them, since that release pays that line.
+        // C/A, released C/H, released C/A} per vendor. A release linked to a line counts for that
+        // line's vendor, since it pays that line; lines with no vendor share the null key.
         Map<Long, BigDecimal[]> owedByVendor = new HashMap<>();
 
         for (FinanceIncomePayment p : payments) {
@@ -793,7 +793,8 @@ public class FinanceServiceImpl implements FinanceService {
                 vt.setReleasedCashInAccount(vt.getReleasedCashInAccount().add(amount));
             }
             vt.setReleaseCount(vt.getReleaseCount() + 1);
-            Long payee = r.getExpense() != null && r.getExpense().getVendor() == null ? null : r.getVendor().getId();
+            Long payee = r.getExpense() == null ? r.getVendor().getId()
+                    : r.getExpense().getVendor() == null ? null : r.getExpense().getVendor().getId();
             addOwed(owedByVendor, payee,
                     r.getMode() == FinanceIncomePayment.PaymentMode.CASH_IN_HAND ? 2 : 3, amount);
         }
@@ -803,27 +804,36 @@ public class FinanceServiceImpl implements FinanceService {
         // hidden by another vendor's pending amount. Within a vendor they follow the vendor's
         // total, not each bucket: paying part of a vendor's bank share in cash leaves the cash
         // side "over" and the bank side pending, but nothing extra has left the business (the
-        // vendor cards show that cash/bank shift). The pair still reconciles with the net:
+        // vendor card names that cash/bank shift). Lines with no vendor are the exception: money
+        // paid to a vendor beyond its own lines may be paying them, so they absorb it first.
+        // The pair still reconciles with the net:
         //   outstandingTotal - extraTotal == expenseTotal - releasedTotal
         dto.setExpenseCashInHand(expenseCH);
         dto.setExpenseCashInAccount(expenseCA);
 
+        BigDecimal[] untagged = owedByVendor.remove(null);
+        if (untagged == null) {
+            untagged = new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
+        }
         BigDecimal outstandingCH = BigDecimal.ZERO;
         BigDecimal outstandingCA = BigDecimal.ZERO;
-        BigDecimal extraCH = BigDecimal.ZERO;
-        BigDecimal extraCA = BigDecimal.ZERO;
-        for (BigDecimal[] o : owedByVendor.values()) {
-            BigDecimal net = o[0].add(o[1]).subtract(o[2]).subtract(o[3]);
-            BigDecimal owed = net.max(BigDecimal.ZERO);
-            BigDecimal over = net.negate().max(BigDecimal.ZERO);
-            // Only a bucket that is itself owed (or over) can carry the vendor's owed (or over)
-            // amount. When both buckets lean the same way the vendor total is their sum, so each
-            // keeps its own figure; when they disagree only the larger side survives, capped.
-            outstandingCH = outstandingCH.add(o[0].subtract(o[2]).max(BigDecimal.ZERO).min(owed));
-            outstandingCA = outstandingCA.add(o[1].subtract(o[3]).max(BigDecimal.ZERO).min(owed));
-            extraCH = extraCH.add(o[2].subtract(o[0]).max(BigDecimal.ZERO).min(over));
-            extraCA = extraCA.add(o[3].subtract(o[1]).max(BigDecimal.ZERO).min(over));
+        for (Map.Entry<Long, BigDecimal[]> owed : owedByVendor.entrySet()) {
+            BigDecimal[] o = owed.getValue();
+            BigDecimal[] split = owedAndExtra(o);
+            outstandingCH = outstandingCH.add(split[0]);
+            outstandingCA = outstandingCA.add(split[1]);
+            untagged[2] = untagged[2].add(split[2]);
+            untagged[3] = untagged[3].add(split[3]);
+            CustomerFinanceSummaryDto.VendorTotalDto vt = vendorMap.get(owed.getKey());
+            if (vt != null) {
+                markShift(vt, o);
+            }
         }
+        BigDecimal[] rest = owedAndExtra(untagged);
+        outstandingCH = outstandingCH.add(rest[0]);
+        outstandingCA = outstandingCA.add(rest[1]);
+        BigDecimal extraCH = rest[2];
+        BigDecimal extraCA = rest[3];
         dto.setOutstandingCashInHand(outstandingCH);
         dto.setOutstandingCashInAccount(outstandingCA);
         dto.setOutstandingTotal(outstandingCH.add(outstandingCA));
@@ -856,6 +866,49 @@ public class FinanceServiceImpl implements FinanceService {
         }
 
         return dto;
+    }
+
+    /**
+     * {outstanding C/H, outstanding C/A, extra C/H, extra C/A} of one vendor's
+     * {expensed C/H, expensed C/A, released C/H, released C/A}. They follow the vendor's total:
+     * only a bucket that is itself owed (or over) can carry the vendor's owed (or over) amount.
+     * When both buckets lean the same way the total is their sum, so each keeps its own figure;
+     * when they disagree only the larger side survives, capped at the total.
+     */
+    private static BigDecimal[] owedAndExtra(BigDecimal[] o) {
+        BigDecimal net = o[0].add(o[1]).subtract(o[2]).subtract(o[3]);
+        BigDecimal owed = net.max(BigDecimal.ZERO);
+        BigDecimal over = net.negate().max(BigDecimal.ZERO);
+        return new BigDecimal[]{
+                o[0].subtract(o[2]).max(BigDecimal.ZERO).min(owed),
+                o[1].subtract(o[3]).max(BigDecimal.ZERO).min(owed),
+                o[2].subtract(o[0]).max(BigDecimal.ZERO).min(over),
+                o[3].subtract(o[1]).max(BigDecimal.ZERO).min(over)};
+    }
+
+    /**
+     * One side paid beyond its share while the other is still owed: the part that moved across
+     * (a cash/bank shift, not extra money) and anything paid beyond the vendor's total. Worked
+     * out here, on the same grouping as outstanding and extra, so the card and the notice can
+     * never disagree with those figures. Under a rupee is rounding from percentage splits.
+     */
+    private static void markShift(CustomerFinanceSummaryDto.VendorTotalDto vt, BigDecimal[] o) {
+        BigDecimal ch = o[0].subtract(o[2]);
+        BigDecimal ca = o[1].subtract(o[3]);
+        FinanceIncomePayment.PaymentMode from = null;
+        BigDecimal moved = BigDecimal.ZERO;
+        if (ch.signum() < 0 && ca.signum() > 0) {
+            from = FinanceIncomePayment.PaymentMode.CASH_IN_HAND;
+            moved = ch.negate().min(ca);
+        } else if (ca.signum() < 0 && ch.signum() > 0) {
+            from = FinanceIncomePayment.PaymentMode.CASH_IN_ACCOUNT;
+            moved = ca.negate().min(ch);
+        }
+        if (from != null && moved.compareTo(BigDecimal.ONE) >= 0) {
+            vt.setShiftFrom(from);
+            vt.setShiftAmount(moved);
+            vt.setShiftBeyondTotal(ch.add(ca).negate().max(BigDecimal.ZERO));
+        }
     }
 
     /** Adds to one slot of a vendor's {expensed C/H, expensed C/A, released C/H, released C/A}. */
