@@ -101,14 +101,14 @@ public final class FinanceImportColumns {
 
     /**
      * Lower case letters and digits only, in any script: "Cash in Hand %" and "cash-in-hand" both
-     * become "cashinhand", and a Malayalam name keeps its letters.
+     * become "cashinhand", and a Malayalam name keeps its letters and vowel signs.
      */
     public static String squash(String s) {
         if (s == null) {
             return "";
         }
         return java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFKC)
-                .toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]", "");
+                .toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{M}\\p{N}]", "");
     }
 
     /**

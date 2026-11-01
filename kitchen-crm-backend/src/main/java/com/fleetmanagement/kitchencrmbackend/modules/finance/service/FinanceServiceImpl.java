@@ -699,6 +699,17 @@ public class FinanceServiceImpl implements FinanceService {
             return value == null ? "" : value.trim();
         };
         List<String> errors = row.getErrors();
+        // A broken formula reads as marker text; in a name or note it would otherwise be saved.
+        for (Map.Entry<String, String> h : headerOf.entrySet()) {
+            String value = raw.cells().get(h.getValue());
+            if (value != null && value.startsWith(FinanceSheetReader.FORMULA_MARK)) {
+                errors.add(h.getValue() + " has a broken formula (" + value.substring(FinanceSheetReader.FORMULA_MARK.length())
+                        + ". Type the value instead, or open the file in Excel and save it again");
+            }
+        }
+        if (!errors.isEmpty()) {
+            return null;
+        }
 
         String typeText = cell.apply(FinanceImportColumns.TYPE);
         Kind kind = FinanceImportColumns.kindOf(typeText);
@@ -734,11 +745,12 @@ public class FinanceServiceImpl implements FinanceService {
             errors.add("Amount cannot be negative");
         } else if (amount.signum() == 0 && kind != null && kind != Kind.EXPENSE) {
             errors.add("Amount must be more than zero");
-        } else if (amount.compareTo(new BigDecimal("1000000000000")) >= 0) {
-            errors.add("Amount \"" + amountText + "\" is too large");
         }
         if (amount != null) {
             amount = amount.setScale(2, RoundingMode.HALF_UP);
+            if (amount.compareTo(new BigDecimal("1000000000000")) >= 0) {
+                errors.add("Amount \"" + amountText + "\" is too large");
+            }
         }
         row.setAmount(amount);
 
@@ -852,7 +864,7 @@ public class FinanceServiceImpl implements FinanceService {
                 errors.add(read[0] + " \"" + text + "\" is not " + (pct ? "a percentage" : "an amount"));
                 return;
             }
-            if (!pct && value.compareTo(new BigDecimal("1000000000000")) >= 0) {
+            if (!pct && value.setScale(2, RoundingMode.HALF_UP).compareTo(new BigDecimal("1000000000000")) >= 0) {
                 errors.add(read[0] + " \"" + text + "\" is too large");
                 return;
             }

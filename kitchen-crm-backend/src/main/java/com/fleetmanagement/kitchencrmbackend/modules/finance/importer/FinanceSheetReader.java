@@ -35,6 +35,12 @@ public final class FinanceSheetReader {
     /** An .xlsx is a zip; what it unpacks to is what POI holds in memory. */
     private static final long MAX_UNZIPPED_BYTES = 60L * 1024 * 1024;
     public static final int MAX_ROWS = 2000;
+    /** Lines read at all, blank ones included: a file of nothing but blank lines stops here. */
+    private static final int MAX_LINES = 100_000;
+    /** Shared by every blank line, so blank lines cost no memory of their own. */
+    private static final List<String> BLANK = List.of();
+    /** Starts the text a broken formula cell is read as; the import flags any cell that has it. */
+    public static final String FORMULA_MARK = "(formula ";
     /** The template's data sheet; any other workbook is read from its first sheet. */
     public static final String ENTRIES_SHEET = "Entries";
 
@@ -99,9 +105,12 @@ public final class FinanceSheetReader {
                 }
                 // Blank lines are kept (row numbers stay right) but only filled ones count
                 // towards the stop, so blank rows can never push real rows past it unseen.
-                lines.add(cells);
+                lines.add(blank(cells) ? BLANK : cells);
                 if (!blank(cells) && ++filled > MAX_ROWS + 1) {
                     break;
+                }
+                if (lines.size() > MAX_LINES) {
+                    throw new ReadProblem("The sheet has more than " + MAX_LINES + " lines. Delete the empty rows and retry");
                 }
             }
             return lines;
@@ -126,6 +135,11 @@ public final class FinanceSheetReader {
             return "";
         }
         boolean formula = cell.getCellType() == CellType.FORMULA;
+        // POI reports a never-calculated .xlsx formula as NUMERIC 0; look for the missing value.
+        if (formula && cell instanceof org.apache.poi.xssf.usermodel.XSSFCell x
+                && (!x.getCTCell().isSetV() || x.getCTCell().getV() == null || x.getCTCell().getV().isEmpty())) {
+            return FORMULA_MARK + "with no value: " + cell.getCellFormula() + ")";
+        }
         CellType type = formula ? cell.getCachedFormulaResultType() : cell.getCellType();
         switch (type) {
             case NUMERIC:
@@ -143,9 +157,9 @@ public final class FinanceSheetReader {
             case BOOLEAN:
                 return String.valueOf(cell.getBooleanCellValue());
             case ERROR:
-                return formula ? "(formula error: " + cell.getCellFormula() + ")" : "(error cell)";
+                return formula ? FORMULA_MARK + "error: " + cell.getCellFormula() + ")" : FORMULA_MARK + "error)";
             case BLANK:
-                return formula ? "(formula with no value: " + cell.getCellFormula() + ")" : "";
+                return formula ? FORMULA_MARK + "with no value: " + cell.getCellFormula() + ")" : "";
             default:
                 return formatter.formatCellValue(cell).trim();
         }
@@ -222,11 +236,19 @@ public final class FinanceSheetReader {
                 }
                 cells.add(cell.toString().trim());
                 cell.setLength(0);
-                lines.add(cells);
-                if (!blank(cells) && ++filled > MAX_ROWS + 1) {
-                    return lines;
+                if (blank(cells)) {
+                    lines.add(BLANK);
+                    cells.clear();
+                } else {
+                    lines.add(cells);
+                    if (++filled > MAX_ROWS + 1) {
+                        return lines;
+                    }
+                    cells = new ArrayList<>();
                 }
-                cells = new ArrayList<>();
+                if (lines.size() > MAX_LINES) {
+                    throw new ReadProblem("The file has more than " + MAX_LINES + " lines. Delete the empty lines and retry");
+                }
             } else {
                 cell.append(ch);
             }
