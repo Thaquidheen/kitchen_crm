@@ -21,7 +21,11 @@ services:
       start_period: 30s
 
   backend:
-    build: ./kitchen-crm-backend
+    # Images are built on the host's network: the build only downloads (Maven, npm), and the
+    # server's Docker bridge has lost outbound access before (Nov 2026), failing a deploy.
+    build:
+      context: ./kitchen-crm-backend
+      network: host
     container_name: kitchen_crm_backend
     restart: always
     environment:
@@ -47,6 +51,7 @@ services:
   frontend:
     build:
       context: ./kitchen-crm-frontend
+      network: host
       args:
         - VITE_API_BASE_URL=${VITE_API_BASE_URL}
     container_name: kitchen_crm_frontend
