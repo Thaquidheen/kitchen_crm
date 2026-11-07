@@ -227,8 +227,10 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
         onSuccess?.(res);
       } else {
         const res = await createCustomer(payloadBase as CustomerCreate).unwrap();
-        // Schedule the first follow-up as a reminder (bell notifies at 10:00 that day)
-        if (values.nextFollowUpDate && (res as any)?.id) {
+        // Schedule the first follow-up as a reminder (bell notifies at 10:00 that day). Only with
+        // customers.reminders, like the field itself: a date picked before that right was taken
+        // away stays in the form, and the server would refuse the reminder after the save.
+        if (values.nextFollowUpDate && (res as any)?.id && can('customers.reminders')) {
           try {
             await createReminder({
               customerId: (res as any).id,

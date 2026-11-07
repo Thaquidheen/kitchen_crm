@@ -24,6 +24,7 @@ import {
 import { FilterChips } from '@/components/shared/FilterChips';
 import { AssignedTasksSection } from './AssignedTasksSection';
 import type { AdminTodo } from '@/features/task-management/types';
+import { usePermissions } from '@/features/permissions/usePermissions';
 
 const PRIORITY_META: Record<string, { st: string; label: string }> = {
   URGENT: { st: 'lost', label: 'Urgent' },
@@ -54,15 +55,24 @@ interface GroupDef {
 }
 
 export const MyTodosTab: React.FC = () => {
-  const { data: todos = [], isLoading } = useGetMyTodosQuery(undefined, { pollingInterval: 60000, refetchOnFocus: true, refetchOnReconnect: true, refetchOnMountOrArgChange: true });
+  // The tab holds two things with a permission each: their own list (tasks.todos) and the tasks the
+  // administrator gave them (tasks.mine). The tab shows while either is allowed; the other half is
+  // not asked for, since the server would refuse it.
+  const { can } = usePermissions();
+  const canTodos = can('tasks.todos');
+  const canMine = can('tasks.mine');
+  const { data: todos = [], isLoading } = useGetMyTodosQuery(undefined, { skip: !canTodos, pollingInterval: 60000, refetchOnFocus: true, refetchOnReconnect: true, refetchOnMountOrArgChange: true });
 
   // Tasks an admin assigned to me sit above my own list, with a chip row to view either alone.
   // The admin can reopen or re-assign from their own browser; poll so this reflects that.
   // 20 s: an admin's answer to a question asked on a task should show up while the person waits.
-  const { data: assignedTasks = [] } = useGetMyTasksQuery({}, { pollingInterval: 20000, refetchOnFocus: true, refetchOnReconnect: true, refetchOnMountOrArgChange: true });
+  const { data: assignedData } = useGetMyTasksQuery({}, { skip: !canMine, pollingInterval: 20000, refetchOnFocus: true, refetchOnReconnect: true, refetchOnMountOrArgChange: true });
+  const assignedTasks = canMine ? assignedData ?? [] : [];
   const [view, setView] = useState<'' | 'MINE' | 'ASSIGNED'>('');
-  const showMine = view !== 'ASSIGNED';
-  const showAssigned = view !== 'MINE' && assignedTasks.length > 0;
+  // The chips only matter while both halves are there.
+  const bothHalves = canTodos && assignedTasks.length > 0;
+  const showMine = canTodos && (view !== 'ASSIGNED' || !bothHalves);
+  const showAssigned = assignedTasks.length > 0 && (view !== 'MINE' || !canTodos);
   const openAssigned = assignedTasks.filter((t) => !t.completed).length;
 
   // Composer
@@ -191,7 +201,7 @@ export const MyTodosTab: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      {assignedTasks.length > 0 && (
+      {bothHalves && (
         <FilterChips
           items={[
             { key: '', label: 'All', count: openCount + openAssigned },
@@ -203,6 +213,12 @@ export const MyTodosTab: React.FC = () => {
         />
       )}
       {showAssigned && <AssignedTasksSection tasks={assignedTasks} />}
+      {!canTodos && assignedTasks.length === 0 && (
+        <div className="bg-background-800 border border-background-600 rounded-[14px] px-4 py-12 text-center">
+          <CalendarDays className="w-8 h-8 mx-auto mb-2 text-text-500" />
+          <p className="m-0 text-[13px] text-text-600">No tasks given to you right now.</p>
+        </div>
+      )}
 
       {showMine && (
         <>

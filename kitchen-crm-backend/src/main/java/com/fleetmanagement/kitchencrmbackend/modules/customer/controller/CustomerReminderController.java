@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -43,17 +44,41 @@ public class CustomerReminderController {
     public ResponseEntity<ApiResponse<CustomerReminderDto>> createReminder(
             @Valid @RequestBody CustomerReminderDto dto,
             @AuthenticationPrincipal UserPrincipal currentUser) {
-        // A reminder set on a customer (not on an appliance customer or an architect).
-        boolean onCustomer = dto.getCustomerId() != null && dto.getApplianceCustomerId() == null
-                && dto.getArchitectId() == null;
-        if (onCustomer && !permissionService.can(currentUser, Permission.CUSTOMERS_REMINDERS)) {
+        Permission missing = missingToAdd(dto, currentUser);
+        if (missing != null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error(PermissionInterceptor.message(Permission.CUSTOMERS_REMINDERS)));
+                    .body(ApiResponse.error(PermissionInterceptor.message(missing)));
         }
         return ResponseEntity.ok(reminderService.createReminder(
                 dto,
                 currentUser != null ? currentUser.getName() : null,
                 currentUser != null ? currentUser.getId() : null));
+    }
+
+    /**
+     * What a reminder is on decides who may add it: a customer, an Appliance &amp; Quartz entry or an
+     * architect each need that module's Reminders permission. A body naming none, or more than one,
+     * is refused by the service anyway, but one naming several needs the permission of every owner
+     * sent, so it can never get past here on the one the person happens to have. Null when they may
+     * add it, else the first permission they lack.
+     */
+    private Permission missingToAdd(CustomerReminderDto dto, UserPrincipal user) {
+        List<Permission> needed = new ArrayList<>();
+        if (dto.getCustomerId() != null) {
+            needed.add(Permission.CUSTOMERS_REMINDERS);
+        }
+        if (dto.getApplianceCustomerId() != null) {
+            needed.add(Permission.APPLIANCE_REMINDERS);
+        }
+        if (dto.getArchitectId() != null) {
+            needed.add(Permission.ARCHITECTS_REMINDERS);
+        }
+        for (Permission p : needed) {
+            if (!permissionService.can(user, p)) {
+                return p;
+            }
+        }
+        return null;
     }
 
     @PutMapping("/{id}")

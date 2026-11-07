@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  boardRights,
   defaultHandIn,
   isOpenJob,
   isReopenedJob,
@@ -11,6 +12,7 @@ import {
   quotedText,
   splitToAssign,
 } from './quotationWorkRules';
+import type { PermissionKey } from '@/features/permissions/types';
 import type { QuotationJob } from './types';
 
 const job = (over: Partial<QuotationJob>): QuotationJob => ({
@@ -224,5 +226,29 @@ describe('quotationLabel', () => {
   it('uses the project name, falls back to the number, and shows later versions', () => {
     expect(quotationLabel({ id: 1, quotationNumber: 'QUO-1', projectName: 'Villa kitchen', versionNumber: 2 })).toBe('Villa kitchen · V2');
     expect(quotationLabel({ id: 1, quotationNumber: 'QUO-1', versionNumber: 1 })).toBe('QUO-1');
+  });
+});
+
+describe('boardRights', () => {
+  const allowing = (...keys: PermissionKey[]) => (key: PermissionKey) => keys.includes(key);
+
+  it('gives whoever manages only the parts their permissions allow', () => {
+    expect(boardRights(true, allowing('quotation_work.change'))).toEqual({
+      assign: false,
+      change: true,
+      remove: false,
+      prepare: false,
+    });
+    expect(boardRights(true, allowing('quotation_work.assign', 'quotation_work.remove', 'quotation_work.prepare'))).toEqual({
+      assign: true,
+      change: false,
+      remove: true,
+      prepare: true,
+    });
+  });
+
+  it('never lets someone who does not manage the board give out, change or remove work', () => {
+    const everything = () => true;
+    expect(boardRights(false, everything)).toEqual({ assign: false, change: false, remove: false, prepare: true });
   });
 });

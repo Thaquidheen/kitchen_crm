@@ -83,6 +83,8 @@ import {
 import { DesignerPicker, type DesignAssignment } from '@/features/design/components/DesignerPicker';
 import { DesignLibrary } from '@/features/design/components/DesignLibrary';
 import { PlanDocumentsField } from '@/features/design/components/PlanDocumentsField';
+import { NoAccess } from '@/features/permissions/NoAccess';
+import { usePermissions } from '@/features/permissions/usePermissions';
 import type { DesignJob, DesignPriority, DesignStatus, DesignerStatus, DesignerSummary, UnassignedDesignCustomer } from '@/features/design/types';
 
 const card = 'bg-background-800 border border-background-600 rounded-[14px]';
@@ -505,7 +507,7 @@ const AssignModal: React.FC<{ customer: UnassignedDesignCustomer | null; onClose
 
 const DesignsPage: React.FC = () => {
   const isAdmin = useIsSuperAdmin();
-  const { data: me } = useGetDesignMeQuery();
+  const { data: me, isLoading: meLoading } = useGetDesignMeQuery();
   // Admin staff follow designs next to the admin: they get the board and attach plan documents.
   // Assigning a designer is the admin's alone.
   const manages = isAdmin || !!me?.canCoordinate;
@@ -513,13 +515,21 @@ const DesignsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showClosed, setShowClosed] = useState(false);
   const [assignFor, setAssignFor] = useState<UnassignedDesignCustomer | null>(null);
+  const { can, ready: permissionsReady } = usePermissions();
+  // The lists are refused without "See designs" (Sales and staff without a type never have it), so
+  // they are only asked for once we know it is allowed.
+  const mayView = permissionsReady && can('designs.view');
 
   const poll = { pollingInterval: 20000, refetchOnFocus: true, refetchOnMountOrArgChange: true } as const;
   // The second view needs the finished designs too, so they are always loaded for whoever manages.
-  const { data: jobs = [], isLoading } = useGetDesignJobsQuery({ includeClosed: manages || showClosed }, poll);
+  const { data: jobs = [], isLoading: jobsLoading } = useGetDesignJobsQuery(
+    { includeClosed: manages || showClosed },
+    { ...poll, skip: !mayView },
+  );
+  const isLoading = jobsLoading || !mayView;
   const { data: designers = [] } = useGetDesignersQuery(undefined, { ...poll, skip: !manages });
-  const { data: unassigned = [] } = useGetUnassignedDesignsQuery(undefined, { ...poll, skip: !manages });
-  const { data: library = [] } = useGetDesignLibraryQuery(undefined, { pollingInterval: 60000, skip: !manages });
+  const { data: unassigned = [] } = useGetUnassignedDesignsQuery(undefined, { ...poll, skip: !manages || !mayView });
+  const { data: library = [] } = useGetDesignLibraryQuery(undefined, { pollingInterval: 60000, skip: !manages || !mayView });
 
   const openJobId = Number(searchParams.get('job') ?? 0) || null;
   const setParam = (key: string, value: string | null) => {
@@ -633,6 +643,11 @@ const DesignsPage: React.FC = () => {
   // What waits for this person: an admin also reviews, Admin staff only assign.
   const needsAdmin = (isAdmin ? review.length : 0) + unassigned.length;
 
+  // Until /design-jobs/me answers we cannot tell a designer from someone who is not one: a Sales
+  // user would otherwise flash "ask the administrator" before "Designs are for designers".
+  if (!isAdmin && meLoading) {
+    return <div className={`${card} p-6 animate-pulse h-40`} />;
+  }
   if (!manages && me && !me.designer) {
     return (
       <div className={`${card} px-6 py-14 text-center`}>
@@ -641,6 +656,9 @@ const DesignsPage: React.FC = () => {
         <div className="text-[12.5px] text-text-700 mt-1">Ask an admin to set your staff type to Designer.</div>
       </div>
     );
+  }
+  if (permissionsReady && !can('designs.view')) {
+    return <NoAccess what="designs" />;
   }
 
   const tab = (key: AdminView, label: string, badge: React.ReactNode) => {
@@ -913,7 +931,8 @@ const DesignsPage: React.FC = () => {
         </>
       )}
 
-      <DesignJobDrawer jobId={openJobId} viewer={viewer} onClose={closeJob} />
+      {/* Not opened while the permissions load or without "See designs": the server would refuse it. */}
+      <DesignJobDrawer jobId={mayView ? openJobId : null} viewer={viewer} onClose={closeJob} />
       <AssignModal customer={assignFor} onClose={() => setAssignFor(null)} />
     </div>
   );

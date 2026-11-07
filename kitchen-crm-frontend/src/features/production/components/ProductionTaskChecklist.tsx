@@ -51,6 +51,7 @@ import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { BellRing, ListChecks, Calendar } from 'lucide-react';
+import { usePermissions } from '@/features/permissions/usePermissions';
 
 /** Fallback priority colours, used until the configured colours load (and if the request fails).
     The Settings → Task priority colours page can override each of these per app. */
@@ -125,6 +126,17 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
     taskDate: '',
     priority: 'MEDIUM' as TaskPriority,
   });
+
+  // What this person may change on the checklist, one switch per kind of call (the server refuses
+  // the rest): ticking is /toggle, the bell is /reminder, deleting is DELETE, every other change —
+  // add, rename, date, priority, reorder — is the checklist switch. Seeding the standard stages is
+  // part of starting production. Whoever has none of them still sees the checklist, read-only.
+  const { can } = usePermissions();
+  const canTick = can('production.tick');
+  const canChange = can('production.checklist');
+  const canDelete = can('production.checklist_delete');
+  const canRemind = can('production.reminders');
+  const canApplyStandard = can('production.start');
 
   // Task Groups API hooks
   const { data: taskGroupsResponse, isLoading: isLoadingGroups } = useGetTaskGroupsByCustomerQuery(customerId);
@@ -452,7 +464,7 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
     const isEditingThis = editingTaskId === task.id;
 
     return (
-      <SortableItem key={taskKey} id={task.id} disabled={isEditingThis || isLoading}>
+      <SortableItem key={taskKey} id={task.id} disabled={!canChange || isEditingThis || isLoading}>
         {({ attributes, listeners }) =>
           isEditingThis ? (
             renderEditTaskForm(task)
@@ -463,20 +475,25 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
         }`}
         style={priorityRowStyle(task.priority, task.completed)}
       >
-        {/* Drag handle — only the grip starts a reorder, sitting in the row's left indent. */}
-        <button
-          {...attributes}
-          {...listeners}
-          onClick={(e) => e.stopPropagation()}
-          className="p-1 -ml-7 mr-0.5 text-text-600 hover:text-text-900 cursor-grab active:cursor-grabbing touch-none shrink-0"
-          title="Drag to reorder"
-          aria-label="Drag to reorder task"
-        >
-          <GripVertical className="w-4 h-4" />
-        </button>
+        {/* Drag handle — only the grip starts a reorder, sitting in the row's left indent. Without the
+            checklist switch an empty spacer keeps the rows lined up. */}
+        {canChange ? (
+          <button
+            {...attributes}
+            {...listeners}
+            onClick={(e) => e.stopPropagation()}
+            className="p-1 -ml-7 mr-0.5 text-text-600 hover:text-text-900 cursor-grab active:cursor-grabbing touch-none shrink-0"
+            title="Drag to reorder"
+            aria-label="Drag to reorder task"
+          >
+            <GripVertical className="w-4 h-4" />
+          </button>
+        ) : (
+          <span className="w-6 -ml-7 mr-0.5 shrink-0" aria-hidden="true" />
+        )}
         <div
-          className="flex items-center gap-3 flex-1 cursor-pointer"
-          onClick={() => !isLoading && handleToggleTask(task)}
+          className={`flex items-center gap-3 flex-1 ${canTick ? 'cursor-pointer' : ''}`}
+          onClick={() => canTick && !isLoading && handleToggleTask(task)}
         >
           {isLoading ? (
             <Loader2 className="w-5 h-5 text-primary-500 animate-spin shrink-0" />
@@ -498,22 +515,44 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
                 {task.taskTitle}
               </span>
               {/* Priority badge — click to edit the task (change Medium → High, etc.). Colour comes
-                  from the configured per-priority colours. */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  startEditTask(task);
-                }}
-                className="text-xs px-1.5 py-0.5 rounded font-medium hover:opacity-80 transition-opacity cursor-pointer"
-                style={priorityStyle(task.priority)}
-                title="Change priority"
-              >
-                {task.priority}
-              </button>
+                  from the configured per-priority colours. Read-only without the checklist switch. */}
+              {canChange ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    startEditTask(task);
+                  }}
+                  className="text-xs px-1.5 py-0.5 rounded font-medium hover:opacity-80 transition-opacity cursor-pointer"
+                  style={priorityStyle(task.priority)}
+                  title="Change priority"
+                >
+                  {task.priority}
+                </button>
+              ) : (
+                <span
+                  className="text-xs px-1.5 py-0.5 rounded font-medium"
+                  style={priorityStyle(task.priority)}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {task.priority}
+                </span>
+              )}
               {/* Inline task date: click to set/change it. stopPropagation so the row's
-                  completion toggle (the whole left region) does not fire. */}
-              {editingDateTaskId === task.id ? (
+                  completion toggle (the whole left region) does not fire. Without the checklist
+                  switch the date is only shown (it and the badge still stop the click, so reading them never
+                  ticks the task). */}
+              {!canChange ? (
+                task.taskDate ? (
+                  <span
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-text-600 whitespace-nowrap tabular-nums"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Calendar className="w-3 h-3" />
+                    {new Date(task.taskDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                ) : null
+              ) : editingDateTaskId === task.id ? (
                 <input
                   type="date"
                   autoFocus
@@ -575,7 +614,7 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
               <BellRing className="w-3 h-3" />
               {new Date((task as any).reminderDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
             </span>
-          ) : !task.completed ? (
+          ) : !task.completed && canRemind ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -587,26 +626,30 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
               <BellRing className="w-3.5 h-3.5" />
             </button>
           ) : null}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              startEditTask(task);
-            }}
-            className="p-1 text-text-500 hover:text-primary-500 transition-colors"
-            title="Edit task"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDeleteTask(task.id);
-            }}
-            className="p-1 text-red-400 hover:text-red-300 transition-colors"
-            title="Delete task"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          {canChange && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                startEditTask(task);
+              }}
+              className="p-1 text-text-500 hover:text-primary-500 transition-colors"
+              title="Edit task"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteTask(task.id);
+              }}
+              className="p-1 text-red-400 hover:text-red-300 transition-colors"
+              title="Delete task"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
           )
@@ -767,7 +810,7 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
         {/* Group Header */}
         <div className="flex items-center justify-between px-3.5 py-3 bg-background-800 cursor-pointer hover:bg-background-700 transition-colors">
           {/* Stage drag handle — only top-level stages reorder (sub-stages stay put). */}
-          {depth === 0 && dragHandle && (
+          {depth === 0 && dragHandle && canChange && (
             <button
               {...dragHandle.attributes}
               {...dragHandle.listeners}
@@ -854,27 +897,31 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
               </>
             ) : (
               <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditingGroupId(group.id);
-                    setEditingGroupTitle(group.groupTitle);
-                  }}
-                  className="p-1.5 text-text-600 hover:text-text-900 transition-colors"
-                  title="Edit group"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteGroup(group.id);
-                  }}
-                  className="p-1.5 text-red-400 hover:text-red-300 transition-colors"
-                  title="Delete group"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {canChange && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingGroupId(group.id);
+                      setEditingGroupTitle(group.groupTitle);
+                    }}
+                    className="p-1.5 text-text-600 hover:text-text-900 transition-colors"
+                    title="Edit group"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteGroup(group.id);
+                    }}
+                    className="p-1.5 text-red-400 hover:text-red-300 transition-colors"
+                    title="Delete group"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -906,8 +953,8 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
               </div>
             )}
 
-            {/* Add Task Form or Button */}
-            {showAddTaskFormForGroup === group.id ? (
+            {/* Add Task Form or Button (both are the checklist switch) */}
+            {!canChange ? null : showAddTaskFormForGroup === group.id ? (
               renderAddTaskForm(group.id)
             ) : (
               <button
@@ -920,7 +967,7 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
             )}
 
             {/* Only a stage may gain sub-stages; the backend refuses a third level. */}
-            {depth === 0 && addingSubStageFor === group.id ? (
+            {!canChange ? null : depth === 0 && addingSubStageFor === group.id ? (
               <div className="flex items-center gap-2 p-2 pl-10 border-t border-background-700 bg-background-800">
                 <input
                   autoFocus
@@ -982,26 +1029,34 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
         <div className="p-8 text-center border border-dashed border-background-500 rounded-xl">
           <ListChecks className="w-8 h-8 text-text-500 mx-auto mb-2" />
           <p className="text-text-900 font-semibold text-sm">This job has no stage checklist yet</p>
-          <p className="text-text-600 text-[12.5px] mt-1 mb-4">
-            Apply the standard 3-stage checklist (36 tasks), or build the groups by hand.
-          </p>
-          <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={handleApplyStandard}
-              disabled={isApplying}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-            >
-              {isApplying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ListChecks className="w-4 h-4" />}
-              Apply standard stages
-            </button>
-            <button
-              onClick={() => setShowAddGroupForm(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 border border-background-500 text-text-900 rounded-lg hover:bg-background-700 transition-colors"
-            >
-              <FolderPlus className="w-4 h-4" />
-              Add group manually
-            </button>
-          </div>
+          {(canApplyStandard || canChange) && (
+            <>
+              <p className="text-text-600 text-[12.5px] mt-1 mb-4">
+                Apply the standard 3-stage checklist (36 tasks), or build the groups by hand.
+              </p>
+              <div className="flex items-center justify-center gap-2">
+                {canApplyStandard && (
+                  <button
+                    onClick={handleApplyStandard}
+                    disabled={isApplying}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+                  >
+                    {isApplying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ListChecks className="w-4 h-4" />}
+                    Apply standard stages
+                  </button>
+                )}
+                {canChange && (
+                  <button
+                    onClick={() => setShowAddGroupForm(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 border border-background-500 text-text-900 rounded-lg hover:bg-background-700 transition-colors"
+                  >
+                    <FolderPlus className="w-4 h-4" />
+                    Add group manually
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <>
@@ -1009,15 +1064,15 @@ export const ProductionTaskChecklist: React.FC<ProductionTaskChecklistProps> = (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleStageDragEnd}>
             <SortableContext items={taskGroups.map(g => g.id)} strategy={verticalListSortingStrategy}>
               {taskGroups.map((group, idx) => (
-                <SortableItem key={group.id} id={group.id}>
+                <SortableItem key={group.id} id={group.id} disabled={!canChange}>
                   {(handle) => renderGroup(group, idx, 0, undefined, handle)}
                 </SortableItem>
               ))}
             </SortableContext>
           </DndContext>
 
-          {/* Add Group Form */}
-          {showAddGroupForm ? (
+          {/* Add Group Form (the checklist switch) */}
+          {!canChange ? null : showAddGroupForm ? (
             <div className="p-4 bg-background-800 rounded-lg border border-background-600 space-y-3">
               <input
                 type="text"

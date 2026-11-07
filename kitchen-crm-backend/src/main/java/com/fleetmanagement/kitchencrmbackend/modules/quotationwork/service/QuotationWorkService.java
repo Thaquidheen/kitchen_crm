@@ -41,7 +41,8 @@ public interface QuotationWorkService {
 
     ApiResponse<QuotationJobDto> assign(QuotationJobAssignRequest request, Viewer viewer);
 
-    ApiResponse<QuotationJobDto> update(Long jobId, QuotationJobUpdateRequest request, Viewer viewer);
+    /** mayReassign: whether the caller may also give the work to someone else (Give out quotations). */
+    ApiResponse<QuotationJobDto> update(Long jobId, QuotationJobUpdateRequest request, Viewer viewer, boolean mayReassign);
 
     ApiResponse<List<QuotationJobDto>> reorder(QuotationJobReorderRequest request, Viewer viewer);
 

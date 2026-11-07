@@ -18,6 +18,8 @@ import { AccessoryManager } from '../../features/products/components/AccessoryMa
 import { CabinetsManager } from '../../features/products/components/CabinetsManager';
 import { DoorsManager } from '../../features/products/components/DoorsManager';
 import { LightingManager } from '../../features/products/components/LightingManager';
+import { usePermissions } from '@/features/permissions/usePermissions';
+import { NoAccess } from '@/features/permissions/NoAccess';
 
 type TabType =
   | 'categories'
@@ -47,6 +49,12 @@ const ProductsPage: React.FC = () => {
   const { tab } = useParams();
   const activeTab: TabType = isTab(tab) ? tab : 'categories';
   const active = TABS.find((t) => t.id === activeTab)!;
+  const { can, ready: permissionsReady } = usePermissions();
+
+  // Only the page is closed: quotations still read the catalogue, so the server serves it either way.
+  if (permissionsReady && !can('products.view')) {
+    return <NoAccess what="products" />;
+  }
 
   return (
     <div className="w-full">

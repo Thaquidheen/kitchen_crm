@@ -18,6 +18,7 @@ import { QuotationWorkBoard } from '@/features/quotation-work/components/Quotati
 import { useQuotationBoardCount } from '@/features/quotation-work/useQuotationBoardCount';
 import { useGetQuotationWorkMeQuery } from '@/features/quotation-work/quotationWorkAPI';
 import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
+import { usePermissions } from '@/features/permissions/usePermissions';
 
 type PageView = 'board' | 'list';
 
@@ -150,7 +151,10 @@ export function QuotationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: me, isError: meFailed } = useGetQuotationWorkMeQuery();
   const board = useQuotationBoardCount(me);
-  const hasBoard = !!me?.canManage || board.any;
+  const { can } = usePermissions();
+  // Without "See the work board" there is no board here at all: the page is the list, even when a
+  // notification link asks for the board.
+  const hasBoard = can('quotation_work.view') && (!!me?.canManage || board.any);
   const access = useQuotationAccess();
   // Without a chosen view the page opens on the board when there is something on it for this
   // person (work to do, customers to assign, news) and on the list otherwise, as before. That is

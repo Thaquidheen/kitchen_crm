@@ -22,7 +22,51 @@ export type PermissionKey =
   | 'quotations.pdf'
   | 'quotations.see_rates'
   | 'quotations.see_margins'
-  | 'quotations.edit_margins';
+  | 'quotations.edit_margins'
+  | 'quotations.send_for_approval'
+  | 'quotation_work.view'
+  | 'quotation_work.prepare'
+  | 'quotation_work.assign'
+  | 'quotation_work.change'
+  | 'quotation_work.remove'
+  | 'appliance.view'
+  | 'appliance.add'
+  | 'appliance.edit'
+  | 'appliance.delete'
+  | 'appliance.files'
+  | 'appliance.followups'
+  | 'appliance.reminders'
+  | 'reminders.view'
+  | 'reminders.edit'
+  | 'reminders.done'
+  | 'reminders.delete'
+  | 'tasks.todos'
+  | 'tasks.mine'
+  | 'designs.view'
+  | 'designs.add_plans'
+  | 'designs.upload_files'
+  | 'designs.remove_files'
+  | 'designs.work'
+  | 'designs.conversation'
+  | 'production.view'
+  | 'production.start'
+  | 'production.tick'
+  | 'production.checklist'
+  | 'production.checklist_delete'
+  | 'production.reminders'
+  | 'production.pending_works'
+  | 'production.edit_job'
+  | 'products.view'
+  | 'vendors.view'
+  | 'vendors.add'
+  | 'vendors.edit'
+  | 'vendors.deactivate'
+  | 'architects.view'
+  | 'architects.add'
+  | 'architects.edit'
+  | 'architects.delete'
+  | 'architects.visits'
+  | 'architects.reminders';
 
 /** What the signed-in person may do. */
 export interface MyPermissions {
@@ -46,6 +90,10 @@ export interface PermissionInfo {
   defaultAllowed: boolean;
   /** Only hides something on the screen; the server cannot enforce it. */
   screenOnly: boolean;
+  /** Key of the permission this one only works together with. */
+  requires?: string | null;
+  /** The staff types it can be given to; missing when it is for every type. */
+  appliesTo?: string[] | null;
 }
 
 export interface PermissionModule {

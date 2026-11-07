@@ -18,6 +18,7 @@ import {
 import { Building2, ChevronDown, Loader2, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCreateArchitectMutation, useGetAllArchitectsQuery } from '../architectsAPI';
+import { usePermissions } from '@/features/permissions/usePermissions';
 import { partnerTypeLabel, partnerTypeOf } from '../types';
 import type { Architect, PartnerType } from '../types';
 
@@ -58,6 +59,10 @@ export function ArchitectPicker({
   // visible to the next row's duplicate guard.
   const { data: allArchitects = [], isLoading } = useGetAllArchitectsQuery();
   const [createArchitect, { isLoading: isCreating }] = useCreateArchitectMutation();
+  // Linking a record that is already there never creates anything, so only "Create as new" needs
+  // "Add architects and builders". Without "See architects" the list carries no phone numbers.
+  const { can } = usePermissions();
+  const mayCreate = can('architects.add');
 
   const label = partnerTypeLabel(type);
   const lower = label.toLowerCase();
@@ -87,7 +92,7 @@ export function ArchitectPicker({
   const exactMatch = q
     ? pool.find((a) => a.architectureName.trim().toLowerCase() === q)
     : undefined;
-  const canCreate = !!q && !exactMatch && !isCreating;
+  const canCreate = mayCreate && !!q && !exactMatch && !isCreating;
 
   const handleCreate = async () => {
     const name = query.trim();
@@ -127,9 +132,12 @@ export function ArchitectPicker({
           <div className="text-[13px] font-semibold text-text-900 truncate">
             {name ?? `Linked ${lower}`}
           </div>
-          <div className="text-[11.5px] text-text-600 mt-0.5 truncate">
-            {details || `No firm or phone on record — add them in the Architects module`}
-          </div>
+          {/* Without "See architects" the phone is never sent, so a missing one says nothing. */}
+          {(details || can('architects.view')) && (
+            <div className="text-[11.5px] text-text-600 mt-0.5 truncate">
+              {details || `No firm or phone on record — add them in the Architects module`}
+            </div>
+          )}
         </div>
         {!disabled && (
           <button
@@ -164,7 +172,7 @@ export function ArchitectPicker({
       <div className="relative">
         <ComboboxInput
           className={`${inputCls} pr-9`}
-          placeholder={`Search ${lower}s or type a new name…`}
+          placeholder={mayCreate ? `Search ${lower}s or type a new name…` : `Search ${lower}s…`}
           displayValue={() => query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -188,7 +196,11 @@ export function ArchitectPicker({
 
           {!isLoading && matches.length === 0 && !canCreate && (
             <div className="px-3 py-2 text-[12.5px] text-text-600">
-              No {lower}s yet — type a name to create one.
+              {mayCreate
+                ? `No ${lower}s yet — type a name to create one.`
+                : q
+                  ? `No ${lower} by that name. Ask someone who may add ${lower}s to add it.`
+                  : `No ${lower}s yet.`}
             </div>
           )}
 

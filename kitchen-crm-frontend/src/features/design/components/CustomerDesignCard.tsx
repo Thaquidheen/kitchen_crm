@@ -8,6 +8,7 @@ import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, Palette, Paperclip, RotateCcw, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { usePermissions } from '@/features/permissions/usePermissions';
 import { useGetCustomerDesignJobQuery, useGetDesignMeQuery, useUploadCustomerPlanDocumentsMutation } from '../designAPI';
 import { PLAN_ACCEPT, addPickedFiles, designFilesHeading, isPlanFileName, uploadSizeProblem } from '../designFiles';
 import {
@@ -56,6 +57,7 @@ export const CustomerDesignCard: React.FC<Props> = ({
   const { data: designMe } = useGetDesignMeQuery();
   // Admins and Admin staff work in the Designs page; everyone else only sees the design here.
   const opensDesigns = isAdmin || !!designMe?.canCoordinate;
+  const { can } = usePermissions();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [redesignOpen, setRedesignOpen] = useState(false);
   const [showEarlier, setShowEarlier] = useState(false);
@@ -77,7 +79,10 @@ export const CustomerDesignCard: React.FC<Props> = ({
   // A cancelled design counts as none: the customer waits to be assigned again and the next
   // assignment picks that design up, with what is attached to it.
   const canAddPlans =
-    opensDesigns && customerStatus === 'DESIGN_STAGE' && (!design || open || design.status === 'CANCELLED');
+    opensDesigns &&
+    can('designs.add_plans') &&
+    customerStatus === 'DESIGN_STAGE' &&
+    (!design || open || design.status === 'CANCELLED');
   const onPickPlans = async (picked: FileList | null) => {
     if (!picked || picked.length === 0) {return;}
     const next = addPickedFiles([], Array.from(picked), isPlanFileName);
@@ -112,7 +117,8 @@ export const CustomerDesignCard: React.FC<Props> = ({
         <Palette size={13} className="text-text-500" />
         <span className={sectionLabel}>Design</span>
         <span className="flex-1" />
-        {design && opensDesigns && (
+        {/* The Designs page is refused without "See designs": no link to it then. */}
+        {design && opensDesigns && can('designs.view') && (
           <Link to={`/designs?job=${design.id}`} className="text-[12px] font-medium text-primary-600 hover:underline">
             Open in Designs
           </Link>

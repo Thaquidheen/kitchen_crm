@@ -72,9 +72,22 @@ public class PermissionServiceImpl implements PermissionService {
         return current;
     }
 
-    private static boolean allowed(Map<String, Map<String, Boolean>> decided, String staffType, Permission permission) {
+    /** What the switch itself says for this staff type, before anything it depends on. */
+    private static boolean switchedOn(Map<String, Map<String, Boolean>> decided, String staffType, Permission permission) {
+        if (!permission.appliesTo(staffType)) {
+            return false;
+        }
         Boolean answer = decided.getOrDefault(staffType, Map.of()).get(permission.key());
         return answer != null ? answer : permission.defaultAllowed();
+    }
+
+    /** Whether the staff type really has it: its own switch, and the one it only works together with. */
+    private static boolean allowed(Map<String, Map<String, Boolean>> decided, String staffType, Permission permission) {
+        if (!switchedOn(decided, staffType, permission)) {
+            return false;
+        }
+        Permission required = permission.requires();
+        return required == null || allowed(decided, staffType, required);
     }
 
     private boolean allowed(String staffType, Permission permission) {
@@ -161,14 +174,19 @@ public class PermissionServiceImpl implements PermissionService {
         Map<String, List<PermissionDto>> byModule = new LinkedHashMap<>();
         for (Permission p : Permission.values()) {
             byModule.computeIfAbsent(p.module(), k -> new ArrayList<>())
-                    .add(new PermissionDto(p.key(), p.label(), p.description(), p.defaultAllowed(), p.screenOnly()));
+                    .add(new PermissionDto(p.key(), p.label(), p.description(), p.defaultAllowed(), p.screenOnly(),
+                            p.requires() == null ? null : p.requires().key(),
+                            p.appliesToTypes() == null ? null : STAFF_TYPES.keySet().stream()
+                                    .filter(p::appliesTo).toList()));
         }
         byModule.forEach((name, permissions) -> dto.getModules().add(new ModuleDto(name, permissions)));
 
         for (String type : STAFF_TYPES.keySet()) {
             Map<String, Boolean> row = new LinkedHashMap<>();
+            // The switches as they are set: a switch whose required permission is off keeps its own
+            // answer, so turning the required one back on brings back what was there.
             for (Permission p : Permission.values()) {
-                row.put(p.key(), allowed(decided, type, p));
+                row.put(p.key(), switchedOn(decided, type, p));
             }
             dto.getValues().put(type, row);
         }
@@ -190,8 +208,13 @@ public class PermissionServiceImpl implements PermissionService {
                 continue;
             }
             for (Map.Entry<String, Boolean> answer : type.getValue().entrySet()) {
-                if (Permission.byKey(answer.getKey()) == null) {
+                Permission permission = Permission.byKey(answer.getKey());
+                if (permission == null) {
                     return ApiResponse.error("Unknown permission: " + answer.getKey());
+                }
+                if (!permission.appliesTo(type.getKey())) {
+                    return ApiResponse.error(permission.label() + " is not something " + STAFF_TYPES.get(type.getKey())
+                            + " can be given");
                 }
                 if (answer.getValue() == null) {
                     return ApiResponse.error("Say yes or no for " + answer.getKey());

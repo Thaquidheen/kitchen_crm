@@ -16,7 +16,7 @@ import type { PermissionKey } from './types';
 export function usePermissions() {
   const isSuperAdmin = useIsSuperAdmin();
   const signedIn = useAppSelector((state) => !!state.auth.user);
-  const { data, isError } = useGetMyPermissionsQuery(undefined, {
+  const { data } = useGetMyPermissionsQuery(undefined, {
     skip: !signedIn || isSuperAdmin,
     pollingInterval: 60000,
     refetchOnFocus: true,
@@ -24,8 +24,12 @@ export function usePermissions() {
   const can = useCallback((key: PermissionKey) => isAllowed(isSuperAdmin, data, key), [isSuperAdmin, data]);
   return {
     can,
-    /** False until we know the answers; hide rather than flash what may not be allowed. */
-    ready: isSuperAdmin || data !== undefined || isError,
+    /**
+     * False until we know the answers; hide rather than flash what may not be allowed. Also false
+     * when the question failed before any answer came: that is not a "no" (the server still decides
+     * every call), so pages wait for the next poll instead of closing every module.
+     */
+    ready: isSuperAdmin || data !== undefined,
   };
 }
 

@@ -15,6 +15,7 @@ import { useGetDashboardSummaryQuery, useGetRevenueAnalyticsQuery } from '@/feat
 import { useGetCustomerStatisticsQuery } from '@/features/customers/customersAPI';
 import { useGetQuotationsQuery, useGetRemindersQuery, useGetReminderStatsQuery } from '@/app/baseApi';
 import { useQuotationAccess } from '@/features/quotations/useQuotationAccess';
+import { usePermissions } from '@/features/permissions/usePermissions';
 import ROUTES from '@/routes/routes.config';
 import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 import { useAppSelector } from '@/app/hooks';
@@ -98,8 +99,14 @@ export function DashboardPage() {
     { page: 0, size: 5, sortBy: 'createdAt', sortDir: 'desc' },
     { skip: !mayReadQuotations },
   );
-  const { data: todayRem } = useGetRemindersQuery({ bucket: 'TODAY', page: 0, size: 6 });
-  const { data: remStats } = useGetReminderStatsQuery();
+  // Reminders: the same lists as the Reminders page, so not asked for (and their cards not shown)
+  // without reminders.view.
+  const { can } = usePermissions();
+  const mayReadReminders = can('reminders.view');
+  const { data: todayRemData } = useGetRemindersQuery({ bucket: 'TODAY', page: 0, size: 6 }, { skip: !mayReadReminders });
+  const { data: remStatsData } = useGetReminderStatsQuery(undefined, { skip: !mayReadReminders });
+  const todayRem = mayReadReminders ? todayRemData : undefined;
+  const remStats = mayReadReminders ? remStatsData : undefined;
 
   const s: any = summary ?? {};
   const rev: any = revenue ?? {};
@@ -232,7 +239,8 @@ export function DashboardPage() {
       count: String(s.stalledProductionJobs ?? 0),
       st: 'follow',
       to: ROUTES.PRODUCTION,
-      show: Number(s.stalledProductionJobs ?? 0) > 0,
+      // It leads to the Production page, so only for whoever may open it.
+      show: Number(s.stalledProductionJobs ?? 0) > 0 && can('production.view'),
     },
   ].filter((a) => a.show);
 
@@ -536,8 +544,12 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Band 3 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-4 items-start">
+      {/* Band 3. Without reminders.view there is no schedule card: the quotations take the full width. */}
+      <div
+        className={`grid grid-cols-1 gap-4 items-start ${
+          mayReadReminders ? 'lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]' : ''
+        }`}
+      >
         <div className={`${CARD} overflow-hidden`}>
           <div className="flex items-center gap-2.5 px-4 py-3.5">
             <div className="text-[13.5px] font-[650] text-text-900 whitespace-nowrap">Latest quotations</div>
@@ -610,6 +622,7 @@ export function DashboardPage() {
           </div>
         </div>
 
+        {mayReadReminders && (
         <div className={`${CARD} overflow-hidden`}>
           <div className="flex items-center gap-2.5 px-4 py-3.5">
             <div className="text-[13.5px] font-[650] text-text-900 whitespace-nowrap">Today's schedule</div>
@@ -651,6 +664,7 @@ export function DashboardPage() {
             ))
           )}
         </div>
+        )}
       </div>
     </div>
   );

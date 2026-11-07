@@ -200,7 +200,8 @@ export function StatusChangeModal({
   const uploadsDesign = quotationSingle && !loadingDesign && (gate === 'NEEDS_DESIGN' || settlesOpen);
   const needsDesign = uploadsDesign && designFiles.length === 0;
   const designTooLarge = uploadsDesign ? uploadSizeProblem(designFiles) : null;
-  const handsOverPlans = toDesign && coordinates && !isBulk;
+  // Only offered to whoever may add plans: otherwise the stage would save and the plans be refused.
+  const handsOverPlans = toDesign && coordinates && !isBulk && can('designs.add_plans');
   const plansTooLarge = handsOverPlans ? uploadSizeProblem(planFiles) : null;
   // Staff cannot send a customer with an approved design back to Design: that is a redesign, the admin's.
   const staffRedesign =
