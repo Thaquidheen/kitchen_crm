@@ -54,6 +54,12 @@ public class FinanceServiceImpl implements FinanceService {
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of("image/jpeg", "image/png", "application/pdf");
     private static final long MAX_FILE_BYTES = 20L * 1024 * 1024;
     private static final int MAX_BATCH_FILES = 10;
+    /**
+     * Stored with every receipt record. Kept as it always was so existing rows still resolve, but it
+     * is no longer a link anyone can open: that path is refused, and the file is read through
+     * getReceiptContent instead.
+     */
+    private static final String RECEIPT_URL_PREFIX = "/uploads/finance-receipts/";
 
     @Value("${app.finance-receipt-upload-dir:uploads/finance-receipts}")
     private String receiptUploadDir;
@@ -1041,6 +1047,52 @@ public class FinanceServiceImpl implements FinanceService {
         return ApiResponse.success("File removed", buildSummary(finance));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public FinanceReceiptContent getReceiptContent(Long fileId) {
+        FinanceReceiptFile file = receiptRepository.findById(fileId).orElse(null);
+        if (file == null) {
+            return null;
+        }
+        Path stored = receiptPath(file.getFileUrl());
+        if (stored == null || !Files.isRegularFile(stored)) {
+            log.warn("Finance receipt {} has no readable file behind {}", fileId, file.getFileUrl());
+            return null;
+        }
+        String name = stored.getFileName().toString();
+        String ext = name.substring(name.lastIndexOf('.') + 1).toLowerCase();
+        String contentType = switch (ext) {
+            case "pdf" -> "application/pdf";
+            case "png" -> "image/png";
+            case "jpg", "jpeg" -> "image/jpeg";
+            default -> "application/octet-stream";
+        };
+        String fileName = file.getFileName() == null || file.getFileName().isBlank() ? name : file.getFileName();
+        return new FinanceReceiptContent(stored, fileName, contentType);
+    }
+
+    /**
+     * Where a receipt's file sits on disk, worked out from its stored URL. Only a bare file name
+     * directly inside the receipts folder is accepted, so a URL that was ever made to point anywhere
+     * else (another folder, "..") reads nothing rather than some other file on the server.
+     */
+    private Path receiptPath(String url) {
+        if (url == null || !url.startsWith(RECEIPT_URL_PREFIX)) {
+            return null;
+        }
+        String name = url.substring(RECEIPT_URL_PREFIX.length());
+        if (name.isEmpty() || name.contains("/") || name.contains("\\") || name.contains("..")) {
+            return null;
+        }
+        try {
+            Path dir = Paths.get(receiptUploadDir).toAbsolutePath().normalize();
+            Path target = dir.resolve(name).normalize();
+            return dir.equals(target.getParent()) ? target : null;
+        } catch (java.nio.file.InvalidPathException e) {
+            return null;
+        }
+    }
+
     /** Validate the whole batch before storing anything (appliance precedent). */
     private String validateBatch(MultipartFile[] files) {
         if (files == null || files.length == 0) {
@@ -1082,7 +1134,7 @@ public class FinanceServiceImpl implements FinanceService {
             String ext = original.contains(".") ? original.substring(original.lastIndexOf('.') + 1).toLowerCase() : "bin";
             String stored = "finance-" + ownerType + "-" + ownerId + "-" + System.currentTimeMillis() + "-" + (i++) + "." + ext;
             Files.copy(file.getInputStream(), dir.resolve(stored), StandardCopyOption.REPLACE_EXISTING);
-            out.add(new StoredFile("/uploads/finance-receipts/" + stored, original));
+            out.add(new StoredFile(RECEIPT_URL_PREFIX + stored, original));
         }
         return out;
     }

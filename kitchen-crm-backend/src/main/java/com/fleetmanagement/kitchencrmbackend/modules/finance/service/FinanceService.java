@@ -51,6 +51,9 @@ public interface FinanceService {
 
     ApiResponse<CustomerFinanceSummaryDto> deleteReceipt(Long fileId);
 
+    /** The stored file of one receipt, or null when the record or its file is gone. */
+    FinanceReceiptContent getReceiptContent(Long fileId);
+
     /** Checks (save=false) or imports (save=true) a sheet of payments, expense lines and releases. */
     /** The Excel template for importSheet, with the active vendors in its Vendor drop-down. */
     byte[] importTemplate();

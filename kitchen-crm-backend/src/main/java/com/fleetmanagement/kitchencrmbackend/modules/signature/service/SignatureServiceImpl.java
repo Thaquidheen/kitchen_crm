@@ -121,7 +121,7 @@ public class SignatureServiceImpl implements SignatureService {
             // Don't fail the entire operation if notification fails
         }
 
-        log.info("Created signature request: documentId={}, token={}", document.getId(), document.getSigningToken());
+        log.info("Created signature request: documentId={}, token={}", document.getId(), tokenPrefix(document.getSigningToken()));
 
         return document;
     }
@@ -147,7 +147,14 @@ public class SignatureServiceImpl implements SignatureService {
     @Override
     @Transactional
     public DocumentVerificationDto verifySigningToken(String signingToken, String ipAddress, String userAgent) {
-        log.info("Verifying signing token: {}", signingToken);
+        return verifySigningToken(signingToken, ipAddress, userAgent, true);
+    }
+
+    @Override
+    @Transactional
+    public DocumentVerificationDto verifySigningToken(String signingToken, String ipAddress, String userAgent,
+                                                      boolean recordOpen) {
+        log.info("Verifying signing token: {}", tokenPrefix(signingToken));
 
         Optional<SignedDocument> documentOpt = signedDocumentRepository.findBySigningToken(signingToken);
 
@@ -192,8 +199,8 @@ public class SignatureServiceImpl implements SignatureService {
                 .build();
         }
 
-        // Update status to OPENED if this is the first time
-        if (document.getStatus() == SignatureStatus.SENT && document.getOpenedAt() == null) {
+        // Update status to OPENED if this is the first time (the customer's visit only)
+        if (recordOpen && document.getStatus() == SignatureStatus.SENT && document.getOpenedAt() == null) {
             document.setStatus(SignatureStatus.OPENED);
             document.setOpenedAt(LocalDateTime.now());
             signedDocumentRepository.save(document);
@@ -231,7 +238,7 @@ public class SignatureServiceImpl implements SignatureService {
     @Override
     @Transactional
     public SignatureResponse captureSignature(SignatureRequest request) {
-        log.info("Capturing signature for token: {}", request.getSigningToken());
+        log.info("Capturing signature for token: {}", tokenPrefix(request.getSigningToken()));
 
         // Verify token
         SignedDocument document = signedDocumentRepository.findBySigningToken(request.getSigningToken())
@@ -309,7 +316,7 @@ public class SignatureServiceImpl implements SignatureService {
     @Override
     @Transactional
     public SignatureResponse rejectDocument(String signingToken, String reason, String ipAddress, String userAgent) {
-        log.info("Rejecting document for token: {}", signingToken);
+        log.info("Rejecting document for token: {}", tokenPrefix(signingToken));
 
         SignedDocument document = signedDocumentRepository.findBySigningToken(signingToken)
             .orElseThrow(() -> new RuntimeException("Invalid signing token"));
@@ -541,6 +548,11 @@ public class SignatureServiceImpl implements SignatureService {
 
     private String generateSigningToken() {
         return UUID.randomUUID().toString().replace("-", "");
+    }
+
+    // The token works like a password for the public page, so only its first characters are logged.
+    private static String tokenPrefix(String token) {
+        return token != null && token.length() > 8 ? token.substring(0, 8) + "..." : "INVALID";
     }
 
     private void createAuditLog(SignedDocument document, String eventType, String description) {

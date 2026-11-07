@@ -6,10 +6,15 @@ import com.fleetmanagement.kitchencrmbackend.modules.finance.service.FinanceServ
 import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,6 +22,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -191,6 +197,28 @@ public class CustomerFinanceController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<CustomerFinanceSummaryDto>> deleteReceipt(@PathVariable Long fileId) {
         return respond(service.deleteReceipt(fileId));
+    }
+
+    /**
+     * Sends back one receipt's file. Receipts used to be plain /uploads links that opened without
+     * signing in, under predictable names; that path is now refused, and this is the only way to a
+     * receipt, behind the same role check and reporting key as the rest of finance. The file is found
+     * from its record by id, never from a path the client sends.
+     */
+    @GetMapping("/receipts/{fileId}/file")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Resource> getReceiptFile(@PathVariable Long fileId) {
+        FinanceReceiptContent content = service.getReceiptContent(fileId);
+        if (content == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(content.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.inline().filename(content.fileName(), StandardCharsets.UTF_8).build().toString())
+                // Money paperwork: not to be kept by the browser or anything in between.
+                .cacheControl(CacheControl.noStore())
+                .body(new FileSystemResource(content.path()));
     }
 
     // ---------------------------------------------------------------- import from Excel / CSV

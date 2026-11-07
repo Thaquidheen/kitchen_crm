@@ -117,11 +117,17 @@ public class TokenSecurityServiceImpl implements TokenSecurityService {
     public void logAccessAttempt(SignedDocument document, String token, String ipAddress,
                                  String userAgent, boolean success, String reason) {
 
-        SignatureAuditLog auditLog = new SignatureAuditLog();
-
-        if (document != null) {
-            auditLog.setSignedDocument(document);
+        if (document == null) {
+            // An audit row belongs to a document, so a token that matches none is only logged.
+            // Saving the row anyway failed on the required document and turned a mistyped link
+            // into a server error instead of the "invalid link" answer.
+            log.warn("ACCESS_LOG: FAILED - no document, token: {}..., IP: {}, reason: {}",
+                token != null && token.length() > 8 ? token.substring(0, 8) : "INVALID", ipAddress, reason);
+            return;
         }
+
+        SignatureAuditLog auditLog = new SignatureAuditLog();
+        auditLog.setSignedDocument(document);
 
         auditLog.setEventType(success ? SignatureAuditLog.EventType.ACCESS_GRANTED : SignatureAuditLog.EventType.ACCESS_DENIED);
         auditLog.setEventDescription(success
@@ -151,6 +157,10 @@ public class TokenSecurityServiceImpl implements TokenSecurityService {
 
     @Override
     public boolean isTokenExpired(SignedDocument document) {
+        // Marked expired by the administrator: the link stops working at once, whatever its date.
+        if (document.getStatus() == SignatureStatus.EXPIRED) {
+            return true;
+        }
         if (document.getExpiresAt() == null) {
             return false;
         }

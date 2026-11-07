@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -20,12 +21,25 @@ import java.util.Map;
 /**
  * REST Controller for notification management
  * Provides endpoints for sending and tracking notifications
+ *
+ * Administrator only, every endpoint. Open to any signed-in user, a staff member could send any
+ * template to any address with their own variables, email any quotation's PDF anywhere, and read
+ * the sent-mail history with customers' addresses. No screen calls these: the app sends its mail
+ * through NotificationService directly (signature requests, reminders and confirmations from
+ * SignatureServiceImpl), and those Java calls never pass through this controller, so they are
+ * not affected by this annotation.
+ *
+ * PUT /{id}/status is labelled a webhook but no provider calls it: it has always needed a JWT
+ * like everything outside /api/public/**, so it was only ever reachable by signed-in users. If a
+ * delivery webhook is wired up one day it needs its own endpoint with the provider's signature
+ * check, not this one opened up.
  */
 @RestController
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "*")
+@PreAuthorize("hasRole('SUPER_ADMIN')")
 public class NotificationController {
 
     private final NotificationService notificationService;

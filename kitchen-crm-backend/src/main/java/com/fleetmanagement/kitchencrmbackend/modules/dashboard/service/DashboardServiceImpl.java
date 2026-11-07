@@ -295,7 +295,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
-    public ApiResponse<Map<String, Object>> getBusinessAlerts() {
+    public ApiResponse<Map<String, Object>> getBusinessAlerts(boolean includeFinancial) {
         Map<String, Object> alerts = new HashMap<>();
         List<Map<String, Object>> alertsList = new ArrayList<>();
 
@@ -311,9 +311,10 @@ public class DashboardServiceImpl implements DashboardService {
             alertsList.add(alert);
         }
 
-        // Low Cash Alert
-        BigDecimal totalCash = getTotalCashInHand().add(getTotalCashInAccount());
-        if (totalCash.compareTo(BigDecimal.valueOf(100000)) < 0) {
+        // Low Cash Alert. Its mere presence tells the reader the company's cash is under the
+        // threshold, so it is left out entirely for staff rather than reworded.
+        if (includeFinancial
+                && getTotalCashInHand().add(getTotalCashInAccount()).compareTo(BigDecimal.valueOf(100000)) < 0) {
             Map<String, Object> alert = new HashMap<>();
             alert.put("type", "danger");
             alert.put("title", "Low Cash Alert");

@@ -6,9 +6,12 @@
 import React, { useRef, useState } from 'react';
 import { Paperclip, X, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useUploadFinanceReceiptsMutation, useDeleteFinanceReceiptMutation } from '../financeAPI';
+import {
+  useUploadFinanceReceiptsMutation,
+  useDeleteFinanceReceiptMutation,
+  useGetFinanceReceiptFileUrlMutation,
+} from '../financeAPI';
 import type { FinanceReceipt } from '../types';
-import { fileUrl } from '@/utils/fileUrl';
 
 interface ReceiptsCellProps {
   owner: 'payments' | 'expenses' | 'releases';
@@ -20,6 +23,7 @@ interface ReceiptsCellProps {
 export const ReceiptsCell: React.FC<ReceiptsCellProps> = ({ owner, ownerId, receipts, allowQuote }) => {
   const [upload, { isLoading: isUploading }] = useUploadFinanceReceiptsMutation();
   const [deleteReceipt] = useDeleteFinanceReceiptMutation();
+  const [getReceiptFileUrl] = useGetFinanceReceiptFileUrlMutation();
   const receiptInput = useRef<HTMLInputElement>(null);
   const quoteInput = useRef<HTMLInputElement>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -51,6 +55,36 @@ export const ReceiptsCell: React.FC<ReceiptsCellProps> = ({ owner, ownerId, rece
     setDeleting(null);
   };
 
+  // Receipts are not public links any more: the file is fetched through the finance API (sign-in
+  // token + reporting key) and shown from a blob: URL in a new tab.
+  const handleOpen = async (r: FinanceReceipt) => {
+    // The tab is opened now, while the click still counts as the user's own action. One opened
+    // after the await is treated as a pop-up and blocked.
+    const tab = window.open('', '_blank');
+    try {
+      const url = await getReceiptFileUrl(r.id).unwrap();
+      if (!url) {
+        throw new Error('No file');
+      }
+      if (tab) {
+        tab.location.href = url;
+      } else {
+        // Pop-ups blocked anyway: save the file instead of showing nothing.
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = r.fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      // Long enough for the tab to have loaded it; only then is it safe to let the URL go.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      tab?.close();
+      toast.error('Could not open the file');
+    }
+  };
+
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
       {(receipts ?? []).map((r) => (
@@ -60,15 +94,16 @@ export const ReceiptsCell: React.FC<ReceiptsCellProps> = ({ owner, ownerId, rece
           title={r.fileName}
         >
           <FileText className="w-3 h-3 shrink-0 text-text-500" />
-          <a
-            href={fileUrl(r.fileUrl)}
-            target="_blank"
-            rel="noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="truncate hover:underline"
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpen(r);
+            }}
+            className="min-w-0 truncate text-left hover:underline"
           >
             {r.kind === 'QUOTE' ? `Quote · ${r.fileName}` : r.fileName}
-          </a>
+          </button>
           <button
             onClick={(e) => {
               e.stopPropagation();

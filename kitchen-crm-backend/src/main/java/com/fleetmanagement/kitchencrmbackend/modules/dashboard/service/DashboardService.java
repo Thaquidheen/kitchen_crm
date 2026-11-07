@@ -35,6 +35,8 @@ public interface DashboardService {
     // Export Capabilities
     ApiResponse<byte[]> exportDashboardData(String format, LocalDate fromDate, LocalDate toDate);
 
-    // Alerts and Notifications
-    ApiResponse<Map<String, Object>> getBusinessAlerts();
+    // Alerts and Notifications. includeFinancial is false for anyone who may not see the company's
+    // money: the cash alert is then not even computed, so it cannot leak through the list or the
+    // alert count.
+    ApiResponse<Map<String, Object>> getBusinessAlerts(boolean includeFinancial);
 }

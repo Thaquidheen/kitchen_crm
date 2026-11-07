@@ -196,6 +196,24 @@ export const financeAPI = baseApi.injectEndpoints({
       query: (fileId) => ({ url: `/customer-finance/receipts/${fileId}`, method: 'DELETE' }),
       invalidatesTags: (r) => summaryTags(r?.data),
     }),
+
+    /**
+     * Fetches one receipt's file and answers a blob: URL for it (the caller revokes it). Receipts
+     * are no longer reachable as plain /uploads links: they come only through the API, which needs
+     * the sign-in token and the reporting key that baseApi attaches, so an <a href> cannot open
+     * them. The URL, not the Blob, is returned so the store only ever holds a string.
+     */
+    getFinanceReceiptFileUrl: builder.mutation<string | null, number>({
+      query: (fileId) => ({
+        url: `/customer-finance/receipts/${fileId}/file`,
+        responseHandler: async (response) => {
+          if (!response.ok) {
+            return response.json().catch(() => null);
+          }
+          return URL.createObjectURL(await response.blob());
+        },
+      }),
+    }),
   }),
   overrideExisting: false,
 });
@@ -220,4 +238,5 @@ export const {
   useImportFinanceSheetMutation,
   useDownloadFinanceImportTemplateMutation,
   useDeleteFinanceReceiptMutation,
+  useGetFinanceReceiptFileUrlMutation,
 } = financeAPI;

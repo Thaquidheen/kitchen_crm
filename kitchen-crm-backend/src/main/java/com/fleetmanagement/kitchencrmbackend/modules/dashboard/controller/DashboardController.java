@@ -47,31 +47,49 @@ public class DashboardController {
         return ResponseEntity.ok(dashboardService.getRevenueAnalytics(fromDate, toDate));
     }
 
+    /** Operational, so open to staff; the one money field (project value) is withheld from them. */
     @GetMapping("/project-analytics")
     public ResponseEntity<ApiResponse<ProjectAnalyticsDto>> getProjectAnalytics(
             @RequestParam(defaultValue = "#{T(java.time.LocalDate).now().minusMonths(6)}")
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(defaultValue = "#{T(java.time.LocalDate).now()}")
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
-        return ResponseEntity.ok(dashboardService.getProjectAnalytics(fromDate, toDate));
+        ApiResponse<ProjectAnalyticsDto> response = dashboardService.getProjectAnalytics(fromDate, toDate);
+        if (!isSuperAdmin() && response != null && response.getData() != null) {
+            withholdFinancials(response.getData());
+        }
+        return ResponseEntity.ok(response);
     }
 
+    /** Customer counts stay open to staff; the cost and lifetime-value figures are withheld. */
     @GetMapping("/customer-analytics")
     public ResponseEntity<ApiResponse<CustomerAnalyticsDto>> getCustomerAnalytics(
             @RequestParam(defaultValue = "#{T(java.time.LocalDate).now().minusMonths(12)}")
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(defaultValue = "#{T(java.time.LocalDate).now()}")
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
-        return ResponseEntity.ok(dashboardService.getCustomerAnalytics(fromDate, toDate));
+        ApiResponse<CustomerAnalyticsDto> response = dashboardService.getCustomerAnalytics(fromDate, toDate);
+        if (!isSuperAdmin() && response != null && response.getData() != null) {
+            withholdFinancials(response.getData());
+        }
+        return ResponseEntity.ok(response);
     }
 
+    /**
+     * Same treatment as /summary: the operational and quality figures stay for staff, the money is
+     * withheld. This used to go out whole to every signed-in user, revenue and profit included.
+     */
     @GetMapping("/performance-metrics")
     public ResponseEntity<ApiResponse<PerformanceMetricsDto>> getPerformanceMetrics(
             @RequestParam(defaultValue = "#{T(java.time.LocalDate).now().minusMonths(3)}")
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(defaultValue = "#{T(java.time.LocalDate).now()}")
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
-        return ResponseEntity.ok(dashboardService.getPerformanceMetrics(fromDate, toDate));
+        ApiResponse<PerformanceMetricsDto> response = dashboardService.getPerformanceMetrics(fromDate, toDate);
+        if (!isSuperAdmin() && response != null && response.getData() != null) {
+            withholdFinancials(response.getData());
+        }
+        return ResponseEntity.ok(response);
     }
 
     /** Same treatment: the operational counters stay, the money keys are removed for staff. */
@@ -111,9 +129,51 @@ public class DashboardController {
         dto.setCashInAccount(null);
     }
 
+    /**
+     * The achievement percentage goes too: the monthly target is a constant in the source, so the
+     * percentage alone gives away the month's takings. The nested objects are kept (with null
+     * fields) so a client reading salesPerformance.x or financialHealth.x does not crash.
+     */
+    private void withholdFinancials(PerformanceMetricsDto dto) {
+        if (dto.getKpiMetrics() != null) {
+            dto.getKpiMetrics().remove("total_revenue");
+        }
+        PerformanceMetricsDto.SalesPerformanceDto sales = dto.getSalesPerformance();
+        if (sales != null) {
+            sales.setMonthlyTarget(null);
+            sales.setMonthlyAchieved(null);
+            sales.setAchievementPercentage(null);
+        }
+        PerformanceMetricsDto.FinancialHealthDto health = dto.getFinancialHealth();
+        if (health != null) {
+            health.setGrossRevenue(null);
+            health.setNetProfit(null);
+            health.setProfitMargin(null);
+            health.setOperatingExpenses(null);
+            health.setReturnOnInvestment(null);
+            health.setDaysOfCashOnHand(null);
+        }
+    }
+
+    private void withholdFinancials(ProjectAnalyticsDto dto) {
+        if (dto.getProjectTimelines() != null) {
+            dto.getProjectTimelines().forEach(t -> t.setProjectValue(null));
+        }
+    }
+
+    private void withholdFinancials(CustomerAnalyticsDto dto) {
+        if (dto.getMonthlyAcquisition() != null) {
+            dto.getMonthlyAcquisition().forEach(m -> m.setAcquisitionCost(null));
+        }
+        if (dto.getRetentionMetrics() != null) {
+            dto.getRetentionMetrics().remove("customer_lifetime_value");
+        }
+    }
+
+    /** Staff keep the operational alerts; the cash alert is only built for the administrator. */
     @GetMapping("/business-alerts")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getBusinessAlerts() {
-        return ResponseEntity.ok(dashboardService.getBusinessAlerts());
+        return ResponseEntity.ok(dashboardService.getBusinessAlerts(isSuperAdmin()));
     }
 
     @GetMapping("/custom-report/{reportType}")

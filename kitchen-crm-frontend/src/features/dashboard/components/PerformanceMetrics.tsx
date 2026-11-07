@@ -8,6 +8,7 @@ import { useAppSelector } from '@/app/hooks';
 import { selectPerformanceMetricsDateRange } from '../dashboardSlice';
 import { Card } from '@/components/ui/Card';
 import { KPICard } from './KPICard';
+import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
 import {
   Target,
   TrendingUp,
@@ -22,6 +23,9 @@ import {
 export function PerformanceMetrics() {
   const dateRange = useAppSelector(selectPerformanceMetricsDateRange);
   const { data, isLoading, error } = useGetPerformanceMetricsQuery(dateRange);
+  // The backend withholds the money from staff (null, never 0). The money tiles are not drawn
+  // for them at all, because a tile showing "₹0" or "0%" would read as a real figure.
+  const isSuperAdmin = useIsSuperAdmin();
 
   if (error) {
     return (
@@ -36,7 +40,8 @@ export function PerformanceMetrics() {
     );
   }
 
-  const formatCurrency = (value: string | undefined) => {
+  const formatCurrency = (value: string | null | undefined) => {
+    if (value == null) return '—';
     if (!value) return '₹0';
     const num = parseFloat(value);
     if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)}Cr`;
@@ -53,31 +58,35 @@ export function PerformanceMetrics() {
           Sales Performance
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard
-            title="Monthly Target"
-            value={formatCurrency(data?.salesPerformance.monthlyTarget)}
-            icon={Target}
-            loading={isLoading}
-          />
-          <KPICard
-            title="Monthly Achieved"
-            value={formatCurrency(data?.salesPerformance.monthlyAchieved)}
-            icon={TrendingUp}
-            variant="success"
-            loading={isLoading}
-          />
-          <KPICard
-            title="Achievement %"
-            value={`${data?.salesPerformance.achievementPercentage?.toFixed(1) || '0'}%`}
-            icon={Award}
-            variant={
-              data?.salesPerformance.achievementPercentage &&
-              data.salesPerformance.achievementPercentage >= 100
-                ? 'success'
-                : 'warning'
-            }
-            loading={isLoading}
-          />
+          {isSuperAdmin && (
+            <>
+              <KPICard
+                title="Monthly Target"
+                value={formatCurrency(data?.salesPerformance?.monthlyTarget)}
+                icon={Target}
+                loading={isLoading}
+              />
+              <KPICard
+                title="Monthly Achieved"
+                value={formatCurrency(data?.salesPerformance?.monthlyAchieved)}
+                icon={TrendingUp}
+                variant="success"
+                loading={isLoading}
+              />
+              <KPICard
+                title="Achievement %"
+                value={`${data?.salesPerformance?.achievementPercentage?.toFixed(1) || '0'}%`}
+                icon={Award}
+                variant={
+                  data?.salesPerformance?.achievementPercentage &&
+                  data.salesPerformance.achievementPercentage >= 100
+                    ? 'success'
+                    : 'warning'
+                }
+                loading={isLoading}
+              />
+            </>
+          )}
           <KPICard
             title="Conversion Rate"
             value={`${data?.salesPerformance.conversionRate?.toFixed(1) || '0'}%`}
@@ -223,7 +232,8 @@ export function PerformanceMetrics() {
         </div>
       </div>
 
-      {/* Financial Health */}
+      {/* Financial Health: entirely money, so administrator only */}
+      {isSuperAdmin && (
       <div>
         <h3 className="text-lg font-semibold text-white-900 mb-4 flex items-center gap-2">
           <DollarSign className="h-5 w-5 text-purple-500" />
@@ -314,6 +324,7 @@ export function PerformanceMetrics() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

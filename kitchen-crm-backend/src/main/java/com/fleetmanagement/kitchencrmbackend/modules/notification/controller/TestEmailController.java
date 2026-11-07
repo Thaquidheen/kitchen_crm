@@ -6,16 +6,22 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Temporary endpoint to test outbound email delivery via configured SMTP
+ * Temporary endpoint to test outbound email delivery via configured SMTP.
+ *
+ * Administrator only. It sends any subject and HTML to any address from the company mail
+ * account, so open to every signed-in user it let any staff member send mail that looks like
+ * it came from the business. No screen calls it; it is kept for checking SMTP after a deploy.
  */
 @RestController
 @RequestMapping("/api/v1/email")
 @RequiredArgsConstructor
 @Slf4j
+@PreAuthorize("hasRole('SUPER_ADMIN')")
 public class TestEmailController {
 
     private final EmailService emailService;
