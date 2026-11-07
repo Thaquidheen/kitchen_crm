@@ -14,6 +14,8 @@ import { fmtReminderDate } from '@/utils/reminderFormat';
 import toast from 'react-hot-toast';
 import { Pagination } from '@/components/shared/Pagination';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { usePermissions } from '@/features/permissions/usePermissions';
+import { NoAccess } from '@/features/permissions/NoAccess';
 import {
   useGetApplianceCustomersQuery,
   useGetApplianceStatisticsQuery,
@@ -117,15 +119,32 @@ export function ApplianceQuartzPage() {
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
 
-  const { data: pageData, isLoading } = useGetApplianceCustomersQuery({
-    category,
-    status,
-    search: search || undefined,
-    page,
-    size: 10,
-  });
+  const { can, ready: permissionsReady } = usePermissions();
+  // Each action is shown only to whoever the server would let do it; seeing the PDFs that are
+  // already attached comes with seeing the entry.
+  const canView = can('appliance.view');
+  const canAdd = can('appliance.add');
+  const canEdit = can('appliance.edit');
+  const canDelete = can('appliance.delete');
+  const canFiles = can('appliance.files');
+  const canFollowUps = can('appliance.followups');
+  const canReminders = can('appliance.reminders');
+
+  // Not asked until we know the page is allowed: the server would refuse it anyway.
+  const { data: pageData, isLoading: isListLoading } = useGetApplianceCustomersQuery(
+    {
+      category,
+      status,
+      search: search || undefined,
+      page,
+      size: 10,
+    },
+    { skip: !canView },
+  );
   // Status counts follow the selected category so the chips match the rows listed.
-  const { data: stats } = useGetApplianceStatisticsQuery({ category });
+  const { data: stats } = useGetApplianceStatisticsQuery({ category }, { skip: !canView });
+  // While the permissions are still loading the list is skipped, not empty: keep the skeleton up.
+  const isLoading = isListLoading || !permissionsReady;
 
   const [createEntry, { isLoading: isCreating }] = useCreateApplianceCustomerMutation();
   const [updateEntry, { isLoading: isUpdating }] = useUpdateApplianceCustomerMutation();
@@ -209,6 +228,15 @@ export function ApplianceQuartzPage() {
   const [remindersFor, setRemindersFor] = useState<ApplianceEntry | null>(null);
   const [followUpsFor, setFollowUpsFor] = useState<ApplianceEntry | null>(null);
   const [filesFor, setFilesFor] = useState<ApplianceEntry | null>(null);
+
+  // A right taken away while its dialog is open closes the dialog for good; without this the
+  // entry stays remembered and the dialog pops open again by itself when the right comes back.
+  useEffect(() => {
+    if (!canReminders) setRemindersFor(null);
+  }, [canReminders]);
+  useEffect(() => {
+    if (!canFollowUps) setFollowUpsFor(null);
+  }, [canFollowUps]);
 
   const openAdd = () => {
     setEditing(null);
@@ -298,6 +326,10 @@ export function ApplianceQuartzPage() {
   const thClass =
     'px-3 py-[9px] text-left text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500';
 
+  if (permissionsReady && !canView) {
+    return <NoAccess what="Appliance & Quartz" />;
+  }
+
   return (
     <div className="w-full">
       {/* Page header */}
@@ -314,15 +346,17 @@ export function ApplianceQuartzPage() {
           </p>
         </div>
         <div className="flex-1" />
-        <button
-          onClick={openAdd}
-          className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold whitespace-nowrap"
-        >
-          <span className="w-5 h-5 rounded-md bg-white/20 backdrop-blur-[2px] flex items-center justify-center shrink-0">
-            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-          </span>
-          Add Entry
-        </button>
+        {canAdd && (
+          <button
+            onClick={openAdd}
+            className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold whitespace-nowrap"
+          >
+            <span className="w-5 h-5 rounded-md bg-white/20 backdrop-blur-[2px] flex items-center justify-center shrink-0">
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </span>
+            Add Entry
+          </button>
+        )}
       </div>
 
       {/* Category chips + total value */}
@@ -493,9 +527,11 @@ export function ApplianceQuartzPage() {
                     ) : (
                       <>
                         <div className="text-[14.5px] font-semibold text-text-900">No entries yet</div>
-                        <div className="text-[12.5px] text-text-700 mt-1">
-                          Add your first appliance or quartz customer with the button above.
-                        </div>
+                        {canAdd && (
+                          <div className="text-[12.5px] text-text-700 mt-1">
+                            Add your first appliance or quartz customer with the button above.
+                          </div>
+                        )}
                       </>
                     )}
                   </td>
@@ -540,7 +576,9 @@ export function ApplianceQuartzPage() {
                                 ev.stopPropagation();
                                 setFilesFor(e);
                               }}
-                              title={`${e.quotationFiles!.length} quotation PDF${e.quotationFiles!.length === 1 ? '' : 's'} — open, add or remove`}
+                              title={`${e.quotationFiles!.length} quotation PDF${e.quotationFiles!.length === 1 ? '' : 's'} — ${
+                                canFiles ? 'open, add or remove' : 'open'
+                              }`}
                               className="inline-flex items-center gap-1 h-7 px-2 rounded-lg text-primary-600 hover:bg-primary-600/10 transition-colors shrink-0"
                             >
                               <FileText size={14} />
@@ -556,57 +594,67 @@ export function ApplianceQuartzPage() {
                       </td>
                       <td className="px-3.5 py-[13px]">
                         <div className="flex justify-end gap-0.5">
-                          <button
-                            onClick={() => setFollowUpsFor(e)}
-                            title="Follow-ups"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors"
-                          >
-                            <PhoneCall size={14} />
-                          </button>
-                          <button
-                            onClick={() => setRemindersFor(e)}
-                            title="Reminders"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors"
-                          >
-                            <BellRing size={14} />
-                          </button>
-                          <label
-                            onClick={(ev) => ev.stopPropagation()}
-                            title="Attach quotation PDF"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors cursor-pointer"
-                          >
-                            <Upload size={14} />
-                            <input
-                              type="file"
-                              accept="application/pdf"
-                              multiple
-                              className="hidden"
-                              onChange={(ev) => handleQuotationUpload(e.id, ev)}
-                            />
-                          </label>
-                          <button
-                            onClick={() => openEdit(e)}
-                            title="Edit"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteId(e.id)}
-                            title="Delete"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 transition-colors"
-                            style={{}}
-                            onMouseEnter={(ev) => {
-                              (ev.currentTarget as HTMLButtonElement).style.background = 'var(--st-lost-bg)';
-                              (ev.currentTarget as HTMLButtonElement).style.color = 'var(--st-lost-fg)';
-                            }}
-                            onMouseLeave={(ev) => {
-                              (ev.currentTarget as HTMLButtonElement).style.background = 'transparent';
-                              (ev.currentTarget as HTMLButtonElement).style.color = '';
-                            }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {canFollowUps && (
+                            <button
+                              onClick={() => setFollowUpsFor(e)}
+                              title="Follow-ups"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors"
+                            >
+                              <PhoneCall size={14} />
+                            </button>
+                          )}
+                          {canReminders && (
+                            <button
+                              onClick={() => setRemindersFor(e)}
+                              title="Reminders"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors"
+                            >
+                              <BellRing size={14} />
+                            </button>
+                          )}
+                          {canFiles && (
+                            <label
+                              onClick={(ev) => ev.stopPropagation()}
+                              title="Attach quotation PDF"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors cursor-pointer"
+                            >
+                              <Upload size={14} />
+                              <input
+                                type="file"
+                                accept="application/pdf"
+                                multiple
+                                className="hidden"
+                                onChange={(ev) => handleQuotationUpload(e.id, ev)}
+                              />
+                            </label>
+                          )}
+                          {canEdit && (
+                            <button
+                              onClick={() => openEdit(e)}
+                              title="Edit"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => setDeleteId(e.id)}
+                              title="Delete"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 transition-colors"
+                              style={{}}
+                              onMouseEnter={(ev) => {
+                                (ev.currentTarget as HTMLButtonElement).style.background = 'var(--st-lost-bg)';
+                                (ev.currentTarget as HTMLButtonElement).style.color = 'var(--st-lost-fg)';
+                              }}
+                              onMouseLeave={(ev) => {
+                                (ev.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                                (ev.currentTarget as HTMLButtonElement).style.color = '';
+                              }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -770,61 +818,71 @@ export function ApplianceQuartzPage() {
 
               {/* Quotation PDF — attachable at ANY stage. This was gated behind
                   fStatus === QUOTATION, which put it out of reach for a Lead or Potential entry
-                  even though the supplier PDF usually arrives before the stage is moved on. */}
-              <div>
-                <label className={labelCls}>Quotation PDF</label>
-                {!editing ? (
-                  <p className="text-[12.5px] text-text-600">
-                    Save this entry first, then reopen it to attach quotations.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {(editing.quotationFiles ?? []).map((f) => (
-                      <div
-                        key={f.id}
-                        className="flex items-center gap-2.5 p-3 rounded-xl border border-background-600 bg-background-700/40"
-                      >
-                        <FileText size={16} className="text-primary-600 shrink-0" />
-                        <a
-                          href={fileUrl(f.fileUrl)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex-1 min-w-0 text-[13px] text-text-900 hover:text-primary-600 truncate"
-                          title={f.fileName}
-                        >
-                          {f.fileName}
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => handleQuotationDelete(editing.id, f.id)}
-                          title="Remove this quotation"
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:text-error hover:bg-error/10 transition-colors shrink-0"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
-                    <label className="flex items-center justify-center gap-2 p-4 rounded-xl border border-dashed border-background-500 text-[13px] text-text-600 cursor-pointer hover:border-primary-600 hover:text-text-900 transition-colors">
-                      <Upload size={15} />
-                      {isUploading
-                        ? 'Uploading…'
-                        : (editing.quotationFiles?.length ?? 0) > 0
-                        ? 'Add more PDFs'
-                        : 'Upload quotation PDFs'}
-                      <input
-                        type="file"
-                        accept="application/pdf"
-                        multiple
-                        className="hidden"
-                        onChange={(ev) => handleQuotationUpload(editing.id, ev)}
-                      />
-                    </label>
-                    <p className="text-[11.5px] text-text-500">
-                      You can select several files at once. PDF only, up to 20MB each.
+                  even though the supplier PDF usually arrives before the stage is moved on.
+                  Without appliance.files the attached PDFs are still listed to open, with nothing to
+                  add or remove; a new entry then has no section at all. */}
+              {(canFiles || (editing?.quotationFiles?.length ?? 0) > 0) && (
+                <div>
+                  <label className={labelCls}>Quotation PDF</label>
+                  {!editing ? (
+                    <p className="text-[12.5px] text-text-600">
+                      Save this entry first, then reopen it to attach quotations.
                     </p>
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {(editing.quotationFiles ?? []).map((f) => (
+                        <div
+                          key={f.id}
+                          className="flex items-center gap-2.5 p-3 rounded-xl border border-background-600 bg-background-700/40"
+                        >
+                          <FileText size={16} className="text-primary-600 shrink-0" />
+                          <a
+                            href={fileUrl(f.fileUrl)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex-1 min-w-0 text-[13px] text-text-900 hover:text-primary-600 truncate"
+                            title={f.fileName}
+                          >
+                            {f.fileName}
+                          </a>
+                          {canFiles && (
+                            <button
+                              type="button"
+                              onClick={() => handleQuotationDelete(editing.id, f.id)}
+                              title="Remove this quotation"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:text-error hover:bg-error/10 transition-colors shrink-0"
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {canFiles && (
+                        <>
+                          <label className="flex items-center justify-center gap-2 p-4 rounded-xl border border-dashed border-background-500 text-[13px] text-text-600 cursor-pointer hover:border-primary-600 hover:text-text-900 transition-colors">
+                            <Upload size={15} />
+                            {isUploading
+                              ? 'Uploading…'
+                              : (editing.quotationFiles?.length ?? 0) > 0
+                              ? 'Add more PDFs'
+                              : 'Upload quotation PDFs'}
+                            <input
+                              type="file"
+                              accept="application/pdf"
+                              multiple
+                              className="hidden"
+                              onChange={(ev) => handleQuotationUpload(editing.id, ev)}
+                            />
+                          </label>
+                          <p className="text-[11.5px] text-text-500">
+                            You can select several files at once. PDF only, up to 20MB each.
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className={labelCls}>Notes</label>
@@ -895,46 +953,55 @@ export function ApplianceQuartzPage() {
                 >
                   {f.fileName}
                 </a>
-                <button
-                  type="button"
-                  onClick={() => filesFor && handleQuotationDelete(filesFor.id, f.id)}
-                  title="Remove this quotation"
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:text-error hover:bg-error/10 transition-colors shrink-0"
-                >
-                  <X size={14} />
-                </button>
+                {canFiles && (
+                  <button
+                    type="button"
+                    onClick={() => filesFor && handleQuotationDelete(filesFor.id, f.id)}
+                    title="Remove this quotation"
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:text-error hover:bg-error/10 transition-colors shrink-0"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
             ))}
-            <label className="flex items-center justify-center gap-2 p-4 rounded-xl border border-dashed border-background-500 text-[13px] text-text-600 cursor-pointer hover:border-primary-600 hover:text-text-900 transition-colors">
-              <Upload size={15} />
-              {isUploading ? 'Uploading…' : 'Add more PDFs'}
-              <input
-                type="file"
-                accept="application/pdf"
-                multiple
-                className="hidden"
-                onChange={(ev) => filesFor && handleQuotationUpload(filesFor.id, ev)}
-              />
-            </label>
-            <p className="m-0 text-[11.5px] text-text-500">PDF only, up to 20MB each.</p>
+            {/* Without appliance.files this dialog only lists the PDFs to open. */}
+            {canFiles && (
+              <>
+                <label className="flex items-center justify-center gap-2 p-4 rounded-xl border border-dashed border-background-500 text-[13px] text-text-600 cursor-pointer hover:border-primary-600 hover:text-text-900 transition-colors">
+                  <Upload size={15} />
+                  {isUploading ? 'Uploading…' : 'Add more PDFs'}
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    multiple
+                    className="hidden"
+                    onChange={(ev) => filesFor && handleQuotationUpload(filesFor.id, ev)}
+                  />
+                </label>
+                <p className="m-0 text-[11.5px] text-text-500">PDF only, up to 20MB each.</p>
+              </>
+            )}
           </div>
         </ModalBody>
       </Modal>
 
       <Modal
-        isOpen={remindersFor !== null}
+        isOpen={remindersFor !== null && canReminders}
         onClose={() => setRemindersFor(null)}
         title={remindersFor ? `Reminders — ${remindersFor.name}` : 'Reminders'}
         size="lg"
       >
         <ModalBody>
-          {remindersFor && <CustomerReminders applianceCustomerId={remindersFor.id} />}
+          {remindersFor && canReminders && <CustomerReminders applianceCustomerId={remindersFor.id} />}
         </ModalBody>
       </Modal>
 
-      {/* Follow-up call history for one entry; the newest call feeds the "Last called" column. */}
+      {/* Follow-up call history for one entry; the newest call feeds the "Last called" column.
+          This dialog and the reminders one above close if their permission is taken away while
+          they are open (it is re-read every minute), so they never ask what the server now refuses. */}
       <ApplianceFollowUpsModal
-        isOpen={followUpsFor !== null}
+        isOpen={followUpsFor !== null && canFollowUps}
         onClose={() => setFollowUpsFor(null)}
         entry={followUpsFor}
       />

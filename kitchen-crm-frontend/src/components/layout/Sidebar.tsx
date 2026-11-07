@@ -41,8 +41,8 @@ export interface MenuItem {
   adminOnly?: boolean;
   /** Shown to super admins and to staff whose type is Designer. */
   designersAndAdmins?: boolean;
-  /** Hidden from staff whose type has not been allowed this (Permissions page). */
-  permission?: PermissionKey;
+  /** Hidden from staff whose type has not been allowed this (Permissions page); a list means any of them. */
+  permission?: PermissionKey | PermissionKey[];
 }
 
 export interface NavGroup {
@@ -69,16 +69,22 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Customers', path: ROUTES.CUSTOMERS, icon: <Users size={18} />, permission: 'customers.view' },
       { label: 'Quotations', path: ROUTES.QUOTATIONS, icon: <FileText size={18} />, permission: 'quotations.view' },
-      { label: 'Appliance & Quartz', path: ROUTES.APPLIANCE_QUARTZ, icon: <Refrigerator size={18} /> },
-      { label: 'Reminders', path: ROUTES.REMINDERS, icon: <BellRing size={18} /> },
+      { label: 'Appliance & Quartz', path: ROUTES.APPLIANCE_QUARTZ, icon: <Refrigerator size={18} />, permission: 'appliance.view' },
+      {
+        label: 'Reminders',
+        path: ROUTES.REMINDERS,
+        icon: <BellRing size={18} />,
+        // The page also holds the to-do list and the tasks given to them: shown while any of it is allowed.
+        permission: ['reminders.view', 'tasks.todos', 'tasks.mine'],
+      },
     ],
   },
   {
     label: 'Operations',
     items: [
-      { label: 'Designs', path: ROUTES.DESIGNS, icon: <Palette size={18} />, designersAndAdmins: true },
-      { label: 'Production', path: ROUTES.PRODUCTION, icon: <Hammer size={18} /> },
-      { label: 'Products', path: ROUTES.PRODUCTS, icon: <Package size={18} /> },
+      { label: 'Designs', path: ROUTES.DESIGNS, icon: <Palette size={18} />, designersAndAdmins: true, permission: 'designs.view' },
+      { label: 'Production', path: ROUTES.PRODUCTION, icon: <Hammer size={18} />, permission: 'production.view' },
+      { label: 'Products', path: ROUTES.PRODUCTS, icon: <Package size={18} />, permission: 'products.view' },
       { label: 'Laser Meter', path: ROUTES.LASER_METER, icon: <Ruler size={18} /> },
     ],
   },
@@ -87,13 +93,13 @@ const navGroups: NavGroup[] = [
     // the unlock passphrase; the group keeps its shape from Vendors so nothing looks removed.
     label: 'Finance',
     items: [
-      { label: 'Vendors', path: ROUTES.VENDORS, icon: <Store size={18} /> },
+      { label: 'Vendors', path: ROUTES.VENDORS, icon: <Store size={18} />, permission: 'vendors.view' },
     ],
   },
   {
     label: 'People',
     items: [
-      { label: 'Architects', path: ROUTES.ARCHITECTS, icon: <Building2 size={18} /> },
+      { label: 'Architects', path: ROUTES.ARCHITECTS, icon: <Building2 size={18} />, permission: 'architects.view' },
       { label: 'Staff', path: ROUTES.STAFF, icon: <IdCard size={18} />, adminOnly: true },
     ],
   },
@@ -198,7 +204,9 @@ export const Sidebar = ({ isCollapsed, onToggle, isMobileOpen = false, onMobileC
                 (!item.adminOnly || isSuperAdmin) &&
                 (!item.designersAndAdmins || isSuperAdmin || isDesigner || coordinatesDesigns) &&
                 // Kept while the answers load, so the menu does not jump for people who may see it.
-                (!item.permission || !permissionsReady || can(item.permission))
+                (!item.permission ||
+                  !permissionsReady ||
+                  (Array.isArray(item.permission) ? item.permission.some(can) : can(item.permission)))
             );
             if (items.length === 0) return null;
             return (

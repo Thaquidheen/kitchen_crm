@@ -20,6 +20,8 @@ import {
 } from '@/features/vendors/vendorsAPI';
 import type { Vendor, VendorType } from '@/features/vendors/vendorsAPI';
 import VendorFormModal from '@/features/vendors/components/VendorFormModal';
+import { usePermissions } from '@/features/permissions/usePermissions';
+import NoAccess from '@/features/permissions/NoAccess';
 import { Plus, Search, Trash2, Edit } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -66,6 +68,11 @@ export function VendorsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Vendor | null>(null);
+  const { can, ready: permissionsReady } = usePermissions();
+  // Every vendor address needs "See vendors": wait for the answer instead of asking and being refused.
+  const canView = permissionsReady && can('vendors.view');
+  const canEdit = can('vendors.edit');
+  const canDeactivate = can('vendors.deactivate');
 
   // Debounce the search into the server param, resetting to the first page (CustomerList idiom).
   useEffect(() => {
@@ -76,15 +83,19 @@ export function VendorsPage() {
     return () => clearTimeout(t);
   }, [searchDraft]);
 
-  const { data, isLoading, error } = useGetVendorsQuery({
-    page,
-    size: 10,
-    sortBy,
-    sortDir,
-    search: search || undefined,
-    vendorType: typeFilter || undefined,
-    active: activeFilter === 'all' ? undefined : activeFilter === 'active',
-  });
+  const { data, isLoading: isFetchingFirst, error } = useGetVendorsQuery(
+    {
+      page,
+      size: 10,
+      sortBy,
+      sortDir,
+      search: search || undefined,
+      vendorType: typeFilter || undefined,
+      active: activeFilter === 'all' ? undefined : activeFilter === 'active',
+    },
+    { skip: !canView }
+  );
+  const isLoading = isFetchingFirst || !permissionsReady;
 
   // Deleting the last row of the last page leaves the page index past the end — walk back.
   useEffect(() => {
@@ -132,6 +143,10 @@ export function VendorsPage() {
 
   const hasFilters = !!(search || typeFilter || activeFilter !== 'active');
 
+  if (permissionsReady && !can('vendors.view')) {
+    return <NoAccess what="vendors" />;
+  }
+
   return (
     <div className="w-full">
       {/* Page header */}
@@ -148,18 +163,20 @@ export function VendorsPage() {
           </p>
         </div>
         <div className="flex-1" />
-        <button
-          onClick={() => {
-            setEditingVendor(null);
-            setIsModalOpen(true);
-          }}
-          className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold whitespace-nowrap"
-        >
-          <span className="w-5 h-5 rounded-md bg-white/20 backdrop-blur-[2px] flex items-center justify-center shrink-0">
-            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-          </span>
-          Add Vendor
-        </button>
+        {can('vendors.add') && (
+          <button
+            onClick={() => {
+              setEditingVendor(null);
+              setIsModalOpen(true);
+            }}
+            className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold whitespace-nowrap"
+          >
+            <span className="w-5 h-5 rounded-md bg-white/20 backdrop-blur-[2px] flex items-center justify-center shrink-0">
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </span>
+            Add Vendor
+          </button>
+        )}
       </div>
 
       {/* Type chips */}
@@ -394,31 +411,35 @@ export function VendorsPage() {
                       </td>
                       <td className="px-3.5 py-[13px]">
                         <div className="flex justify-end gap-0.5">
-                          <button
-                            onClick={() => {
-                              setEditingVendor(vendor);
-                              setIsModalOpen(true);
-                            }}
-                            title="Edit"
-                            className={iconBtn}
-                          >
-                            <Edit size={14} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteTarget(vendor)}
-                            title="Deactivate"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 transition-colors"
-                            onMouseEnter={(ev) => {
-                              ev.currentTarget.style.background = 'var(--st-lost-bg)';
-                              ev.currentTarget.style.color = 'var(--st-lost-fg)';
-                            }}
-                            onMouseLeave={(ev) => {
-                              ev.currentTarget.style.background = 'transparent';
-                              ev.currentTarget.style.color = '';
-                            }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => {
+                                setEditingVendor(vendor);
+                                setIsModalOpen(true);
+                              }}
+                              title="Edit"
+                              className={iconBtn}
+                            >
+                              <Edit size={14} />
+                            </button>
+                          )}
+                          {canDeactivate && (
+                            <button
+                              onClick={() => setDeleteTarget(vendor)}
+                              title="Deactivate"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 transition-colors"
+                              onMouseEnter={(ev) => {
+                                ev.currentTarget.style.background = 'var(--st-lost-bg)';
+                                ev.currentTarget.style.color = 'var(--st-lost-fg)';
+                              }}
+                              onMouseLeave={(ev) => {
+                                ev.currentTarget.style.background = 'transparent';
+                                ev.currentTarget.style.color = '';
+                              }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

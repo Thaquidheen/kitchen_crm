@@ -1,17 +1,23 @@
 package com.fleetmanagement.kitchencrmbackend.modules.vendor.controller;
 
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.Permission;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.service.PermissionService;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.web.PermissionInterceptor;
 import com.fleetmanagement.kitchencrmbackend.modules.vendor.dto.VendorCreateDto;
 import com.fleetmanagement.kitchencrmbackend.modules.vendor.dto.VendorDto;
 import com.fleetmanagement.kitchencrmbackend.modules.vendor.dto.VendorUpdateDto;
 import com.fleetmanagement.kitchencrmbackend.modules.vendor.service.VendorService;
+import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +30,9 @@ public class VendorController {
 
     @Autowired
     private VendorService vendorService;
+
+    @Autowired
+    private PermissionService permissionService;
 
     /**
      * Sortable properties, whitelisted: an arbitrary {@code sortBy} goes straight into
@@ -98,7 +107,19 @@ public class VendorController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<VendorDto>> updateVendor(
             @PathVariable Long id,
-            @Valid @RequestBody VendorUpdateDto vendorUpdateDto) {
+            @Valid @RequestBody VendorUpdateDto vendorUpdateDto,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        // The edit form sends the vendor's status every time. Saving it unchanged is an ordinary
+        // edit; switching a vendor inactive or active again is what "Deactivate vendors" decides.
+        if (vendorUpdateDto.getActive() != null
+                && !permissionService.can(currentUser, Permission.VENDORS_DEACTIVATE)) {
+            ApiResponse<VendorDto> current = vendorService.getVendorById(id);
+            if (current.getSuccess() && current.getData() != null
+                    && !vendorUpdateDto.getActive().equals(current.getData().getActive())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error(PermissionInterceptor.message(Permission.VENDORS_DEACTIVATE)));
+            }
+        }
         ApiResponse<VendorDto> response = vendorService.updateVendor(id, vendorUpdateDto);
         if (response.getSuccess()) {
             return ResponseEntity.ok(response);

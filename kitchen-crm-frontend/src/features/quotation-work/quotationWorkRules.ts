@@ -1,6 +1,7 @@
 /**
  * Plain rules of the quotation work board (no React), so they can be unit tested.
  */
+import type { PermissionKey } from '@/features/permissions/types';
 import type { QuotationJob, QuotationJobStatus, QuotationRef, QuotationWorkPriority } from './types';
 
 export const PRIORITY_TEXT: Record<QuotationWorkPriority, string> = {
@@ -11,6 +12,19 @@ export const PRIORITY_TEXT: Record<QuotationWorkPriority, string> = {
 };
 
 export const isOpenJob = (s: QuotationJobStatus) => s === 'WAITING' || s === 'IN_PROGRESS';
+
+/**
+ * What the board lets this person do. Giving out, changing and removing work are for whoever
+ * manages the board (the admin and Admin staff, as /me says) and each also needs its own
+ * permission; switching one off hides only that part. Preparing is for the person the work is
+ * given to (or whoever manages) with "Prepare quotations given to them".
+ */
+export const boardRights = (manages: boolean, can: (key: PermissionKey) => boolean) => ({
+  assign: manages && can('quotation_work.assign'),
+  change: manages && can('quotation_work.change'),
+  remove: manages && can('quotation_work.remove'),
+  prepare: can('quotation_work.prepare'),
+});
 
 /**
  * Work back in someone's list because a completed quotation was reopened for editing: open work

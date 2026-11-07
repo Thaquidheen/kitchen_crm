@@ -5,6 +5,8 @@
  * with their list (drag to set which quotation is done first), and what was completed lately.
  * Everybody else: only their own list, in the order that was set.
  * There is no approval step: the person marks the work completed and the admin is notified.
+ * Admin staff only get the parts their permissions allow: the customers to assign with "Give out
+ * quotations", dragging the order with "Change given work" (the server refuses the rest).
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -27,13 +29,14 @@ import type { PendingEditRequest } from '@/features/quotations/editRequestsAPI';
 import { usePendingEditRequests } from '@/features/quotations/usePendingEditRequests';
 import { EditRequestControl } from '@/features/quotations/components/EditRequestControl';
 import { pendingFor } from '@/features/quotations/editRequestRules';
+import { usePermissions } from '@/features/permissions/usePermissions';
 import {
   useGetQuotationJobsQuery,
   useGetUnassignedQuotationCustomersQuery,
   useMarkQuotationWorkSeenMutation,
   useReorderQuotationJobsMutation,
 } from '../quotationWorkAPI';
-import { isReopenedJob, queuesByAssignee, quotedText, splitToAssign } from '../quotationWorkRules';
+import { boardRights, isReopenedJob, queuesByAssignee, quotedText, splitToAssign } from '../quotationWorkRules';
 import { fmtDayTime, JobStatusPill } from '../quotationWorkUi';
 import type { QuotationJob, QuotationWorkMe, UnassignedQuotationCustomer } from '../types';
 import { AssignQuotationModal, type AssignQuotationTarget } from './AssignQuotationModal';
@@ -205,8 +208,10 @@ const PersonColumn: React.FC<{
   jobs: QuotationJob[];
   fresh: Map<number, string>;
   pendingEdits?: PendingEditRequest[];
+  /** May change the order (without it the list is shown in its order, without handles). */
+  canReorder: boolean;
   onOpen: (id: number) => void;
-}> = ({ assigneeId, name, jobs, fresh, pendingEdits, onOpen }) => {
+}> = ({ assigneeId, name, jobs, fresh, pendingEdits, canReorder, onOpen }) => {
   const [order, setOrder] = useState<QuotationJob[]>(jobs);
   const [reorder] = useReorderQuotationJobsMutation();
   useEffect(() => setOrder(jobs), [jobs]);
@@ -240,24 +245,37 @@ const PersonColumn: React.FC<{
         </div>
         <div className="mt-1 text-[11.5px] text-text-600">
           {overdue > 0 && <span style={{ color: 'var(--st-lost-fg)' }}>{overdue} overdue · </span>}
-          {order.length > 1 ? 'Drag to set which comes first' : 'Quotations in the order to do them'}
+          {canReorder && order.length > 1 ? 'Drag to set which comes first' : 'Quotations in the order to do them'}
         </div>
       </div>
       <div className={columnBody}>
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-          <SortableContext items={order.map((j) => j.id)} strategy={verticalListSortingStrategy}>
-            {order.map((j, i) => (
-              <SortableJobRow
-                key={j.id}
-                job={j}
-                position={i + 1}
-                news={fresh.get(j.id)}
-                editRequest={pendingFor(pendingEdits, j.quotation?.id)}
-                onOpen={onOpen}
-              />
-            ))}
-          </SortableContext>
-        </DndContext>
+        {canReorder ? (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+            <SortableContext items={order.map((j) => j.id)} strategy={verticalListSortingStrategy}>
+              {order.map((j, i) => (
+                <SortableJobRow
+                  key={j.id}
+                  job={j}
+                  position={i + 1}
+                  news={fresh.get(j.id)}
+                  editRequest={pendingFor(pendingEdits, j.quotation?.id)}
+                  onOpen={onOpen}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+        ) : (
+          order.map((j, i) => (
+            <JobRowView
+              key={j.id}
+              job={j}
+              position={i + 1}
+              news={fresh.get(j.id)}
+              editRequest={pendingFor(pendingEdits, j.quotation?.id)}
+              onOpen={onOpen}
+            />
+          ))
+        )}
       </div>
     </section>
   );
@@ -265,12 +283,15 @@ const PersonColumn: React.FC<{
 
 export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) => {
   const manages = !!me?.canManage;
+  const { can } = usePermissions();
+  const rights = boardRights(manages, can);
+  const canAssign = rights.assign;
   const [searchParams, setSearchParams] = useSearchParams();
   const [assignTarget, setAssignTarget] = useState<AssignQuotationTarget | null>(null);
 
   const poll = { pollingInterval: 20000, refetchOnFocus: true, refetchOnMountOrArgChange: true } as const;
   const { data: jobs = [], isLoading } = useGetQuotationJobsQuery(undefined, poll);
-  const { data: unassigned = [] } = useGetUnassignedQuotationCustomersQuery(undefined, { ...poll, skip: !manages });
+  const { data: unassigned = [] } = useGetUnassignedQuotationCustomersQuery(undefined, { ...poll, skip: !canAssign });
   const [markSeen] = useMarkQuotationWorkSeenMutation();
   // Completed quotations somebody asked to reopen: the board says so until the admin answers, and
   // marks the work that is back in a list because the admin approved.
@@ -345,36 +366,38 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
     <>
       {manages ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-none lg:grid-flow-col lg:auto-cols-[minmax(248px,440px)] gap-3 items-start lg:overflow-x-auto pb-1">
-          <section className={columnShell} aria-label="Customers to assign">
-            <div className="px-3 pt-3 pb-2">
-              <div className="flex items-center gap-2">
-                <UserPlus size={15} className="text-primary-600" />
-                <span className={sectionTitle}>To assign</span>
-                <span className={countBadge}>{toAssign.waiting.length}</span>
+          {canAssign && (
+            <section className={columnShell} aria-label="Customers to assign">
+              <div className="px-3 pt-3 pb-2">
+                <div className="flex items-center gap-2">
+                  <UserPlus size={15} className="text-primary-600" />
+                  <span className={sectionTitle}>To assign</span>
+                  <span className={countBadge}>{toAssign.waiting.length}</span>
+                </div>
+                <div className="mt-1 text-[11.5px] text-text-600">
+                  In Quotation Stage: no quotation yet, or just moved here.
+                </div>
               </div>
-              <div className="mt-1 text-[11.5px] text-text-600">
-                In Quotation Stage: no quotation yet, or just moved here.
+              <div className={columnBody}>
+                {toAssign.waiting.length === 0 && (
+                  <p className="m-0 py-3 text-center text-[12px] text-text-500">
+                    Nobody is waiting. Customers appear here when they reach Quotation Stage.
+                  </p>
+                )}
+                {toAssign.waiting.map((c) => (
+                  <ToAssignRow key={c.customerId} customer={c} onAssign={assignTo} />
+                ))}
+                {/* Anyone else: a customer in another stage, or one whose quotation needs more work. */}
+                <button
+                  type="button"
+                  onClick={() => setAssignTarget({ mode: 'assign' })}
+                  className="shrink-0 inline-flex items-center justify-center gap-1.5 h-8 rounded-[10px] border border-dashed border-background-600 text-[12.5px] font-medium text-text-700 hover:border-primary-600 hover:text-text-900 transition-colors"
+                >
+                  <Plus size={14} /> Assign another customer
+                </button>
               </div>
-            </div>
-            <div className={columnBody}>
-              {toAssign.waiting.length === 0 && (
-                <p className="m-0 py-3 text-center text-[12px] text-text-500">
-                  Nobody is waiting. Customers appear here when they reach Quotation Stage.
-                </p>
-              )}
-              {toAssign.waiting.map((c) => (
-                <ToAssignRow key={c.customerId} customer={c} onAssign={assignTo} />
-              ))}
-              {/* Anyone else: a customer in another stage, or one whose quotation needs more work. */}
-              <button
-                type="button"
-                onClick={() => setAssignTarget({ mode: 'assign' })}
-                className="shrink-0 inline-flex items-center justify-center gap-1.5 h-8 rounded-[10px] border border-dashed border-background-600 text-[12.5px] font-medium text-text-700 hover:border-primary-600 hover:text-text-900 transition-colors"
-              >
-                <Plus size={14} /> Assign another customer
-              </button>
-            </div>
-          </section>
+            </section>
+          )}
 
           {queues.map((q) => (
             <PersonColumn
@@ -384,11 +407,17 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
               jobs={q.jobs}
               fresh={fresh}
               pendingEdits={pendingEdits}
+              canReorder={rights.change}
               onOpen={open}
             />
           ))}
 
           {completedColumn}
+
+          {/* Without "Give out quotations" the board is only the lists: say so when they are empty. */}
+          {!canAssign && queues.length === 0 && !completedColumn && (
+            <p className={`${card} m-0 px-4 py-6 text-center text-[12.5px] text-text-500`}>Nobody is preparing a quotation right now.</p>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
@@ -425,6 +454,9 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
       <QuotationJobModal
         job={openJob}
         canManage={manages}
+        canChange={rights.change}
+        canRemove={rights.remove}
+        canPrepare={rights.prepare}
         myId={me?.userId}
         onClose={() => setJobParam(null)}
         onEdit={(job) => {
@@ -432,7 +464,12 @@ export const QuotationWorkBoard: React.FC<{ me?: QuotationWorkMe }> = ({ me }) =
           setAssignTarget({ mode: 'edit', job });
         }}
       />
-      <AssignQuotationModal target={assignTarget} onClose={() => setAssignTarget(null)} />
+      <AssignQuotationModal
+        target={assignTarget}
+        canAssign={canAssign}
+        canReorder={rights.change}
+        onClose={() => setAssignTarget(null)}
+      />
     </>
   );
 };

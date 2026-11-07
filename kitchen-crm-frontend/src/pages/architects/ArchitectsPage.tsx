@@ -23,6 +23,8 @@ import ArchitectFormModal from '@/features/architects/components/ArchitectFormMo
 import ArchitectVisitFormModal from '@/features/architects/components/ArchitectVisitFormModal';
 import ArchitectVisitHistory from '@/features/architects/components/ArchitectVisitHistory';
 import ArchitectReminderModal from '@/features/architects/components/ArchitectReminderModal';
+import { usePermissions } from '@/features/permissions/usePermissions';
+import NoAccess from '@/features/permissions/NoAccess';
 
 /** Purple for architects, orange for builders — distinct from the green/red visit states. */
 const TYPE_PILL: Record<PartnerType, { st: string; label: string }> = {
@@ -65,6 +67,14 @@ export function ArchitectsPage() {
   const [editingArchitect, setEditingArchitect] = useState<Architect | null>(null);
   const [selectedArchitect, setSelectedArchitect] = useState<Architect | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Architect | null>(null);
+  const { can, ready: permissionsReady } = usePermissions();
+  // The list and the counts need "See architects": wait for the answer instead of being refused.
+  const canView = permissionsReady && can('architects.view');
+  // The star is saved through the same edit as the details.
+  const canEdit = can('architects.edit');
+  const canVisits = can('architects.visits');
+  const canRemind = can('architects.reminders');
+  const canDelete = can('architects.delete');
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -74,17 +84,21 @@ export function ArchitectsPage() {
     return () => clearTimeout(t);
   }, [searchTerm]);
 
-  const { data, isLoading, error } = useGetArchitectsQuery({
-    page,
-    size: 10,
-    sortBy,
-    sortDir,
-    visitStatus: visitStatusFilter || undefined,
-    partnerType: typeFilter || undefined,
-    highlighted: starredOnly || undefined,
-    search: debouncedSearch || undefined,
-  });
-  const { data: counts } = useGetArchitectCountsQuery();
+  const { data, isLoading: isFetchingFirst, error } = useGetArchitectsQuery(
+    {
+      page,
+      size: 10,
+      sortBy,
+      sortDir,
+      visitStatus: visitStatusFilter || undefined,
+      partnerType: typeFilter || undefined,
+      highlighted: starredOnly || undefined,
+      search: debouncedSearch || undefined,
+    },
+    { skip: !canView }
+  );
+  const isLoading = isFetchingFirst || !permissionsReady;
+  const { data: counts } = useGetArchitectCountsQuery(undefined, { skip: !canView });
   const [deleteArchitect, { isLoading: isDeleting }] = useDeleteArchitectMutation();
   const [toggleHighlight] = useToggleArchitectHighlightMutation();
 
@@ -141,6 +155,10 @@ export function ArchitectsPage() {
   const selectCls =
     'h-[34px] px-2.5 rounded-[10px] border border-background-600 bg-background-900 text-text-900 text-[12.5px] outline-none cursor-pointer focus:border-primary-600 transition-colors';
 
+  if (permissionsReady && !can('architects.view')) {
+    return <NoAccess what="architects and builders" />;
+  }
+
   return (
     <div className="w-full">
       {/* Page header */}
@@ -159,18 +177,20 @@ export function ArchitectsPage() {
           </p>
         </div>
         <div className="flex-1" />
-        <button
-          onClick={() => {
-            setEditingArchitect(null);
-            setIsModalOpen(true);
-          }}
-          className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold whitespace-nowrap"
-        >
-          <span className="w-5 h-5 rounded-md bg-white/20 backdrop-blur-[2px] flex items-center justify-center shrink-0">
-            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-          </span>
-          Add {typeFilter ? partnerTypeLabel(typeFilter) : 'Architect'}
-        </button>
+        {can('architects.add') && (
+          <button
+            onClick={() => {
+              setEditingArchitect(null);
+              setIsModalOpen(true);
+            }}
+            className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold whitespace-nowrap"
+          >
+            <span className="w-5 h-5 rounded-md bg-white/20 backdrop-blur-[2px] flex items-center justify-center shrink-0">
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </span>
+            Add {typeFilter ? partnerTypeLabel(typeFilter) : 'Architect'}
+          </button>
+        )}
       </div>
 
       {/* Type chips */}
@@ -463,34 +483,40 @@ export function ArchitectsPage() {
                       </td>
                       <td className="px-3.5 py-[13px]">
                         <div className="flex justify-end gap-0.5">
-                          <button
-                            onClick={() => handleToggleStar(architect)}
-                            title={architect.highlighted ? 'Remove highlight' : 'Highlight (float to top)'}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-background-600"
-                            style={{ color: architect.highlighted ? '#f5b301' : undefined }}
-                          >
-                            <Star size={14} fill={architect.highlighted ? '#f5b301' : 'none'} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedArchitect(architect);
-                              setIsReminderModalOpen(true);
-                            }}
-                            title="Set reminder"
-                            className={iconBtn}
-                          >
-                            <Bell size={14} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedArchitect(architect);
-                              setIsVisitModalOpen(true);
-                            }}
-                            title="Record a visit"
-                            className={iconBtn}
-                          >
-                            <Calendar size={14} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => handleToggleStar(architect)}
+                              title={architect.highlighted ? 'Remove highlight' : 'Highlight (float to top)'}
+                              className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-background-600"
+                              style={{ color: architect.highlighted ? '#f5b301' : undefined }}
+                            >
+                              <Star size={14} fill={architect.highlighted ? '#f5b301' : 'none'} />
+                            </button>
+                          )}
+                          {canRemind && (
+                            <button
+                              onClick={() => {
+                                setSelectedArchitect(architect);
+                                setIsReminderModalOpen(true);
+                              }}
+                              title="Set reminder"
+                              className={iconBtn}
+                            >
+                              <Bell size={14} />
+                            </button>
+                          )}
+                          {canVisits && (
+                            <button
+                              onClick={() => {
+                                setSelectedArchitect(architect);
+                                setIsVisitModalOpen(true);
+                              }}
+                              title="Record a visit"
+                              className={iconBtn}
+                            >
+                              <Calendar size={14} />
+                            </button>
+                          )}
                           <button
                             onClick={() => {
                               setSelectedArchitect(architect);
@@ -501,31 +527,35 @@ export function ArchitectsPage() {
                           >
                             <History size={14} />
                           </button>
-                          <button
-                            onClick={() => {
-                              setEditingArchitect(architect);
-                              setIsModalOpen(true);
-                            }}
-                            title="Edit"
-                            className={iconBtn}
-                          >
-                            <Edit size={14} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteTarget(architect)}
-                            title="Delete"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 transition-colors"
-                            onMouseEnter={(ev) => {
-                              ev.currentTarget.style.background = 'var(--st-lost-bg)';
-                              ev.currentTarget.style.color = 'var(--st-lost-fg)';
-                            }}
-                            onMouseLeave={(ev) => {
-                              ev.currentTarget.style.background = 'transparent';
-                              ev.currentTarget.style.color = '';
-                            }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => {
+                                setEditingArchitect(architect);
+                                setIsModalOpen(true);
+                              }}
+                              title="Edit"
+                              className={iconBtn}
+                            >
+                              <Edit size={14} />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => setDeleteTarget(architect)}
+                              title="Delete"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 transition-colors"
+                              onMouseEnter={(ev) => {
+                                ev.currentTarget.style.background = 'var(--st-lost-bg)';
+                                ev.currentTarget.style.color = 'var(--st-lost-fg)';
+                              }}
+                              onMouseLeave={(ev) => {
+                                ev.currentTarget.style.background = 'transparent';
+                                ev.currentTarget.style.color = '';
+                              }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

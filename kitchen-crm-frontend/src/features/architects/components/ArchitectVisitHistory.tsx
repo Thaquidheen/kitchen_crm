@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useGetVisitHistoryQuery, useDeleteVisitMutation } from '../architectsAPI';
 import { Card } from '@/components/ui/Card';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { usePermissions } from '@/features/permissions/usePermissions';
 import { Calendar, User, FileText, Clock, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Architect, ArchitectVisit } from '../types';
@@ -19,6 +20,9 @@ export function ArchitectVisitHistory({ architect }: ArchitectVisitHistoryProps)
   const { data: visits, isLoading, error } = useGetVisitHistoryQuery(architect.id);
   const [deleteVisit, { isLoading: isDeleting }] = useDeleteVisitMutation();
   const [deleteTarget, setDeleteTarget] = useState<ArchitectVisit | null>(null);
+  // Seeing the history needs only "See architects"; removing a visit is "Record visits".
+  const { can } = usePermissions();
+  const canRemove = can('architects.visits');
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -115,23 +119,25 @@ export function ArchitectVisitHistory({ architect }: ArchitectVisitHistoryProps)
                 <span className="text-xs sm:text-sm text-text-600">
                   {formatRelativeTime(visit.visitDate)}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setDeleteTarget(visit)}
-                  title="Remove this visit"
-                  aria-label="Remove this visit"
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 transition-colors"
-                  onMouseEnter={(ev) => {
-                    ev.currentTarget.style.background = 'var(--st-lost-bg)';
-                    ev.currentTarget.style.color = 'var(--st-lost-fg)';
-                  }}
-                  onMouseLeave={(ev) => {
-                    ev.currentTarget.style.background = 'transparent';
-                    ev.currentTarget.style.color = '';
-                  }}
-                >
-                  <Trash2 size={14} />
-                </button>
+                {canRemove && (
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(visit)}
+                    title="Remove this visit"
+                    aria-label="Remove this visit"
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 transition-colors"
+                    onMouseEnter={(ev) => {
+                      ev.currentTarget.style.background = 'var(--st-lost-bg)';
+                      ev.currentTarget.style.color = 'var(--st-lost-fg)';
+                    }}
+                    onMouseLeave={(ev) => {
+                      ev.currentTarget.style.background = 'transparent';
+                      ev.currentTarget.style.color = '';
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </div>
             </div>
             

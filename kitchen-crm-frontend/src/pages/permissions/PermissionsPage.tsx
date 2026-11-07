@@ -9,7 +9,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useGetPermissionMatrixQuery, useSavePermissionsMutation } from '@/features/permissions/permissionsAPI';
-import { changedValues, countChanges, isOnDefaults } from '@/features/permissions/permissionRules';
+import { appliesTo, blockedBy, changedValues, countChanges, isOnDefaults } from '@/features/permissions/permissionRules';
 import type { PermissionValues } from '@/features/permissions/types';
 
 const card = 'bg-background-800 border border-background-600 rounded-[14px]';
@@ -80,7 +80,11 @@ const PermissionsPage: React.FC = () => {
     setEdited((prev) => {
       if (!prev) {return prev;}
       const row = { ...prev[staffType] };
-      matrix.modules.forEach((m) => m.permissions.forEach((p) => (row[p.key] = p.defaultAllowed)));
+      matrix.modules.forEach((m) =>
+        m.permissions.forEach((p) => {
+          if (appliesTo(p, staffType)) {row[p.key] = p.defaultAllowed;}
+        }),
+      );
       return { ...prev, [staffType]: row };
     });
 
@@ -182,16 +186,40 @@ const PermissionsPage: React.FC = () => {
                       <div className="text-[12px] text-text-600 mt-0.5 max-w-[520px]">{p.description}</div>
                     </td>
                     {matrix.staffTypes.map((t) => {
+                      if (!appliesTo(p, t.key)) {
+                        return (
+                          <td key={t.key} className="px-3 py-2.5 text-center align-middle">
+                            <span
+                              className="text-[13px] text-text-500"
+                              title={`Not something ${t.label} does`}
+                              aria-label={`${p.label} — not for ${t.label}`}
+                            >
+                              —
+                            </span>
+                          </td>
+                        );
+                      }
                       const on = edited[t.key]?.[p.key] === true;
+                      const blocker = on ? blockedBy(matrix, edited, p, t.key) : null;
                       return (
                         <td key={t.key} className="px-3 py-2.5 text-center align-middle">
-                          <Switch
-                            on={on}
-                            changed={matrix.values[t.key]?.[p.key] !== on}
-                            disabled={saving}
-                            label={`${p.label} — ${t.label}`}
-                            onChange={(next) => set(t.key, p.key, next)}
-                          />
+                          <div className="inline-flex flex-col items-center gap-1">
+                            <Switch
+                              on={on}
+                              changed={matrix.values[t.key]?.[p.key] !== on}
+                              disabled={saving}
+                              label={`${p.label} — ${t.label}`}
+                              onChange={(next) => set(t.key, p.key, next)}
+                            />
+                            {blocker && (
+                              <span
+                                className="text-[10.5px] leading-tight text-text-600 max-w-[110px]"
+                                title={`Does nothing while “${blocker.label}” is off`}
+                              >
+                                needs “{blocker.label}”
+                              </span>
+                            )}
+                          </div>
                         </td>
                       );
                     })}

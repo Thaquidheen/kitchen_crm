@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
+import { usePermissions } from '@/features/permissions/usePermissions';
 import toast from 'react-hot-toast';
 import type { Vendor, VendorCreate } from '@/features/vendors/vendorsAPI';
 
@@ -67,6 +68,10 @@ interface VendorFormModalProps {
 export default function VendorFormModal({ isOpen, onClose, vendor, onCreated }: VendorFormModalProps) {
   const [createVendor, { isLoading: isCreating }] = useCreateVendorMutation();
   const [updateVendor, { isLoading: isUpdating }] = useUpdateVendorMutation();
+  // Making a vendor inactive or active again is its own permission (the server refuses an edit
+  // that changes it). Without it the Status field is not shown and an edit leaves it as it is.
+  const { can } = usePermissions();
+  const canChangeStatus = can('vendors.deactivate');
 
   const {
     register,
@@ -98,7 +103,10 @@ export default function VendorFormModal({ isOpen, onClose, vendor, onCreated }: 
       };
 
       if (vendor) {
-        await updateVendor({ id: vendor.id, vendor: vendorData }).unwrap();
+        await updateVendor({
+          id: vendor.id,
+          vendor: canChangeStatus ? vendorData : { ...vendorData, active: undefined },
+        }).unwrap();
         toast.success('Vendor updated');
       } else {
         const created = await createVendor(vendorData).unwrap();
@@ -135,10 +143,12 @@ export default function VendorFormModal({ isOpen, onClose, vendor, onCreated }: 
           ))}
         </Select>
 
-        <Select label="Status" {...register('active')} error={errors.active?.message}>
-          <option value="true">Active</option>
-          <option value="false">Inactive</option>
-        </Select>
+        {canChangeStatus && (
+          <Select label="Status" {...register('active')} error={errors.active?.message}>
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+          </Select>
+        )}
 
         <TextArea label="Notes" {...register('notes')} error={errors.notes?.message} rows={3} />
 

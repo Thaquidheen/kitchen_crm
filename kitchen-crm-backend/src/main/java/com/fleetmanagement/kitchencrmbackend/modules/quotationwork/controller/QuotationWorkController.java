@@ -1,6 +1,8 @@
 package com.fleetmanagement.kitchencrmbackend.modules.quotationwork.controller;
 
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.Permission;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.service.PermissionService;
 import com.fleetmanagement.kitchencrmbackend.modules.quotationwork.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.quotationwork.service.QuotationWorkService;
 import com.fleetmanagement.kitchencrmbackend.modules.quotationwork.service.QuotationWorkService.Viewer;
@@ -27,6 +29,8 @@ public class QuotationWorkController {
 
     @Autowired
     private QuotationWorkService service;
+    @Autowired
+    private PermissionService permissionService;
 
     private Viewer viewer(UserPrincipal user) {
         Long id = user != null ? user.getId() : null;
@@ -121,7 +125,7 @@ public class QuotationWorkController {
         if (!viewer.manages()) {
             return forbidden();
         }
-        return respond(service.update(id, body, viewer));
+        return respond(service.update(id, body, viewer, permissionService.can(user, Permission.QUOTATION_WORK_ASSIGN)));
     }
 
     @PutMapping("/{id}/cancel")

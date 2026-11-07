@@ -22,6 +22,9 @@ import { useGetStageRequestFeedQuery } from '@/features/customers/stageRequestsA
 import { useGetEditRequestFeedQuery } from '@/features/quotations/editRequestsAPI';
 import { useGetDesignMeQuery } from '@/features/design/designAPI';
 import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
+import { usePermissions } from '@/features/permissions/usePermissions';
+import { NoAccess } from '@/features/permissions/NoAccess';
+import { allowedReminderTabs, pickReminderTab, type ReminderTab } from './reminderTabs';
 import toast from 'react-hot-toast';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -108,6 +111,10 @@ export function RemindersPage() {
   });
 
   const isSuperAdmin = useIsSuperAdmin();
+  const { can, ready: permissionsReady } = usePermissions();
+  // The reminder lists are refused without reminders.view: not asked for at all then (the page may
+  // still hold the to-dos and tasks).
+  const canSeeReminders = can('reminders.view');
 
   // Reminders are private to whoever created them. A super admin sees everyone by default and
   // can narrow to one person; the server ignores this for staff, so it is only ever a narrowing.
@@ -130,8 +137,10 @@ export function RemindersPage() {
     createdByUserId,
     page,
     size: 20,
+  }, { skip: !canSeeReminders });
+  const { data: stats } = useGetReminderStatsQuery(createdByUserId ? { createdByUserId } : undefined, {
+    skip: !canSeeReminders,
   });
-  const { data: stats } = useGetReminderStatsQuery(createdByUserId ? { createdByUserId } : undefined);
 
   const reminders: Reminder[] = data?.content ?? [];
   const totalElements: number = data?.totalElements ?? 0;
@@ -267,24 +276,32 @@ export function RemindersPage() {
   // Team Tasks (assign work to staff) is a super-admin tab; a staff deep link to it falls back.
   // (isSuperAdmin and the creator filter are declared at the top — the queries need them.)
   const tabParam = searchParams.get('tab');
-  // Designs: designers see their own designs here; admins see the designs that need them.
-  const { data: designMe } = useGetDesignMeQuery();
-  const canSeeDesigns = isSuperAdmin || !!designMe?.designer;
+  // Designs: designers see their own designs here; admins see the designs that need them. The
+  // designer's list is the Designs page's own list, so it follows designs.view like that page (and,
+  // like that page, is not asked for before the permissions are known: it would only be refused).
+  const { data: designMe, isLoading: designMeLoading } = useGetDesignMeQuery();
+  const canSeeDesigns = isSuperAdmin || (!!designMe?.designer && permissionsReady && can('designs.view'));
   // Edit requests: staff ask to reopen a completed quotation; the admin answers here.
   const { data: editFeed } = useGetEditRequestFeedQuery(undefined, { skip: !isSuperAdmin, pollingInterval: 30000 });
   const { data: stageFeed } = useGetStageRequestFeedQuery(undefined, { skip: !isSuperAdmin, pollingInterval: 30000 });
-  const tab: 'reminders' | 'todos' | 'team' | 'designs' | 'approvals' =
-    tabParam === 'todos'
-      ? 'todos'
-      : tabParam === 'approvals' && isSuperAdmin
-        ? 'approvals'
-      : tabParam === 'team' && isSuperAdmin
-        ? 'team'
-        : tabParam === 'designs' && canSeeDesigns
-          ? 'designs'
-          : 'reminders';
-  const setTab = (t: 'reminders' | 'todos' | 'team' | 'designs' | 'approvals') =>
+  // Each tab is shown only while what it lists is allowed; a link to one that is not opens the
+  // first one that is.
+  const allowedTabs = allowedReminderTabs({
+    isSuperAdmin,
+    reminders: canSeeReminders,
+    todos: can('tasks.todos'),
+    mine: can('tasks.mine'),
+    designs: canSeeDesigns,
+  });
+  const tab = pickReminderTab(tabParam, allowedTabs);
+  const setTab = (t: ReminderTab) =>
     setSearchParams(t === 'reminders' ? {} : { tab: t }, { replace: true });
+
+  if (!tab) {
+    // Nothing on the page is allowed. Blank, not a refusal, while the answers are still loading
+    // (a designer's Designs tab waits for "am I a designer").
+    return permissionsReady && !designMeLoading ? <NoAccess what="reminders, to-dos or tasks" /> : null;
+  }
 
   return (
     <div className="w-full">
@@ -293,9 +310,11 @@ export function RemindersPage() {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="m-0 text-[22px] font-[650] tracking-[-0.01em] text-text-900">Reminders</h1>
+            {canSeeReminders && (
             <span className="text-xs font-[650] px-[9px] py-0.5 rounded-full bg-background-700 border border-background-600 text-text-700 tabular-nums">
               {openTotal}
             </span>
+            )}
           </div>
           <p className="mt-[5px] mb-0 text-[13px] text-text-700">
             {tab === 'todos'
@@ -308,7 +327,8 @@ export function RemindersPage() {
           </p>
         </div>
         <div className="flex-1" />
-        {tab === 'reminders' && (
+        {/* The page's own Add puts the reminder on a customer: the customer's Reminders permission. */}
+        {tab === 'reminders' && can('customers.reminders') && (
           <button
             onClick={openCreate}
             className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold"
@@ -332,8 +352,8 @@ export function RemindersPage() {
             ...(isSuperAdmin
               ? [{ key: 'approvals', label: 'Requests', icon: <FileCheck2 size={14} />, count: (editFeed?.count ?? 0) + (stageFeed?.count ?? 0) }]
               : []),
-          ] as { key: 'reminders' | 'todos' | 'team' | 'designs' | 'approvals'; label: string; icon: ReactNode; count?: number }[]
-        ).map((t) => {
+          ] as { key: ReminderTab; label: string; icon: ReactNode; count?: number }[]
+        ).filter((t) => allowedTabs.includes(t.key)).map((t) => {
           const active = tab === t.key;
           return (
             <button
@@ -593,7 +613,7 @@ export function RemindersPage() {
                       <td className="px-3 py-3">{statusPill(r.bucket)}</td>
                       <td className="px-3.5 py-3">
                         <div className="flex items-center justify-end gap-0.5">
-                          {!isDone && (
+                          {!isDone && can('reminders.done') && (
                             <button
                               onClick={() => handleMarkDone(r)}
                               title="Mark as done"
@@ -602,6 +622,7 @@ export function RemindersPage() {
                               <Check className="h-3.5 w-3.5" />
                             </button>
                           )}
+                          {can('reminders.edit') && (
                           <button
                             onClick={() => openEdit(r)}
                             title="Edit"
@@ -609,6 +630,8 @@ export function RemindersPage() {
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
+                          )}
+                          {can('reminders.delete') && (
                           <button
                             onClick={() => setDeleteTarget(r)}
                             title="Delete"
@@ -616,6 +639,7 @@ export function RemindersPage() {
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
+                          )}
                         </div>
                       </td>
                     </tr>

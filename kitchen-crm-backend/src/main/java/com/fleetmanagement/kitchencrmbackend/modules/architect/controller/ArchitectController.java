@@ -8,6 +8,8 @@ import com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectVisi
 import com.fleetmanagement.kitchencrmbackend.modules.architect.dto.ArchitectVisitDto;
 import com.fleetmanagement.kitchencrmbackend.modules.architect.entity.Architect;
 import com.fleetmanagement.kitchencrmbackend.modules.architect.service.ArchitectService;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.Permission;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.service.PermissionService;
 import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,11 +20,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/architects")
@@ -39,6 +43,23 @@ public class ArchitectController {
 
     @Autowired
     private ArchitectService architectService;
+
+    @Autowired
+    private PermissionService permissionService;
+
+    /**
+     * What the customer form's picker needs to tell one record from another, for someone who may
+     * not see architects: the name, the firm and who runs it. Phone, email and location stay out.
+     */
+    private static ArchitectDto namesOnly(ArchitectDto full) {
+        ArchitectDto dto = new ArchitectDto();
+        dto.setId(full.getId());
+        dto.setArchitectureName(full.getArchitectureName());
+        dto.setPartnerType(full.getPartnerType());
+        dto.setFirm(full.getFirm());
+        dto.setPrincipalArchitectName(full.getPrincipalArchitectName());
+        return dto;
+    }
 
     private Pageable pageableOf(int page, int size, String sortBy, String sortDir) {
         String safeSortBy = SORTABLE.contains(sortBy) ? sortBy : "architectureName";
@@ -65,10 +86,18 @@ public class ArchitectController {
                 pageableOf(page, size, sortBy, sortDir), visitStatus, highlighted, search, partnerType));
     }
 
+    /** Open to everyone signed in: the customer form picks from it. See {@link #namesOnly}. */
     @GetMapping("/all")
     public ResponseEntity<ApiResponse<List<ArchitectDto>>> getAllArchitectsList(
-            @RequestParam(required = false) Architect.PartnerType partnerType) {
-        return ResponseEntity.ok(architectService.getAllArchitects(partnerType));
+            @RequestParam(required = false) Architect.PartnerType partnerType,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        ApiResponse<List<ArchitectDto>> response = architectService.getAllArchitects(partnerType);
+        if (response.getData() != null && !permissionService.can(currentUser, Permission.ARCHITECTS_VIEW)) {
+            response.setData(response.getData().stream()
+                    .map(ArchitectController::namesOnly)
+                    .collect(Collectors.toList()));
+        }
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/search")
@@ -95,8 +124,15 @@ public class ArchitectController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<ArchitectDto>> createArchitect(@Valid @RequestBody ArchitectCreateDto architectCreateDto) {
+    public ResponseEntity<ApiResponse<ArchitectDto>> createArchitect(
+            @Valid @RequestBody ArchitectCreateDto architectCreateDto,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
         ApiResponse<ArchitectDto> response = architectService.createArchitect(architectCreateDto);
+        // A name that already exists answers with that record. Without architects.view, adding
+        // must not become a way to read an existing record's phone and email by typing its name.
+        if (response.getData() != null && !permissionService.can(currentUser, Permission.ARCHITECTS_VIEW)) {
+            response.setData(namesOnly(response.getData()));
+        }
         if (response.getSuccess()) {
             return ResponseEntity.ok(response);
         } else {

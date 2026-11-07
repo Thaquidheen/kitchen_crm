@@ -1,7 +1,8 @@
 /**
  * AssignQuotationModal — hand a customer's quotation to someone, or change work already handed
  * out (person, priority, due date, note). Used by the admin and Admin staff; the quotation can
- * be given to any active person, a designer included.
+ * be given to any active person, a designer included. The people to choose from come with "Give
+ * out quotations": without it a change keeps the person and only edits the rest.
  */
 import React, { useEffect, useState } from 'react';
 import { Check, Search, UserRound } from 'lucide-react';
@@ -24,6 +25,10 @@ export type AssignQuotationTarget =
 
 interface Props {
   target: AssignQuotationTarget | null;
+  /** May give out work; the list of people is only served with it. */
+  canAssign: boolean;
+  /** May reorder the board (quotation_work.change); without it there is nothing to drag. */
+  canReorder: boolean;
   onClose: () => void;
 }
 
@@ -38,7 +43,7 @@ const selectable = (on: boolean): React.CSSProperties =>
     ? { borderColor: 'var(--color-primary-600)', background: 'color-mix(in oklab, var(--color-primary-600) 12%, transparent)' }
     : { borderColor: 'var(--color-background-600)', background: 'var(--color-background-900)' };
 
-export const AssignQuotationModal: React.FC<Props> = ({ target, onClose }) => {
+export const AssignQuotationModal: React.FC<Props> = ({ target, canAssign, canReorder, onClose }) => {
   const editing = target?.mode === 'edit' ? target.job : null;
   const [customer, setCustomer] = useState<UnassignedQuotationCustomer | null>(null);
   const [search, setSearch] = useState('');
@@ -47,7 +52,11 @@ export const AssignQuotationModal: React.FC<Props> = ({ target, onClose }) => {
   const [priority, setPriority] = useState<QuotationWorkPriority>('MEDIUM');
   const [note, setNote] = useState('');
 
-  const { data: assignees = [], isLoading: loadingPeople } = useGetQuotationAssigneesQuery(undefined, { skip: !target });
+  const { data: assignees = [], isLoading: loadingPeople } = useGetQuotationAssigneesQuery(undefined, {
+    skip: !target || !canAssign,
+  });
+  // Changing work without "Give out quotations": the person stays, so the server sees no hand-over.
+  const keepsPerson = !!editing && !canAssign;
   const needsCustomer = target?.mode === 'assign' && !customer;
   const { data: found, isFetching: searching } = useGetCustomersPageQuery(
     { name: search, page: 0, size: 8, sortBy: 'name', sortDir: 'asc' },
@@ -151,12 +160,17 @@ export const AssignQuotationModal: React.FC<Props> = ({ target, onClose }) => {
                 <UserRound size={13} className="text-primary-600" />
                 Who prepares it <span className="text-error">*</span>
               </label>
-              {editing && !loadingPeople && !assignees.some((p) => p.id === editing.assigneeId) && (
+              {editing && !keepsPerson && !loadingPeople && !assignees.some((p) => p.id === editing.assigneeId) && (
                 <p className="m-0 mb-1.5 text-[11.5px] text-text-600">
                   Now with {editing.assigneeName ?? 'someone else'}. Choose who takes it over.
                 </p>
               )}
-              {loadingPeople ? (
+              {keepsPerson ? (
+                <div className="px-3 py-2 rounded-[10px] border" style={selectable(true)}>
+                  <span className="block text-[13px] font-semibold text-text-900 truncate">{editing?.assigneeName ?? 'Staff'}</span>
+                  <span className="block text-[11.5px] text-text-600">Giving it to someone else needs “Give out quotations”.</span>
+                </div>
+              ) : loadingPeople ? (
                 <div className="h-10 rounded-[10px] bg-background-700 animate-pulse" />
               ) : (
                 <div className="flex flex-col gap-1.5 max-h-[220px] overflow-y-auto pr-0.5">
@@ -217,7 +231,9 @@ export const AssignQuotationModal: React.FC<Props> = ({ target, onClose }) => {
             <p className="m-0 text-[11.5px] text-text-600">
               {editing
                 ? 'The person is told in their notifications when you change the priority, due date or note.'
-                : 'The person gets a notification with the priority and due date. New work goes to the end of their list — drag it up on the board to make it first.'}
+                : `The person gets a notification with the priority and due date. New work goes to the end of their list${
+                    canReorder ? ' — drag it up on the board to make it first.' : '.'
+                  }`}
             </p>
           </div>
         )}

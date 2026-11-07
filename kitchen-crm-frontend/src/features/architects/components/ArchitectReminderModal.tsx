@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
 import { useCreateReminderMutation } from '@/app/baseApi';
+import { usePermissions } from '@/features/permissions/usePermissions';
 import type { Architect } from '../types';
 import { partnerTypeLabel, partnerTypeOf } from '../types';
 import toast from 'react-hot-toast';
@@ -34,6 +35,9 @@ export default function ArchitectReminderModal({ isOpen, onClose, architect }: P
   const [remindAt, setRemindAt] = useState(localDefault());
   const [notes, setNotes] = useState('');
   const [createReminder, { isLoading }] = useCreateReminderMutation();
+  // The server refuses a reminder on an architect without architects.reminders: no form to fill then.
+  const { can, ready: permissionsReady } = usePermissions();
+  const refused = permissionsReady && !can('architects.reminders');
 
   useEffect(() => {
     if (isOpen && architect) {
@@ -76,6 +80,12 @@ export default function ArchitectReminderModal({ isOpen, onClose, architect }: P
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Set reminder" size="sm">
       <ModalBody>
+        {refused ? (
+          <p className="m-0 text-[13px] text-text-600">
+            You do not have permission to set reminders on architects and builders. Ask the administrator
+            to allow it in Permissions.
+          </p>
+        ) : (
         <div className="space-y-4">
           {architect && (
             <div className="text-[12.5px] text-text-600">
@@ -94,10 +104,13 @@ export default function ArchitectReminderModal({ isOpen, onClose, architect }: P
           <TextArea label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)}
             placeholder="Optional" rows={3} />
         </div>
+        )}
       </ModalBody>
       <ModalFooter>
-        <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button onClick={save} disabled={isLoading}>{isLoading ? 'Saving…' : 'Set reminder'}</Button>
+        <Button variant="secondary" onClick={onClose}>{refused ? 'Close' : 'Cancel'}</Button>
+        {!refused && (
+          <Button onClick={save} disabled={isLoading || !permissionsReady}>{isLoading ? 'Saving…' : 'Set reminder'}</Button>
+        )}
       </ModalFooter>
     </Modal>
   );
