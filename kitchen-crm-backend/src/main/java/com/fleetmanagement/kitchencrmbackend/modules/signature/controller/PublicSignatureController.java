@@ -150,6 +150,10 @@ public class PublicSignatureController {
      * POST /api/public/documents/sign/{token}/reject
      *
      * This endpoint allows customers to reject a document with a reason
+     *
+     * It runs the same token validation as the GET and the approval above. Without it an
+     * unknown token ended in a 500, a guess left no trace in the audit log, and a quotation the
+     * customer had already rejected could be rejected again, overwriting the reason and time.
      */
     @PostMapping("/{token}/reject")
     public ResponseEntity<SignatureResponse> rejectDocument(
@@ -163,6 +167,20 @@ public class PublicSignatureController {
         log.info("PUBLIC: Customer rejecting document for token, reason: {}", reason);
 
         try {
+            TokenSecurityService.TokenValidationResult validationResult =
+                tokenSecurityService.validateToken(token, ipAddress, userAgent);
+
+            if (!validationResult.isValid()) {
+                log.warn("PUBLIC: Token validation failed on rejection: {}",
+                    validationResult.getErrorMessage());
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(SignatureResponse.builder()
+                        .success(false)
+                        .error(validationResult.getErrorMessage())
+                        .build());
+            }
+
             SignatureResponse response = signatureService.rejectDocument(
                 token, reason, ipAddress, userAgent);
 

@@ -12,7 +12,6 @@ import {
   XCircle,
   Download,
   RefreshCw,
-  ExternalLink,
   Copy,
 } from 'lucide-react';
 import approvalService from '../../services/approvalService';
@@ -28,7 +27,8 @@ interface SignatureManagementProps {
 
 interface SignedDocument {
   id: number;
-  token: string;
+  // Only the administrator receives it; see fetchDocuments.
+  token?: string;
   status: string;
   sentAt: string;
   expiresAt: string;
@@ -78,8 +78,20 @@ export default function SignatureManagement({
       console.log(`[SignatureManagement] Fetching documents for quotation ${quotationId}`);
       const docs = await approvalService.getSignedDocuments(quotationId);
       console.log(`[SignatureManagement] Received ${docs.length} documents`);
-      // Ensure docs is always an array
-      setDocuments(Array.isArray(docs) ? docs : []);
+      // Ensure docs is always an array. The server names the fields documentId and signingToken;
+      // this panel was written against id and token, so the copy-link button used to build
+      // /sign/undefined. The token is the customer's key to the public approval page (whoever
+      // holds it can approve as the customer), so only the administrator receives it; for staff
+      // it stays empty and the copy button is not shown.
+      setDocuments(
+        Array.isArray(docs)
+          ? docs.map((d: any) => ({
+              ...d,
+              id: d.id ?? d.documentId,
+              token: d.token ?? d.signingToken ?? undefined,
+            }))
+          : []
+      );
     } catch (error: any) {
       console.error('[SignatureManagement] Failed to fetch documents:', error);
 
@@ -173,12 +185,6 @@ export default function SignatureManagement({
     setShowCopied(true);
     toast.success('Signing link copied to clipboard!');
     setTimeout(() => setShowCopied(false), 2000);
-  };
-
-  // Open signing link
-  const openSigningLink = (token: string) => {
-    const link = `${window.location.origin}/sign/${token}`;
-    window.open(link, '_blank');
   };
 
   // Get status badge
@@ -358,25 +364,21 @@ export default function SignatureManagement({
                 <div className="flex gap-2 ml-4">
                   {(doc.status === 'PENDING' || doc.status === 'SENT') && (
                     <>
-                      <button
-                        onClick={() => copySigningLink(doc.token)}
-                        className="p-2 text-text-600 hover:text-primary-400 hover:bg-primary-900/20 rounded-lg transition-colors"
-                        title="Copy signing link"
-                      >
-                        {showCopied ? (
-                          <CheckCircle className="h-4 w-4 text-success" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </button>
-
-                      <button
-                        onClick={() => openSigningLink(doc.token)}
-                        className="p-2 text-text-600 hover:text-primary-400 hover:bg-primary-900/20 rounded-lg transition-colors"
-                        title="Open signing page"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </button>
+                      {/* No "open signing page" button: opening the public page from here
+                          would record the customer as having opened the link. */}
+                      {doc.token && (
+                        <button
+                          onClick={() => copySigningLink(doc.token!)}
+                          className="p-2 text-text-600 hover:text-primary-400 hover:bg-primary-900/20 rounded-lg transition-colors"
+                          title="Copy signing link"
+                        >
+                          {showCopied ? (
+                            <CheckCircle className="h-4 w-4 text-success" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </button>
+                      )}
 
                       <button
                         onClick={() => handleResendNotification(doc.id)}

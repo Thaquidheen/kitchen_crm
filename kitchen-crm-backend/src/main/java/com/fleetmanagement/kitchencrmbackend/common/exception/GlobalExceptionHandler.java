@@ -10,9 +10,12 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -87,6 +90,27 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                 .body(ApiResponse.error("These files are too large. One file can be up to 50 MB, "
                         + "and the files of one upload up to 200 MB together."));
+    }
+
+    /**
+     * A file under /uploads (or any address) that is not there, or that is refused to the public
+     * like the finance receipts. Without this it fell to the catch-all below: a 500 and an ERROR
+     * with a stack trace in the log for every missing picture.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<String>> handleNoResource(NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Not found"));
+    }
+
+    /**
+     * A call without a parameter or file part it needs. That is the caller's mistake, so it is a
+     * 400 naming what is missing; it used to fall to the catch-all below and read as a server error.
+     */
+    @ExceptionHandler({MissingServletRequestParameterException.class, MissingServletRequestPartException.class})
+    public ResponseEntity<ApiResponse<String>> handleMissingPart(Exception ex) {
+        String name = ex instanceof MissingServletRequestParameterException p ? p.getParameterName()
+                : ((MissingServletRequestPartException) ex).getRequestPartName();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error("Missing: " + name));
     }
 
     @ExceptionHandler(RuntimeException.class)

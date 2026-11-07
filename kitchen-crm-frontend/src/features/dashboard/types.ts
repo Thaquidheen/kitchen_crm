@@ -84,7 +84,8 @@ export interface ProjectTimeline {
   estimatedDays: number;
   actualDays: number;
   status: string;
-  projectValue: string;
+  // Withheld from staff: null for them, never 0.
+  projectValue: string | null;
 }
 
 export interface TeamPerformance {
@@ -117,7 +118,8 @@ export interface MonthlyCustomer {
   month: string;
   newCustomers: number;
   totalCustomers: number;
-  acquisitionCost: string;
+  // Withheld from staff: null for them, never 0.
+  acquisitionCost: string | null;
 }
 
 export interface CustomerSatisfaction {
@@ -139,9 +141,11 @@ export interface CustomerAnalytics {
 
 // Performance Metrics Types
 export interface SalesPerformance {
-  monthlyTarget: string;
-  monthlyAchieved: string;
-  achievementPercentage: number;
+  // The money fields (and the percentage derived from them) are withheld from staff: they come
+  // back null, never 0, so a screen can tell "hidden" from "genuinely nothing".
+  monthlyTarget: string | null;
+  monthlyAchieved: string | null;
+  achievementPercentage: number | null;
   leadsGenerated: number;
   quotationsSent: number;
   projectsWon: number;
@@ -164,13 +168,14 @@ export interface QualityMetrics {
   defectRate: number;
 }
 
+/** Every field is null for staff: the backend withholds the whole block from them. */
 export interface FinancialHealth {
-  grossRevenue: string;
-  netProfit: string;
-  profitMargin: number;
-  operatingExpenses: string;
-  returnOnInvestment: number;
-  daysOfCashOnHand: number;
+  grossRevenue: string | null;
+  netProfit: string | null;
+  profitMargin: number | null;
+  operatingExpenses: string | null;
+  returnOnInvestment: number | null;
+  daysOfCashOnHand: number | null;
 }
 
 export interface PerformanceMetrics {

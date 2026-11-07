@@ -2,8 +2,12 @@ package com.fleetmanagement.kitchencrmbackend.modules.signature.controller;
 
 import com.fleetmanagement.kitchencrmbackend.modules.signature.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.signature.entity.DocumentType;
+import com.fleetmanagement.kitchencrmbackend.modules.signature.entity.SignatureStatus;
 import com.fleetmanagement.kitchencrmbackend.modules.signature.entity.SignedDocument;
 import com.fleetmanagement.kitchencrmbackend.modules.signature.service.SignatureService;
+import com.fleetmanagement.kitchencrmbackend.modules.signature.service.TokenSecurityService;
+import com.fleetmanagement.kitchencrmbackend.security.UserPrincipal;
+import com.fleetmanagement.kitchencrmbackend.security.ViewerScope;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -20,6 +26,16 @@ import java.util.Map;
 /**
  * REST Controller for digital signature operations
  * Provides endpoints for document signing, verification, and tracking
+ *
+ * <p>Who may call what. The only screen that uses this controller is the Digital Signature panel
+ * on the quotation page, and it calls exactly two endpoints here: send-for-signature and the
+ * quotation's documents (plus the PDF download, which is not built yet). Those stay open to every
+ * signed-in user, with the answer trimmed for staff. Everything else is the administrator's: no
+ * screen calls it, and it either hands out the customer's signing token (whoever holds it can
+ * approve or reject the quotation as the customer on the public page), lists customers' email and
+ * phone past customers.view, or changes a signing request.
+ *
+ * <p>The customer signs on the public page (PublicSignatureController), never through here.
  */
 @RestController
 @RequestMapping("/api/v1/signatures")
@@ -29,12 +45,14 @@ import java.util.Map;
 public class SignatureController {
 
     private final SignatureService signatureService;
+    private final TokenSecurityService tokenSecurityService;
 
     /**
      * Create signature request for a quotation
      * POST /api/signatures/quotation/{quotationId}/request
      */
     @PostMapping("/quotation/{quotationId}/request")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<SignedDocument> createQuotationSignatureRequest(
             @PathVariable Long quotationId) {
 
@@ -51,10 +69,15 @@ public class SignatureController {
     }
 
     /**
-     * Verify signing token (when customer opens signing link)
+     * Check a signing token
      * GET /api/signatures/verify/{signingToken}
+     *
+     * The customer's own open goes through the public GET, which records it. This one is a
+     * signed-in check, so it must not record anything: it used to mark the document OPENED, and
+     * a check from the office then showed as the customer having opened the link.
      */
     @GetMapping("/verify/{signingToken}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<DocumentVerificationDto> verifySigningToken(
             @PathVariable String signingToken,
             HttpServletRequest request) {
@@ -66,7 +89,7 @@ public class SignatureController {
 
         try {
             DocumentVerificationDto result = signatureService.verifySigningToken(
-                signingToken, ipAddress, userAgent);
+                signingToken, ipAddress, userAgent, false);
 
             if (result.getValid()) {
                 return ResponseEntity.ok(result);
@@ -89,8 +112,15 @@ public class SignatureController {
     /**
      * Capture digital signature
      * POST /api/signatures/sign
+     *
+     * Records the customer's approval, so it is the administrator's alone: it used to accept any
+     * token from any signed-in user, which let staff approve a quotation in the customer's name.
+     * No screen calls it; customers approve on the public page. The token goes through the same
+     * checks as there (exists, not expired, not already signed or rejected), and every attempt is
+     * written to the audit log.
      */
     @PostMapping("/sign")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<SignatureResponse> captureSignature(
             @Valid @RequestBody SignatureRequest request,
             HttpServletRequest httpRequest) {
@@ -102,9 +132,14 @@ public class SignatureController {
         request.setUserAgent(userAgent);
 
         log.info("REST: Capturing signature for token: {}, type: {}, IP: {}",
-            request.getSigningToken(), request.getSignatureType(), ipAddress);
+            tokenPrefix(request.getSigningToken()), request.getSignatureType(), ipAddress);
 
         try {
+            SignatureResponse refused = refuseInvalidToken(request.getSigningToken(), ipAddress, userAgent);
+            if (refused != null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(refused);
+            }
+
             SignatureResponse response = signatureService.captureSignature(request);
 
             if (response.getSuccess()) {
@@ -128,8 +163,11 @@ public class SignatureController {
     /**
      * Reject a document
      * POST /api/signatures/reject
+     *
+     * Administrator only, for the same reason as /sign: it records the customer's decision.
      */
     @PostMapping("/reject")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<SignatureResponse> rejectDocument(
             @RequestParam String signingToken,
             @RequestParam String reason,
@@ -138,9 +176,14 @@ public class SignatureController {
         String ipAddress = getClientIp(httpRequest);
         String userAgent = httpRequest.getHeader("User-Agent");
 
-        log.info("REST: Rejecting document for token: {}, reason: {}", signingToken, reason);
+        log.info("REST: Rejecting document for token: {}, reason: {}", tokenPrefix(signingToken), reason);
 
         try {
+            SignatureResponse refused = refuseInvalidToken(signingToken, ipAddress, userAgent);
+            if (refused != null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(refused);
+            }
+
             SignatureResponse response = signatureService.rejectDocument(
                 signingToken, reason, ipAddress, userAgent);
 
@@ -163,6 +206,7 @@ public class SignatureController {
      * GET /api/signatures/status/{documentId}
      */
     @GetMapping("/status/{documentId}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<SignatureStatusDto> getSignatureStatus(
             @PathVariable Long documentId) {
 
@@ -183,10 +227,11 @@ public class SignatureController {
      * GET /api/signatures/status/token/{signingToken}
      */
     @GetMapping("/status/token/{signingToken}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<SignatureStatusDto> getSignatureStatusByToken(
             @PathVariable String signingToken) {
 
-        log.info("REST: Getting signature status for token: {}", signingToken);
+        log.info("REST: Getting signature status for token: {}", tokenPrefix(signingToken));
 
         try {
             SignatureStatusDto status = signatureService.getSignatureStatusByToken(signingToken);
@@ -203,6 +248,7 @@ public class SignatureController {
      * GET /api/signatures/customer/{customerId}
      */
     @GetMapping("/customer/{customerId}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<SignatureStatusDto>> getCustomerSignatureRequests(
             @PathVariable Long customerId) {
 
@@ -225,6 +271,7 @@ public class SignatureController {
      * GET /api/signatures/type/{documentType}
      */
     @GetMapping("/type/{documentType}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<SignatureStatusDto>> getSignatureRequestsByType(
             @PathVariable DocumentType documentType) {
 
@@ -247,6 +294,7 @@ public class SignatureController {
      * GET /api/signatures/reference
      */
     @GetMapping("/reference")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<SignatureStatusDto> getSignatureRequestByReference(
             @RequestParam DocumentType documentType,
             @RequestParam Long referenceId) {
@@ -275,6 +323,7 @@ public class SignatureController {
      * POST /api/signatures/{documentId}/reminder
      */
     @PostMapping("/{documentId}/reminder")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Map<String, Object>> sendSignatureReminder(
             @PathVariable Long documentId,
             @RequestParam(defaultValue = "3") int daysElapsed) {
@@ -305,6 +354,7 @@ public class SignatureController {
      * POST /api/signatures/{documentId}/regenerate-token
      */
     @PostMapping("/{documentId}/regenerate-token")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<SignedDocument> regenerateSigningToken(
             @PathVariable Long documentId,
             @RequestParam(defaultValue = "7") int expiryDays) {
@@ -326,6 +376,7 @@ public class SignatureController {
      * POST /api/signatures/{documentId}/expire
      */
     @PostMapping("/{documentId}/expire")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Map<String, String>> markDocumentAsExpired(
             @PathVariable Long documentId) {
 
@@ -352,6 +403,7 @@ public class SignatureController {
      * GET /api/signatures/{documentId}/audit-trail
      */
     @GetMapping("/{documentId}/audit-trail")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<SignatureAuditLogDto>> getDocumentAuditTrail(
             @PathVariable Long documentId) {
 
@@ -374,6 +426,7 @@ public class SignatureController {
      * GET /api/signatures/statistics
      */
     @GetMapping("/statistics")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Map<String, Object>> getSignatureStatistics(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
@@ -397,6 +450,7 @@ public class SignatureController {
      * GET /api/signatures/admin/pending-reminders
      */
     @GetMapping("/admin/pending-reminders")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<SignedDocument>> getDocumentsNeedingReminders() {
 
         log.info("REST: Getting documents needing reminders");
@@ -416,6 +470,7 @@ public class SignatureController {
      * GET /api/signatures/admin/expired
      */
     @GetMapping("/admin/expired")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<SignedDocument>> getExpiredDocuments() {
 
         log.info("REST: Getting expired documents");
@@ -435,16 +490,31 @@ public class SignatureController {
      * POST /api/quotations/{id}/send-for-signature
      *
      * Creates a signature request and sends notifications to customer
+     *
+     * Staff press "Send for Signature" on the quotation page, so this stays open to them. The
+     * screen ignores the answer; staff get it without the token and the customer's contact.
      */
     @PostMapping("/quotations/{quotationId}/send-for-signature")
     public ResponseEntity<SignedDocumentDto> sendQuotationForSignature(
-            @PathVariable Long quotationId) {
+            @PathVariable Long quotationId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
 
-        log.info("REST: Admin sending quotation {} for signature", quotationId);
+        log.info("REST: Sending quotation {} for signature", quotationId);
 
         try {
+            // A new request replaces the quotation's current one, so sending again after the customer
+            // approved or rejected would wipe their answer. The panel only offers Send while there is
+            // no request; staff get exactly that, the administrator keeps the choice.
+            if (!ViewerScope.isSuperAdmin(currentUser)) {
+                SignatureStatusDto current = signatureService.getSignatureRequestByReference(
+                    DocumentType.QUOTATION, quotationId);
+                if (current != null && (current.getStatus() == SignatureStatus.SIGNED
+                        || current.getStatus() == SignatureStatus.REJECTED)) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT).build();
+                }
+            }
             SignedDocument document = signatureService.createQuotationSignatureRequest(quotationId);
-            SignedDocumentDto dto = convertToDto(document);
+            SignedDocumentDto dto = forViewer(convertToDto(document), currentUser);
 
             log.info("REST: Quotation {} sent for signature successfully, documentId: {}",
                 quotationId, document.getId());
@@ -462,10 +532,13 @@ public class SignatureController {
      * GET /api/quotations/{id}/documents
      *
      * Returns all signature requests and their statuses for a quotation
+     *
+     * The Digital Signature panel loads this for staff as well, so it stays open, trimmed.
      */
     @GetMapping("/quotations/{quotationId}/documents")
     public ResponseEntity<List<SignatureStatusDto>> getQuotationDocuments(
-            @PathVariable Long quotationId) {
+            @PathVariable Long quotationId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
 
         log.info("REST: Getting signature documents for quotationId: {}", quotationId);
 
@@ -474,7 +547,7 @@ public class SignatureController {
                 DocumentType.QUOTATION, quotationId);
 
             if (status != null) {
-                return ResponseEntity.ok(List.of(status));
+                return ResponseEntity.ok(List.of(forViewer(status, currentUser)));
             } else {
                 return ResponseEntity.ok(List.of());
             }
@@ -522,6 +595,64 @@ public class SignatureController {
             "service", "SignatureService",
             "timestamp", LocalDateTime.now().toString()
         ));
+    }
+
+    /**
+     * What staff may see of a signing request. The signing token (and the link built from it) is
+     * the customer's key to the public approval page: whoever holds it can approve or reject the
+     * quotation as the customer, so only the administrator gets it, to pass on to the customer.
+     * Email and phone are left out for all staff: the panel never shows them, and here they would
+     * go past customers.view. Status, dates and the customer's name stay, which is what the panel
+     * shows.
+     */
+    private SignatureStatusDto forViewer(SignatureStatusDto status, UserPrincipal currentUser) {
+        if (ViewerScope.isSuperAdmin(currentUser)) {
+            return status;
+        }
+        status.setSigningToken(null);
+        status.setSigningUrl(null);
+        status.setCustomerEmail(null);
+        status.setCustomerPhone(null);
+        status.setSignedFromIp(null);
+        return status;
+    }
+
+    /** Same rule as above, for the answer to send-for-signature. */
+    private SignedDocumentDto forViewer(SignedDocumentDto dto, UserPrincipal currentUser) {
+        if (ViewerScope.isSuperAdmin(currentUser)) {
+            return dto;
+        }
+        dto.setSigningToken(null);
+        dto.setSignatureData(null);
+        dto.setCustomerEmail(null);
+        dto.setCustomerPhone(null);
+        dto.setSignerEmail(null);
+        dto.setSignerPhone(null);
+        dto.setSignedFromIp(null);
+        dto.setSignedUserAgent(null);
+        return dto;
+    }
+
+    /**
+     * Runs the token through the same checks the public page uses (exists, not expired, not
+     * already signed or rejected), which also writes the attempt to the audit log. Returns the
+     * refusal to send back, or null when the token may be used.
+     */
+    private SignatureResponse refuseInvalidToken(String token, String ipAddress, String userAgent) {
+        TokenSecurityService.TokenValidationResult validation =
+            tokenSecurityService.validateToken(token, ipAddress, userAgent);
+        if (validation.isValid()) {
+            return null;
+        }
+        return SignatureResponse.builder()
+            .success(false)
+            .error(validation.getErrorMessage())
+            .build();
+    }
+
+    // The token works like a password for the public page, so only its first characters are logged.
+    private static String tokenPrefix(String token) {
+        return token != null && token.length() > 8 ? token.substring(0, 8) + "..." : "INVALID";
     }
 
     // Helper method to convert SignedDocument entity to DTO

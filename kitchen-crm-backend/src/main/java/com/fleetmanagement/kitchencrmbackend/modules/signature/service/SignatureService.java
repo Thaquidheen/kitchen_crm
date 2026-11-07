@@ -47,6 +47,14 @@ public interface SignatureService {
     DocumentVerificationDto verifySigningToken(String signingToken, String ipAddress, String userAgent);
 
     /**
+     * Same as {@link #verifySigningToken(String, String, String)}, but {@code recordOpen = false}
+     * leaves the document untouched. Only the customer's own visit to the public page may mark it
+     * OPENED; a check from the office must not look like the customer opened the link.
+     */
+    DocumentVerificationDto verifySigningToken(String signingToken, String ipAddress, String userAgent,
+                                               boolean recordOpen);
+
+    /**
      * Capture a digital signature
      *
      * @param request the signature request with signature data

@@ -77,6 +77,13 @@ public class SecurityConfig {
                                 // publish /actuator/env and /actuator/beans.
                                 .requestMatchers("/actuator/health").permitAll()
                                 .requestMatchers("/api/public/**").permitAll()
+                                // Finance receipts and warranty certificate PDFs live under the
+                                // uploads root but are never public: receipts are money paperwork
+                                // under predictable names. Screens read them through authenticated
+                                // API endpoints (/api/v1/customer-finance/receipts/{id}/file and
+                                // /api/v1/warranty-cards/{id}/pdf). The first matching rule wins, so
+                                // these MUST stay above the /uploads/** permitAll.
+                                .requestMatchers("/uploads/finance-receipts/**", "/uploads/warranty-cards/**").denyAll()
                                 .requestMatchers("/uploads/**").permitAll() // Allow access to uploaded images and files
                                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                                 .requestMatchers("/swagger-ui.html").permitAll()

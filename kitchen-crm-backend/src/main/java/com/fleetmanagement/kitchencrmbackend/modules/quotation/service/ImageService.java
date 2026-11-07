@@ -103,6 +103,14 @@ public class ImageService {
         System.out.println("Using base directory: " + baseDir);
         System.out.println("Extracted image path: " + imagePath);
 
+        // The address is whatever was saved with the quotation's plan image, so it must not climb
+        // out of the upload folders with ".." — that would put any file on the server (a finance
+        // receipt, say) into a quotation PDF.
+        if (Arrays.asList(imagePath.split("[/\\\\]")).contains("..")) {
+            System.err.println("Refusing image path outside the upload folders: " + imageUrl);
+            return null;
+        }
+
         // Build full file path
         Path fullPath = Paths.get(baseDir, imagePath);
         System.out.println("Full file path: " + fullPath.toAbsolutePath());
