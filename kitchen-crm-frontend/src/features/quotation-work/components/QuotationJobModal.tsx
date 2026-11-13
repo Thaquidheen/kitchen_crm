@@ -2,7 +2,8 @@
  * QuotationJobModal — one piece of quotation work: what was asked, the customer's quotations,
  * and what can be done with it. The person it is assigned to (or whoever manages the board)
  * starts it, opens or creates the quotation, and marks it completed; whoever manages can also
- * change it or take it off the board.
+ * change it or take it off the board. Each of those shows only with its permission (starting and
+ * handing in: "Prepare quotations given to them"), the same ones the server asks for.
  */
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -30,6 +31,12 @@ interface Props {
   job: QuotationJob | null;
   /** Admin or Admin staff. */
   canManage: boolean;
+  /** Manages and may change given work (person, priority, due date, note). */
+  canChange: boolean;
+  /** Manages and may take work off the board. */
+  canRemove: boolean;
+  /** May start and hand in work that is theirs. */
+  canPrepare: boolean;
   myId?: number | null;
   onClose: () => void;
   onEdit: (job: QuotationJob) => void;
@@ -39,7 +46,16 @@ const label = 'text-[11px] font-semibold uppercase tracking-wide text-text-500';
 const ghostBtn =
   'inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] border border-background-600 bg-background-900 text-[12.5px] font-medium text-text-900 whitespace-nowrap hover:border-primary-600 transition-colors disabled:opacity-60';
 
-export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClose, onEdit }) => {
+export const QuotationJobModal: React.FC<Props> = ({
+  job,
+  canManage,
+  canChange,
+  canRemove,
+  canPrepare,
+  myId,
+  onClose,
+  onEdit,
+}) => {
   const navigate = useNavigate();
   const access = useQuotationAccess();
   const [handIn, setHandIn] = useState<number | null>(null);
@@ -74,7 +90,10 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
 
   const open = isOpenJob(job.status);
   const reopened = isReopenedJob(job);
-  const canWork = open && (canManage || job.assigneeId === myId);
+  // Theirs to work on (the server lets the assignee or whoever manages); starting it and handing it
+  // in also need the permission. Creating the quotation is quotations' own permission.
+  const theirs = open && (canManage || job.assigneeId === myId);
+  const canWork = theirs && canPrepare;
   const due = dueText(job);
   const fail = (e: any, fallback: string) => toast.error(e?.message || e?.data?.message || fallback);
 
@@ -236,7 +255,7 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
             </div>
           )}
 
-          {canManage && open && confirmRemove && (
+          {canRemove && open && confirmRemove && (
             <div
               className="flex items-center gap-2 px-3 py-2 rounded-[10px] text-[12.5px]"
               style={{ background: 'var(--st-lost-bg)', color: 'var(--st-lost-fg)' }}
@@ -253,44 +272,46 @@ export const QuotationJobModal: React.FC<Props> = ({ job, canManage, myId, onClo
         </div>
       </ModalBody>
       <ModalFooter className="flex-wrap">
-        {canManage && open && (
+        {(canChange || canRemove) && open && (
           <div className="mr-auto flex items-center gap-1.5">
-            <button type="button" onClick={() => onEdit(job)} className={ghostBtn}>
-              <Pencil size={13} /> Change
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmRemove(true)}
-              className={ghostBtn}
-              aria-label="Remove from the board"
-              title="Remove from the board"
-            >
-              <Trash2 size={13} />
-            </button>
+            {canChange && (
+              <button type="button" onClick={() => onEdit(job)} className={ghostBtn}>
+                <Pencil size={13} /> Change
+              </button>
+            )}
+            {canRemove && (
+              <button
+                type="button"
+                onClick={() => setConfirmRemove(true)}
+                className={ghostBtn}
+                aria-label="Remove from the board"
+                title="Remove from the board"
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
           </div>
         )}
+        {canWork && job.status === 'WAITING' && (
+          <button type="button" onClick={onStart} disabled={starting} className={ghostBtn}>
+            <Play size={13} /> {starting ? 'Starting…' : 'Start'}
+          </button>
+        )}
+        {theirs && access.create && (
+          <button type="button" onClick={createQuotation} className={ghostBtn}>
+            <FilePlus2 size={13} /> {quotations.length === 0 ? 'Create quotation' : 'New quotation'}
+          </button>
+        )}
         {canWork ? (
-          <>
-            {job.status === 'WAITING' && (
-              <button type="button" onClick={onStart} disabled={starting} className={ghostBtn}>
-                <Play size={13} /> {starting ? 'Starting…' : 'Start'}
-              </button>
-            )}
-            {access.create && (
-              <button type="button" onClick={createQuotation} className={ghostBtn}>
-                <FilePlus2 size={13} /> {quotations.length === 0 ? 'Create quotation' : 'New quotation'}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={onComplete}
-              disabled={!handIn || completing}
-              title={handIn ? undefined : 'Create the quotation first'}
-              className="btn-raised-accent inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12.5px] font-semibold whitespace-nowrap disabled:opacity-60"
-            >
-              <CheckCircle2 size={14} /> {completing ? 'Saving…' : 'Mark completed'}
-            </button>
-          </>
+          <button
+            type="button"
+            onClick={onComplete}
+            disabled={!handIn || completing}
+            title={handIn ? undefined : 'Create the quotation first'}
+            className="btn-raised-accent inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12.5px] font-semibold whitespace-nowrap disabled:opacity-60"
+          >
+            <CheckCircle2 size={14} /> {completing ? 'Saving…' : 'Mark completed'}
+          </button>
         ) : (
           <button type="button" onClick={onClose} className="px-4 py-2 rounded-[10px] text-[13px] font-medium text-text-700 hover:bg-background-700">
             Close

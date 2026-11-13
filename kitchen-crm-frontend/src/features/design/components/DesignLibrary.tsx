@@ -13,6 +13,7 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { RotateCcw, Upload } from 'lucide-react';
 import { STATUS_PILL } from '@/features/customers/components/CustomerList';
+import { usePermissions } from '@/features/permissions/usePermissions';
 import { useGetDesignLibraryQuery } from '../designAPI';
 import { fileKindLabel } from '../designFiles';
 import {
@@ -90,6 +91,9 @@ export const DesignLibrary: React.FC<Props> = ({ onOpen, otherFinished, canRedes
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [uploadFor, setUploadFor] = useState<UploadDesignTarget | null>(null);
   const [redesign, setRedesign] = useState<DesignJob | null>(null);
+  // Saving a missing design is uploading a customer's design: the Customers permission decides it.
+  const { can } = usePermissions();
+  const canUploadDesign = can('customers.upload_design');
 
   const libraryRows: Row[] = useMemo(
     () =>
@@ -300,7 +304,7 @@ export const DesignLibrary: React.FC<Props> = ({ onOpen, otherFinished, canRedes
                             {fileKindLabel(d.currentDesignFile.originalFileName)}
                           </a>
                         )}
-                        {!d && (
+                        {!d && canUploadDesign && (
                           <button
                             type="button"
                             onClick={() =>

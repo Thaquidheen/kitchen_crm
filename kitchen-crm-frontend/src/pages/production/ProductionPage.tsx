@@ -23,6 +23,8 @@ import { Input } from '@/components/ui/Input';
 import { useGetCustomersPageQuery } from '@/features/customers/customersAPI';
 import { useGetStaffQuery } from '@/features/staff/staffAPI';
 import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
+import { usePermissions } from '@/features/permissions/usePermissions';
+import { NoAccess } from '@/features/permissions/NoAccess';
 
 type Bucket = 'all' | 'not_started' | 's1' | 's2' | 's3' | 'inprog' | 'completed';
 
@@ -85,6 +87,14 @@ export function ProductionPage() {
   const [issueFor, setIssueFor] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const isSuperAdmin = useIsSuperAdmin();
+  const { can, ready: permissionsReady } = usePermissions();
+  // Each matches a server rule: the lists are production.view; opening a job (every read under
+  // /production-installation/customer/…) is customers.production; starting one and pending works
+  // have their own switch. A control that would only be refused is not shown.
+  const canView = can('production.view');
+  const canOpenJob = can('customers.production');
+  const canStart = can('production.start');
+  const canPendingWork = can('production.pending_works');
 
   // Create modal
   const [createOpen, setCreateOpen] = useState(false);
@@ -103,8 +113,8 @@ export function ProductionPage() {
     size: 100,
     sortBy: 'createdAt',
     sortDir: 'desc',
-  });
-  useGetProductionStatisticsQuery(); // keeps the cache warm for the dashboard
+  }, { skip: !canView });
+  useGetProductionStatisticsQuery(undefined, { skip: !canView }); // keeps the cache warm for the dashboard
 
   const allRows: any[] = listResponse?.data?.content ?? [];
   const totalElements = listResponse?.data?.totalElements ?? 0;
@@ -193,6 +203,12 @@ export function ProductionPage() {
     return pill(meta.st ?? 'draft', meta.label);
   };
 
+  const openJob = (customerId: number) => {
+    if (canOpenJob) {
+      navigate(`/production/customer/${customerId}`);
+    }
+  };
+
   const hasFilters = bucket !== 'all' || !!customerName || !!projectManager || !!teamLead;
   const clearFilters = () => {
     setBucket('all');
@@ -200,6 +216,10 @@ export function ProductionPage() {
     setProjectManager('');
     setTeamLead('');
   };
+
+  if (permissionsReady && !canView) {
+    return <NoAccess what="production" />;
+  }
 
   return (
     <div className="w-full">
@@ -217,15 +237,17 @@ export function ProductionPage() {
           </p>
         </div>
         <div className="flex-1" />
-        <button
-          onClick={openCreate}
-          className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold"
-        >
-          <span className="w-5 h-5 rounded-md bg-white/20 backdrop-blur-[2px] flex items-center justify-center shrink-0">
-            <Plus size={14} />
-          </span>
-          Start Production
-        </button>
+        {canStart && (
+          <button
+            onClick={openCreate}
+            className="btn-raised-accent inline-flex items-center gap-2 px-3.5 py-[7px] rounded-[10px] text-[13px] font-semibold"
+          >
+            <span className="w-5 h-5 rounded-md bg-white/20 backdrop-blur-[2px] flex items-center justify-center shrink-0">
+              <Plus size={14} />
+            </span>
+            Start Production
+          </button>
+        )}
       </div>
 
       {/* Stage chips */}
@@ -334,7 +356,8 @@ export function ProductionPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-background-600">
-              {isLoading ? (
+              {/* Until the permissions are known the list is not asked for: keep the skeleton up. */}
+              {isLoading || !permissionsReady ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
                     {Array.from({ length: 7 }).map((__, j) => (
@@ -357,7 +380,7 @@ export function ProductionPage() {
                       >
                         Clear filters
                       </button>
-                    ) : (
+                    ) : canStart ? (
                       <button
                         onClick={openCreate}
                         className="mt-3 btn-raised-accent inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-[10px] text-[12.5px] font-semibold"
@@ -365,7 +388,7 @@ export function ProductionPage() {
                         <Plus size={13} />
                         Start Production
                       </button>
-                    )}
+                    ) : null}
                   </td>
                 </tr>
               ) : (
@@ -377,8 +400,8 @@ export function ProductionPage() {
                   return (
                     <tr
                       key={r.id}
-                      onClick={() => navigate(`/production/customer/${r.customerId}`)}
-                      className="hover:bg-background-700 transition-colors cursor-pointer"
+                      onClick={() => openJob(r.customerId)}
+                      className={`hover:bg-background-700 transition-colors ${canOpenJob ? 'cursor-pointer' : ''}`}
                     >
                       <td className="px-3.5 py-[13px]">
                         <div className="flex items-center gap-2.5 min-w-0">
@@ -454,34 +477,38 @@ export function ProductionPage() {
                       </td>
                       <td className="px-3.5 py-[13px]">
                         <div className="flex justify-end gap-0.5">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/production/customer/${r.customerId}`);
-                            }}
-                            title="View job"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors"
-                          >
-                            <Eye size={14} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setIssueFor(r.customerId);
-                            }}
-                            title="Add pending work"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 transition-colors"
-                            onMouseEnter={(ev) => {
-                              ev.currentTarget.style.background = 'var(--st-potential-bg)';
-                              ev.currentTarget.style.color = 'var(--st-potential-fg)';
-                            }}
-                            onMouseLeave={(ev) => {
-                              ev.currentTarget.style.background = 'transparent';
-                              ev.currentTarget.style.color = '';
-                            }}
-                          >
-                            <AlertTriangle size={14} />
-                          </button>
+                          {canOpenJob && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openJob(r.customerId);
+                              }}
+                              title="View job"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors"
+                            >
+                              <Eye size={14} />
+                            </button>
+                          )}
+                          {canPendingWork && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIssueFor(r.customerId);
+                              }}
+                              title="Add pending work"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 transition-colors"
+                              onMouseEnter={(ev) => {
+                                ev.currentTarget.style.background = 'var(--st-potential-bg)';
+                                ev.currentTarget.style.color = 'var(--st-potential-fg)';
+                              }}
+                              onMouseLeave={(ev) => {
+                                ev.currentTarget.style.background = 'transparent';
+                                ev.currentTarget.style.color = '';
+                              }}
+                            >
+                              <AlertTriangle size={14} />
+                            </button>
+                          )}
                           {isSuperAdmin && (
                             <button
                               onClick={(e) => {

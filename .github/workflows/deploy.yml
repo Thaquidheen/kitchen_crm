@@ -78,6 +78,22 @@ jobs:
             $COMPOSE up -d --no-deps nginx
             docker restart kitchen_crm_nginx
 
+            # Docker's forward rules for the app's network have twice gone missing after this restart
+            # (something on the server rewrites Docker's chains). The site then still answers on the
+            # server itself, so the smoke test below passes, but visitors from outside get nothing.
+            # Put back exactly the three rules Docker would add for this network, only if missing.
+            # Best effort: nothing here may stop the deploy (or skip the smoke test and the roll-back
+            # hint below); inside this block a failing command is reported, not fatal.
+            {
+              BR="br-$(docker network inspect -f '{{.Id}}' kitchen-crm-backend_kitchen-crm-network | cut -c1-12)"
+              iptables -C DOCKER-CT -o "$BR" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT 2>/dev/null \
+                || iptables -I DOCKER-CT 1 -o "$BR" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+              iptables -C DOCKER-BRIDGE -o "$BR" -j DOCKER 2>/dev/null || iptables -I DOCKER-BRIDGE 1 -o "$BR" -j DOCKER
+              iptables -C DOCKER-FORWARD -i "$BR" -j ACCEPT 2>/dev/null || iptables -A DOCKER-FORWARD -i "$BR" -j ACCEPT
+              iptables -C FORWARD -j DOCKER-FORWARD 2>/dev/null || echo "WARN: FORWARD no longer passes through DOCKER-FORWARD"
+              echo "Forward rules for $BR: $(iptables -S | grep -c -- "$BR" || true) (3 or more expected)"
+            } || echo "WARN: could not restore the Docker forward rules; check the site from outside"
+
             if [ "$ok" = 1 ]; then
               docker logs kitchen_crm_backend --since "$SINCE" 2>&1 | grep -iE "Migrating schema|Successfully applied|Schema .* is up to date|Started .* in " || true
               sleep 3

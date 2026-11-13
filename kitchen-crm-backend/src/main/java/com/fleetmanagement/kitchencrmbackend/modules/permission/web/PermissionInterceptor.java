@@ -24,9 +24,14 @@ import java.util.Set;
  * {@link #RULES}; the first rule that matches decides. A call no rule mentions is not restricted
  * here (it may still carry its own role check).
  *
- * <p>Two things cannot be decided from the address alone and are checked where they happen:
- * what a person without {@code customers.view} gets back (CustomerController trims the answer),
- * and reminders or design uploads whose meaning depends on what is sent (their controllers ask).
+ * <p>Some things cannot be decided from the address alone and are checked where they happen:
+ * what a person without {@code customers.view} or {@code architects.view} gets back (CustomerController
+ * and ArchitectController trim the answer), and what depends on what is sent — adding a reminder
+ * (by what it is on), a design upload, and making a vendor inactive through an edit (their
+ * controllers ask).
+ *
+ * <p>A rule can only refuse. Where the controller itself keeps something to the administrator or
+ * to one staff type, a permission switched on does not open it.
  */
 @Component
 public class PermissionInterceptor implements HandlerInterceptor {
@@ -35,7 +40,13 @@ public class PermissionInterceptor implements HandlerInterceptor {
     private static final Set<String> READ = Set.of("GET");
     private static final Set<String> WRITE = Set.of("POST", "PUT", "PATCH", "DELETE");
 
-    /** methods, address pattern, permission needed. */
+    /**
+     * methods, address pattern, permission needed. A null permission marks an address that stays
+     * open on purpose: it stops the search, so a broader rule below cannot catch it. That is how a
+     * one-segment rule for "any id" ('*') lives next to fixed addresses such as /me. A digits-only
+     * pattern cannot do that job: Spring also reads "0x5", "+5" or " 5" as the id 5, and those
+     * would match no rule at all.
+     */
     record Rule(Set<String> methods, String pattern, Permission permission) {
     }
 
@@ -87,15 +98,121 @@ public class PermissionInterceptor implements HandlerInterceptor {
             new Rule(Set.of("PUT"), "/api/v1/quotations/*", Permission.QUOTATIONS_EDIT),
             new Rule(READ, "/api/v1/quotations", Permission.QUOTATIONS_VIEW),
             new Rule(READ, "/api/v1/quotations/**", Permission.QUOTATIONS_VIEW),
-            // ---- a customer's production (the overview lists of the Production page stay open)
-            new Rule(ANY, "/api/v1/production-installation/customer/**", Permission.CUSTOMERS_PRODUCTION),
-            new Rule(Set.of("POST"), "/api/v1/production-installation", Permission.CUSTOMERS_PRODUCTION),
-            new Rule(ANY, "/api/v1/production/task-groups", Permission.CUSTOMERS_PRODUCTION),
-            new Rule(ANY, "/api/v1/production/task-groups/**", Permission.CUSTOMERS_PRODUCTION),
-            new Rule(ANY, "/api/v1/production-custom-tasks", Permission.CUSTOMERS_PRODUCTION),
-            new Rule(ANY, "/api/v1/production-custom-tasks/**", Permission.CUSTOMERS_PRODUCTION),
-            new Rule(ANY, "/api/v1/production/issues", Permission.CUSTOMERS_PRODUCTION),
-            new Rule(ANY, "/api/v1/production/issues/**", Permission.CUSTOMERS_PRODUCTION)
+            // ---- customer approval of a quotation: the two calls the Digital Signature panel makes
+            // (and the approved PDF's download). Everything else under /signatures is the
+            // administrator's on the controller.
+            new Rule(Set.of("POST"), "/api/v1/signatures/quotations/*/send-for-signature",
+                    Permission.QUOTATIONS_SEND_FOR_APPROVAL),
+            new Rule(READ, "/api/v1/signatures/quotations/*/documents", Permission.QUOTATIONS_VIEW),
+            new Rule(READ, "/api/v1/signatures/documents/*/download", Permission.QUOTATIONS_VIEW),
+
+            // ---- the quotation work board. /me, /feed and /seen stay open: the bell and the Quotations
+            // page ask them for everyone.
+            new Rule(Set.of("PUT"), "/api/v1/quotation-jobs/seen", null),
+            new Rule(READ, "/api/v1/quotation-jobs", Permission.QUOTATION_WORK_VIEW),
+            new Rule(Set.of("PUT"), "/api/v1/quotation-jobs/*/start", Permission.QUOTATION_WORK_PREPARE),
+            new Rule(Set.of("PUT"), "/api/v1/quotation-jobs/*/complete", Permission.QUOTATION_WORK_PREPARE),
+            new Rule(Set.of("POST"), "/api/v1/quotation-jobs/assign", Permission.QUOTATION_WORK_ASSIGN),
+            new Rule(READ, "/api/v1/quotation-jobs/unassigned", Permission.QUOTATION_WORK_ASSIGN),
+            new Rule(READ, "/api/v1/quotation-jobs/assignees", Permission.QUOTATION_WORK_ASSIGN),
+            new Rule(Set.of("PUT"), "/api/v1/quotation-jobs/reorder", Permission.QUOTATION_WORK_CHANGE),
+            new Rule(Set.of("PUT"), "/api/v1/quotation-jobs/*", Permission.QUOTATION_WORK_CHANGE),
+            new Rule(Set.of("PUT"), "/api/v1/quotation-jobs/*/cancel", Permission.QUOTATION_WORK_REMOVE),
+
+            // ---- designs. /me, /designers, /my-feed and the customer's design stay open: the sidebar,
+            // the bell and the customer page ask them for everyone. The administrator's own actions
+            // (assign, review, redesign) keep their role check on the controller.
+            new Rule(READ, "/api/v1/design-jobs/me", null),
+            new Rule(READ, "/api/v1/design-jobs/designers", null),
+            new Rule(READ, "/api/v1/design-jobs/my-feed", null),
+            new Rule(READ, "/api/v1/design-jobs/attention", null),
+            new Rule(READ, "/api/v1/design-jobs", Permission.DESIGNS_VIEW),
+            new Rule(READ, "/api/v1/design-jobs/*", Permission.DESIGNS_VIEW),
+            new Rule(Set.of("POST"), "/api/v1/design-jobs/customer/*/plan-documents", Permission.DESIGNS_ADD_PLANS),
+            new Rule(Set.of("POST"), "/api/v1/design-jobs/*/plan-documents", Permission.DESIGNS_ADD_PLANS),
+            new Rule(Set.of("POST"), "/api/v1/design-jobs/*/files", Permission.DESIGNS_UPLOAD_FILES),
+            new Rule(Set.of("DELETE"), "/api/v1/design-jobs/*/files/*", Permission.DESIGNS_REMOVE_FILES),
+            new Rule(Set.of("PUT"), "/api/v1/design-jobs/*/start", Permission.DESIGNS_WORK),
+            new Rule(Set.of("PUT"), "/api/v1/design-jobs/*/complete", Permission.DESIGNS_WORK),
+            new Rule(Set.of("POST"), "/api/v1/design-jobs/*/notes", Permission.DESIGNS_CONVERSATION),
+
+            // ---- production. Opening a job is customers.production; each kind of change has its own
+            // permission, which only works together with it (Permission.requires). Handover and
+            // deleting a job keep their administrator check on the controller. The job rules come
+            // before the Production page's lists, whose /** would otherwise catch them.
+            new Rule(READ, "/api/v1/production-installation/customer/**", Permission.CUSTOMERS_PRODUCTION),
+            new Rule(Set.of("POST"), "/api/v1/production-installation/customer/*/apply-standard-stages",
+                    Permission.PRODUCTION_START),
+            new Rule(WRITE, "/api/v1/production-installation/customer/**", Permission.PRODUCTION_EDIT_JOB),
+            new Rule(Set.of("POST"), "/api/v1/production-installation", Permission.PRODUCTION_START),
+            new Rule(READ, "/api/v1/production-installation", Permission.PRODUCTION_VIEW),
+            new Rule(READ, "/api/v1/production-installation/**", Permission.PRODUCTION_VIEW),
+            new Rule(READ, "/api/v1/production/task-groups", Permission.CUSTOMERS_PRODUCTION),
+            new Rule(READ, "/api/v1/production/task-groups/**", Permission.CUSTOMERS_PRODUCTION),
+            new Rule(Set.of("DELETE"), "/api/v1/production/task-groups/*", Permission.PRODUCTION_CHECKLIST_DELETE),
+            new Rule(WRITE, "/api/v1/production/task-groups", Permission.PRODUCTION_CHECKLIST),
+            new Rule(WRITE, "/api/v1/production/task-groups/**", Permission.PRODUCTION_CHECKLIST),
+            new Rule(READ, "/api/v1/production-custom-tasks", Permission.CUSTOMERS_PRODUCTION),
+            new Rule(READ, "/api/v1/production-custom-tasks/**", Permission.CUSTOMERS_PRODUCTION),
+            new Rule(Set.of("PATCH"), "/api/v1/production-custom-tasks/*/toggle", Permission.PRODUCTION_TICK),
+            new Rule(Set.of("POST"), "/api/v1/production-custom-tasks/*/reminder", Permission.PRODUCTION_REMINDERS),
+            new Rule(Set.of("DELETE"), "/api/v1/production-custom-tasks/*", Permission.PRODUCTION_CHECKLIST_DELETE),
+            new Rule(WRITE, "/api/v1/production-custom-tasks", Permission.PRODUCTION_CHECKLIST),
+            new Rule(WRITE, "/api/v1/production-custom-tasks/**", Permission.PRODUCTION_CHECKLIST),
+            new Rule(READ, "/api/v1/production/issues", Permission.CUSTOMERS_PRODUCTION),
+            new Rule(READ, "/api/v1/production/issues/**", Permission.CUSTOMERS_PRODUCTION),
+            new Rule(WRITE, "/api/v1/production/issues", Permission.PRODUCTION_PENDING_WORKS),
+            new Rule(WRITE, "/api/v1/production/issues/**", Permission.PRODUCTION_PENDING_WORKS),
+
+            // ---- Appliance & Quartz
+            new Rule(ANY, "/api/v1/appliance-customers/*/followups", Permission.APPLIANCE_FOLLOWUPS),
+            new Rule(ANY, "/api/v1/appliance-customers/*/followups/*", Permission.APPLIANCE_FOLLOWUPS),
+            new Rule(WRITE, "/api/v1/appliance-customers/*/quotations", Permission.APPLIANCE_FILES),
+            new Rule(WRITE, "/api/v1/appliance-customers/*/quotations/*", Permission.APPLIANCE_FILES),
+            new Rule(Set.of("POST"), "/api/v1/appliance-customers", Permission.APPLIANCE_ADD),
+            new Rule(Set.of("PUT"), "/api/v1/appliance-customers/*", Permission.APPLIANCE_EDIT),
+            new Rule(Set.of("DELETE"), "/api/v1/appliance-customers/*", Permission.APPLIANCE_DELETE),
+            new Rule(READ, "/api/v1/appliance-customers", Permission.APPLIANCE_VIEW),
+            new Rule(READ, "/api/v1/appliance-customers/**", Permission.APPLIANCE_VIEW),
+            new Rule(READ, "/api/v1/reminders/appliance/*", Permission.APPLIANCE_REMINDERS),
+
+            // ---- reminders in general. A customer's reminders are above. /notifications stays open
+            // (the bell). Adding one is decided by what it is on, in CustomerReminderController.
+            new Rule(READ, "/api/v1/reminders", Permission.REMINDERS_VIEW),
+            new Rule(READ, "/api/v1/reminders/stats", Permission.REMINDERS_VIEW),
+            new Rule(READ, "/api/v1/reminders/open", Permission.REMINDERS_VIEW),
+            new Rule(Set.of("PATCH"), "/api/v1/reminders/*/done", Permission.REMINDERS_DONE),
+            new Rule(Set.of("PUT"), "/api/v1/reminders/*", Permission.REMINDERS_EDIT),
+            new Rule(Set.of("DELETE"), "/api/v1/reminders/*", Permission.REMINDERS_DELETE),
+
+            // ---- to-dos and tasks. The administrator's own task screens keep their role check on
+            // the controller; the administrator passes every permission anyway.
+            new Rule(ANY, "/api/v1/tasks/admin-todo", Permission.TASKS_TODOS),
+            new Rule(ANY, "/api/v1/tasks/admin-todo/**", Permission.TASKS_TODOS),
+            new Rule(ANY, "/api/v1/tasks/employee", Permission.TASKS_MINE),
+            new Rule(ANY, "/api/v1/tasks/employee/**", Permission.TASKS_MINE),
+
+            // ---- vendors. Making one inactive through an edit is checked in VendorController.
+            new Rule(Set.of("POST"), "/api/v1/vendors", Permission.VENDORS_ADD),
+            new Rule(Set.of("PUT"), "/api/v1/vendors/*", Permission.VENDORS_EDIT),
+            new Rule(Set.of("DELETE"), "/api/v1/vendors/*", Permission.VENDORS_DEACTIVATE),
+            new Rule(READ, "/api/v1/vendors", Permission.VENDORS_VIEW),
+            new Rule(READ, "/api/v1/vendors/**", Permission.VENDORS_VIEW),
+
+            // ---- architects and builders. /all stays open: the customer form picks one from it, and
+            // ArchitectController gives only names to someone without architects.view.
+            new Rule(READ, "/api/v1/architects/all", null),
+            new Rule(READ, "/api/v1/architects", Permission.ARCHITECTS_VIEW),
+            new Rule(READ, "/api/v1/architects/*", Permission.ARCHITECTS_VIEW),
+            new Rule(READ, "/api/v1/architects/*/visits", Permission.ARCHITECTS_VIEW),
+            new Rule(READ, "/api/v1/architects/*/notes", Permission.ARCHITECTS_VIEW),
+            new Rule(Set.of("POST"), "/api/v1/architects/*/visits", Permission.ARCHITECTS_VISITS),
+            new Rule(Set.of("POST"), "/api/v1/architects/*/visits/quick", Permission.ARCHITECTS_VISITS),
+            new Rule(Set.of("DELETE"), "/api/v1/architects/*/visits/*", Permission.ARCHITECTS_VISITS),
+            new Rule(Set.of("POST"), "/api/v1/architects/*/notes", Permission.ARCHITECTS_EDIT),
+            new Rule(Set.of("POST"), "/api/v1/architects", Permission.ARCHITECTS_ADD),
+            new Rule(Set.of("PUT"), "/api/v1/architects/*", Permission.ARCHITECTS_EDIT),
+            new Rule(Set.of("DELETE"), "/api/v1/architects/*", Permission.ARCHITECTS_DELETE)
     );
 
     private static final AntPathMatcher MATCHER = new AntPathMatcher();

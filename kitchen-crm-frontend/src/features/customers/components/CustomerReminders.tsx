@@ -16,6 +16,7 @@ import {
   useMarkReminderDoneMutation,
   useDeleteReminderMutation,
 } from '@/app/baseApi';
+import { usePermissions } from '@/features/permissions/usePermissions';
 
 export interface CustomerReminder {
   id: number;
@@ -38,11 +39,15 @@ export function CustomerReminders({ customerId, applianceCustomerId }: CustomerR
   // A reminder belongs to either a customer or an Appliance & Quartz entry; this component
   // serves both, so only the relevant query runs.
   const isAppliance = applianceCustomerId != null;
+  // Seeing and adding them follows the owner's module (customers.reminders or appliance.reminders);
+  // changing, ticking off and deleting follow the Reminders permissions, wherever the reminder is.
+  const { can, ready: permissionsReady } = usePermissions();
+  const canOwner = can(isAppliance ? 'appliance.reminders' : 'customers.reminders');
   const customerQuery = useGetCustomerRemindersQuery(customerId as number, {
-    skip: isAppliance || customerId == null,
+    skip: isAppliance || customerId == null || !canOwner,
   });
   const applianceQuery = useGetApplianceRemindersQuery(applianceCustomerId as number, {
-    skip: !isAppliance,
+    skip: !isAppliance || !canOwner,
   });
   const reminders: CustomerReminder[] = (isAppliance ? applianceQuery.data : customerQuery.data) ?? [];
   const isLoading = isAppliance ? applianceQuery.isLoading : customerQuery.isLoading;
@@ -50,6 +55,9 @@ export function CustomerReminders({ customerId, applianceCustomerId }: CustomerR
   const [updateReminder, { isLoading: isUpdating }] = useUpdateReminderMutation();
   const [markDone] = useMarkReminderDoneMutation();
   const [deleteReminder] = useDeleteReminderMutation();
+  const canEdit = can('reminders.edit');
+  const canDone = can('reminders.done');
+  const canDelete = can('reminders.delete');
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CustomerReminder | null>(null);
@@ -129,13 +137,19 @@ export function CustomerReminders({ customerId, applianceCustomerId }: CustomerR
           <AlarmClock className="h-5 w-5 text-primary-600" />
           Reminders
         </h2>
-        <Button variant="primary" size="sm" onClick={openAdd} className="flex items-center gap-1.5">
-          <Plus className="h-4 w-4" />
-          Add Reminder
-        </Button>
+        {canOwner && (
+          <Button variant="primary" size="sm" onClick={openAdd} className="flex items-center gap-1.5">
+            <Plus className="h-4 w-4" />
+            Add Reminder
+          </Button>
+        )}
       </div>
 
-      {isLoading ? (
+      {permissionsReady && !canOwner ? (
+        <p className="text-text-600 text-sm py-4">
+          You do not have access to these reminders. Ask the administrator to allow it in Permissions.
+        </p>
+      ) : isLoading || !permissionsReady ? (
         <p className="text-text-600 text-sm py-4">Loading reminders...</p>
       ) : reminders.length === 0 ? (
         <p className="text-text-600 text-sm py-4">No reminders yet. Add one to get notified at the right time.</p>
@@ -145,14 +159,14 @@ export function CustomerReminders({ customerId, applianceCustomerId }: CustomerR
             const done = r.status === 'DONE';
             return (
               <div key={r.id} className="py-3 flex items-start gap-3">
-                {/* Circle check: click to mark done */}
+                {/* Circle check: click to mark done (a plain marker when ticking off is not allowed) */}
                 <button
-                  onClick={() => !done && handleDone(r.id)}
-                  title={done ? 'Done' : 'Mark done'}
-                  disabled={done}
+                  onClick={() => !done && canDone && handleDone(r.id)}
+                  title={done ? 'Done' : canDone ? 'Mark done' : undefined}
+                  disabled={done || !canDone}
                   className={`mt-0.5 w-[20px] h-[20px] rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                    done
-                      ? 'cursor-default'
+                    done || !canDone
+                      ? `cursor-default${done ? '' : ' border-background-500'}`
                       : 'border-background-500 hover:border-primary-600 cursor-pointer'
                   }`}
                   style={
@@ -188,14 +202,16 @@ export function CustomerReminders({ customerId, applianceCustomerId }: CustomerR
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
-                  {!done && (
+                  {!done && canEdit && (
                     <Button variant="ghost" size="sm" onClick={() => openEdit(r)} title="Edit" className="p-1.5">
                       <Pencil className="h-4 w-4" />
                     </Button>
                   )}
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} title="Delete" className="p-1.5 text-error hover:text-error">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {canDelete && (
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} title="Delete" className="p-1.5 text-error hover:text-error">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             );

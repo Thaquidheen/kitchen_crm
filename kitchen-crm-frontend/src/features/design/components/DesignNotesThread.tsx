@@ -13,9 +13,11 @@ import { fmtReminderDateTime } from '@/utils/reminderFormat';
 interface Props {
   job: DesignJob;
   viewer: 'admin' | 'designer';
+  /** False when the administrator has not allowed this person to write here: they still read it. */
+  canWrite?: boolean;
 }
 
-export const DesignNotesThread: React.FC<Props> = ({ job, viewer }) => {
+export const DesignNotesThread: React.FC<Props> = ({ job, viewer, canWrite = true }) => {
   const [text, setText] = useState('');
   const [addNote, { isLoading: sending }] = useAddDesignNoteMutation();
   const [markSeen] = useMarkDesignSeenMutation();
@@ -51,7 +53,7 @@ export const DesignNotesThread: React.FC<Props> = ({ job, viewer }) => {
     <div>
       {notes.length === 0 ? (
         <p className="m-0 py-2 text-[12px] text-text-500">
-          {viewer === 'designer' ? 'Any question about this design? Write to the admin here.' : 'No notes yet.'}
+          {viewer === 'designer' && canWrite ? 'Any question about this design? Write to the admin here.' : 'No notes yet.'}
         </p>
       ) : (
         <div ref={listRef} className="max-h-[240px] overflow-y-auto flex flex-col gap-2 py-1">
@@ -92,33 +94,37 @@ export const DesignNotesThread: React.FC<Props> = ({ job, viewer }) => {
           })}
         </div>
       )}
-      <div className="flex items-end gap-2 mt-2">
-        <textarea
-          value={text}
-          rows={1}
-          maxLength={2000}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              send();
-            }
-          }}
-          placeholder={viewer === 'designer' ? 'Write to the admin…' : `Write to ${job.designerName ?? 'the designer'}…`}
-          aria-label="Note"
-          className="flex-1 min-h-[36px] max-h-[120px] px-3 py-2 rounded-[10px] border border-background-600 bg-background-900 text-text-900 text-[13px] outline-none focus:border-primary-600 transition-colors placeholder:text-text-500 resize-y"
-        />
-        <button
-          type="button"
-          onClick={send}
-          disabled={sending || !text.trim()}
-          className="btn-raised-accent inline-flex items-center gap-1.5 h-[36px] px-3.5 rounded-[10px] text-[13px] font-semibold disabled:opacity-50"
-        >
-          <Send size={14} />
-          {sending ? 'Sending…' : 'Send'}
-        </button>
-      </div>
-      <p className="m-0 mt-1 text-[11px] text-text-500">Enter to send · Shift+Enter for a new line</p>
+      {canWrite && (
+        <>
+          <div className="flex items-end gap-2 mt-2">
+            <textarea
+              value={text}
+              rows={1}
+              maxLength={2000}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  send();
+                }
+              }}
+              placeholder={viewer === 'designer' ? 'Write to the admin…' : `Write to ${job.designerName ?? 'the designer'}…`}
+              aria-label="Note"
+              className="flex-1 min-h-[36px] max-h-[120px] px-3 py-2 rounded-[10px] border border-background-600 bg-background-900 text-text-900 text-[13px] outline-none focus:border-primary-600 transition-colors placeholder:text-text-500 resize-y"
+            />
+            <button
+              type="button"
+              onClick={send}
+              disabled={sending || !text.trim()}
+              className="btn-raised-accent inline-flex items-center gap-1.5 h-[36px] px-3.5 rounded-[10px] text-[13px] font-semibold disabled:opacity-50"
+            >
+              <Send size={14} />
+              {sending ? 'Sending…' : 'Send'}
+            </button>
+          </div>
+          <p className="m-0 mt-1 text-[11px] text-text-500">Enter to send · Shift+Enter for a new line</p>
+        </>
+      )}
     </div>
   );
 };

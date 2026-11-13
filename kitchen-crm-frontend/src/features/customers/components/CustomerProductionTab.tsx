@@ -26,6 +26,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useGetCustomerRemindersQuery } from '@/app/baseApi';
 import { useIsSuperAdmin } from '@/features/auth/useIsSuperAdmin';
+import { usePermissions } from '@/features/permissions/usePermissions';
+import { NoAccess } from '@/features/permissions/NoAccess';
 import { ProductionCreateModal } from '../../production/components/ProductionCreateModal';
 import { ProductionTaskChecklist } from '../../production/components/ProductionTaskChecklist';
 import { ReportIssueModal } from '../../production/components/ReportIssueModal';
@@ -69,8 +71,21 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
   const [newStageTitle, setNewStageTitle] = useState('');
   const [handoverOpen, setHandoverOpen] = useState(false);
   const isSuperAdmin = useIsSuperAdmin();
+  const { can, ready: permissionsReady } = usePermissions();
+  // Used on the customer page and on the Production page's job view. Every read of the job is
+  // customers.production; each kind of change has its own switch (the server refuses the rest), so
+  // a control is shown only when its call would be let through.
+  const canOpen = can('customers.production');
+  const canStart = can('production.start');
+  const canChangeChecklist = can('production.checklist');
+  const canPendingWork = can('production.pending_works');
+  // The reminders card reads /reminders/customer/{id}, which is the customer's Reminders permission.
+  const canSeeReminders = can('customers.reminders');
 
-  const { data: productionResponse, isLoading, error, refetch } = useGetProductionInstallationByCustomerQuery(customerId);
+  const { data: productionResponse, isLoading, error, refetch } = useGetProductionInstallationByCustomerQuery(
+    customerId,
+    { skip: !canOpen }
+  );
   const [createProductionInstallation] = useCreateProductionInstallationMutation();
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
   const [createTaskGroup, { isLoading: isAddingStage }] = useCreateTaskGroupMutation();
@@ -130,16 +145,16 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
   const production: any = productionResponse?.success ? productionResponse?.data : null;
 
   // Same query the checklist uses — RTK dedupes, so this costs nothing extra.
-  const { data: groupsResponse } = useGetTaskGroupsByCustomerQuery(customerId, { skip: !production });
+  const { data: groupsResponse } = useGetTaskGroupsByCustomerQuery(customerId, { skip: !canOpen || !production });
   const taskGroups: any[] = groupsResponse?.success ? groupsResponse.data || [] : [];
 
-  const { data: remindersData } = useGetCustomerRemindersQuery(customerId, { skip: !production });
+  const { data: remindersData } = useGetCustomerRemindersQuery(customerId, { skip: !canSeeReminders || !production });
   const openReminders: any[] = useMemo(
     () => (remindersData ?? []).filter((r: any) => r.status !== 'DONE').slice(0, 3),
     [remindersData]
   );
 
-  const { data: issuesResponse } = useGetIssuesByCustomerQuery(customerId, { skip: !production });
+  const { data: issuesResponse } = useGetIssuesByCustomerQuery(customerId, { skip: !canOpen || !production });
   const openIssues: any[] = useMemo(
     () => (issuesResponse?.data ?? []).filter((i: any) => i.status !== 'RESOLVED' && i.status !== 'CLOSED'),
     [issuesResponse]
@@ -205,7 +220,12 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
   const noProductionExists = isNotFoundResponse || isNotFoundError;
   const isRealError = error && !isNotFoundError;
 
-  if (isLoading) {
+  if (permissionsReady && !canOpen) {
+    return <NoAccess what="production jobs" />;
+  }
+
+  // Until the permissions are known the job is not asked for: show the placeholder, not "no job yet".
+  if (isLoading || !permissionsReady) {
     return (
       <div className="bg-background-800 border border-background-600 rounded-[14px] p-5 animate-pulse">
         <div className="h-6 bg-background-700 rounded w-1/3 mb-3" />
@@ -236,24 +256,32 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
         <div className="bg-background-800 border border-dashed border-background-500 rounded-[14px] p-12 text-center">
           <Package className="w-10 h-10 text-text-500 mx-auto mb-3" />
           <h3 className="text-[14.5px] font-semibold text-text-900 mb-1">No production job yet</h3>
-          <p className="text-[12.5px] text-text-600 mb-5">
-            Starting production adds the standard 3-stage checklist (36 tasks) automatically.
-          </p>
-          <button
-            className="btn-raised-accent inline-flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] font-semibold"
-            onClick={() => setIsCreateModalOpen(true)}
-          >
-            <Package className="w-4 h-4" />
-            Initiate Production Phase
-          </button>
+          {canStart ? (
+            <>
+              <p className="text-[12.5px] text-text-600 mb-5">
+                Starting production adds the standard 3-stage checklist (36 tasks) automatically.
+              </p>
+              <button
+                className="btn-raised-accent inline-flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] font-semibold"
+                onClick={() => setIsCreateModalOpen(true)}
+              >
+                <Package className="w-4 h-4" />
+                Initiate Production Phase
+              </button>
+            </>
+          ) : (
+            <p className="text-[12.5px] text-text-600">Production has not been started for this customer.</p>
+          )}
         </div>
-        <ProductionCreateModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          onSubmit={handleCreateProductionInstallation}
-          customerId={customerId}
-          title="Create Production Installation"
-        />
+        {canStart && (
+          <ProductionCreateModal
+            isOpen={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+            onSubmit={handleCreateProductionInstallation}
+            customerId={customerId}
+            title="Create Production Installation"
+          />
+        )}
       </>
     );
   }
@@ -311,20 +339,24 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
             </div>
           </div>
           <div className="flex-1" />
-          <button
-            onClick={() => setIsReportIssueModalOpen(true)}
-            className="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-[10px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors"
-          >
-            <AlertTriangle className="w-3.5 h-3.5" style={{ color: 'var(--st-hold-fg, var(--st-potential-fg))' }} />
-            Add pending work
-          </button>
-          <button
-            onClick={() => setAddStageOpen(true)}
-            className="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-[10px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add Stage
-          </button>
+          {canPendingWork && (
+            <button
+              onClick={() => setIsReportIssueModalOpen(true)}
+              className="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-[10px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors"
+            >
+              <AlertTriangle className="w-3.5 h-3.5" style={{ color: 'var(--st-hold-fg, var(--st-potential-fg))' }} />
+              Add pending work
+            </button>
+          )}
+          {canChangeChecklist && (
+            <button
+              onClick={() => setAddStageOpen(true)}
+              className="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-[10px] border border-background-500 bg-background-800 text-text-900 text-[12.5px] font-medium hover:bg-background-700 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Stage
+            </button>
+          )}
           {/* Gated on the handover flag, not on status — status derives from the checklist and
               would hide this exactly when every task is done. */}
           {!production.handoverToClient && isSuperAdmin && (
@@ -472,36 +504,42 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
           </div>
 
           {/* Upcoming reminders */}
-          <div className="bg-background-800 border border-background-600 rounded-[14px] px-4 py-3.5">
-            <div className="flex items-center gap-2 mb-1.5">
-              <h4 className="m-0 text-[13px] font-[650] text-text-900">Upcoming reminders</h4>
-              <span className="text-[11px] font-[650] px-2 py-0.5 rounded-full bg-background-700 border border-background-600 text-text-700 tabular-nums">
-                {openReminders.length}
-              </span>
-              <span className="flex-1" />
-              <button
-                onClick={() => navigate('/reminders')}
-                className="text-[11.5px] font-semibold text-primary-600 hover:underline whitespace-nowrap"
-              >
-                View all
-              </button>
-            </div>
-            {openReminders.length === 0 ? (
-              <p className="m-0 text-[12px] text-text-500">None — use the bell on a task to set one.</p>
-            ) : (
-              openReminders.map((r: any) => (
-                <div key={r.id} className="flex items-center gap-2 py-1.5 border-t border-background-600 first:border-t-0 text-[12.5px]">
-                  <span className="flex-1 min-w-0 truncate text-text-800">{r.title}</span>
-                  <span
-                    className="text-[11px] font-semibold px-2 py-0.5 rounded-full tabular-nums shrink-0"
-                    style={{ background: 'var(--st-potential-bg)', color: 'var(--st-potential-fg)' }}
+          {canSeeReminders && (
+            <div className="bg-background-800 border border-background-600 rounded-[14px] px-4 py-3.5">
+              <div className="flex items-center gap-2 mb-1.5">
+                <h4 className="m-0 text-[13px] font-[650] text-text-900">Upcoming reminders</h4>
+                <span className="text-[11px] font-[650] px-2 py-0.5 rounded-full bg-background-700 border border-background-600 text-text-700 tabular-nums">
+                  {openReminders.length}
+                </span>
+                <span className="flex-1" />
+                {can('reminders.view') && (
+                  <button
+                    onClick={() => navigate('/reminders')}
+                    className="text-[11.5px] font-semibold text-primary-600 hover:underline whitespace-nowrap"
                   >
-                    {fmtDate(r.remindAt)}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
+                    View all
+                  </button>
+                )}
+              </div>
+              {openReminders.length === 0 ? (
+                <p className="m-0 text-[12px] text-text-500">
+                  {can('production.reminders') ? 'None — use the bell on a task to set one.' : 'None.'}
+                </p>
+              ) : (
+                openReminders.map((r: any) => (
+                  <div key={r.id} className="flex items-center gap-2 py-1.5 border-t border-background-600 first:border-t-0 text-[12.5px]">
+                    <span className="flex-1 min-w-0 truncate text-text-800">{r.title}</span>
+                    <span
+                      className="text-[11px] font-semibold px-2 py-0.5 rounded-full tabular-nums shrink-0"
+                      style={{ background: 'var(--st-potential-bg)', color: 'var(--st-potential-fg)' }}
+                    >
+                      {fmtDate(r.remindAt)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
 
           {/* Pending works */}
           <div className="bg-background-800 border border-background-600 rounded-[14px] px-4 py-3.5">
@@ -538,22 +576,24 @@ export const CustomerProductionTab: React.FC<CustomerProductionTabProps> = ({ cu
                       </span>
                     )}
                   </span>
-                  <button
-                    onClick={() => handleMarkDone(i.id)}
-                    disabled={resolvingIssueId === i.id}
-                    title="Mark done"
-                    className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-text-500 transition-colors disabled:opacity-50"
-                    onMouseEnter={(ev) => {
-                      ev.currentTarget.style.background = 'var(--st-confirmed-bg)';
-                      ev.currentTarget.style.color = 'var(--st-confirmed-fg)';
-                    }}
-                    onMouseLeave={(ev) => {
-                      ev.currentTarget.style.background = 'transparent';
-                      ev.currentTarget.style.color = '';
-                    }}
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                  </button>
+                  {canPendingWork && (
+                    <button
+                      onClick={() => handleMarkDone(i.id)}
+                      disabled={resolvingIssueId === i.id}
+                      title="Mark done"
+                      className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-text-500 transition-colors disabled:opacity-50"
+                      onMouseEnter={(ev) => {
+                        ev.currentTarget.style.background = 'var(--st-confirmed-bg)';
+                        ev.currentTarget.style.color = 'var(--st-confirmed-fg)';
+                      }}
+                      onMouseLeave={(ev) => {
+                        ev.currentTarget.style.background = 'transparent';
+                        ev.currentTarget.style.color = '';
+                      }}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               ))
             )}

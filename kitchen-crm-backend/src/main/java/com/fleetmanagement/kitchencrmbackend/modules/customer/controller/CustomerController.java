@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -59,6 +60,35 @@ public class CustomerController {
         dto.setCreatedAt(full.getCreatedAt());
         dto.setUpdatedAt(full.getUpdatedAt());
         return dto;
+    }
+
+    /**
+     * What a person without "See architects and builders" gets of the project network: who is
+     * involved (name, firm, partner type — what the architect picker gives them too) but not a
+     * linked architect's or builder's phone, which is the Architects module's to show. Referral
+     * people are typed on the customer itself and stay. The legacy leadSources holds the same
+     * entries as projectNetwork; both are cleared.
+     */
+    private static void hidePartnerContacts(CustomerDto dto) {
+        if (dto == null) {
+            return;
+        }
+        hideContactsIn(dto.getProjectNetwork());
+        hideContactsIn(dto.getLeadSources());
+    }
+
+    private static void hideContactsIn(List<ProjectNetworkMemberDto> members) {
+        if (members != null) {
+            members.forEach(m -> m.setArchitectContact(null));
+        }
+    }
+
+    /** Every customer answer carrying the network goes through here before it leaves. */
+    private void trimForViewer(ApiResponse<CustomerDto> response, UserPrincipal viewer) {
+        if (response != null && response.getData() != null
+                && !permissionService.can(viewer, Permission.ARCHITECTS_VIEW)) {
+            hidePartnerContacts(response.getData());
+        }
     }
 
     @GetMapping
@@ -101,6 +131,8 @@ public class CustomerController {
                         createdFromDt, createdToDt, starredOnly, pageable);
         if (!seesDetails && response.getData() != null) {
             response.setData(response.getData().map(CustomerController::nameOnly));
+        } else if (response.getData() != null && !permissionService.can(currentUser, Permission.ARCHITECTS_VIEW)) {
+            response.getData().getContent().forEach(CustomerController::hidePartnerContacts);
         }
         return ResponseEntity.ok(response);
     }
@@ -118,6 +150,7 @@ public class CustomerController {
             if (response.getData() != null && !permissionService.can(currentUser, Permission.CUSTOMERS_VIEW)) {
                 response.setData(nameOnly(response.getData()));
             }
+            trimForViewer(response, currentUser);
             return ResponseEntity.ok(response);
         } else {
             return ResponseEntity.notFound().build();
@@ -132,6 +165,7 @@ public class CustomerController {
         ApiResponse<CustomerDto> response = customerService.createCustomer(
                 customerCreateDto, currentUser.getName(),
                 permissionService.can(currentUser, Permission.CUSTOMERS_CHANGE_STAGE));
+        trimForViewer(response, currentUser);
 
         if (response.getSuccess()) {
             return ResponseEntity.ok(response);
@@ -148,6 +182,7 @@ public class CustomerController {
 
         ApiResponse<CustomerDto> response = customerService.updateCustomer(
                 id, customerDto, currentUser.getName());
+        trimForViewer(response, currentUser);
 
         if (response.getSuccess()) {
             return ResponseEntity.ok(response);
@@ -164,9 +199,11 @@ public class CustomerController {
     /** Star or unstar a customer: body {"highlighted": true|false}. Shared by the whole team. */
     @PatchMapping("/{id}/highlight")
     public ResponseEntity<ApiResponse<CustomerDto>> setHighlighted(@PathVariable Long id,
-                                                                   @RequestBody Map<String, Object> body) {
+                                                                   @RequestBody Map<String, Object> body,
+                                                                   @AuthenticationPrincipal UserPrincipal currentUser) {
         boolean on = body != null && Boolean.TRUE.equals(body.get("highlighted"));
         ApiResponse<CustomerDto> result = customerService.setHighlighted(id, on);
+        trimForViewer(result, currentUser);
         return Boolean.TRUE.equals(result.getSuccess())
                 ? ResponseEntity.ok(result)
                 : ResponseEntity.status(org.springframework.http.HttpStatus.NOT_FOUND).body(result);

@@ -26,6 +26,7 @@ import {
 } from '../../features/task-management/taskAPI';
 import type { EmployeeTask } from '../../features/task-management/types';
 import { useIsSuperAdmin } from '../../features/auth/useIsSuperAdmin';
+import { usePermissions } from '../../features/permissions/usePermissions';
 import { usePriorityStyle, PRIORITY_LABEL } from '../../features/task-management/usePriorityStyle';
 import { ROUTES } from '../../routes/routes.config';
 import { FilterChips } from '../shared/FilterChips';
@@ -100,22 +101,31 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
   const isSuperAdmin = useIsSuperAdmin();
   const pstyle = usePriorityStyle();
   const [open, setOpen] = useState(false);
-  const [filter, setFilter] = useState<SourceKey>('');
+  const [chosenFilter, setFilter] = useState<SourceKey>('');
+  // Due reminders always reach the bell (its feed is open to everyone); the to-do list and the tasks
+  // given to them are each refused without their permission, so they are not asked for then, and a
+  // tick is only offered where marking done is allowed.
+  const { can } = usePermissions();
+  const canTodos = can('tasks.todos');
+  const canMine = can('tasks.mine');
+  const canTickReminder = can('reminders.done');
 
   const { data: notifData } = useGetReminderNotificationsQuery(undefined, {
     pollingInterval: 60000,
     skip: !enabled,
   });
-  const { data: todoNotif } = useGetMyDueTodosQuery(undefined, {
+  const { data: todoData } = useGetMyDueTodosQuery(undefined, {
     pollingInterval: 60000,
-    skip: !enabled,
+    skip: !enabled || !canTodos,
   });
+  const todoNotif = canTodos ? todoData : undefined;
   // Tasks an admin assigned to me: due today or earlier, any I have not yet opened, and any with an
   // unread reply from the admin. 30 s: replies are a conversation, 60 s felt dead.
-  const { data: dueTaskNotif } = useGetMyDueTasksQuery(undefined, {
+  const { data: dueTaskData } = useGetMyDueTasksQuery(undefined, {
     pollingInterval: 30000,
-    skip: !enabled,
+    skip: !enabled || !canMine,
   });
+  const dueTaskNotif = canMine ? dueTaskData : undefined;
   // Tasks I assigned that were completed (unseen), are overdue, or have an unread staff reply — super admin only.
   const { data: attentionNotif } = useGetAssignerAttentionQuery(undefined, {
     pollingInterval: 30000,
@@ -199,8 +209,8 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
         editRequests.length +
         stageRequests.length,
     },
-    { key: 'TODOS', label: 'To-dos', st: SOURCE_META.TODOS.st, count: todos.length },
-    { key: 'ASSIGNED', label: 'Assigned to me', st: SOURCE_META.ASSIGNED.st, count: dueTasks.length },
+    ...(canTodos ? [{ key: 'TODOS', label: 'To-dos', st: SOURCE_META.TODOS.st, count: todos.length }] : []),
+    ...(canMine ? [{ key: 'ASSIGNED', label: 'Assigned to me', st: SOURCE_META.ASSIGNED.st, count: dueTasks.length }] : []),
     ...(isSuperAdmin ? [{ key: 'TEAM', label: 'Team', st: SOURCE_META.TEAM.st, count: attention.length }] : []),
     ...(isSuperAdmin || isDesigner
       ? [{ key: 'DESIGNS', label: 'Designs', st: SOURCE_META.DESIGNS.st, count: designs.length }]
@@ -213,6 +223,9 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
     { key: 'APPLIANCE', label: 'Appliance', st: SOURCE_META.APPLIANCE.st, count: counts.APPLIANCE },
     { key: 'ARCHITECT', label: 'Architects', st: SOURCE_META.ARCHITECT.st, count: counts.ARCHITECT },
   ];
+  // A chip can go away while it is chosen (its permission was taken away): show everything then
+  // rather than a list filtered by a chip that is no longer there.
+  const filter: SourceKey = chips.some((c) => c.key === chosenFilter) ? chosenFilter : '';
 
   const isTaskFilter =
     filter === 'TODOS' || filter === 'ASSIGNED' || filter === 'TEAM' || filter === 'DESIGNS' || filter === 'QUOTES';
@@ -553,9 +566,11 @@ export function NotificationBell({ enabled }: { enabled: boolean }) {
             {meta.label} · {r.ownerName ?? r.customerName} · {fmtReminderDateTime(r.remindAt)}
           </p>
         </button>
-        <button onClick={() => doneReminder(r.id)} className="mt-1 inline-flex items-center gap-1 text-xs text-success hover:underline">
-          <Check size={12} /> Mark done
-        </button>
+        {canTickReminder && (
+          <button onClick={() => doneReminder(r.id)} className="mt-1 inline-flex items-center gap-1 text-xs text-success hover:underline">
+            <Check size={12} /> Mark done
+          </button>
+        )}
       </div>
     );
   };

@@ -279,17 +279,27 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
   const staffUploads = viewer === 'coordinator' && can('customers.upload_design');
   // The admin alone corrects an approved version: puts the right file in, takes a wrong one out.
   const correctsApproved = viewer === 'admin' && approved;
+  // Where the design stands lets this person change its files at all; the permissions below then
+  // decide adding and removing separately (the administrator passes both).
+  const filesOpen =
+    (open && (viewer === 'admin' || designerCanWork || (viewer === 'coordinator' && !!job && isDesignerWork(job.status)))) ||
+    correctsApproved;
   const canUploadDesign =
-    (open && (viewer === 'admin' || designerCanWork || (staffUploads && !!job && isDesignerWork(job.status)))) || correctsApproved;
+    filesOpen && (viewer !== 'coordinator' || staffUploads) && can('designs.upload_files');
   const canSettle =
     (viewer === 'admin' || staffUploads) && canSettleOpenDesign(job, { admin: viewer === 'admin', coordinator: staffUploads });
   // Admin staff take back only what they uploaded themselves, not the designer's files.
   // An approved version keeps at least one design file: the last one is replaced, not removed.
   const canRemoveDesignFile = (f: DesignFile) =>
-    canUploadDesign &&
+    filesOpen &&
+    can('designs.remove_files') &&
     (viewer !== 'coordinator' || (!!myName && f.uploadedBy === myName)) &&
     !(correctsApproved && (job?.files ?? []).length < 2);
   const managesPlans = viewer === 'admin' || viewer === 'coordinator';
+  const canAddPlans = managesPlans && can('designs.add_plans');
+  const canRemovePlans = managesPlans && can('designs.remove_files');
+  // Starting and handing in, and writing to the admin, are the designer's own permissions.
+  const canWork = can('designs.work');
   const files = job?.files ?? [];
   const planDocuments = job?.planDocuments ?? [];
   const hasDesign = files.some((f) => isDesignFileName(f.originalFileName));
@@ -447,7 +457,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                   <div className="flex items-center gap-2">
                     <div className={sectionLabel}>Plan documents from admin ({planDocuments.length})</div>
                     <span className="flex-1" />
-                    {managesPlans && (
+                    {canAddPlans && (
                       <>
                         <input
                           ref={planInput}
@@ -474,7 +484,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                           key={f.id}
                           file={f}
                           tag={version > 1 ? versionLabel(f.versionNo) : undefined}
-                          onRemove={managesPlans ? () => removeFile(f) : undefined}
+                          onRemove={canRemovePlans ? () => removeFile(f) : undefined}
                           removing={removing}
                         />
                       ))}
@@ -515,7 +525,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                 )}
                 {files.length === 0 ? (
                   <p className="m-0 text-[12.5px] text-text-500">
-                    {viewer === 'designer'
+                    {viewer === 'designer' && canUploadDesign
                       ? 'Upload the design here: PDF, images or CAD drawings (DWG, DXF). Several files can be chosen.'
                       : 'No design uploaded yet.'}
                   </p>
@@ -534,7 +544,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
               </div>
 
               {/* Designer actions */}
-              {viewer === 'designer' && (job.status === 'PLANNING' || job.status === 'REVISION_REQUIRED') && (
+              {viewer === 'designer' && canWork && (job.status === 'PLANNING' || job.status === 'REVISION_REQUIRED') && (
                 <button
                   type="button"
                   onClick={doStart}
@@ -544,7 +554,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                   <Play size={14} /> {starting ? 'Starting…' : job.status === 'REVISION_REQUIRED' ? 'Start the changes' : 'Start design'}
                 </button>
               )}
-              {designerCanWork && (
+              {designerCanWork && canWork && (
                 <div className="rounded-[12px] border border-background-600 p-3 space-y-2">
                   <div className="text-[13px] font-semibold text-text-900">Finished? Send it to the admin</div>
                   <textarea
@@ -684,7 +694,7 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
               {viewer !== 'coordinator' && (
                 <div>
                   <div className={sectionLabel}>Notes</div>
-                  <DesignNotesThread job={job} viewer={viewer} />
+                  <DesignNotesThread job={job} viewer={viewer} canWrite={can('designs.conversation')} />
                 </div>
               )}
             </div>

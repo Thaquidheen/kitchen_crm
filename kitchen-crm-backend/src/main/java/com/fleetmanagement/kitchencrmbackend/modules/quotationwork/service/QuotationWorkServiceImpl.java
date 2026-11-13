@@ -7,6 +7,8 @@ import com.fleetmanagement.kitchencrmbackend.modules.auth.repository.UserReposit
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.entity.Customer.CustomerStatus;
 import com.fleetmanagement.kitchencrmbackend.modules.customer.repository.CustomerRepository;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.Permission;
+import com.fleetmanagement.kitchencrmbackend.modules.permission.web.PermissionInterceptor;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.entity.Quotation.QuotationStatus;
 import com.fleetmanagement.kitchencrmbackend.modules.quotation.repository.QuotationRepository;
@@ -233,7 +235,8 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
     }
 
     @Override
-    public ApiResponse<QuotationJobDto> update(Long jobId, QuotationJobUpdateRequest request, Viewer viewer) {
+    public ApiResponse<QuotationJobDto> update(Long jobId, QuotationJobUpdateRequest request, Viewer viewer,
+                                               boolean mayReassign) {
         QuotationJob job = jobRepository.findById(jobId).orElse(null);
         if (job == null) {
             return ApiResponse.error("Quotation work not found");
@@ -247,6 +250,10 @@ public class QuotationWorkServiceImpl implements QuotationWorkService {
         }
 
         boolean reassigned = request.getAssigneeId() != null && !request.getAssigneeId().equals(job.getAssigneeUserId());
+        if (reassigned && !mayReassign) {
+            // Handing work to another person is giving it out, not just changing it.
+            return ApiResponse.error(PermissionInterceptor.message(Permission.QUOTATION_WORK_ASSIGN));
+        }
         if (reassigned) {
             User assignee = userRepository.findById(request.getAssigneeId()).orElse(null);
             if (assignee == null || !isActive(assignee)) {

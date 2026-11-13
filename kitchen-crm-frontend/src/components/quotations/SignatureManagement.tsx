@@ -15,6 +15,7 @@ import {
   Copy,
 } from 'lucide-react';
 import approvalService from '../../services/approvalService';
+import { usePermissions } from '../../features/permissions/usePermissions';
 
 interface SignatureManagementProps {
   quotationId: number;
@@ -54,6 +55,8 @@ export default function SignatureManagement({
   const [documents, setDocuments] = useState<SignedDocument[]>([]);
   const [showCopied, setShowCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { can } = usePermissions();
+  const canSend = can('quotations.send_for_approval');
 
   // Debug logging
   console.log('SignatureManagement props:', {
@@ -255,7 +258,7 @@ export default function SignatureManagement({
         <h2 className="text-xl font-bold text-text-900">Digital Signature</h2>
 
         {/* Send for Signature Button */}
-        {!signedDocumentId && quotationStatus !== 'APPROVED' && (
+        {canSend && !signedDocumentId && quotationStatus !== 'APPROVED' && (
           <button
             onClick={handleSendForSignature}
             disabled={sending}
@@ -409,11 +412,15 @@ export default function SignatureManagement({
         <div className="text-center py-6 sm:py-8 text-text-500">
           <p className="text-xs sm:text-sm">No signature requests found</p>
         </div>
-      ) : (
+      ) : canSend ? (
         <div className="bg-info/20 rounded-lg p-3 sm:p-4 text-center">
           <p className="text-xs sm:text-sm text-info">
             Click "Send for Signature" to request customer approval via email.
           </p>
+        </div>
+      ) : (
+        <div className="text-center py-6 sm:py-8 text-text-500">
+          <p className="text-xs sm:text-sm">Not sent to the customer yet</p>
         </div>
       )}
     </div>

@@ -52,5 +52,9 @@ public class PermissionMatrixDto {
         private Boolean defaultAllowed;
         /** Only hides something on the screen; the server cannot enforce it. */
         private Boolean screenOnly;
+        /** Key of the permission this one only works together with, or null. */
+        private String requires;
+        /** The staff types it can be given to, or null when it is for every type. */
+        private List<String> appliesTo;
     }
 }

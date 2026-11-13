@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changedValues, countChanges, isAllowed, isOnDefaults } from './permissionRules';
+import { appliesTo, blockedBy, changedValues, countChanges, isAllowed, isOnDefaults } from './permissionRules';
 import type { MyPermissions, PermissionMatrix } from './types';
 
 const mine = (permissions: Record<string, boolean>): MyPermissions => ({ superAdmin: false, staffType: 'DESIGNER', permissions });
@@ -60,5 +60,50 @@ describe('isOnDefaults', () => {
   it('is true only when every answer equals its default', () => {
     expect(isOnDefaults(matrix, { DESIGNER: { 'customers.edit': true, 'customers.delete': false } }, 'DESIGNER')).toBe(true);
     expect(isOnDefaults(matrix, { DESIGNER: { 'customers.edit': true, 'customers.delete': true } }, 'DESIGNER')).toBe(false);
+  });
+});
+
+describe('permissions limited to some staff types, and ones that need another', () => {
+  const p = (key: string, extra: Partial<import('./types').PermissionInfo> = {}) => ({
+    key,
+    label: key,
+    description: '',
+    defaultAllowed: true,
+    screenOnly: false,
+    ...extra,
+  });
+  const matrix: PermissionMatrix = {
+    staffTypes: [
+      { key: 'ADMIN_STAFF', label: 'Admin staff', users: 1 },
+      { key: 'SALES', label: 'Sales', users: 1 },
+    ],
+    modules: [
+      {
+        name: 'Production',
+        permissions: [
+          p('customers.production'),
+          p('production.tick', { requires: 'customers.production' }),
+          p('quotation_work.assign', { appliesTo: ['ADMIN_STAFF'] }),
+        ],
+      },
+    ],
+    values: {},
+  };
+
+  it('has no switch for a staff type it is not for, and ignores that type on "Use defaults"', () => {
+    expect(appliesTo(matrix.modules[0].permissions[2], 'ADMIN_STAFF')).toBe(true);
+    expect(appliesTo(matrix.modules[0].permissions[2], 'SALES')).toBe(false);
+    expect(appliesTo(matrix.modules[0].permissions[0], 'SALES')).toBe(true);
+    const values = { SALES: { 'customers.production': true, 'production.tick': true, 'quotation_work.assign': false } };
+    expect(isOnDefaults(matrix, values, 'SALES')).toBe(true);
+  });
+
+  it('names the permission that is off and makes a switch do nothing', () => {
+    const tick = matrix.modules[0].permissions[1];
+    expect(blockedBy(matrix, { SALES: { 'customers.production': false, 'production.tick': true } }, tick, 'SALES')?.key).toBe(
+      'customers.production',
+    );
+    expect(blockedBy(matrix, { SALES: { 'customers.production': true, 'production.tick': true } }, tick, 'SALES')).toBeNull();
+    expect(blockedBy(matrix, {}, matrix.modules[0].permissions[0], 'SALES')).toBeNull();
   });
 });
