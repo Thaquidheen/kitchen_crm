@@ -109,3 +109,39 @@ export interface PermissionMatrix {
   modules: PermissionModule[];
   values: PermissionValues;
 }
+
+/** One staff member in the picker of the "One person" view. */
+export interface PersonSummary {
+  userId: number;
+  name: string;
+  email: string;
+  /** ADMIN_STAFF | DESIGNER | SALES | NONE */
+  staffType: string;
+  staffTypeLabel: string;
+  active: boolean;
+  /** How many permissions are set just for this person (and still count for their staff type). */
+  overrides: number;
+}
+
+/** permission key -> what is set just for one person (missing = they follow their staff type). */
+export type PersonOverrides = Record<string, boolean>;
+
+/** What a save sends for one person: null puts a permission back to what their staff type says. */
+export type PersonChanges = Record<string, boolean | null>;
+
+/** One person's permissions: what their staff type gives, what is set just for them, and the outcome. */
+export interface PersonPermissions {
+  userId: number;
+  name: string;
+  /** ADMIN_STAFF | DESIGNER | SALES | NONE */
+  staffType: string;
+  staffTypeLabel: string;
+  active: boolean;
+  modules: PermissionModule[];
+  /** The staff type's switches; false where a permission does not apply to the type. */
+  typeValues: Record<string, boolean>;
+  /** Only the permissions set just for this person that still apply to their staff type. */
+  overrides: PersonOverrides;
+  /** What the person really has, required permissions included. */
+  effective: Record<string, boolean>;
+}
