@@ -6,7 +6,8 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Plus, Search, Edit, Trash2, RotateCcw, KeyRound, Ban } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Edit, Trash2, RotateCcw, KeyRound, Ban, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   useGetStaffQuery,
@@ -22,6 +23,7 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { ROUTES } from '@/routes/routes.config';
 
 type StaffFilter = 'all' | 'active' | 'inactive';
 
@@ -46,6 +48,7 @@ const thClass =
   'px-3 py-[9px] text-left text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500';
 
 export function StaffPage() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [stage, setStage] = useState<StaffFilter>('all');
   const [typeFilter, setTypeFilter] = useState<'' | 'SALES' | 'DESIGNER' | 'ADMIN_STAFF' | 'NONE'>('');
@@ -282,7 +285,7 @@ export function StaffPage() {
                 <th className={thClass}>Contact</th>
                 <th className={thClass}>Status</th>
                 <th className={thClass}>Added</th>
-                <th className="px-3.5 py-[9px] text-right text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 w-[110px]">
+                <th className="px-3.5 py-[9px] text-right text-[11px] font-[650] tracking-[0.05em] uppercase text-text-500 w-[140px]">
                   Actions
                 </th>
               </tr>
@@ -398,6 +401,16 @@ export function StaffPage() {
                           >
                             <KeyRound size={14} />
                           </button>
+                          {/* This person's own permissions, on top of their staff type. */}
+                          {!staff.roles?.includes('ROLE_SUPER_ADMIN') && (
+                            <button
+                              onClick={() => navigate(`${ROUTES.PERMISSIONS}?person=${staff.id}`)}
+                              title="Permissions"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-500 hover:bg-background-600 hover:text-text-900 transition-colors"
+                            >
+                              <ShieldCheck size={14} />
+                            </button>
+                          )}
                           {staff.active ? (
                             <button
                               onClick={() => setDeactivateTarget(staff)}

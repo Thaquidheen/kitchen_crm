@@ -2,7 +2,7 @@
  * "May the signed-in person do this?" — the one hook the screens ask.
  *
  * A super admin may do everything. Everybody else gets what the administrator allowed their staff
- * type; it is re-read every minute and when the window gets focus back, so a change made on the
+ * type, or set just for them; it is re-read every minute and when the window gets focus back, so a change made on the
  * Permissions page reaches people without them signing in again. This only decides what the
  * screens show — the server checks every action itself.
  */

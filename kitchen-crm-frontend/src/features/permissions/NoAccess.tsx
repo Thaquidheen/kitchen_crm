@@ -1,7 +1,7 @@
 import React from 'react';
 import { Lock } from 'lucide-react';
 
-/** Shown in place of a page the administrator has not allowed for this person's staff type. */
+/** Shown in place of a page the administrator has not allowed this person. */
 export const NoAccess: React.FC<{ what: string }> = ({ what }) => (
   <div className="bg-background-800 border border-background-600 rounded-[14px] px-6 py-14 text-center">
     <Lock size={26} className="mx-auto text-text-500" />
