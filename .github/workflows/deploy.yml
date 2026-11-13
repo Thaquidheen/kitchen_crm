@@ -27,7 +27,23 @@ jobs:
             mkdir -p "$BK"
 
             echo "== Backing up database to $BK/db.sql.gz"
-            docker exec kitchen_crm_mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --databases kitchen_crm' > "$BK/db.sql"
+            # mysqldump runs in a throwaway container of the same MySQL image on the app's network, not
+            # through `docker exec`: something on the server breaks exec ("error adding SSB flag to
+            # seccomp filter"), which stopped a deploy here, while starting a container still works.
+            # The root password goes in through an env file readable by root only, never the command line.
+            MYSQL_IMG=$(docker inspect -f '{{.Config.Image}}' kitchen_crm_mysql)
+            NET=$(docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{"\n"}}{{end}}' kitchen_crm_mysql | head -1)
+            ( umask 077; docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' kitchen_crm_mysql \
+                | sed -n 's/^MYSQL_ROOT_PASSWORD=/MYSQL_PWD=/p' > "$BK/.mysql.env" )
+            if ! docker run --rm --network "$NET" --env-file "$BK/.mysql.env" "$MYSQL_IMG" \
+                mysqldump -h kitchen_crm_mysql -uroot --single-transaction --routines --triggers --databases kitchen_crm > "$BK/db.sql"; then
+              rm -f "$BK/.mysql.env"
+              echo "Database backup failed: nothing was changed"
+              exit 1
+            fi
+            rm -f "$BK/.mysql.env"
+            # A dump cut short must stop the deploy just as a failed one does.
+            tail -1 "$BK/db.sql" | grep -q "Dump completed" || { echo "Database backup incomplete: nothing was changed"; exit 1; }
             gzip "$BK/db.sql"
             git rev-parse HEAD > "$BK/previous-commit.txt"
             docker tag kitchen-crm-backend-backend:latest "kitchen-crm-backend-backend:before-$TS" || true
