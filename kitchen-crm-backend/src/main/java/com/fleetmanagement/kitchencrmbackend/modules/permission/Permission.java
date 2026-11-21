@@ -58,6 +58,9 @@ public enum Permission {
             true, false),
     CUSTOMERS_SITE_MEASUREMENT("customers.site_measurement", "Customers", "Site measurement",
             "Open and save a customer's site measurement.", true, false),
+    CUSTOMERS_REQUIREMENTS("customers.requirements", "Customers", "Requirement sheet",
+            "Fill in and change a customer's requirement sheet. Seeing it comes with \"See customer details\".",
+            true, false, "customers.view"),
     CUSTOMERS_QUOTATIONS("customers.quotations", "Customers", "Customer's quotations",
             "See the list of a customer's quotations on the customer page.", true, false),
 

@@ -175,12 +175,27 @@ public class DesignJobServiceImpl implements DesignJobService {
     @Transactional(readOnly = true)
     public ApiResponse<DesignJobDto> get(Long jobId, Long callerId, boolean admin, boolean coordinator) {
         DesignPhase job = jobRepository.findById(jobId).orElse(null);
-        boolean own = job != null && isAssignedDesigner(job, callerId);
-        if (job == null || !(admin || coordinator || own)) {
+        if (job == null || !mayOpen(job, callerId, admin, coordinator)) {
             return ApiResponse.error("Design job not found");
         }
+        boolean own = isAssignedDesigner(job, callerId);
         DesignJobDto dto = detail(job);
         return ApiResponse.success(admin || own ? dto : withoutConversation(dto));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ApiResponse<Long> customerOfJob(Long jobId, Long callerId, boolean admin, boolean coordinator) {
+        DesignPhase job = jobId == null ? null : jobRepository.findById(jobId).orElse(null);
+        if (job == null || job.getCustomer() == null || !mayOpen(job, callerId, admin, coordinator)) {
+            return ApiResponse.error("Design job not found");
+        }
+        return ApiResponse.success(job.getCustomer().getId());
+    }
+
+    /** Who may open a job: the admin, Admin staff who coordinate designs, and the designer it is given to. */
+    private static boolean mayOpen(DesignPhase job, Long callerId, boolean admin, boolean coordinator) {
+        return admin || coordinator || isAssignedDesigner(job, callerId);
     }
 
     @Override

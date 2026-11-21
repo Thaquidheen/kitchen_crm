@@ -12,6 +12,7 @@ export type PermissionKey =
   | 'customers.reminders'
   | 'customers.upload_design'
   | 'customers.site_measurement'
+  | 'customers.requirements'
   | 'customers.production'
   | 'customers.quotations'
   | 'quotations.view'

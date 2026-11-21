@@ -64,6 +64,10 @@ public class PermissionInterceptor implements HandlerInterceptor {
             new Rule(WRITE, "/api/v1/customers/*/pipeline", Permission.CUSTOMERS_EDIT),
             new Rule(READ, "/api/v1/customers/*/requirements", Permission.CUSTOMERS_VIEW),
             new Rule(READ, "/api/v1/customers/*/pipeline", Permission.CUSTOMERS_VIEW),
+            // the requirement sheet: seen with the customer's details, filled in with its own permission.
+            // The designer's read-only copy is under /design-jobs.
+            new Rule(WRITE, "/api/v1/customers/*/requirement-sheet", Permission.CUSTOMERS_REQUIREMENTS),
+            new Rule(READ, "/api/v1/customers/*/requirement-sheet", Permission.CUSTOMERS_VIEW),
             new Rule(Set.of("PUT"), "/api/v1/customers/*", Permission.CUSTOMERS_EDIT),
             new Rule(Set.of("DELETE"), "/api/v1/customers/*", Permission.CUSTOMERS_DELETE),
             // ---- activity and notes
@@ -128,6 +132,8 @@ public class PermissionInterceptor implements HandlerInterceptor {
             new Rule(READ, "/api/v1/design-jobs/attention", null),
             new Rule(READ, "/api/v1/design-jobs", Permission.DESIGNS_VIEW),
             new Rule(READ, "/api/v1/design-jobs/*", Permission.DESIGNS_VIEW),
+            // the customer's requirement sheet, read-only, for whoever may open the job (DesignJobController)
+            new Rule(READ, "/api/v1/design-jobs/*/requirement-sheet", Permission.DESIGNS_VIEW),
             new Rule(Set.of("POST"), "/api/v1/design-jobs/customer/*/plan-documents", Permission.DESIGNS_ADD_PLANS),
             new Rule(Set.of("POST"), "/api/v1/design-jobs/*/plan-documents", Permission.DESIGNS_ADD_PLANS),
             new Rule(Set.of("POST"), "/api/v1/design-jobs/*/files", Permission.DESIGNS_UPLOAD_FILES),

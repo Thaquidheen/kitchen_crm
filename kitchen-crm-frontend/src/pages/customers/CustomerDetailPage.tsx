@@ -35,6 +35,7 @@ import { CustomerFollowUps } from '../../features/customers/components/CustomerF
 import { CustomerReminders } from '../../features/customers/components/CustomerReminders';
 import { CustomerActivityPanel } from '../../features/customers/components/CustomerActivityPanel';
 import { CustomerProductionTab } from '../../features/customers/components/CustomerProductionTab';
+import { CustomerRequirementSheet } from '../../features/customers/components/RequirementSheet';
 import {
   CustomerQuotationsTab,
   CustomerQuotationsSummary,
@@ -52,7 +53,8 @@ import type { CustomerStatus } from '../../features/customers/types';
 import { getSiteMeasurementRoute } from '../../routes/routes.config';
 
 // Timeline is gone as a tab — its feed now lives on Overview, where notes are written.
-const TABS = ['Overview', 'Reminders', 'Pipeline', 'Quotations', 'Production', 'Warranty'];
+// Requirements is the paper requirement sheet; seeing it comes with "See customer details".
+const TABS = ['Overview', 'Requirements', 'Reminders', 'Pipeline', 'Quotations', 'Production', 'Warranty'];
 
 const STATUS_OPTIONS: Array<{ value: CustomerStatus; label: string }> = [
   { value: 'LEAD', label: 'Lead' },
@@ -94,6 +96,9 @@ const CustomerDetailPage: React.FC = () => {
   const [deleteCustomer, { isLoading: isDeleting }] = useDeleteCustomerMutation();
 
   const [activeTab, setActiveTab] = useState('Overview');
+  // The requirement sheet stays mounted once opened, so a look at another tab keeps what is
+  // being filled in but not saved yet.
+  const [sheetOpened, setSheetOpened] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   // Status changes go through a modal that requires a note, so the picked status is
@@ -289,7 +294,10 @@ const CustomerDetailPage: React.FC = () => {
           return (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => {
+                setActiveTab(tab);
+                if (tab === 'Requirements') {setSheetOpened(true);}
+              }}
               className={`px-3.5 py-2.5 text-[13px] whitespace-nowrap border-b-2 -mb-px transition-colors ${
                 active
                   ? 'border-primary-600 text-primary-600 font-semibold'
@@ -357,12 +365,18 @@ const CustomerDetailPage: React.FC = () => {
         <CustomerQuotationsTab customerId={customer.id} />
       ) : shownTab === 'Production' ? (
         <CustomerProductionTab customerId={customer.id} />
-      ) : (
+      ) : shownTab === 'Requirements' ? null : (
         <div className="bg-background-800 border border-background-600 rounded-[14px] px-6 py-16 text-center">
           <div className="text-[14.5px] font-semibold text-text-900">{shownTab}</div>
           <div className="text-[12.5px] text-text-700 mt-1">
             This tab is coming soon — the {shownTab.toLowerCase()} view will appear here.
           </div>
+        </div>
+      )}
+
+      {sheetOpened && (
+        <div hidden={shownTab !== 'Requirements'}>
+          <CustomerRequirementSheet customerId={customer.id} />
         </div>
       )}
 

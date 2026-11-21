@@ -1,5 +1,6 @@
 import { baseApi } from '@/app/baseApi';
 import type { ApiResponse } from '@/types/api.types';
+import { requirementSheetTag, type RequirementSheet } from '@/features/customers/requirementSheetAPI';
 import type {
   DesignFeed,
   DesignJob,
@@ -49,6 +50,13 @@ export const designAPI = baseApi.injectEndpoints({
       query: (id) => `/design-jobs/${id}`,
       transformResponse: unwrap<DesignJob>('Design not found'),
       providesTags: ['Designs'],
+    }),
+    /** The customer's requirement sheet, read only, for whoever may open this design. */
+    getDesignJobRequirementSheet: builder.query<RequirementSheet, number>({
+      query: (id) => `/design-jobs/${id}/requirement-sheet`,
+      transformResponse: unwrap<RequirementSheet>('Failed to load the requirement sheet'),
+      // A save on the customer page is heard here through the customer's tag.
+      providesTags: (r) => (r ? [requirementSheetTag(r.customerId)] : []),
     }),
     getCustomerDesignJob: builder.query<DesignJob | null, number>({
       query: (customerId) => `/design-jobs/customer/${customerId}`,
@@ -222,6 +230,7 @@ export const {
   useGetDesignJobsQuery,
   useGetDesignJobQuery,
   useGetCustomerDesignJobQuery,
+  useGetDesignJobRequirementSheetQuery,
   useLazyGetCustomerDesignJobQuery,
   useGetDesignLibraryQuery,
   useGetUnassignedDesignsQuery,

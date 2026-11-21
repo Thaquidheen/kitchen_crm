@@ -34,6 +34,14 @@ public interface DesignJobService {
 
     ApiResponse<DesignJobDto> get(Long jobId, Long callerId, boolean admin, boolean coordinator);
 
+    /**
+     * The id of the job's customer, for whoever may open the job (the same rule as {@link #get}):
+     * the admin, Admin staff who coordinate designs, and the designer it is given to. Anyone else
+     * is told "Design job not found", as by get. Used to show the designer the customer's
+     * requirement sheet.
+     */
+    ApiResponse<Long> customerOfJob(Long jobId, Long callerId, boolean admin, boolean coordinator);
+
     /** Summary of a customer's design job (no notes/files) — readable by any signed-in staff. */
     ApiResponse<DesignJobDto> getForCustomer(Long customerId);
 
