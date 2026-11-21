@@ -1,6 +1,7 @@
 /**
- * DesignJobDrawer — one customer's design: brief, plan documents from the admin, the design files
- * of the current version, earlier versions, the notes thread and the actions for whoever is looking.
+ * DesignJobDrawer — one customer's design: brief, the customer's requirement sheet (read only),
+ * plan documents from the admin, the design files of the current version, earlier versions, the
+ * notes thread and the actions for whoever is looking.
  * Designer: Start → upload the design (PDF, images, CAD drawings) → Mark complete (admin is notified).
  * Admin: edit designer / due date / priority / brief, attach plan documents, Approve or Request
  * changes — and, once a version is approved, Request redesign to open the next one.
@@ -46,6 +47,7 @@ import {
 import { useAppSelector } from '@/app/hooks';
 import { usePermissions } from '@/features/permissions/usePermissions';
 import { DesignNotesThread } from './DesignNotesThread';
+import { DesignRequirementSheet } from './DesignRequirementSheet';
 import { RedesignModal } from './RedesignModal';
 import { UploadDesignModal } from './UploadDesignModal';
 import type { DesignFile, DesignPriority, DesignStatus } from '../types';
@@ -375,6 +377,9 @@ export const DesignJobDrawer: React.FC<Props> = ({ jobId, viewer, onClose }) => 
                 <div className={sectionLabel}>{version > 1 ? `What to change (${versionLabel(version)})` : 'Brief'}</div>
                 <p className="m-0 text-[13px] text-text-900 whitespace-pre-wrap">{job.brief || '—'}</p>
               </div>
+
+              {/* What staff marked at the client's site: read only here, changed on the customer page */}
+              <DesignRequirementSheet key={job.id} jobId={job.id} />
 
               {/* Admin edit — an approved version is changed by a redesign, not by editing */}
               {viewer === 'admin' &&

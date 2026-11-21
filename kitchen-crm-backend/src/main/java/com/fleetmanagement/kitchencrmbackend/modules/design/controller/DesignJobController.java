@@ -1,6 +1,8 @@
 package com.fleetmanagement.kitchencrmbackend.modules.design.controller;
 
 import com.fleetmanagement.kitchencrmbackend.common.dto.ApiResponse;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.requirementsheet.RequirementSheetDto;
+import com.fleetmanagement.kitchencrmbackend.modules.customer.requirementsheet.RequirementSheetService;
 import com.fleetmanagement.kitchencrmbackend.modules.design.dto.*;
 import com.fleetmanagement.kitchencrmbackend.modules.design.service.DesignJobService;
 import com.fleetmanagement.kitchencrmbackend.modules.permission.Permission;
@@ -35,6 +37,9 @@ public class DesignJobController {
 
     @Autowired
     private PermissionService permissionService;
+
+    @Autowired
+    private RequirementSheetService requirementSheetService;
 
     private static Long id(UserPrincipal p) {
         return p != null ? p.getId() : null;
@@ -232,6 +237,27 @@ public class DesignJobController {
                                                          @AuthenticationPrincipal UserPrincipal user) {
         boolean admin = ViewerScope.isSuperAdmin(user);
         return respond(service.get(id, id(user), admin, !admin && service.isCoordinator(id(user))));
+    }
+
+    /**
+     * The customer's requirement sheet, to read while making the design: for whoever may open the
+     * job, without "See customer details" (a designer often does not have it). Changing the sheet
+     * is only on the customer page.
+     */
+    @GetMapping("/{id}/requirement-sheet")
+    public ResponseEntity<ApiResponse<RequirementSheetDto>> requirementSheet(@PathVariable Long id,
+                                                                             @AuthenticationPrincipal UserPrincipal user) {
+        boolean admin = ViewerScope.isSuperAdmin(user);
+        ApiResponse<Long> customer = service.customerOfJob(id, id(user), admin,
+                !admin && service.isCoordinator(id(user)));
+        if (!Boolean.TRUE.equals(customer.getSuccess())) {
+            return respond(ApiResponse.error(customer.getMessage()));
+        }
+        ApiResponse<RequirementSheetDto> sheet = requirementSheetService.get(customer.getData());
+        if (!Boolean.TRUE.equals(sheet.getSuccess())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(sheet);
+        }
+        return ResponseEntity.ok(sheet);
     }
 
     @PutMapping("/{id}/start")
